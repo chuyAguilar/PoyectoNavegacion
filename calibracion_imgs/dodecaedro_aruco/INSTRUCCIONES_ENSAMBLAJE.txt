@@ -1,0 +1,59 @@
+
+INSTRUCCIONES DE ENSAMBLAJE - DODECAEDRO ARUCO
+==============================================
+
+MATERIALES NECESARIOS:
+- Plantilla impresa (plantilla_dodecaedro_lezna.png)
+- Cartulina o papel grueso (180-250 g/m²)
+- Tijeras o cutter
+- Pegamento o cinta adhesiva
+- Regla
+
+PASOS:
+
+1. IMPRESIÓN
+   - Imprimir plantilla_dodecaedro_lezna.png en cartulina
+   - Asegurarse de que la escala sea 100% (sin ajustar al tamaño de página)
+   - Verificar que los marcadores se vean nítidos
+
+2. RECORTE
+   - Recortar cada cuadrado por las líneas grises
+   - Usar tijeras afiladas o cutter para bordes limpios
+   - Mantener los marcadores ArUco centrados
+
+3. ENSAMBLAJE (VERSIÓN SIMPLIFICADA)
+   Opción A - Cubo (más fácil):
+   - Usar 6 de los 12 marcadores
+   - Formar un cubo pegando las caras
+   - IDs recomendados: 1, 2, 3, 4, 5, 6
+   
+   Opción B - Dodecaedro completo (óptimo):
+   - Buscar plantilla de dodecaedro en internet
+   - Pegar los 12 marcadores en las 12 caras
+   - Requiere más tiempo pero mejor cobertura
+
+4. MONTAJE EN LA LEZNA
+   - Pegar el cubo/dodecaedro en el mango de la lezna
+   - Asegurarse de que esté firmemente sujeto
+   - Verificar que no interfiera con el uso del instrumento
+
+5. MARCADOR DE LA COLUMNA
+   - Imprimir plantilla_marcador_columna.png
+   - Recortar y pegar en cartón rígido
+   - Fijar en la columna vertebral (modelo físico)
+   - Orientar hacia las cámaras
+
+VERIFICACIÓN:
+- Ejecutar: python aruco_test.py
+- Verificar que detecta los IDs correctamente
+- Probar diferentes orientaciones
+
+NOTAS:
+- Para navegación quirúrgica, usar cartulina mate (sin brillo)
+- Evitar arrugas o dobleces en los marcadores
+- Mantener los marcadores limpios y sin reflejos
+
+¿PROBLEMAS?
+- Si los marcadores no se detectan: verificar iluminación
+- Si la detección es inestable: aumentar el tamaño del dodecaedro
+- Si hay reflejos: usar papel mate o aplicar spray anti-reflejo

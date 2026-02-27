@@ -1,0 +1,108 @@
+
+GUÍA DE ENSAMBLAJE - DODECAEDRO ARUCO 50mm
+==========================================
+
+ESPECIFICACIONES:
+-----------------
+Dodecaedro: 50 mm de lado (por arista)
+Diámetro total: ~155 mm
+Caras: 12 pentágonos regulares
+Marcadores ArUco: ~48 mm (cuadrados)
+IDs: 1-12
+
+MATERIALES:
+-----------
+✅ Dodecaedro impreso en 3D (50mm de lado) en PLA blanco mate
+✅ Plantilla impresa (plantilla_dodecaedro_50mm.png)
+✅ Tijeras afiladas o cutter
+✅ Pegamento en barra o papel adhesivo
+✅ Paciencia (recortar pentágonos requiere precisión)
+
+PASOS:
+------
+
+1. IMPRIMIR PLANTILLA
+   - Imprimir plantilla_dodecaedro_50mm.png en papel mate
+   - Configurar impresora a escala 100% (sin ajustar)
+   - Verificar que los pentágonos tengan el tamaño correcto
+
+2. RECORTAR MARCADORES
+   - Recortar cada pentágono por las líneas negras
+   - Usar tijeras muy afiladas para bordes limpios
+   - Los pentágonos deben quedar simétricos
+   - Tomar tiempo, la precisión es importante
+
+3. PREPARAR DODECAEDRO
+   - Limpiar cada cara con alcohol
+   - Identificar qué cara será cada ID (opcional)
+   - Asegurarse de que estén secas
+
+4. PEGAR MARCADORES
+   - Aplicar pegamento uniformemente
+   - Centrar el marcador en cada cara pentagonal
+   - El marcador cuadrado debe quedar centrado en el pentágono
+   - Presionar firmemente
+   - Eliminar burbujas de aire
+
+5. VERIFICACIÓN
+   - Todos los marcadores deben estar planos
+   - Sin arrugas ni burbujas
+   - Probar con: python aruco_test.py
+
+CONFIGURACIÓN DEL DODECAEDRO EN EL SLICER 3D:
+---------------------------------------------
+Lado de arista: 50 mm
+Material: PLA blanco mate
+Relleno: 15-20%
+Soportes: NO (orientar bien)
+Tiempo: ~3-4 horas
+Filamento: ~30-40 g
+
+ORIENTACIÓN PARA IMPRESIÓN:
+---------------------------
+- Colocar una cara plana sobre la cama
+- Usar "Lay flat" si está disponible
+- Esto evita necesidad de soportes
+
+MONTAJE EN LA LEZNA:
+--------------------
+1. Limpiar el mango de la lezna
+2. Aplicar pegamento fuerte (cianoacrilato)
+3. Pegar el dodecaedro firmemente
+4. Dejar secar 24 horas
+5. Verificar que no interfiera con el uso
+
+VENTAJAS DEL DODECAEDRO 50mm:
+-----------------------------
+✅ Compacto (50mm de lado)
+✅ 12 caras = mejor cobertura angular que cubo
+✅ Siempre hay una cara visible
+✅ Ideal para rotaciones libres de la lezna
+✅ Tracking continuo durante perforación
+
+DESVENTAJAS:
+------------
+⚠️ Más complejo de ensamblar que un cubo
+⚠️ Recortar pentágonos requiere más precisión
+⚠️ Marcadores más pequeños (~48mm vs 40mm en cubo)
+
+COMPARACIÓN CON CUBO:
+---------------------
+Cubo 50mm:
+- 6 caras cuadradas
+- Marcadores de 40mm
+- Más fácil de ensamblar
+- Suficiente para rotaciones moderadas
+
+Dodecaedro 50mm:
+- 12 caras pentagonales
+- Marcadores de ~48mm
+- Más complejo de ensamblar
+- Mejor para rotaciones libres
+
+RECOMENDACIÓN:
+--------------
+Si es tu primera vez, considera empezar con un CUBO de 50mm.
+Si necesitas tracking perfecto en cualquier orientación, usa el DODECAEDRO.
+
+¡Tu dodecaedro ArUco está listo para navegación quirúrgica profesional!
