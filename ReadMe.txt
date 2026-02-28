@@ -25,13 +25,24 @@ python -m venv venv
 
 
 ### 3. Activar entorno
-En Git Bash / macOS / Linux:
-source venv/bin/activate
-En PowerShell:
+
+#### En Windows
+ (Git Bash)
+source venv/Scripts/activate
+En Windows (PowerShell)
 venv\Scripts\Activate.ps1
+
+#### En macOS / Linux
+source venv/bin/activate
+Desactivar entorno
+
+En cualquier sistema:
+
+deactivate
 
 ### 4. Instalar proyecto
 pip install -e ./project
+
 Entorno de desarrollo (opcional)
 Instalar dependencias de testing:
 pip install -e ./project[dev]
