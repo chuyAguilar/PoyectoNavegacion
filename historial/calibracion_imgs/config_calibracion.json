@@ -1,0 +1,9 @@
+{
+    "factor_escala": 1.0449379440539817,
+    "fecha_calibracion": "2025-12-12 18:23:24",
+    "distancia_prueba_mm": 100.0,
+    "distancia_medida_unidades": 95.699462890625,
+    "distancia_calculada_mm": 100.0,
+    "aruco_id_usado": 0,
+    "notas": "Calibraci\u00f3n de escala para navegaci\u00f3n quir\u00fargica"
+}
