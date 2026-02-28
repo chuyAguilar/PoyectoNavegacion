@@ -1,0 +1,43 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+
+# Distribución / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Archivos de instalación editable
+*.pth
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+
+# coverage
+.coverage
+htmlcov/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Archivos temporales
+*.log
