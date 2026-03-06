@@ -9,7 +9,8 @@ description = "Navigation and ArUco tracking utilities"
 requires-python = ">=3.11,<3.12"
 dependencies = [
     "numpy>=2.4.0,<3.0.0",
-    "opencv-contrib-python>=4.13.0,<5.0.0"
+    "opencv-contrib-python>=4.13.0,<5.0.0",
+    "pyigtl>=0.3.1,<0.4.0"
 ]
 
 [project.optional-dependencies]

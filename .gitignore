@@ -43,3 +43,6 @@ Thumbs.db
 
 # Archivos temporales
 *.log
+
+#imagenes
+project\calibration\images
