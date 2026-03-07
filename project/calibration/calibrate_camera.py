@@ -3,8 +3,8 @@ import glob
 import cv2
 import numpy as np
 
-pattern_size = (6, 6)
-square_size = 22.0  # mm
+pattern_size = (8, 6)
+square_size = 22.2  # mm
 
 images = glob.glob("project/calibration/images/*.jpg")
 
@@ -14,14 +14,22 @@ objp *= square_size
 
 objpoints = []
 imgpoints = []
+image_size = None
+
+print(f"Total imágenes encontradas: {len(images)}")
 
 for fname in images:
+    print(f"Procesando: {fname}")
     img = cv2.imread(fname)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    if image_size is None:
+        image_size = gray.shape[::-1]
 
     ret, corners = cv2.findChessboardCorners(gray, pattern_size, None)
 
     if ret:
+        print("Chessboard detectado")
         objpoints.append(objp)
 
         corners2 = cv2.cornerSubPix(
@@ -37,12 +45,22 @@ for fname in images:
         cv2.drawChessboardCorners(img, pattern_size, corners2, ret)
         cv2.imshow("Corners", img)
         cv2.waitKey(200)
+    else:
+        print("Chessboard NO detectado")
 
 cv2.destroyAllWindows()
 
+print(f"Imágenes válidas usadas para calibración: {len(objpoints)}")
+
+if len(objpoints) == 0:
+    print("ERROR: No se detectaron tableros en las imágenes.")
+    exit()
+
+print("Ejecutando calibración... esto puede tardar unos segundos")
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
-    objpoints, imgpoints, gray.shape[::-1], None, None
+    objpoints, imgpoints, image_size, None, None
 )
+print("Calibración terminada")
 
 # Error de reproyección
 mean_error = 0
