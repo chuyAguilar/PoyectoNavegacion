@@ -117,6 +117,21 @@ def main():
             T_camera_reference = transforms[reference_id]
             T_camera_pointer = transforms["instrument"]
 
+            R_board_to_instrument = R_scipy.from_euler("xyz", [0, 0, 0], degrees=True).as_matrix()
+
+            T_board_to_instrument = Transform.from_rotation_translation(
+                R_board_to_instrument,
+                np.zeros(3)
+            )
+
+            T_camera_pointer = T_camera_pointer @ T_board_to_instrument
+            
+            T_tip = Transform.from_rotation_translation(
+                np.eye(3),
+                tracker.tip_offset
+            )           
+            T_camera_pointer = T_camera_pointer @ T_tip
+
             T_reference_pointer = T_camera_reference.inverse() @ T_camera_pointer
             
             translation = T_reference_pointer.translation()
