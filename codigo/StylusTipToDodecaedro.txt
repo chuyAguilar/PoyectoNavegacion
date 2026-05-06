@@ -1,0 +1,11 @@
+# Matriz StylusTipToDodecaedro 4x4
+# Offset del tip respecto al centro del dodecaedro
+# Calculada con 755 poses (RANSAC)
+# Offset (mm): [0.315, -0.258, -88.617]
+# Std (mm):    [1.679, 1.447, 0.383]
+# RMSE: 0.380 mm
+
+    1.000000     0.000000     0.000000     0.314873
+    0.000000     1.000000     0.000000    -0.258080
+    0.000000     0.000000     1.000000   -88.616704
+    0.000000     0.000000     0.000000     1.000000

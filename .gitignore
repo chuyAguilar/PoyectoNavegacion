@@ -1,0 +1,24 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+.env
+
+# Archivos de caché y binarios de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos de datos generados y modelos
+*.npy
+*.npz
+# Si algunos de los archivos .npy/.npz son requeridos para ejecución (ej. calibración base), coméntalos arriba o añádelos con !*.npy
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Directorios de IDEs (opcional)
+.vscode/
+.idea/
+*.swp

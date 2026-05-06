@@ -1,0 +1,62 @@
+# =====================================================================
+# Configuracion del tracker ArUco - Multi-marker con dodecaedro
+# =====================================================================
+
+camera:
+  source: 0
+  width: 640
+  height: 480
+  fps: 30
+  backend: MSMF
+  fourcc: MJPG
+  calibration_file: data/camera_calibration_caja_luz.yml
+
+
+# =====================================================================
+# Diccionario ArUco (uno solo para todos)
+# =====================================================================
+markers:
+  dictionary: DICT_ARUCO_MIP_36h12
+
+  # Marcadores INDIVIDUALES (que NO pertenecen a un rigid body)
+  # Cada uno publica su propia transformada NameToTracker
+  list:
+    - id: 0
+      name: Marker0
+      size_mm: 60.8
+
+
+# =====================================================================
+# Rigid bodies multi-marker
+# El sistema combina los marcadores visibles de un rigid body para
+# estimar UNA sola pose conjunta optima.
+# =====================================================================
+rigid_bodies:
+  - name: Dodecaedro
+    geometry_file: data/reference_dodecaedro_calibrado.txt
+
+
+# =====================================================================
+# OpenIGTLink
+# =====================================================================
+igtlink:
+  transforms_port: 18944
+  video_port: 18945
+  send_video: false
+
+
+# =====================================================================
+# Filtrado opcional
+# =====================================================================
+filtering:
+  enabled: false
+  min_cutoff: 1.0
+  beta: 0.0
+
+
+# =====================================================================
+# Debug
+# =====================================================================
+debug:
+  show_window: true
+  verbose: true
