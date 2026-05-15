@@ -1,0 +1,47 @@
+{
+    "camera": "Global Shutter Camera (32e4:0234)",
+    "platform": "X11; Linux x86_64",
+    "avg_reprojection_error": 0.1440296635954037,
+    "camera_matrix": {
+        "type_id": "opencv-matrix",
+        "rows": 3,
+        "cols": 3,
+        "dt": "d",
+        "data": [
+            699.9321672570068,
+            0,
+            612.2997248326982,
+            0,
+            699.7497570833252,
+            333.7868283760045,
+            0,
+            0,
+            1
+        ]
+    },
+    "distortion_coefficients": {
+        "type_id": "opencv-matrix",
+        "rows": 5,
+        "cols": 1,
+        "dt": "d",
+        "data": [
+            0.03387266940315543,
+            -0.05378713409962571,
+            -0.0001172958338357037,
+            0.0003483817009380966,
+            0.018378925944401908
+        ]
+    },
+    "distortion_model": "rectilinear",
+    "img_size": {
+        "type_id": "opencv-matrix",
+        "rows": 2,
+        "cols": 1,
+        "dt": "d",
+        "data": [
+            1280,
+            720
+        ]
+    },
+    "calibration_time": "Sat, 11 Apr 2026 00:24:17 GMT"
+}
