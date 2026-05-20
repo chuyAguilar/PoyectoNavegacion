@@ -1,197 +1,274 @@
 """
-Genera reference_dodecaedro.txt para el dodecaedro V1 con IDs 151-161.
+Genera reference_dodecaedro.txt para el rigid body multi-marker tipo dodecaedro.
 
-==========================================================================
-ADVERTENCIA (recuperacion 2026-05-14, Fase 1 de auditoria iter 2):
+Por defecto, reproduce la geometria de iteracion 1 (IDs 151-161, arista 20 mm,
+marker 16 mm), bit-a-bit identica al historico (RMSE BA 0.61 px).
 
-Este script fue recuperado desde una conversacion previa porque el original
-no estaba versionado en el repo. Al ejecutarlo y comparar con el
-reference_dodecaedro.txt que SI existe en data/, los resultados son:
+Para migrar a iteracion 2 (IDs 1-11):
+  python generar_reference_dodecaedro.py \
+      --id-top 1 --ids-superior 2,3,4,5,6 --ids-inferior 7,8,9,10,11 \
+      --output data/reference_dodecaedro_iter2.txt
 
-  - ID 151 (TOP): identico al 100%.
-  - IDs 152-161: centros identicos, pero las 4 esquinas estan rotadas
-                 ciclicamente 90 grados (c0 nuevo = c3 viejo, c1 = c0, etc.).
+Auditoria: documentos/auditoria_iter2/03a_auditoria_generar_reference_dodecaedro.md
 
-La fuente de verdad sigue siendo data/reference_dodecaedro.txt, porque
-ese fue el que sirvio de semilla al bundle adjustment exitoso (RMSE 0.61 px)
-y todo el pipeline downstream (tracker, pivote, registro) ya esta validado
-contra el. Este script queda como referencia historica de la matematica
-generadora, NO regenerar data/reference_dodecaedro.txt con el sin antes
-auditar la convencion de orden de esquinas en Fase 3.
-==========================================================================
+Convencion de esquinas (OpenCV ArUco):
+  c0=TL  c1=TR  c2=BR  c3=BL  (clockwise empezando por top-left)
 
-Convencion (iteracion 1):
-  ID 151: cara TOP (eje +Z)
-  IDs 152-156: cinturon superior (azimuts 0, 72, 144, 216, 288 deg)
-  IDs 157-161: cinturon inferior (azimuts 36, 108, 180, 252, 324 deg)
-
-Geometria:
-  Arista del dodecaedro: 20 mm (medida real del impreso)
-  Tamanio de marcador: 16 mm
-  Configuracion: antiprismatica (cinturon inferior offset 36 deg respecto al superior)
-
-Formato del archivo:
-  tag_id  cx cy cz  c0x c0y c0z  c1x c1y c1z  c2x c2y c2z  c3x c3y c3z
-  donde c0, c1, c2, c3 son las 4 esquinas del marcador en orden:
-    c0: top-left, c1: top-right, c2: bottom-right, c3: bottom-left
-  El orden corresponde a la convencion de OpenCV ArUco.
+Convencion fisica del label:
+  El label del marker apunta hacia +Z (regla 'ID label apuntando hacia la
+  punta'). El frame local de cada cara es right-handed con la normal saliente.
 """
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
 import numpy as np
 
-# ============================================================================
-# PARAMETROS GEOMETRICOS
-# ============================================================================
 
-# Constante geometrica del dodecaedro regular
-PHI = (1 + np.sqrt(5)) / 2
+PHI = (1.0 + np.sqrt(5.0)) / 2.0
+THETA = np.arccos(1.0 / np.sqrt(5.0))
+DIHEDRAL_DEG = float(np.degrees(np.arccos(-1.0 / np.sqrt(5.0))))
 
-# Arista del dodecaedro (medida real del impreso)
-EDGE_MM = 20.0
-
-# Tamanio del marcador (medido real del impreso)
-MARKER_MM = 16.0
-
-# Radio inscrito (distancia del centro del dodecaedro a una cara)
-R_IN = EDGE_MM * PHI**2 / (2 * np.sqrt(3 - PHI))
-
-# Angulo polar de las caras del cinturon (desde el eje +Z)
-THETA = np.arccos(1 / np.sqrt(5))
+DEFAULT_EDGE_MM = 20.0
+DEFAULT_MARKER_MM = 16.0
+DEFAULT_ID_TOP = 151
+DEFAULT_IDS_SUPERIOR = [152, 153, 154, 155, 156]
+DEFAULT_IDS_INFERIOR = [157, 158, 159, 160, 161]
 
 
-# ============================================================================
-# CONVENCION DE IDs (ITERACION 1)
-# ============================================================================
-
-# IDs por posicion en el dodecaedro
-ID_TOP = 151
-IDS_SUPERIOR = [152, 153, 154, 155, 156]   # azimuts 0, 72, 144, 216, 288
-IDS_INFERIOR = [157, 158, 159, 160, 161]   # azimuts 36, 108, 180, 252, 324
+def inradius(edge_mm):
+    """Distancia del centro del dodecaedro a una cara."""
+    return edge_mm * PHI**2 / (2.0 * np.sqrt(3.0 - PHI))
 
 
-# ============================================================================
-# FUNCIONES GEOMETRICAS
-# ============================================================================
-
-def rotation_matrix(axis, angle):
-    """Matriz de rotacion 3x3 alrededor de un eje (Rodrigues)."""
-    axis = np.array(axis) / np.linalg.norm(axis)
-    a = np.cos(angle / 2)
-    b, c, d = -axis * np.sin(angle / 2)
-    return np.array([
-        [a*a + b*b - c*c - d*d, 2*(b*c - a*d), 2*(b*d + a*c)],
-        [2*(b*c + a*d), a*a + c*c - b*b - d*d, 2*(c*d - a*b)],
-        [2*(b*d - a*c), 2*(c*d + a*b), a*a + d*d - b*b - c*c]
-    ])
+def diametro_cara_pentagonal(edge_mm):
+    """Diametro circunscrito al pentagono regular de lado edge_mm."""
+    return edge_mm / np.sin(np.radians(36.0))
 
 
-def construir_cara(centro, normal, rotacion_propia=0):
-    """Construye las 4 esquinas de un marcador en una cara del dodecaedro.
+def construir_cara(centro, normal, marker_mm, rotacion_propia=0.0):
+    """4 esquinas de un marker en una cara del dodecaedro.
 
-    Args:
-        centro: posicion 3D del centro de la cara
-        normal: vector normal a la cara (apunta hacia afuera)
-        rotacion_propia: angulo (rad) de rotacion del marcador alrededor de su normal
+    Frame local right-handed (z=normal saliente):
+      y_marker = proyeccion de +Z sobre la cara (label apunta hacia +Z).
+                 Caso especial TOP/BASE: y_marker = +Y global.
+      x_marker = cross(y_marker, normal).
 
-    Returns:
-        Array (4, 3) con las 4 esquinas en el orden top-left, top-right, bottom-right, bottom-left
+    Esquinas OpenCV ArUco: c0=TL, c1=TR, c2=BR, c3=BL.
     """
-    # Sistema de coordenadas local de la cara:
-    # - eje z local = normal (apunta hacia afuera)
-    # - eje x local = perpendicular a la normal, en un plano elegido consistentemente
-    # - eje y local = z x x
-    # Para que el sistema sea consistente, elegimos x como la proyeccion
-    # del eje Z global sobre el plano de la cara
-    z_global = np.array([0, 0, 1])
+    z_global = np.array([0.0, 0.0, 1.0])
 
-    # Si la cara mira hacia arriba o abajo, usar eje X global como referencia
     if abs(np.dot(normal, z_global)) > 0.99:
-        x_ref = np.array([1, 0, 0])
+        y_marker = np.array([0.0, 1.0, 0.0])
     else:
-        x_ref = z_global
+        y_marker = z_global - np.dot(z_global, normal) * normal
+        y_marker = y_marker / np.linalg.norm(y_marker)
 
-    # Proyectar x_ref sobre el plano de la cara
-    x_local = x_ref - np.dot(x_ref, normal) * normal
-    x_local = x_local / np.linalg.norm(x_local)
+    x_marker = np.cross(y_marker, normal)
+    x_marker = x_marker / np.linalg.norm(x_marker)
 
-    # Aplicar rotacion propia del marcador
-    if rotacion_propia != 0:
-        R = rotation_matrix(normal, rotacion_propia)
-        x_local = R @ x_local
+    if rotacion_propia != 0.0:
+        from scipy.spatial.transform import Rotation
+        R = Rotation.from_rotvec(normal * rotacion_propia).as_matrix()
+        x_marker = R @ x_marker
+        y_marker = R @ y_marker
 
-    y_local = np.cross(normal, x_local)
-    y_local = y_local / np.linalg.norm(y_local)
-
-    # Las 4 esquinas del marcador (en sistema local, luego trasladar)
-    half = MARKER_MM / 2
-    esquinas_locales = [
-        np.array([-half,  half, 0]),  # c0: top-left
-        np.array([ half,  half, 0]),  # c1: top-right
-        np.array([ half, -half, 0]),  # c2: bottom-right
-        np.array([-half, -half, 0]),  # c3: bottom-left
-    ]
-
-    # Transformar a sistema global
-    R_local_to_global = np.column_stack([x_local, y_local, normal])
-    esquinas_globales = np.array([centro + R_local_to_global @ esq for esq in esquinas_locales])
-
-    return esquinas_globales
+    half = marker_mm / 2.0
+    esquinas_locales = np.array([
+        [-half,  half, 0.0],
+        [ half,  half, 0.0],
+        [ half, -half, 0.0],
+        [-half, -half, 0.0],
+    ])
+    R_local_to_global = np.column_stack([x_marker, y_marker, normal])
+    return centro + esquinas_locales @ R_local_to_global.T
 
 
-# ============================================================================
-# CONSTRUCCION DEL DODECAEDRO
-# ============================================================================
+def _validar_inputs(edge_mm, marker_mm, id_top, ids_superior, ids_inferior):
+    if edge_mm <= 0.0:
+        raise ValueError(f"edge_mm debe ser positivo (recibido: {edge_mm})")
+    if marker_mm <= 0.0:
+        raise ValueError(f"marker_mm debe ser positivo (recibido: {marker_mm})")
+    diam = diametro_cara_pentagonal(edge_mm)
+    if marker_mm >= diam:
+        raise ValueError(
+            f"marker_mm={marker_mm} no cabe en cara pentagonal "
+            f"(diam={diam:.3f} mm con edge={edge_mm} mm)"
+        )
+    if len(ids_superior) != 5:
+        raise ValueError(f"ids_superior debe tener 5 IDs (recibidos {len(ids_superior)})")
+    if len(ids_inferior) != 5:
+        raise ValueError(f"ids_inferior debe tener 5 IDs (recibidos {len(ids_inferior)})")
+    todos = [id_top] + list(ids_superior) + list(ids_inferior)
+    if len(set(todos)) != 11:
+        raise ValueError(f"Los 11 IDs deben ser unicos; recibidos: {todos}")
 
-def construir_dodecaedro():
-    """Devuelve dict {tag_id: 4x3 esquinas} para los 11 marcadores."""
+
+def construir_dodecaedro(edge_mm=DEFAULT_EDGE_MM, marker_mm=DEFAULT_MARKER_MM,
+                         id_top=DEFAULT_ID_TOP, ids_superior=None, ids_inferior=None):
+    """Geometria 3D de los 11 markers del dodecaedro."""
+    if ids_superior is None:
+        ids_superior = list(DEFAULT_IDS_SUPERIOR)
+    if ids_inferior is None:
+        ids_inferior = list(DEFAULT_IDS_INFERIOR)
+
+    _validar_inputs(edge_mm, marker_mm, id_top, ids_superior, ids_inferior)
+
+    r_in = inradius(edge_mm)
     geometria = {}
 
-    # === Cara TOP (ID 151) ===
-    centro_top = np.array([0, 0, R_IN])
-    normal_top = np.array([0, 0, 1])
-    geometria[ID_TOP] = construir_cara(centro_top, normal_top)
+    centro_top = np.array([0.0, 0.0, r_in])
+    normal_top = np.array([0.0, 0.0, 1.0])
+    geometria[id_top] = construir_cara(centro_top, normal_top, marker_mm)
 
-    # === Cinturon superior (IDs 152-156) ===
-    for i, tag_id in enumerate(IDS_SUPERIOR):
-        azimut = i * (2 * np.pi / 5)  # 0, 72, 144, 216, 288 deg
+    for i, tag_id in enumerate(ids_superior):
+        az = i * (2.0 * np.pi / 5.0)
         centro = np.array([
-            np.sin(THETA) * np.cos(azimut),
-            np.sin(THETA) * np.sin(azimut),
-            np.cos(THETA)
-        ]) * R_IN
+            np.sin(THETA) * np.cos(az),
+            np.sin(THETA) * np.sin(az),
+            np.cos(THETA),
+        ]) * r_in
         normal = centro / np.linalg.norm(centro)
-        geometria[tag_id] = construir_cara(centro, normal)
+        geometria[tag_id] = construir_cara(centro, normal, marker_mm)
 
-    # === Cinturon inferior (IDs 157-161) ===
-    for i, tag_id in enumerate(IDS_INFERIOR):
-        azimut = i * (2 * np.pi / 5) + np.pi / 5  # offset 36 deg
+    for i, tag_id in enumerate(ids_inferior):
+        az = i * (2.0 * np.pi / 5.0) + np.pi / 5.0
         centro = np.array([
-            np.sin(THETA) * np.cos(azimut),
-            np.sin(THETA) * np.sin(azimut),
-            -np.cos(THETA)
-        ]) * R_IN
+            np.sin(THETA) * np.cos(az),
+            np.sin(THETA) * np.sin(az),
+            -np.cos(THETA),
+        ]) * r_in
         normal = centro / np.linalg.norm(centro)
-        geometria[tag_id] = construir_cara(centro, normal)
+        geometria[tag_id] = construir_cara(centro, normal, marker_mm)
 
     return geometria
 
 
-# ============================================================================
-# GUARDAR ARCHIVO
-# ============================================================================
+def validar_geometria(geometria, edge_mm=DEFAULT_EDGE_MM, marker_mm=DEFAULT_MARKER_MM,
+                      id_top=DEFAULT_ID_TOP, ids_superior=None, ids_inferior=None,
+                      tol_mm=1e-3, verbose=True):
+    """Valida la geometria contra invariantes del dodecaedro regular."""
+    if ids_superior is None:
+        ids_superior = list(DEFAULT_IDS_SUPERIOR)
+    if ids_inferior is None:
+        ids_inferior = list(DEFAULT_IDS_INFERIOR)
 
-def guardar_archivo(geometria, output_path):
+    r_in_esp = inradius(edge_mm)
+    d_adj_esp = 2.0 * r_in_esp * np.sin(THETA / 2.0)
+    diam = diametro_cara_pentagonal(edge_mm)
+
+    chequeos = []
+
+    def add(nombre, ok, valor="", esperado="", unidad=""):
+        chequeos.append((nombre, ok, str(valor), str(esperado), unidad))
+
+    add("PHI identidad (phi^2 = phi+1)", abs(PHI**2 - PHI - 1) < 1e-12)
+
+    theta_alt = np.pi - np.arccos(-1.0 / np.sqrt(5.0))
+    add("THETA = pi - dihedral", abs(THETA - theta_alt) < 1e-12,
+        f"{np.degrees(THETA):.6f}", f"{np.degrees(theta_alt):.6f}", "deg")
+
+    r_in_alt = (edge_mm / 2.0) * np.sqrt(2.5 + 1.1 * np.sqrt(5.0))
+    add("inradius formulas alternativas coinciden",
+        abs(r_in_esp - r_in_alt) < 1e-9,
+        f"{r_in_esp:.6f}", f"{r_in_alt:.6f}", "mm")
+
+    add("11 markers presentes", len(geometria) == 11, len(geometria), 11)
+
+    ids_esp = set([id_top] + list(ids_superior) + list(ids_inferior))
+    add("IDs esperados presentes", ids_esp == set(geometria.keys()),
+        sorted(geometria.keys()), sorted(ids_esp))
+
+    max_err_eq = 0.0
+    for esq in geometria.values():
+        err = abs(np.linalg.norm(esq.mean(axis=0)) - r_in_esp)
+        if err > max_err_eq:
+            max_err_eq = err
+    add("Caras equidistantes del origen", max_err_eq < tol_mm,
+        f"{max_err_eq:.6f}", f"< {tol_mm}", "mm")
+
+    margen = (diam - marker_mm) / 2.0
+    add("Marker cabe en cara (margen > 1 mm)", margen > 1.0,
+        f"{margen:.3f}", "> 1.0", "mm")
+
+    c_top = geometria[id_top].mean(axis=0)
+    max_err_ts = 0.0
+    for tid in ids_superior:
+        err = abs(np.linalg.norm(c_top - geometria[tid].mean(axis=0)) - d_adj_esp)
+        if err > max_err_ts:
+            max_err_ts = err
+    add("Distancia TOP <-> cinturon superior uniforme", max_err_ts < tol_mm,
+        f"{max_err_ts:.6f}", f"d_adj={d_adj_esp:.4f}", "mm")
+
+    max_err_si = 0.0
+    for i in range(5):
+        err = abs(np.linalg.norm(
+            geometria[ids_superior[i]].mean(axis=0)
+            - geometria[ids_inferior[i]].mean(axis=0)
+        ) - d_adj_esp)
+        if err > max_err_si:
+            max_err_si = err
+    add("Adyacencia antiprismatica (sup_i, inf_i)", max_err_si < tol_mm,
+        f"{max_err_si:.6f}", f"d_adj={d_adj_esp:.4f}", "mm")
+
+    normales = []
+    for esq in geometria.values():
+        n = esq.mean(axis=0)
+        normales.append(n / np.linalg.norm(n))
+    normales.append(np.array([0.0, 0.0, -1.0]))
+    suma_norm = np.linalg.norm(np.sum(normales, axis=0))
+    add("Simetria: suma de 12 normales ~ 0", suma_norm < 1e-10,
+        f"{suma_norm:.2e}", "< 1e-10")
+
+    max_err_lado = 0.0
+    for esq in geometria.values():
+        for i in range(4):
+            err = abs(np.linalg.norm(esq[i] - esq[(i + 1) % 4]) - marker_mm)
+            if err > max_err_lado:
+                max_err_lado = err
+    add("Esquinas forman cuadrado de lado marker_mm",
+        max_err_lado < tol_mm, f"{max_err_lado:.6f}", f"{marker_mm}", "mm")
+
+    if verbose:
+        print(f"\n{'='*78}\nVALIDACION GEOMETRICA EXHAUSTIVA\n{'='*78}")
+        print(f"Parametros: edge={edge_mm} mm, marker={marker_mm} mm")
+        print(f"             id_top={id_top}, ids_sup={ids_superior}, ids_inf={ids_inferior}")
+        print(f"Esperados: r_in={r_in_esp:.4f} mm, d_adj={d_adj_esp:.4f} mm, "
+              f"dihedral={DIHEDRAL_DEG:.3f} deg, diam_cara={diam:.3f} mm")
+        print(f"Tolerancia: {tol_mm} mm")
+        print("-" * 78)
+        for nombre, ok, v, e, u in chequeos:
+            estado = "PASS" if ok else "FAIL"
+            extra = f"  [{v} vs {e} {u}]" if v or e else ""
+            print(f"  [{estado}] {nombre}{extra}")
+        print("-" * 78)
+
+    ok_todos = all(c[1] for c in chequeos)
+    if verbose:
+        print(f"RESULTADO: {'TODOS PASS' if ok_todos else 'HAY FAILS'}\n")
+    return ok_todos
+
+
+def guardar_archivo(geometria, output_path, edge_mm=DEFAULT_EDGE_MM,
+                    marker_mm=DEFAULT_MARKER_MM):
     """Guarda en formato reference.txt compatible con tracker.py."""
-    with open(output_path, "w") as f:
-        f.write(f"# Geometria TEORICA del dodecaedro V1\n")
-        f.write(f"# IDs: 151-161 (TOP, cinturon superior, cinturon inferior)\n")
-        f.write(f"# Arista: {EDGE_MM} mm\n")
-        f.write(f"# Marcador: {MARKER_MM} mm\n")
-        f.write(f"# Radio inscrito: {R_IN:.4f} mm\n")
-        f.write(f"# Formato: tag_id  cx cy cz  c0x c0y c0z  c1x c1y c1z  c2x c2y c2z  c3x c3y c3z\n")
-        f.write(f"#\n")
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    r_in = inradius(edge_mm)
+    ids_sorted = sorted(geometria.keys())
 
-        # Ordenar por ID
-        for tag_id in sorted(geometria.keys()):
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("# Geometria TEORICA del dodecaedro multi-marker\n")
+        f.write(f"# IDs: {ids_sorted}\n")
+        f.write(f"# Arista del dodecaedro: {edge_mm} mm\n")
+        f.write(f"# Tamano del marker: {marker_mm} mm\n")
+        f.write(f"# Radio inscrito: {r_in:.4f} mm\n")
+        f.write("# Convencion esquinas (OpenCV ArUco): c0=TL c1=TR c2=BR c3=BL\n")
+        f.write("# Convencion fisica: label apunta hacia +Z (hacia la punta)\n")
+        f.write("# Formato: tag_id  cx cy cz  c0x c0y c0z  c1x c1y c1z  c2x c2y c2z  c3x c3y c3z\n")
+        f.write("#\n")
+        for tag_id in ids_sorted:
             esquinas = geometria[tag_id]
             centro = esquinas.mean(axis=0)
             valores = list(centro) + list(esquinas.flatten())
@@ -199,50 +276,50 @@ def guardar_archivo(geometria, output_path):
             f.write(linea + "\n")
 
 
-# ============================================================================
-# VALIDACION DE ADYACENCIAS
-# ============================================================================
-
-def validar_geometria(geometria):
-    """Imprime distancias entre caras para validar la geometria."""
-    print("\n=== VALIDACION GEOMETRICA ===")
-    print(f"Radio inscrito teorico: {R_IN:.3f} mm")
-    print(f"Arista: {EDGE_MM} mm")
-    print(f"Marcador: {MARKER_MM} mm")
-
-    # Distancia entre caras adyacentes en dodecaedro regular
-    centro_top = geometria[ID_TOP].mean(axis=0)
-    centro_sup0 = geometria[IDS_SUPERIOR[0]].mean(axis=0)
-    d_adj = np.linalg.norm(centro_top - centro_sup0)
-    print(f"\nDistancia TOP-Sup_0 (caras adyacentes): {d_adj:.3f} mm")
-
-    print(f"\nValidacion clave: ID 152 (Sup_0) e ID 157 (Inf_0) deben compartir arista")
-    centro_152 = geometria[152].mean(axis=0)
-    centro_157 = geometria[157].mean(axis=0)
-    d_152_157 = np.linalg.norm(centro_152 - centro_157)
-    print(f"Distancia ID152-ID157: {d_152_157:.3f} mm")
-
-    if abs(d_152_157 - d_adj) < 0.5:
-        print(f"  OK: comparten arista (distancia {d_152_157:.2f} ~ {d_adj:.2f} mm)")
-    else:
-        print(f"  ERROR: NO comparten arista")
+def _parse_int_list(s):
+    return [int(x.strip()) for x in s.split(",") if x.strip()]
 
 
-# ============================================================================
-# MAIN
-# ============================================================================
+def main():
+    parser = argparse.ArgumentParser(
+        description="Genera reference_dodecaedro.txt (geometria teorica).",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("--output", default="data/reference_dodecaedro.txt")
+    parser.add_argument("--edge-mm", type=float, default=DEFAULT_EDGE_MM)
+    parser.add_argument("--marker-mm", type=float, default=DEFAULT_MARKER_MM)
+    parser.add_argument("--id-top", type=int, default=DEFAULT_ID_TOP)
+    parser.add_argument("--ids-superior", type=_parse_int_list,
+                        default=DEFAULT_IDS_SUPERIOR)
+    parser.add_argument("--ids-inferior", type=_parse_int_list,
+                        default=DEFAULT_IDS_INFERIOR)
+    parser.add_argument("--no-validate", action="store_true")
+    args = parser.parse_args()
 
-if __name__ == "__main__":
-    print("Generando geometria teorica del dodecaedro V1 (IDs 151-161)...")
-    geometria = construir_dodecaedro()
-    validar_geometria(geometria)
+    print("Generando geometria teorica del dodecaedro...")
+    print(f"  edge={args.edge_mm} mm, marker={args.marker_mm} mm")
+    print(f"  id_top={args.id_top}, ids_sup={args.ids_superior}, ids_inf={args.ids_inferior}")
 
-    output_path = "reference_dodecaedro.txt"
-    guardar_archivo(geometria, output_path)
-    print(f"\nArchivo generado: {output_path}")
+    geometria = construir_dodecaedro(
+        edge_mm=args.edge_mm, marker_mm=args.marker_mm,
+        id_top=args.id_top,
+        ids_superior=args.ids_superior, ids_inferior=args.ids_inferior,
+    )
+
+    if not args.no_validate:
+        ok = validar_geometria(
+            geometria, edge_mm=args.edge_mm, marker_mm=args.marker_mm,
+            id_top=args.id_top,
+            ids_superior=args.ids_superior, ids_inferior=args.ids_inferior,
+        )
+        if not ok:
+            raise SystemExit("ERROR: la validacion fallo. No se guarda el archivo.")
+
+    guardar_archivo(geometria, args.output,
+                    edge_mm=args.edge_mm, marker_mm=args.marker_mm)
+    print(f"\nArchivo generado: {args.output}")
     print(f"Total marcadores: {len(geometria)}")
 
-    print("\n=== POSICIONES DE CENTROS ===")
-    for tag_id in sorted(geometria.keys()):
-        centro = geometria[tag_id].mean(axis=0)
-        print(f"  ID {tag_id:3d}: ({centro[0]:+7.2f}, {centro[1]:+7.2f}, {centro[2]:+7.2f}) mm")
+
+if __name__ == "__main__":
+    main()
