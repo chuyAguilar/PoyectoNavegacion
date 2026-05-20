@@ -1,0 +1,84 @@
+digraph mapa_flujo {
+	bgcolor=white compound=true fontname=Helvetica fontsize=11 nodesep=0.35 rankdir=TB ranksep=0.55 splines=spline
+	node [fillcolor=white fontname=Helvetica fontsize=10 margin="0.15,0.08" shape=box style="rounded,filled"]
+	edge [color="#555555" fontname=Helvetica fontsize=9]
+
+	subgraph cluster_A {
+		color="#90caf9" fillcolor="#f7fbff" fontname="Helvetica-Bold" fontsize=12 label="A. Calibracion camara  (una vez por setup optico)" labeljust=l style="rounded,filled"
+		A1 [label="Patron de calibracion\n(MRPT, 1280x960)" color="#8d6e00" fillcolor="#fffde7" shape=parallelogram style=filled]
+		A2 [label="camera_calibration_caja_luz.yml\nK + dist - RMSE 0.479 px" color="#01579b" fillcolor="#e1f5ff" shape=folder style=filled]
+		A1 -> A2
+	}
+
+	subgraph cluster_BD {
+		color="#ffb300" fillcolor="#fff8e1" fontname="Helvetica-Bold" fontsize=12 label="B - D. Geometria del dodecaedro  (una vez por ensamblaje)" labeljust=l style="rounded,filled"
+
+		B1 [label="generar_reference_dodecaedro.py\n(Etapa B - auditado, 29 tests)" color="#333333" fillcolor="#ffffff" style="rounded,filled"]
+		B2 [label="reference_dodecaedro.txt\n(geometria TEORICA, IDs default)" color="#cc8400" fillcolor="#fff3e0" shape=folder style=filled]
+
+		C1 [label="captura_calibracion.py\n(Etapa C - --duracion 60)" color="#333333" fillcolor="#ffffff" style="rounded,filled"]
+		C2 [label="capturas_calibracion.npz\n(>=100 frames con >=2 markers)" color="#cc8400" fillcolor="#fff3e0" shape=folder style=filled]
+
+		C5 [label="calibrar_topologia.py\n(Etapa C.5 - NUEVO\nopcional pero recomendado)" color="#5e35b1" fillcolor="#ede7f6" style="rounded,filled"]
+		C5out [label="reference_dodecaedro_real.txt\n(geom teorica con orden REAL de IDs)" color="#4527a0" fillcolor="#ede7f6" shape=folder style=filled]
+
+		D1 [label="calibrar_rigid_body.py\n(Etapa D - rigida 6 DOF\n--max-frames 150)" color="#333333" fillcolor="#ffffff" style="rounded,filled"]
+		D2 [label="reference_dodecaedro_calibrado.txt\n(BA - RMSE 0.45 px\nProcrustes < 1mm)" color="#2e7d32" fillcolor="#e8f5e9" shape=folder style=filled]
+
+		B1 -> B2
+		B2 -> C1 [label=" IDs "]
+		C1 -> C2
+		C2 -> C5
+		C2 -> D1
+		C5 -> C5out
+		C5out -> D1 [label=" --teorico\n (recomendado)"]
+		B2 -> D1 [label=" --teorico\n (fallback)" style=dashed color="#999999" fontcolor="#999999"]
+		D1 -> D2
+	}
+
+	subgraph cluster_E {
+		color="#ec407a" fillcolor="#fce4ec" fontname="Helvetica-Bold" fontsize=12 label="E. Calibracion de pivote  (una vez por ensamblaje del stylus)" labeljust=l style="rounded,filled"
+		E1 [label="test_pivote.py\n(--duracion 45\npendiente auditoria)" color="#333333" fillcolor="#ffffff" style="rounded,filled"]
+		E2 [label="poses_pivote_dodecaedro.npy" color="#cc8400" fillcolor="#fff3e0" shape=folder style=filled]
+		E3 [label="StylusTipToDodecaedro\n.npy / .txt\n(.h5 manual en Slicer)" color="#ad1457" fillcolor="#fce4ec" shape=folder style=filled]
+		E1 -> E2
+		E1 -> E3
+	}
+
+	subgraph cluster_F {
+		color="#66bb6a" fillcolor="#e8f5e9" fontname="Helvetica-Bold" fontsize=12 label="F. Tracking en vivo  (cada sesion)" labeljust=l style="rounded,filled"
+		F1 [label="tracker.py\n--config tracker_config.yaml" color="#333333" fillcolor="#ffffff" style="rounded,filled"]
+		F2 [label="Marker0ToTracker\nDodecaedroToTracker\n(OpenIGTLink :18944)" color="#cc8400" fillcolor="#fff3e0" shape=folder style=filled]
+		F1 -> F2
+	}
+
+	subgraph cluster_SL {
+		color="#7e57c2" fillcolor="#ede7f6" fontname="Helvetica-Bold" fontsize=12 label="G + H + I. 3D Slicer + SlicerIGT  (cada sesion)" labeljust=l style="rounded,filled"
+		S1 [label="OpenIGTLink IF\n(recibe Marker0/Dodec ToTracker)" color="#4527a0" fillcolor="#ffffff" style="rounded,filled"]
+		S2 [label="StylusTipToDodecaedro\n(cargado manual como Transform)" color="#4527a0" fillcolor="#ffffff" style="rounded,filled"]
+		S3 [label="Transform Processor\nDodecaedroToMarker0 =\n inv(Marker0ToTracker) . DodecaedroToTracker" color="#4527a0" fillcolor="#ffffff" style="rounded,filled"]
+		S4 [label="Captura puntos fisicos\n(StylusTip + MarkupsFiducial)" color="#4527a0" fillcolor="#ffffff" style="rounded,filled"]
+		S5 [label="STL del hueso" color="#cc8400" fillcolor="#fff3e0" shape=folder]
+		S6 [label="Captura puntos modelo\n(BoneSTL_Points)" color="#4527a0" fillcolor="#ffffff" style="rounded,filled"]
+		S7 [label="Fiducial Registration Wizard\n(rigid)" color="#4527a0" fillcolor="#ffffff" style="rounded,filled"]
+		S8 [label="BoneToMarker0\nRMS <= 3.46 mm (iter 1)\nobjetivo iter 2: <=2 mm" color="#6a1b9a" fillcolor="#f3e5f5" shape=folder]
+		S9 [label="Visualizacion coherente:\nstylus tip + hueso virtual\nse mueven juntos con el paciente" color="#1b5e20" fillcolor="#e8f5e9" style="rounded,filled" peripheries=2]
+
+		S1 -> S3
+		S3 -> S4
+		S5 -> S6
+		S4 -> S7
+		S6 -> S7
+		S7 -> S8
+		S2 -> S9 [label=" jerarquia\n stylus "]
+		S8 -> S9 [label=" jerarquia\n hueso "]
+	}
+
+	A2 -> C1 [label=" K + dist "]
+	A2 -> E1 [label=" K + dist "]
+	A2 -> F1 [label=" K + dist "]
+	D2 -> E1 [label=" geom\n calibrada "]
+	D2 -> F1 [label=" geom\n calibrada "]
+	E3 -> S2 [label=" carga\n manual " style=dashed]
+	F2 -> S1 [label=" stream\n :18944 "]
+}

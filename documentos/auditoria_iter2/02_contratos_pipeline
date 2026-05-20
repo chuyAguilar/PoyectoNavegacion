@@ -1,0 +1,91 @@
+digraph contratos {
+	bgcolor=white compound=true fontname=Helvetica fontsize=11 nodesep=0.4 rankdir=TB ranksep=0.6 splines=spline
+	node [shape=plaintext fontname=Helvetica]
+	edge [color="#555555" fontname=Helvetica fontsize=9]
+
+	// === A. Calibración cámara ===
+	A1 [label=<
+	<TABLE BORDER="2" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#01579b" BGCOLOR="#f7fbff">
+	<TR><TD COLSPAN="2" BGCOLOR="#01579b"><FONT COLOR="white"><B>MRPT (externo)  -  Etapa A</B></FONT></TD></TR>
+	<TR><TD BGCOLOR="#e1f5ff"><B>Recibe</B></TD><TD ALIGN="LEFT">Capturas del tablero a 1280x960</TD></TR>
+	<TR><TD BGCOLOR="#fff8e1"><B>Hace</B></TD><TD ALIGN="LEFT">Calibracion intrinseca de camara<BR/>(modelo pinhole + distorsion)</TD></TR>
+	<TR><TD BGCOLOR="#e8f5e9"><B>Devuelve</B></TD><TD ALIGN="LEFT">camera_calibration_caja_luz.yml<BR/>K (3x3) + dist (1x5)<BR/>RMSE 0.479 px</TD></TR>
+	</TABLE>>]
+
+	// === B. Generar teórico ===
+	B1 [label=<
+	<TABLE BORDER="2" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#cc8400" BGCOLOR="#fff8e1">
+	<TR><TD COLSPAN="2" BGCOLOR="#cc8400"><FONT COLOR="white"><B>generar_reference_dodecaedro.py  -  Etapa B</B></FONT></TD></TR>
+	<TR><TD BGCOLOR="#e1f5ff"><B>Recibe</B></TD><TD ALIGN="LEFT">--edge-mm 20<BR/>--marker-mm 16<BR/>--id-top 151<BR/>--ids-superior 152..156<BR/>--ids-inferior 157..161</TD></TR>
+	<TR><TD BGCOLOR="#fff8e1"><B>Hace</B></TD><TD ALIGN="LEFT">Calcula geometria pentagonal regular<BR/>11 validaciones (PHI, inradius, simetrias)<BR/>Construye 11 markers en sus caras</TD></TR>
+	<TR><TD BGCOLOR="#e8f5e9"><B>Devuelve</B></TD><TD ALIGN="LEFT">reference_dodecaedro.txt<BR/>11 lineas: id  cx cy cz  c0..c3<BR/>(geometria TEORICA default)</TD></TR>
+	</TABLE>>]
+
+	// === C. Captura ===
+	C1 [label=<
+	<TABLE BORDER="2" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#cc8400" BGCOLOR="#fff8e1">
+	<TR><TD COLSPAN="2" BGCOLOR="#cc8400"><FONT COLOR="white"><B>captura_calibracion.py  -  Etapa C</B></FONT></TD></TR>
+	<TR><TD BGCOLOR="#e1f5ff"><B>Recibe</B></TD><TD ALIGN="LEFT">camera_calibration_caja_luz.yml (K, dist)<BR/>reference_dodecaedro.txt (solo IDs)<BR/>--duracion 60 (segundos)</TD></TR>
+	<TR><TD BGCOLOR="#fff8e1"><B>Hace</B></TD><TD ALIGN="LEFT">Abre camara MSMF+MJPG<BR/>Detecta markers con ArUco<BR/>Refina esquinas (subpix)<BR/>Guarda frames con &gt;=2 markers</TD></TR>
+	<TR><TD BGCOLOR="#e8f5e9"><B>Devuelve</B></TD><TD ALIGN="LEFT">capturas_calibracion.npz<BR/>- frames_data: list[{timestamp, detecciones}]<BR/>- K, dist, rb_ids<BR/>(~100-2500 frames utiles)</TD></TR>
+	</TABLE>>]
+
+	// === C.5. Topología (NUEVO) ===
+	C5 [label=<
+	<TABLE BORDER="3" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#4527a0" BGCOLOR="#ede7f6">
+	<TR><TD COLSPAN="2" BGCOLOR="#4527a0"><FONT COLOR="white"><B>calibrar_topologia.py  -  Etapa C.5  (NUEVO)</B></FONT></TD></TR>
+	<TR><TD BGCOLOR="#e1f5ff"><B>Recibe</B></TD><TD ALIGN="LEFT">capturas_calibracion.npz<BR/>--id-top 151<BR/>--edge-mm 20<BR/>--tol-adj-mm 5.0</TD></TR>
+	<TR><TD BGCOLOR="#fff8e1"><B>Hace</B></TD><TD ALIGN="LEFT">Estima pose de cada marker (IPPE_SQUARE)<BR/>Calcula distancias entre pares observados<BR/>Construye grafo de adyacencias<BR/>Identifica anillos sup e inf por TOP<BR/>Ordena ciclicamente</TD></TR>
+	<TR><TD BGCOLOR="#e8f5e9"><B>Devuelve</B></TD><TD ALIGN="LEFT">reference_dodecaedro_real.txt<BR/>(geometria teorica pero con<BR/> IDs en su orden FISICO REAL)</TD></TR>
+	</TABLE>>]
+
+	// === D. BA ===
+	D1 [label=<
+	<TABLE BORDER="2" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#2e7d32" BGCOLOR="#e8f5e9">
+	<TR><TD COLSPAN="2" BGCOLOR="#2e7d32"><FONT COLOR="white"><B>calibrar_rigid_body.py  -  Etapa D</B></FONT></TD></TR>
+	<TR><TD BGCOLOR="#e1f5ff"><B>Recibe</B></TD><TD ALIGN="LEFT">capturas_calibracion.npz<BR/>--teorico reference_dodecaedro_real.txt<BR/>--max-frames 150<BR/>--max-nfev 3000</TD></TR>
+	<TR><TD BGCOLOR="#fff8e1"><B>Hace</B></TD><TD ALIGN="LEFT">Bundle adjustment scipy.least_squares<BR/>Parametrizacion rigida 6 DOF por marker<BR/>Ancla ID 151 (gauge fixing)<BR/>Loss huber f_scale=2.0, method=trf<BR/>Verbose=2 (iter por iter)</TD></TR>
+	<TR><TD BGCOLOR="#e8f5e9"><B>Devuelve</B></TD><TD ALIGN="LEFT">reference_dodecaedro_calibrado.txt<BR/>+ metadata (versiones, hashes, status, RMSE)<BR/>RMSE ~0.45 px<BR/>Procrustes vs teorico &lt; 1 mm</TD></TR>
+	</TABLE>>]
+
+	// === E. Pivote ===
+	E1 [label=<
+	<TABLE BORDER="2" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#ad1457" BGCOLOR="#fce4ec">
+	<TR><TD COLSPAN="2" BGCOLOR="#ad1457"><FONT COLOR="white"><B>test_pivote.py  -  Etapa E  (pendiente auditoria)</B></FONT></TD></TR>
+	<TR><TD BGCOLOR="#e1f5ff"><B>Recibe</B></TD><TD ALIGN="LEFT">camera_calibration_caja_luz.yml (K, dist)<BR/>reference_dodecaedro_calibrado.txt<BR/>--duracion 45 (segundos)<BR/>Fisico: punta clavada, movimiento de cono</TD></TR>
+	<TR><TD BGCOLOR="#fff8e1"><B>Hace</B></TD><TD ALIGN="LEFT">Captura N poses del dodecaedro<BR/>RANSAC sobre ajuste de esfera<BR/>least-squares al centro pivote<BR/>Transforma centro a frame del dodecaedro</TD></TR>
+	<TR><TD BGCOLOR="#e8f5e9"><B>Devuelve</B></TD><TD ALIGN="LEFT">poses_pivote_dodecaedro.npy<BR/>StylusTipToDodecaedro.npy / .txt<BR/>(.h5 se genera manual en Slicer)<BR/>offset ~ 88 mm, std &lt; 2 mm/eje</TD></TR>
+	</TABLE>>]
+
+	// === F. Tracker ===
+	F1 [label=<
+	<TABLE BORDER="2" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#558b2f" BGCOLOR="#f1f8e9">
+	<TR><TD COLSPAN="2" BGCOLOR="#558b2f"><FONT COLOR="white"><B>tracker.py  -  Etapa F  (en vivo)</B></FONT></TD></TR>
+	<TR><TD BGCOLOR="#e1f5ff"><B>Recibe</B></TD><TD ALIGN="LEFT">camera_calibration_caja_luz.yml (K, dist)<BR/>reference_dodecaedro_calibrado.txt<BR/>--config tracker_config.yaml</TD></TR>
+	<TR><TD BGCOLOR="#fff8e1"><B>Hace</B></TD><TD ALIGN="LEFT">Loop en vivo a 28-30 FPS<BR/>Detecta marker 0 (paciente) y dodecaedro<BR/>solvePnP IPPE_SQUARE (N=1) o ITERATIVE (N&gt;=2)<BR/>Empaqueta como TransformMessage<BR/>Envia por OpenIGTLink :18944</TD></TR>
+	<TR><TD BGCOLOR="#e8f5e9"><B>Devuelve</B></TD><TD ALIGN="LEFT">Stream OpenIGTLink :18944<BR/>- Marker0ToTracker (cuando ID 0 visible)<BR/>- DodecaedroToTracker (cuando &gt;=1 marker)</TD></TR>
+	</TABLE>>]
+
+	// === G+H+I. Slicer ===
+	S1 [label=<
+	<TABLE BORDER="2" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#4527a0" BGCOLOR="#ede7f6">
+	<TR><TD COLSPAN="2" BGCOLOR="#4527a0"><FONT COLOR="white"><B>3D Slicer + SlicerIGT  -  Etapas G + H + I</B></FONT></TD></TR>
+	<TR><TD BGCOLOR="#e1f5ff"><B>Recibe</B></TD><TD ALIGN="LEFT">Stream OpenIGTLink (Marker0 + Dodec)<BR/>StylusTipToDodecaedro.h5 (carga manual)<BR/>STL del hueso phantom<BR/>Puntos fisicos (con stylus tip)<BR/>Puntos del modelo (en STL)</TD></TR>
+	<TR><TD BGCOLOR="#fff8e1"><B>Hace</B></TD><TD ALIGN="LEFT">Transform Processor: compone DodecaedroToMarker0<BR/>Fiducial Registration Wizard (rigid)<BR/>Calcula BoneToMarker0<BR/>Anida jerarquia de transformadas</TD></TR>
+	<TR><TD BGCOLOR="#e8f5e9"><B>Devuelve</B></TD><TD ALIGN="LEFT">Visualizacion coherente:<BR/>- Hueso virtual sobre el real<BR/>- Stylus tip en posicion correcta<BR/>- Todo se mueve con el paciente<BR/>RMS registro &lt;= 3.46 mm (objetivo &lt;=2 mm)</TD></TR>
+	</TABLE>>]
+
+	// === Conexiones ===
+	A1 -> C1 [label=" K, dist "]
+	A1 -> E1 [label=" K, dist "]
+	A1 -> F1 [label=" K, dist "]
+	B1 -> C1 [label=" IDs "]
+	B1 -> D1 [style=dashed color="#999999" label=" fallback "]
+	C1 -> C5
+	C1 -> D1
+	C5 -> D1 [label=" --teorico\n recomendado "]
+	D1 -> E1 [label=" geom\n calibrada "]
+	D1 -> F1 [label=" geom\n calibrada "]
+	E1 -> S1 [style=dashed label=" .h5 manual "]
+	F1 -> S1 [label=" stream\n :18944 "]
+}
