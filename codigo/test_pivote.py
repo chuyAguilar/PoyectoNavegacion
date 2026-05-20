@@ -124,7 +124,7 @@ def ajustar_esfera(puntos):
     return centro, r, rmse
 
 
-def ransac_pivote(poses, n_iter=1000, sample_size=20, umbral_inlier=1.5):
+def ransac_pivote(poses, n_iter=1000, sample_size=20, umbral_inlier=1.5, verbose=True):
     """RANSAC para identificar inliers y ajustar esfera robustamente."""
     posiciones = poses[:, :3, 3]
     N = len(posiciones)
@@ -142,8 +142,32 @@ def ransac_pivote(poses, n_iter=1000, sample_size=20, umbral_inlier=1.5):
         inliers = np.where(errores < umbral_inlier)[0]
         if len(inliers) > len(mejor_inliers):
             mejor_inliers = inliers
+        if verbose and (i + 1) % 200 == 0:
+            print(f"    RANSAC {i+1}/{n_iter}: mejor inlier set = {len(mejor_inliers)}/{N}")
 
     return mejor_inliers
+
+
+def ajustar_pivote_axb(poses):
+    """Pivote por la formulacion AX=b clasica (Yaniv 2015 / PlusServer).
+
+    Para cada pose i: R_i * t_dod + t_i = tip_cam (constante)
+    Apilando: [R_i, -I] @ [t_dod; tip_cam] = -t_i  para todo i.
+    Resuelve con least squares lineal cerrado.
+
+    Devuelve (offset_dod, tip_cam, rmse).
+    """
+    N = len(poses)
+    A = np.zeros((3 * N, 6))
+    b = np.zeros(3 * N)
+    for k, pose in enumerate(poses):
+        A[3*k:3*k+3, :3] = pose[:3, :3]
+        A[3*k:3*k+3, 3:6] = -np.eye(3)
+        b[3*k:3*k+3] = -pose[:3, 3]
+    x, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
+    offset_dod, tip_cam = x[:3], x[3:6]
+    rmse = float(np.sqrt(np.mean((A @ x - b) ** 2)))
+    return offset_dod, tip_cam, rmse
 
 
 # ============================================================================
@@ -191,17 +215,28 @@ def main():
     # Camara
     backends = {"DSHOW": cv2.CAP_DSHOW, "MSMF": cv2.CAP_MSMF, "ANY": cv2.CAP_ANY}
     cam_cfg = cfg["camera"]
-    backend = backends.get(cam_cfg.get("backend", "MSMF").upper(), cv2.CAP_MSMF)
+    backend_name = cam_cfg.get("backend", "MSMF").upper()
+    backend = backends.get(backend_name, cv2.CAP_MSMF)
+    print(f"[Camara] Abriendo source={cam_cfg['source']} backend={backend_name}...")
+    t0 = time.time()
     cap = cv2.VideoCapture(int(cam_cfg["source"]), backend)
     if not cap.isOpened():
         print("ERROR: no se pudo abrir la camara")
         sys.exit(1)
+    print(f"[Camara] Abierta en {time.time()-t0:.1f}s")
 
+    print(f"[Camara] Configurando FOURCC={cam_cfg.get('fourcc','MJPG')} "
+          f"{cam_cfg['width']}x{cam_cfg['height']} @ {cam_cfg.get('fps',30)} FPS...")
     fourcc = cv2.VideoWriter_fourcc(*cam_cfg.get("fourcc", "MJPG"))
     cap.set(cv2.CAP_PROP_FOURCC, fourcc)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_cfg["width"])
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_cfg["height"])
     cap.set(cv2.CAP_PROP_FPS, cam_cfg.get("fps", 30))
+    # Warmup: leer 3 frames descartables para que la camara se estabilice
+    print(f"[Camara] Warmup (descartando 3 frames iniciales)...")
+    for _ in range(3):
+        cap.read()
+    print(f"[Camara] Lista para capturar.")
 
     print(f"\n{'='*60}")
     print(f"  CAPTURA DE PIVOTE - Dodecaedro multi-marker")
@@ -282,8 +317,22 @@ def main():
         sys.exit(1)
 
     poses = np.array(poses)
+    # Guardado robusto: borrar archivo previo, escribir, fsync, verificar
+    import os
+    if os.path.exists(args.output):
+        os.remove(args.output)
     np.save(args.output, poses)
-    print(f"  Guardadas en: {args.output}")
+    # Forzar flush a disco
+    with open(args.output, "rb+") as f:
+        f.flush()
+        os.fsync(f.fileno())
+    # Verificar que se guardo correctamente
+    poses_releidas = np.load(args.output)
+    if poses_releidas.shape != poses.shape:
+        print(f"[ERROR] {args.output} se truncó al guardar: "
+              f"esperaba shape {poses.shape}, encontré {poses_releidas.shape}")
+        sys.exit(1)
+    print(f"  Guardadas en: {args.output} ({poses_releidas.shape[0]} poses, verificadas)")
 
     # ========================================================================
     # PROCESAR CON RANSAC
@@ -323,22 +372,51 @@ def main():
     print(f"  STD:      [{std[0]:.3f}, {std[1]:.3f}, {std[2]:.3f}] mm")
     print(f"  Magnitud: {np.linalg.norm(offset):.2f} mm")
 
+    # ========================================================================
+    # CROSS-CHECK: AX=b clasico (Yaniv) sobre los mismos inliers
+    # ========================================================================
+    print(f"\n{'='*60}")
+    print(f"  CROSS-CHECK: AX=b (Yaniv 2015) sobre inliers")
+    print(f"{'='*60}\n")
+    offset_axb, tip_cam_axb, axb_rmse = ajustar_pivote_axb(poses[inliers])
+    print(f"  Offset (AX=b):      [{offset_axb[0]:+.3f}, {offset_axb[1]:+.3f}, {offset_axb[2]:+.3f}] mm")
+    print(f"  Tip cam (AX=b):     [{tip_cam_axb[0]:+.3f}, {tip_cam_axb[1]:+.3f}, {tip_cam_axb[2]:+.3f}] mm")
+    print(f"  Magnitud:           {np.linalg.norm(offset_axb):.3f} mm")
+    print(f"  AX=b RMSE:          {axb_rmse:.3f} mm")
+
+    diff_offset = offset_axb - offset
+    diff_norm = float(np.linalg.norm(diff_offset))
+    print(f"\n  Diferencia esfera vs AX=b: {diff_norm:.3f} mm")
+    if diff_norm > 2.0:
+        print(f"  [!] DISCREPANCIA > 2 mm entre metodos. Probable causa fisica:")
+        print(f"      - Punta no perfectamente fija (se deslizo en el carton).")
+        print(f"      - Barra entre dodecaedro y punta con juego/flexion.")
+        print(f"      - Pocos markers/pose (objetivo >=3).")
+        print(f"  Considera re-clavar mejor la punta y re-capturar.")
+    elif diff_norm > 0.5:
+        print(f"  [ok] Pequena discrepancia, dentro de lo aceptable por ruido.")
+    else:
+        print(f"  [excelente] Ambos metodos coinciden, calibracion robusta.")
+
+    # ========================================================================
+    # EVALUACION
+    # ========================================================================
     print(f"\n{'='*60}")
     print(f"  EVALUACION")
     print(f"{'='*60}")
     std_max = std.max()
     if std_max < 1.0:
         print(f"\n  [EXCELENTE] Std maximo: {std_max:.2f} mm < 1 mm")
-        print(f"              Calibracion sub-milimetrica lograda.")
     elif std_max < 2.0:
         print(f"\n  [BUENO]     Std maximo: {std_max:.2f} mm < 2 mm")
-        print(f"              Aceptable para navegacion quirurgica.")
     elif std_max < 5.0:
         print(f"\n  [REGULAR]   Std maximo: {std_max:.2f} mm")
-        print(f"              Mejor que setup anterior pero no clinico.")
     else:
         print(f"\n  [INSUFICIENTE] Std maximo: {std_max:.2f} mm")
-        print(f"                 Setup necesita mas ajuste.")
+    if np.mean(n_markers_promedio) < 3.0:
+        print(f"\n  [!] Promedio de markers/pose = {np.mean(n_markers_promedio):.2f} (objetivo >=3).")
+    print(f"\n  Nota: la STD mide DISPERSION entre poses, NO error absoluto.")
+    print(f"        Si los dos metodos (esfera y AX=b) coinciden, la calibracion es buena.")
 
     # Guardar matriz StylusTipToDodecaedro
     matriz = np.eye(4)
@@ -348,10 +426,21 @@ def main():
     with open("StylusTipToDodecaedro.txt", "w") as f:
         f.write(f"# Matriz StylusTipToDodecaedro 4x4\n")
         f.write(f"# Offset del tip respecto al centro del dodecaedro\n")
-        f.write(f"# Calculada con {n_inliers} poses (RANSAC)\n")
-        f.write(f"# Offset (mm): [{offset[0]:.3f}, {offset[1]:.3f}, {offset[2]:.3f}]\n")
-        f.write(f"# Std (mm):    [{std[0]:.3f}, {std[1]:.3f}, {std[2]:.3f}]\n")
-        f.write(f"# RMSE: {rmse:.3f} mm\n\n")
+        f.write(f"# Calculada con {n_inliers} poses (RANSAC + sphere fit)\n")
+        f.write(f"# Markers promedio por pose: {np.mean(n_markers_promedio):.2f}\n")
+        f.write(f"#\n")
+        f.write(f"# METODO PRINCIPAL (esfera + transform):\n")
+        f.write(f"#   Offset (mm): [{offset[0]:+.3f}, {offset[1]:+.3f}, {offset[2]:+.3f}]\n")
+        f.write(f"#   Magnitud:    {np.linalg.norm(offset):.3f} mm\n")
+        f.write(f"#   Std (mm):    [{std[0]:.3f}, {std[1]:.3f}, {std[2]:.3f}]\n")
+        f.write(f"#   RMSE esfera: {rmse:.3f} mm\n")
+        f.write(f"#\n")
+        f.write(f"# CROSS-CHECK (AX=b clasico, Yaniv 2015):\n")
+        f.write(f"#   Offset (mm): [{offset_axb[0]:+.3f}, {offset_axb[1]:+.3f}, {offset_axb[2]:+.3f}]\n")
+        f.write(f"#   Magnitud:    {np.linalg.norm(offset_axb):.3f} mm\n")
+        f.write(f"#   AX=b RMSE:   {axb_rmse:.3f} mm\n")
+        f.write(f"#   Diff vs esfera: {diff_norm:.3f} mm\n")
+        f.write(f"#\n")
         for fila in matriz:
             f.write(" ".join(f"{v:12.6f}" for v in fila) + "\n")
 

@@ -151,15 +151,21 @@ def esquinas_a_marker_pose(corners, marker_mm):
 
 
 def parametrizar_geometria(geom_teorica, ids_orden, ancla_id, marker_mm):
-    """Parametrizacion RIGIDA: 6 floats por marker no anclado (centro 3D + rvec Rodrigues).
+    """Parametrizacion RIGIDA con ancla rotacional.
 
-    El tamano fisico del marker (marker_mm) se mantiene FIJO. Esto fuerza que cada
-    marker sea un cuadrado de marker_mm x marker_mm y solo permite al optimizer
-    ajustar su posicion y orientacion. Evita que el BA absorba ruido deformando
-    la geometria (problema observado con parametrizacion libre 2026-05-19).
+    - ANCLA: 3 floats (rvec Rodrigues). El centro queda fijo en su posicion teorica;
+      la orientacion se optimiza. Esto evita el sesgo de inclinacion que aparece
+      cuando el ancla queda con orientacion fija (descubierto 2026-05-20 en pivote).
+    - OTROS MARKERS: 6 floats (centro 3D + rvec).
+    - Tamano fisico (marker_mm) FIJO en todos los markers.
     """
     params = []
     offsets = {}
+    # Primero el ancla: solo rvec (3 params). El centro queda fijo en geom_teorica.
+    _, rvec_ancla = esquinas_a_marker_pose(geom_teorica[ancla_id], marker_mm)
+    offsets[ancla_id] = len(params)
+    params.extend(rvec_ancla.tolist())
+    # Resto: 6 params cada uno
     for mid in ids_orden:
         if mid == ancla_id:
             continue
@@ -171,19 +177,23 @@ def parametrizar_geometria(geom_teorica, ids_orden, ancla_id, marker_mm):
 
 
 def reconstruir_geometria(params, offsets, geom_anclada, ids_orden, ancla_id, marker_mm):
-    """Reconstruye dict {tag_id: (4, 3)} desde params rigidos + ancla fija.
+    """Reconstruye dict {tag_id: (4, 3)} desde params rigidos.
 
-    Cada marker no anclado tiene 6 params: 3 centro + 3 rvec. Las 4 esquinas se
-    derivan via marker_pose_a_esquinas con tamano fijo marker_mm.
+    - ANCLA: 3 params (rvec), centro tomado del centroide de geom_anclada.
+    - OTROS: 6 params (centro + rvec).
     """
-    geom = {ancla_id: geom_anclada.copy()}
+    geom = {}
+    # Centro fijo del ancla = centroide de las esquinas teoricas
+    centro_ancla = geom_anclada.mean(axis=0)
     for mid in ids_orden:
-        if mid == ancla_id:
-            continue
         i = offsets[mid]
-        centro = np.asarray(params[i:i+3])
-        rvec = np.asarray(params[i+3:i+6])
-        geom[mid] = marker_pose_a_esquinas(centro, rvec, marker_mm)
+        if mid == ancla_id:
+            rvec_ancla = np.asarray(params[i:i+3])
+            geom[mid] = marker_pose_a_esquinas(centro_ancla, rvec_ancla, marker_mm)
+        else:
+            centro = np.asarray(params[i:i+3])
+            rvec = np.asarray(params[i+3:i+6])
+            geom[mid] = marker_pose_a_esquinas(centro, rvec, marker_mm)
     return geom
 
 
@@ -250,12 +260,12 @@ def calcular_residuos(params, frames, ids_orden, ancla_id, geom_anclada,
 
 def construir_jac_sparsity(frames, ids_orden, ancla_id, offsets_geom,
                            n_geom_params, n_pose_params):
-    """Construye la matriz de sparsity del jacobiano para parametrizacion RIGIDA.
+    """Construye la matriz de sparsity del jacobiano.
 
     Cada deteccion produce 8 residuos (4 corners x 2 coords).
-    Para parametrizacion rigida (6 floats por marker: centro + rvec):
-      - Todos los 8 residuos dependen de los 6 params del marker (si no es ancla).
-      - Todos los 8 residuos dependen de los 6 params de la pose del frame.
+    - ANCLA (3 params, solo rvec): los 8 residuos dependen de esos 3 params.
+    - OTROS (6 params, centro+rvec): los 8 residuos dependen de los 6 params.
+    - Pose del frame: 6 params, todos los residuos dependen.
     """
     total_residuos = sum(len(fd["detecciones"]) * 8 for fd in frames)
     n_total = n_geom_params + n_pose_params
@@ -266,13 +276,14 @@ def construir_jac_sparsity(frames, ids_orden, ancla_id, offsets_geom,
         pose_offset = n_geom_params + f_idx * 6
         for mid in fd["detecciones"]:
             for r in range(8):
-                # Depende de la pose del frame (6 params)
+                # Pose del frame (6 params)
                 for c in range(6):
                     A[row + r, pose_offset + c] = 1
-                # Depende de los 6 params del marker (si no es ancla)
-                if mid != ancla_id and mid in offsets_geom:
+                # Params del marker
+                if mid in offsets_geom:
                     marker_offset = offsets_geom[mid]
-                    for c in range(6):
+                    n_marker_params = 3 if mid == ancla_id else 6
+                    for c in range(n_marker_params):
                         A[row + r, marker_offset + c] = 1
             row += 8
     return A

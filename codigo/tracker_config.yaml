@@ -47,11 +47,27 @@ igtlink:
 
 # =====================================================================
 # Filtrado opcional
+# 1-Euro filter sobre la POSICION (tvec) de markers individuales y
+# rigid bodies. Reduce jitter sin lag perceptible en movimientos lentos.
+# Parametros conservadores 2026-05-20:
+#   min_cutoff=2.0: corte base 2 Hz (suaviza si esta quieto)
+#   beta=0.05:      adaptativo (deja pasar mas alta freq cuando se mueve)
+# Para movimientos quirurgicos lentos esto es transparente.
 # =====================================================================
 filtering:
-  enabled: false
-  min_cutoff: 1.0
-  beta: 0.0
+  enabled: true
+  min_cutoff: 2.0
+  beta: 0.05
+
+
+# =====================================================================
+# Calidad de poses para rigid bodies
+# Numero minimo de markers detectados para emitir una pose. Con menos
+# de 3 markers la rotacion es inestable (jitter visible en el stylus).
+# Si querias el comportamiento viejo (acepta cualquier N>=1), poner 1.
+# =====================================================================
+rigid_bodies_quality:
+  min_markers: 3
 
 
 # =====================================================================

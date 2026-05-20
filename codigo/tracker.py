@@ -387,13 +387,21 @@ def main():
                 ids_flat = ids.flatten().tolist()
 
                 # === Procesar rigid bodies ===
+                min_markers_rb = cfg.get("rigid_bodies_quality", {}).get("min_markers", 1)
                 for nombre, rb_geom in rigid_bodies.items():
                     detecciones_rb = {}
                     for i, mid in enumerate(ids_flat):
                         if mid in rb_geom:
                             detecciones_rb[mid] = corners[i]
 
-                    if len(detecciones_rb) == 0:
+                    if len(detecciones_rb) < min_markers_rb:
+                        # Pose con pocos markers es inestable (jitter rotacional).
+                        # Descartar para no enviar transformadas ruidosas a Slicer.
+                        if show_window and len(detecciones_rb) > 0:
+                            cv2.putText(display,
+                                f"{nombre}: solo {len(detecciones_rb)} markers (req >= {min_markers_rb})",
+                                (10, 30 + len(rigid_bodies)*25),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 100, 255), 2)
                         continue
 
                     resultado = estimar_pose_rigid_body(detecciones_rb, rb_geom, K, dist)
@@ -481,24 +489,21 @@ def main():
                 last_fps_print = t_now
 
     except KeyboardInterrupt:
-        print("\n[Interrumpido]")
+        print("\n[Interrupcion del usuario]")
     finally:
         cap.release()
         if show_window:
             cv2.destroyAllWindows()
         try:
-            server_tx.stop()
+            server_tx.close()
         except Exception:
             pass
         if server_video is not None:
             try:
-                server_video.stop()
+                server_video.close()
             except Exception:
                 pass
-
-        elapsed = time.time() - t_inicio
-        if elapsed > 0:
-            print(f"[Final] {n_frames} frames en {elapsed:.1f}s = {n_frames/elapsed:.1f} FPS")
+        print("[Salida limpia]")
 
 
 if __name__ == "__main__":

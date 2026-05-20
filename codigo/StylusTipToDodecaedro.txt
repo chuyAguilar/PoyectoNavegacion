@@ -1,0 +1,21 @@
+# Matriz StylusTipToDodecaedro 4x4
+# Offset del tip respecto al centro del dodecaedro
+# Calculada con 1733 poses (RANSAC + sphere fit)
+# Markers promedio por pose: 3.23
+#
+# METODO PRINCIPAL (esfera + transform):
+#   Offset (mm): [-2.136, -6.315, -91.207]
+#   Magnitud:    91.450 mm
+#   Std (mm):    [1.372, 1.345, 0.504]
+#   RMSE esfera: 0.514 mm
+#
+# CROSS-CHECK (AX=b clasico, Yaniv 2015):
+#   Offset (mm): [-1.943, -6.453, -91.236]
+#   Magnitud:    91.485 mm
+#   AX=b RMSE:   1.127 mm
+#   Diff vs esfera: 0.239 mm
+#
+    1.000000     0.000000     0.000000    -2.136446
+    0.000000     1.000000     0.000000    -6.314944
+    0.000000     0.000000     1.000000   -91.206502
+    0.000000     0.000000     0.000000     1.000000
