@@ -357,6 +357,13 @@ def main():
     # === Camara ===
     cap = abrir_camara(cfg["camera"])
 
+    # Warmup: MSMF necesita unos frames para estabilizar despues de set_FOURCC.
+    # Sin esto el primer cap.read() del loop bloquea indefinidamente.
+    print("[Camara] Warmup (descartando 5 frames iniciales)...")
+    for _ in range(5):
+        cap.read()
+    print("[Camara] Lista para capturar.")
+
     # === Loop principal ===
     show_window = cfg.get("debug", {}).get("show_window", True)
     verbose = cfg.get("debug", {}).get("verbose", False)
@@ -365,10 +372,22 @@ def main():
     last_fps_print = t_inicio
 
     try:
+        n_fail_consec = 0
         while True:
             ret, frame = cap.read()
-            if not ret:
+            if not ret or frame is None:
+                n_fail_consec += 1
+                if n_fail_consec in (1, 30, 100, 300):
+                    print(f"[WARN] cap.read() retornando False ({n_fail_consec} consecutivos)")
+                if n_fail_consec > 300:
+                    print("[ERROR] Camara no entrega frames. Saliendo.")
+                    break
                 continue
+            if n_frames == 0:
+                print(f"[Camara] Primer frame OK: shape={frame.shape}, dtype={frame.dtype}")
+            if n_fail_consec > 0:
+                print(f"[Camara] Recuperada tras {n_fail_consec} fallos")
+                n_fail_consec = 0
             n_frames += 1
             t_now = time.time()
 
