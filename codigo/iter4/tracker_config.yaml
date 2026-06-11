@@ -1,0 +1,109 @@
+# =====================================================================
+# Configuracion del tracker - Iter 4 (Femto Bolt)
+# =====================================================================
+# El campo critico nuevo es camera.camera_type:
+#   - "webcam"     -> SVPRO AR0234 + cv2.VideoCapture (iter 1-3, legacy).
+#   - "femtobolt"  -> Orbbec Femto Bolt + pyorbbecsdk (iter 4, default).
+#
+# El backend se elige en camera_backend.py via create_backend(cfg["camera"]).
+# =====================================================================
+
+camera:
+  # ===== Tipo de camara =====
+  camera_type: femtobolt        # webcam | femtobolt
+
+  # ===== Solo para camera_type: webcam =====
+  # (ignorados si camera_type: femtobolt — el SDK maneja todo)
+  source: 0
+  width: 640
+  height: 480
+  fps: 30
+  backend: MSMF
+  fourcc: MJPG
+
+  # ===== Calibracion intrinseca =====
+  # Para webcam: ruta al .yml de calibracion manual (MRPT-style).
+  # Para femtobolt: vacio para usar calibracion de fabrica del SDK,
+  #                 o ruta a un .yml para override (formato data/femtobolt_calibration.yml).
+  calibration_file:             # vacio = fabrica
+
+
+# =====================================================================
+# Diccionario ArUco
+# =====================================================================
+markers:
+  dictionary: DICT_ARUCO_MIP_36h12
+
+  # Tuning del detector ArUco (iter 4):
+  # Subimos los rangos de adaptive threshold y bajamos los umbrales de
+  # perimetro y precision poligonal para que detecte markers en angulos
+  # grazing y con iluminacion no ideal. Si comentas esta seccion, OpenCV
+  # usa los defaults de DetectorParameters.
+  detector:
+    # adaptive threshold: ventanas mas grandes detectan markers a mayor
+    # distancia / con menor contraste. Rango ampliado de [3,23] a [5,35].
+    adaptive_thresh_win_size_min: 5
+    adaptive_thresh_win_size_max: 35
+    adaptive_thresh_win_size_step: 10
+    # min_marker_perimeter_rate: fraccion del perimetro de imagen que el
+    # marker debe ocupar. Default 0.03 = ~24 px en 1920x1080. Bajamos a
+    # 0.02 para markers chicos / lejos.
+    min_marker_perimeter_rate: 0.02
+    # polygonal_approx_accuracy_rate: tolerancia a bordes imperfectos.
+    # Default 0.03, subimos a 0.05 para angulos grazing y ligera blur.
+    polygonal_approx_accuracy_rate: 0.05
+    # max_erroneous_bits_in_border_rate: aceptamos mas error en el borde.
+    max_erroneous_bits_in_border_rate: 0.40
+    # corner_refinement_win_size: ventana mas grande para subpixel.
+    corner_refinement_win_size: 7
+
+  # Marker individual del paciente (referencia osea).
+  # En iter 4 puede cambiar (anotar nuevo size si reimprime).
+  list:
+    - id: 0
+      name: Marker0
+      size_mm: 80.0
+
+
+# =====================================================================
+# Rigid body multi-marker (dodecaedro)
+# =====================================================================
+# IDs y tamano nuevos para iter 4 (anotar abajo cuando esten definitivos).
+rigid_bodies:
+  - name: Dodecaedro
+    geometry_file: iter4/data/reference_dodecaedro_calibrado.txt
+    # marker_mm propiedad de iter 4: 13.4 mm (antes 16 en iter 3).
+    marker_mm: 13.4
+
+
+# =====================================================================
+# Calidad de poses para rigid bodies
+# =====================================================================
+rigid_bodies_quality:
+  min_markers: 3                # descartar poses con menos de 3 markers
+
+
+# =====================================================================
+# OpenIGTLink
+# =====================================================================
+igtlink:
+  transforms_port: 18944
+  video_port: 18945
+  send_video: false
+
+
+# =====================================================================
+# Filtrado 1-Euro (suaviza posicion del rigid body)
+# =====================================================================
+filtering:
+  enabled: true
+  min_cutoff: 2.0
+  beta: 0.05
+
+
+# =====================================================================
+# Debug
+# =====================================================================
+debug:
+  show_window: true
+  verbose: true

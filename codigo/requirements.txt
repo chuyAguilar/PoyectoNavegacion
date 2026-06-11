@@ -1,0 +1,35 @@
+# Dependencias del proyecto MIRAI/PoyectoNavegacion
+# Pipeline iter 2 (auditado) + iter 3 (visualizacion tomografica) + iter 4 (Femto Bolt)
+#
+# Para reinstalar desde cero:
+#   python -m venv .venv
+#   .venv\Scripts\activate
+#   python -m pip install -r requirements.txt
+#
+# Nota: si pip da error "Unable to create process" significa que el venv tiene
+# paths absolutos rotos (carpeta movida/renombrada). Recrear el venv.
+
+# ===== Vision y matematica (iter 2-3) =====
+opencv-python>=4.7.0       # ArUco + solvePnP + ChAruco. Iter 2/3 valido con 4.13.
+numpy>=1.24,<3             # Arrays. Test con 1.26 y 2.x.
+scipy>=1.11                # least_squares (BA + sphere fit pivote). Validado 1.15-1.17.
+
+# ===== Configuracion y serializacion =====
+pyyaml>=6.0                # tracker_config.yaml.
+
+# ===== OpenIGTLink (comunicacion con Slicer) =====
+pyigtl>=0.3.1              # Server TCP para enviar TransformMessage a Slicer.
+
+# ===== Femto Bolt / Orbbec depth camera (iter 4) =====
+pyorbbecsdk2>=2.0.18         # SDK oficial Orbbec v2 (renombrado en PyPI desde 2.0.18). El modulo se importa como pyorbbecsdk (sin "2").
+
+# ===== Tests =====
+pytest>=7.4                # Suite de tests pytest (55+ tests en iter 2).
+
+# ===== Opcional para debugging y visualizacion (no critico) =====
+matplotlib>=3.7            # Diagnostico de poses, plots de pivote.
+
+# ===== Notas =====
+# - 3D Slicer NO se instala via pip. Bajar desde https://download.slicer.org
+# - Modulos SlicerIGT: instalar desde Extensions Manager dentro de Slicer.
+# - Driver Orbbec (si la camara no aparece): https://www.orbbec.com/developers/orbbec-sdk/

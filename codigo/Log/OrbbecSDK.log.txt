@@ -1,0 +1,816 @@
+[06/10 14:41:08.212067][info][13728][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 14:41:08.212106][info][13728][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 14:41:08.212115][info][13728][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 14:41:09.221459][info][13728][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 14:41:09.221499][info][13728][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 14:41:09.414653][info][13728][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 14:41:09.414698][info][13728][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x1AE388F2630
+[06/10 14:41:09.448416][info][13728][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 14:41:10.011377][info][2692][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 14:41:10.663987][info][13728][Pipeline.cpp:228] [CL8CA5300YD] Check and set config done!
+[06/10 14:41:10.664094][info][13728][Pipeline.cpp:266] [CL8CA5300YD] Try to start streams!
+[06/10 14:41:10.664144][info][13728][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 14:41:10.664191][info][13728][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Color
+[06/10 14:41:10.664213][info][13728][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 14:41:10.688783][info][13728][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 14:41:10.688807][info][13728][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Depth
+[06/10 14:41:10.688815][info][13728][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 14:41:11.238880][info][13728][Pipeline.cpp:293] [CL8CA5300YD] Start streams done!
+[06/10 14:41:11.238898][info][13728][Pipeline.cpp:250] [CL8CA5300YD] Pipeline start done!
+[06/10 14:41:11.616690][info][13592][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Depth
+[06/10 14:41:11.617352][info][23628][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Color
+[06/10 14:41:12.281265][warning][23380][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset!
+[06/10 14:41:15.317901][warning][23380][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**27 logs in 3036ms**]
+[06/10 14:41:16.619489][info][14956][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=30.187925fps
+[06/10 14:41:16.619576][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=30.187925fps
+[06/10 14:41:16.650391][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.200676fps
+[06/10 14:41:16.650453][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.200676fps
+[06/10 14:41:21.325610][warning][23380][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**155 logs in 6007ms**]
+[06/10 14:41:21.625992][info][2692][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 14:41:21.626070][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 14:41:21.654576][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 14:41:21.654636][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 14:41:26.632522][info][20988][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 14:41:26.632625][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 14:41:26.662819][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.946098fps
+[06/10 14:41:26.662874][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 14:41:31.638793][info][2692][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 14:41:31.638866][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 14:41:31.669811][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.958059fps
+[06/10 14:41:31.669869][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 14:41:33.374177][warning][928][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**178 logs in 12048ms, last: 14:41:33.308334**]
+[06/10 14:41:36.645063][info][14956][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 14:41:36.645131][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 14:41:36.675628][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 14:41:36.675718][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 14:41:41.652213][info][14956][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 14:41:41.652326][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 14:41:41.683864][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.946098fps
+[06/10 14:41:41.683924][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 14:41:46.658300][info][23628][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 14:41:46.658368][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 14:41:46.688567][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 14:41:46.688665][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 14:41:51.665515][info][23628][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 14:41:51.665616][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 14:41:51.695308][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.958059fps
+[06/10 14:41:51.695396][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 14:41:56.672098][info][2692][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 14:41:56.672198][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 14:41:56.703014][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 14:41:56.703300][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 14:41:57.413088][warning][24932][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**214 logs in 24038ms, last: 14:41:57.339662**]
+[06/10 14:42:01.677738][info][23628][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 14:42:01.677849][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 14:42:01.706465][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.982012fps
+[06/10 14:42:01.706549][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.982012fps
+[06/10 14:42:06.683700][info][14956][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 14:42:06.683767][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 14:42:06.712615][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 14:42:06.712702][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 14:42:11.690314][info][14956][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 14:42:11.690381][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 14:42:11.719902][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 14:42:11.719988][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 14:42:16.697643][info][23628][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.952078fps
+[06/10 14:42:16.697754][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.952078fps
+[06/10 14:42:16.726041][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 14:42:16.726097][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 14:42:21.703541][info][20988][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 14:42:21.703650][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 14:42:21.733053][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.958059fps
+[06/10 14:42:21.733142][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 14:42:26.709873][info][2692][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 14:42:26.709939][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 14:42:26.740718][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 14:42:26.740856][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 14:42:31.717644][info][20988][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.952078fps
+[06/10 14:42:31.717735][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.952078fps
+[06/10 14:42:31.747166][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 14:42:31.747256][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 14:42:36.724291][info][20988][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 14:42:36.724355][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 14:42:36.753351][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 14:42:36.753407][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 14:42:41.732000][info][2692][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.952078fps
+[06/10 14:42:41.732096][info][23380][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.952078fps
+[06/10 14:42:41.761096][info][13592][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 14:42:41.761157][info][7504][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 14:42:45.484617][warning][19208][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**438 logs in 48071ms, last: 14:42:45.403900**]
+[06/10 14:42:45.832103][info][13728][Pipeline.cpp:367] [CL8CA5300YD] Try to stop pipeline!
+[06/10 14:42:45.832121][info][13728][Pipeline.cpp:343] [CL8CA5300YD] Try to stop streams!
+[06/10 14:42:45.832134][info][13728][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Depth
+[06/10 14:42:46.469659][info][13728][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Depth
+[06/10 14:42:46.470253][info][13728][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Depth
+[06/10 14:42:46.470282][info][13728][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Color
+[06/10 14:42:48.669829][info][13728][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Color
+[06/10 14:42:48.670411][info][13728][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Color
+[06/10 14:42:48.670426][info][13728][Pipeline.cpp:363] [CL8CA5300YD] Stop streams done!
+[06/10 14:42:48.670491][info][13728][Pipeline.cpp:392] [CL8CA5300YD] Stop pipeline done!
+[06/10 14:42:48.713816][info][13728][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x1AE388F2630
+[06/10 14:42:48.713996][info][13728][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 14:42:48.714032][info][13728][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 14:42:49.429066][warning][10604][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**7 logs in 3944ms, last: 14:42:46.439857**]
+[06/10 17:23:58.384412][info][4108][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 17:23:58.384432][info][4108][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 17:23:58.384438][info][4108][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 17:23:59.394338][info][4108][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 17:23:59.394371][info][4108][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 17:23:59.556201][info][4108][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 17:23:59.556231][info][4108][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x189A58A5B20
+[06/10 17:23:59.569135][info][4108][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 17:24:00.121740][info][27936][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 17:24:02.645903][info][4108][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x189A58A5B20
+[06/10 17:24:02.646037][info][4108][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 17:24:02.647076][info][4108][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 17:24:14.497488][info][28600][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 17:24:14.497518][info][28600][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 17:24:14.497525][info][28600][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 17:24:15.529150][info][28600][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 17:24:15.529187][info][28600][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 17:24:15.644302][info][28600][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 17:24:15.644332][info][28600][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x120B8050D80
+[06/10 17:24:15.657452][info][28600][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 17:24:16.207853][info][25844][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 17:24:16.898598][info][28600][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x120B8050D80
+[06/10 17:24:16.898781][info][28600][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 17:24:16.901414][info][28600][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 17:32:35.116378][info][28652][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 17:32:35.116400][info][28652][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 17:32:35.116406][info][28652][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 17:32:36.136807][info][28652][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 17:32:36.136825][info][28652][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 17:32:36.277394][info][28652][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 17:32:36.277425][info][28652][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x1959F60CF50
+[06/10 17:32:36.290196][info][28652][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 17:32:36.841303][info][6808][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 17:32:37.507000][info][28652][Pipeline.cpp:228] [CL8CA5300YD] Check and set config done!
+[06/10 17:32:37.507038][info][28652][Pipeline.cpp:266] [CL8CA5300YD] Try to start streams!
+[06/10 17:32:37.507060][info][28652][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 17:32:37.507072][info][28652][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Color
+[06/10 17:32:37.507080][info][28652][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 17:32:37.517564][info][28652][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 17:32:37.517575][info][28652][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Depth
+[06/10 17:32:37.517580][info][28652][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 17:32:38.055893][info][28652][Pipeline.cpp:293] [CL8CA5300YD] Start streams done!
+[06/10 17:32:38.055947][info][28652][Pipeline.cpp:250] [CL8CA5300YD] Pipeline start done!
+[06/10 17:32:38.349531][info][7504][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Depth
+[06/10 17:32:38.418877][info][6808][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Color
+[06/10 17:32:43.351119][info][7504][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.187925fps
+[06/10 17:32:43.351206][info][20960][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.193962fps
+[06/10 17:32:43.422541][info][26168][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=30.181892fps
+[06/10 17:32:43.422603][info][1908][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=30.181892fps
+[06/10 17:32:48.077850][info][28652][Pipeline.cpp:367] [CL8CA5300YD] Try to stop pipeline!
+[06/10 17:32:48.077869][info][28652][Pipeline.cpp:343] [CL8CA5300YD] Try to stop streams!
+[06/10 17:32:48.077883][info][28652][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Depth
+[06/10 17:32:48.430036][info][6808][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.952078fps
+[06/10 17:32:48.430103][info][1908][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.952078fps
+[06/10 17:32:48.799555][info][28652][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Depth
+[06/10 17:32:48.799868][info][28652][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Depth
+[06/10 17:32:48.799886][info][28652][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Color
+[06/10 17:32:50.963321][info][28652][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Color
+[06/10 17:32:50.963934][info][28652][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Color
+[06/10 17:32:50.963948][info][28652][Pipeline.cpp:363] [CL8CA5300YD] Stop streams done!
+[06/10 17:32:50.964007][info][28652][Pipeline.cpp:392] [CL8CA5300YD] Stop pipeline done!
+[06/10 17:32:50.966740][info][28652][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x1959F60CF50
+[06/10 17:32:50.967050][info][28652][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 17:32:50.967124][info][28652][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 17:39:21.751672][info][13568][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 17:39:21.751694][info][13568][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 17:39:21.751699][info][13568][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 17:39:22.787969][info][13568][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 17:39:22.787992][info][13568][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 17:39:22.944765][info][13568][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 17:39:22.944793][info][13568][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x220AA624270
+[06/10 17:39:22.957675][info][13568][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 17:39:23.509205][info][19048][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 17:39:24.169812][info][13568][Pipeline.cpp:228] [CL8CA5300YD] Check and set config done!
+[06/10 17:39:24.169842][info][13568][Pipeline.cpp:266] [CL8CA5300YD] Try to start streams!
+[06/10 17:39:24.169861][info][13568][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 17:39:24.169870][info][13568][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Color
+[06/10 17:39:24.169876][info][13568][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 17:39:24.178317][info][13568][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 17:39:24.178328][info][13568][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Depth
+[06/10 17:39:24.178332][info][13568][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 17:39:24.720656][info][13568][Pipeline.cpp:293] [CL8CA5300YD] Start streams done!
+[06/10 17:39:24.720712][info][13568][Pipeline.cpp:250] [CL8CA5300YD] Pipeline start done!
+[06/10 17:39:25.013493][info][26020][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Depth
+[06/10 17:39:25.112937][info][4628][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Color
+[06/10 17:39:27.734612][info][13568][Pipeline.cpp:367] [CL8CA5300YD] Try to stop pipeline!
+[06/10 17:39:27.734628][info][13568][Pipeline.cpp:343] [CL8CA5300YD] Try to stop streams!
+[06/10 17:39:27.734643][info][13568][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Depth
+[06/10 17:39:28.443343][info][13568][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Depth
+[06/10 17:39:28.443962][info][13568][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Depth
+[06/10 17:39:28.443995][info][13568][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Color
+[06/10 17:39:30.705136][info][13568][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Color
+[06/10 17:39:30.705474][info][13568][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Color
+[06/10 17:39:30.705481][info][13568][Pipeline.cpp:363] [CL8CA5300YD] Stop streams done!
+[06/10 17:39:30.705515][info][13568][Pipeline.cpp:392] [CL8CA5300YD] Stop pipeline done!
+[06/10 17:39:30.706664][info][13568][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x220AA624270
+[06/10 17:39:30.706856][info][13568][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 17:39:30.706900][info][13568][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 17:58:45.575982][info][21092][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 17:58:45.576005][info][21092][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 17:58:45.576011][info][21092][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 17:58:46.609980][info][21092][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 17:58:46.609997][info][21092][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 17:58:46.769716][info][21092][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 17:58:46.769747][info][21092][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x219F00BAE80
+[06/10 17:58:46.782838][info][21092][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 17:58:47.336204][info][16144][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 17:58:47.996028][info][21092][Pipeline.cpp:228] [CL8CA5300YD] Check and set config done!
+[06/10 17:58:47.996116][info][21092][Pipeline.cpp:266] [CL8CA5300YD] Try to start streams!
+[06/10 17:58:47.996164][info][21092][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 17:58:47.996195][info][21092][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Color
+[06/10 17:58:47.996216][info][21092][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 17:58:48.012593][info][21092][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 17:58:48.012607][info][21092][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Depth
+[06/10 17:58:48.012613][info][21092][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 17:58:48.551900][info][21092][Pipeline.cpp:293] [CL8CA5300YD] Start streams done!
+[06/10 17:58:48.551956][info][21092][Pipeline.cpp:250] [CL8CA5300YD] Pipeline start done!
+[06/10 17:58:48.851825][info][10612][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Depth
+[06/10 17:58:48.946578][info][11816][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Color
+[06/10 17:58:49.679496][warning][9384][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset!
+[06/10 17:58:52.683324][warning][9384][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**21 logs in 3003ms**]
+[06/10 17:58:53.882645][info][10612][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.212681fps
+[06/10 17:58:53.882757][info][9012][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.212681fps
+[06/10 17:58:53.951396][info][8320][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=30.169830fps
+[06/10 17:58:53.951457][info][9384][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=30.175858fps
+[06/10 17:58:53.995389][info][21092][Pipeline.cpp:367] [CL8CA5300YD] Try to stop pipeline!
+[06/10 17:58:53.995395][info][21092][Pipeline.cpp:343] [CL8CA5300YD] Try to stop streams!
+[06/10 17:58:53.995408][info][21092][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Depth
+[06/10 17:58:54.588798][info][21092][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Depth
+[06/10 17:58:54.588995][info][21092][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Depth
+[06/10 17:58:54.589004][info][21092][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Color
+[06/10 17:58:56.741136][info][21092][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Color
+[06/10 17:58:56.741311][info][21092][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Color
+[06/10 17:58:56.741314][info][21092][Pipeline.cpp:363] [CL8CA5300YD] Stop streams done!
+[06/10 17:58:56.741347][info][21092][Pipeline.cpp:392] [CL8CA5300YD] Stop pipeline done!
+[06/10 17:58:56.741371][info][21092][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x219F00BAE80
+[06/10 17:58:56.741449][info][21092][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 17:58:56.741474][info][21092][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 17:58:57.823527][warning][27628][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**12 logs in 5140ms, last: 17:58:54.586690**]
+[06/10 18:32:38.371367][info][16960][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 18:32:38.371390][info][16960][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 18:32:38.371396][info][16960][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 18:32:39.390471][info][16960][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 18:32:39.390489][info][16960][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 18:32:39.538954][info][16960][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 18:32:39.538984][info][16960][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x1BD79E2E970
+[06/10 18:32:41.449723][info][16960][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 18:32:41.666839][info][15544][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 18:32:42.330506][info][16960][Pipeline.cpp:228] [CL8CA5300YD] Check and set config done!
+[06/10 18:32:42.330615][info][16960][Pipeline.cpp:266] [CL8CA5300YD] Try to start streams!
+[06/10 18:32:42.330671][info][16960][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 18:32:42.330705][info][16960][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Color
+[06/10 18:32:42.330727][info][16960][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 18:32:42.369219][info][16960][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 18:32:42.369238][info][16960][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Depth
+[06/10 18:32:42.369247][info][16960][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 18:32:42.886654][info][16960][Pipeline.cpp:293] [CL8CA5300YD] Start streams done!
+[06/10 18:32:42.886690][info][16960][Pipeline.cpp:250] [CL8CA5300YD] Pipeline start done!
+[06/10 18:32:43.258215][info][12676][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Color
+[06/10 18:32:43.304017][info][13936][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Depth
+[06/10 18:32:44.119546][warning][5492][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset!
+[06/10 18:32:47.124373][warning][5492][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**40 logs in 3004ms**]
+[06/10 18:32:48.258980][info][12676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=30.193962fps
+[06/10 18:32:48.291451][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=30.212681fps
+[06/10 18:32:48.319755][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.303032fps
+[06/10 18:32:48.319810][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.309074fps
+[06/10 18:32:53.163259][warning][5492][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**103 logs in 6038ms**]
+[06/10 18:32:53.264310][info][14308][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:32:53.296737][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:32:53.325753][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:32:53.325814][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 18:32:58.269615][info][12676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:32:58.302268][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:32:58.335875][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.940119fps
+[06/10 18:32:58.335991][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.940119fps
+[06/10 18:33:03.275168][info][15544][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:33:03.307767][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:33:03.342614][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:33:03.342714][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 18:33:05.243176][warning][5492][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**106 logs in 12079ms**]
+[06/10 18:33:08.280934][info][14308][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:33:08.314990][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:33:08.385343][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.942493fps
+[06/10 18:33:08.385437][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.948435fps
+[06/10 18:33:13.286183][info][11856][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:33:13.320161][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:33:13.411364][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.043772fps
+[06/10 18:33:13.411456][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.043772fps
+[06/10 18:33:18.290494][info][12676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.976019fps
+[06/10 18:33:18.323825][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.976019fps
+[06/10 18:33:18.422539][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.934143fps
+[06/10 18:33:18.422596][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.934143fps
+[06/10 18:33:23.296096][info][11856][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:33:23.329541][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:33:23.424378][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.988007fps
+[06/10 18:33:23.424474][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.988007fps
+[06/10 18:33:28.301841][info][15544][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:33:28.335388][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:33:28.430083][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:33:28.430189][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 18:33:29.269540][warning][5492][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**264 logs in 24026ms**]
+[06/10 18:33:33.306381][info][11856][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.976019fps
+[06/10 18:33:33.339779][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:33:33.433452][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.982012fps
+[06/10 18:33:33.433520][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.982012fps
+[06/10 18:33:38.312007][info][11856][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:33:38.345484][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:33:38.444036][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.934143fps
+[06/10 18:33:38.444100][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.934143fps
+[06/10 18:33:43.319263][info][14308][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:33:43.352056][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:33:43.447967][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 18:33:43.448029][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.976019fps
+[06/10 18:33:48.323296][info][14308][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.976019fps
+[06/10 18:33:48.356620][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:33:48.458108][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.940119fps
+[06/10 18:33:48.458195][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.940119fps
+[06/10 18:33:53.328540][info][11856][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:33:53.362014][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:33:53.492163][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.996027fps
+[06/10 18:33:53.492251][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.996027fps
+[06/10 18:33:58.333548][info][12676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:33:58.367025][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:33:58.495635][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 18:33:58.495693][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.976019fps
+[06/10 18:34:03.338456][info][11856][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:34:03.372723][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:34:03.501937][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:34:03.502000][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 18:34:08.344482][info][12676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:34:08.378131][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:34:08.508643][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.958059fps
+[06/10 18:34:08.508702][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 18:34:13.350198][info][11856][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:34:13.383618][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:34:13.514201][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:34:13.514288][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:34:17.287672][warning][5492][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**512 logs in 48018ms**]
+[06/10 18:34:18.355442][info][11856][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:34:18.388807][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:34:18.521793][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 18:34:18.521925][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 18:34:23.360950][info][14308][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:34:23.394332][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:34:23.554302][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.007948fps
+[06/10 18:34:23.554371][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.007948fps
+[06/10 18:34:28.368001][info][14308][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:34:28.400092][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:34:28.563118][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.946098fps
+[06/10 18:34:28.563185][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.946098fps
+[06/10 18:34:33.372654][info][15544][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:34:33.405868][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:34:33.567943][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:34:33.568011][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:34:38.378589][info][12676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:34:38.412109][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:34:38.575393][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.958059fps
+[06/10 18:34:38.575501][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 18:34:43.384450][info][15544][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:34:43.417911][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:34:43.579906][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:34:43.579964][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:34:48.390961][info][15544][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:34:48.424469][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:34:48.588236][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 18:34:48.588343][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 18:34:53.396953][info][14308][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:34:53.430472][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:34:53.591902][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 18:34:53.591960][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.976019fps
+[06/10 18:34:58.402892][info][14308][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:34:58.437071][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:34:58.598291][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:34:58.598347][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 18:35:03.408266][info][15544][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:35:03.441663][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:35:03.602990][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:35:03.603082][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:35:08.413795][info][15544][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:35:08.447225][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:35:08.607280][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 18:35:08.607348][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.976019fps
+[06/10 18:35:13.418705][info][11856][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:35:13.452377][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:35:13.610928][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 18:35:13.610983][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.976019fps
+[06/10 18:35:17.322717][warning][5492][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**680 logs in 60035ms**]
+[06/10 18:35:18.423573][info][15544][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.976019fps
+[06/10 18:35:18.457564][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:35:18.621980][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.934143fps
+[06/10 18:35:18.622068][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.934143fps
+[06/10 18:35:23.428326][info][14308][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:35:23.461754][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:35:23.631841][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.940119fps
+[06/10 18:35:23.631906][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.940119fps
+[06/10 18:35:28.433291][info][15544][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:35:28.466702][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:35:28.633824][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.988007fps
+[06/10 18:35:28.633895][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.988007fps
+[06/10 18:35:33.440562][info][12676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:35:33.473265][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:35:33.635334][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.994001fps
+[06/10 18:35:33.635448][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.994001fps
+[06/10 18:35:38.443916][info][14308][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.976019fps
+[06/10 18:35:38.477262][info][5492][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.976019fps
+[06/10 18:35:38.637559][info][13936][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.988007fps
+[06/10 18:35:38.637660][info][4764][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.982012fps
+[06/10 18:35:41.850876][info][16960][Pipeline.cpp:367] [CL8CA5300YD] Try to stop pipeline!
+[06/10 18:35:41.850896][info][16960][Pipeline.cpp:343] [CL8CA5300YD] Try to stop streams!
+[06/10 18:35:41.850910][info][16960][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Depth
+[06/10 18:35:42.465620][info][16960][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Depth
+[06/10 18:35:42.465813][info][16960][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Depth
+[06/10 18:35:42.465824][info][16960][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Color
+[06/10 18:35:44.587641][info][16960][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Color
+[06/10 18:35:44.587847][info][16960][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Color
+[06/10 18:35:44.587850][info][16960][Pipeline.cpp:363] [CL8CA5300YD] Stop streams done!
+[06/10 18:35:44.587876][info][16960][Pipeline.cpp:392] [CL8CA5300YD] Stop pipeline done!
+[06/10 18:35:44.587902][info][16960][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x1BD79E2E970
+[06/10 18:35:44.587981][info][16960][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 18:35:44.588011][info][16960][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 18:35:44.637894][warning][18212][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**218 logs in 27315ms, last: 18:35:42.448136**]
+[06/10 18:44:32.625274][info][20876][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 18:44:32.625297][info][20876][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 18:44:32.625302][info][20876][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 18:44:33.644745][info][20876][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 18:44:33.644803][info][20876][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 18:44:33.840973][info][20876][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 18:44:33.841005][info][20876][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x20B42308150
+[06/10 18:44:33.854541][info][20876][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 18:44:34.407214][info][19676][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 18:44:35.066340][info][20876][Pipeline.cpp:228] [CL8CA5300YD] Check and set config done!
+[06/10 18:44:35.066406][info][20876][Pipeline.cpp:266] [CL8CA5300YD] Try to start streams!
+[06/10 18:44:35.066437][info][20876][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 18:44:35.066456][info][20876][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Color
+[06/10 18:44:35.066469][info][20876][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 18:44:35.083351][info][20876][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 18:44:35.083364][info][20876][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Depth
+[06/10 18:44:35.083371][info][20876][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 18:44:35.613696][info][20876][Pipeline.cpp:293] [CL8CA5300YD] Start streams done!
+[06/10 18:44:35.613714][info][20876][Pipeline.cpp:250] [CL8CA5300YD] Pipeline start done!
+[06/10 18:44:35.951181][info][25420][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Depth
+[06/10 18:44:36.014029][info][20680][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Color
+[06/10 18:44:36.681114][warning][6768][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset!
+[06/10 18:44:39.720536][warning][6768][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**26 logs in 3039ms**]
+[06/10 18:44:40.982877][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.206676fps
+[06/10 18:44:40.982982][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.206676fps
+[06/10 18:44:41.019782][info][20680][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=30.163803fps
+[06/10 18:44:41.019855][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=30.163803fps
+[06/10 18:44:45.758811][warning][6768][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**52 logs in 6038ms**]
+[06/10 18:44:45.987541][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 18:44:45.987647][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:44:46.025927][info][27552][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:44:46.025989][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:44:50.996141][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.946098fps
+[06/10 18:44:50.996223][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 18:44:51.033866][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.952078fps
+[06/10 18:44:51.033955][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.952078fps
+[06/10 18:44:56.000099][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 18:44:56.000193][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.976019fps
+[06/10 18:44:56.038214][info][20680][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.976019fps
+[06/10 18:44:56.038279][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.976019fps
+[06/10 18:44:57.808769][warning][6768][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**102 logs in 12049ms**]
+[06/10 18:45:01.006197][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:45:01.006265][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 18:45:01.044413][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:45:01.044497][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:45:06.014100][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 18:45:06.014204][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 18:45:06.049386][info][20680][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:45:06.049453][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:45:11.018124][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 18:45:11.018200][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.976019fps
+[06/10 18:45:11.055149][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:45:11.055226][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:45:16.023128][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:45:16.023228][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:45:16.061093][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:45:16.061177][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:45:21.027886][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:45:21.028154][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:45:21.068671][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.952078fps
+[06/10 18:45:21.068882][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.952078fps
+[06/10 18:45:21.835855][warning][6768][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**252 logs in 24027ms**]
+[06/10 18:45:26.033740][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:45:26.033839][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 18:45:26.071523][info][19676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.988007fps
+[06/10 18:45:26.071579][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.988007fps
+[06/10 18:45:31.039486][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:45:31.039583][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:45:31.077885][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:45:31.077950][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:45:36.047229][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 18:45:36.047314][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 18:45:36.082805][info][19676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:45:36.082879][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:45:41.050809][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 18:45:41.050907][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.976019fps
+[06/10 18:45:41.088978][info][27552][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:45:41.089093][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:45:46.056344][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:45:46.056442][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:45:46.094392][info][19676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:45:46.094499][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:45:51.062032][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:45:51.062132][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 18:45:51.100901][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:45:51.100960][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:45:56.071260][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.946098fps
+[06/10 18:45:56.071363][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.946098fps
+[06/10 18:45:56.105807][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:45:56.105874][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:46:01.074057][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.982012fps
+[06/10 18:46:01.074120][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.982012fps
+[06/10 18:46:01.111711][info][20680][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:46:01.111775][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:46:06.081469][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.958059fps
+[06/10 18:46:06.081542][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 18:46:06.118152][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:46:06.118222][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:46:09.911789][warning][12676][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**416 logs in 48075ms, last: 18:46:09.788911**]
+[06/10 18:46:11.084760][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.976019fps
+[06/10 18:46:11.084859][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.976019fps
+[06/10 18:46:11.123643][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:46:11.123728][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:46:16.090160][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:46:16.090260][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:46:16.128486][info][19676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.976019fps
+[06/10 18:46:16.128557][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.976019fps
+[06/10 18:46:21.095591][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:46:21.095676][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 18:46:21.133449][info][20680][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:46:21.133530][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:46:26.101059][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:46:26.101159][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:46:26.138816][info][27552][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:46:26.138883][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:46:31.106857][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:46:31.106960][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 18:46:31.144248][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:46:31.144307][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:46:36.124034][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.898344fps
+[06/10 18:46:36.124140][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.898344fps
+[06/10 18:46:36.150445][info][27552][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:46:36.150506][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:46:41.155686][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.007948fps
+[06/10 18:46:41.155750][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.007948fps
+[06/10 18:46:41.156377][info][20680][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:46:41.156435][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:46:46.162647][info][19676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:46:46.162749][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:46:46.164951][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.946098fps
+[06/10 18:46:46.165005][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.946098fps
+[06/10 18:46:51.168548][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.982012fps
+[06/10 18:46:51.168642][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.976019fps
+[06/10 18:46:51.168715][info][20680][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:46:51.168798][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:46:56.173701][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:46:56.173808][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:46:56.174993][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:46:56.175130][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:47:01.178953][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:47:01.179055][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:47:01.180274][info][27552][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:47:01.180347][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:47:06.186214][info][19676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:47:06.186314][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:47:06.186710][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 18:47:06.186801][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 18:47:09.923153][warning][24564][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**648 logs in 60011ms, last: 18:47:09.890702**]
+[06/10 18:47:11.192544][info][19676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:47:11.192630][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:47:11.198671][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.928171fps
+[06/10 18:47:11.198741][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.928171fps
+[06/10 18:47:16.198551][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:47:16.198659][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:47:16.225378][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.043772fps
+[06/10 18:47:16.225474][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.043772fps
+[06/10 18:47:21.204851][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:47:21.204922][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:47:21.237954][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.922203fps
+[06/10 18:47:21.238039][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.922203fps
+[06/10 18:47:26.210508][info][26472][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:47:26.210578][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:47:26.253274][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.910271fps
+[06/10 18:47:26.253397][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.910271fps
+[06/10 18:47:31.217133][info][19676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:47:31.217209][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:47:31.288562][info][25420][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.990070fps
+[06/10 18:47:31.288626][info][15532][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.984116fps
+[06/10 18:47:36.223649][info][19676][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:47:36.223939][info][6768][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:47:36.248979][info][20876][Pipeline.cpp:367] [CL8CA5300YD] Try to stop pipeline!
+[06/10 18:47:36.248985][info][20876][Pipeline.cpp:343] [CL8CA5300YD] Try to stop streams!
+[06/10 18:47:36.248999][info][20876][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Depth
+[06/10 18:47:36.802203][info][20876][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Depth
+[06/10 18:47:36.802504][info][20876][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Depth
+[06/10 18:47:36.802520][info][20876][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Color
+[06/10 18:47:38.913251][info][20876][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Color
+[06/10 18:47:38.913652][info][20876][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Color
+[06/10 18:47:38.913661][info][20876][Pipeline.cpp:363] [CL8CA5300YD] Stop streams done!
+[06/10 18:47:38.913707][info][20876][Pipeline.cpp:392] [CL8CA5300YD] Stop pipeline done!
+[06/10 18:47:38.913760][info][20876][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x20B42308150
+[06/10 18:47:38.913924][info][20876][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 18:47:38.913976][info][20876][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 18:47:39.249197][warning][24000][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**338 logs in 29326ms, last: 18:47:36.791364**]
+[06/10 18:53:00.547508][info][14364][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 18:53:00.547530][info][14364][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 18:53:00.547536][info][14364][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 18:53:01.581599][info][14364][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 18:53:01.581615][info][14364][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 18:53:01.772291][info][14364][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 18:53:01.772346][info][14364][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x213295D5680
+[06/10 18:53:01.787834][info][14364][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 18:53:02.340495][info][12676][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 18:53:02.997619][info][14364][Pipeline.cpp:228] [CL8CA5300YD] Check and set config done!
+[06/10 18:53:02.997692][info][14364][Pipeline.cpp:266] [CL8CA5300YD] Try to start streams!
+[06/10 18:53:02.997731][info][14364][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 18:53:02.997757][info][14364][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Color
+[06/10 18:53:02.997776][info][14364][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 18:53:03.014745][info][14364][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 18:53:03.014764][info][14364][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Depth
+[06/10 18:53:03.014774][info][14364][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 18:53:03.547624][info][14364][Pipeline.cpp:293] [CL8CA5300YD] Start streams done!
+[06/10 18:53:03.547644][info][14364][Pipeline.cpp:250] [CL8CA5300YD] Pipeline start done!
+[06/10 18:53:03.844366][info][13716][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Depth
+[06/10 18:53:03.912998][info][5868][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Color
+[06/10 18:53:04.581726][warning][25196][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset!
+[06/10 18:53:07.584502][warning][25196][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**36 logs in 3002ms**]
+[06/10 18:53:08.848290][info][13716][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.175858fps
+[06/10 18:53:08.848369][info][25056][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.181892fps
+[06/10 18:53:08.919506][info][18524][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=30.163803fps
+[06/10 18:53:08.919569][info][25196][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=30.163803fps
+[06/10 18:53:13.626008][warning][25196][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**85 logs in 6041ms**]
+[06/10 18:53:13.854415][info][13716][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 18:53:13.854479][info][25056][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 18:53:13.926296][info][11540][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:53:13.926359][info][25196][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:53:18.861095][info][13716][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.958059fps
+[06/10 18:53:18.861197][info][25056][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 18:53:18.932872][info][11540][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:53:18.932937][info][25196][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:53:23.868969][info][13716][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 18:53:23.869071][info][25056][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 18:53:23.939243][info][18524][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:53:23.939296][info][25196][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:53:25.641399][warning][25196][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**148 logs in 12015ms**]
+[06/10 18:53:27.603990][info][14364][Pipeline.cpp:367] [CL8CA5300YD] Try to stop pipeline!
+[06/10 18:53:27.604007][info][14364][Pipeline.cpp:343] [CL8CA5300YD] Try to stop streams!
+[06/10 18:53:27.604021][info][14364][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Depth
+[06/10 18:53:28.320228][info][14364][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Depth
+[06/10 18:53:28.320581][info][14364][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Depth
+[06/10 18:53:28.320604][info][14364][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Color
+[06/10 18:53:30.455799][info][14364][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Color
+[06/10 18:53:30.456404][info][14364][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Color
+[06/10 18:53:30.456419][info][14364][Pipeline.cpp:363] [CL8CA5300YD] Stop streams done!
+[06/10 18:53:30.456480][info][14364][Pipeline.cpp:392] [CL8CA5300YD] Stop pipeline done!
+[06/10 18:53:30.456557][info][14364][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x213295D5680
+[06/10 18:53:30.456867][info][14364][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 18:53:30.456972][info][14364][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 18:53:31.064404][warning][11572][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**23 logs in 5422ms, last: 18:53:28.311751**]
+[06/10 18:54:17.910759][info][16244][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 18:54:17.910781][info][16244][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 18:54:17.910787][info][16244][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 18:54:18.937084][info][16244][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 18:54:18.937099][info][16244][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 18:54:19.080466][info][16244][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 18:54:19.080497][info][16244][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x1BDB766B1B0
+[06/10 18:54:19.094391][info][16244][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 18:54:19.646236][info][19196][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 18:54:20.300889][info][16244][Pipeline.cpp:228] [CL8CA5300YD] Check and set config done!
+[06/10 18:54:20.300920][info][16244][Pipeline.cpp:266] [CL8CA5300YD] Try to start streams!
+[06/10 18:54:20.300934][info][16244][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 18:54:20.300942][info][16244][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Color
+[06/10 18:54:20.300948][info][16244][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 18:54:20.310477][info][16244][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 18:54:20.310489][info][16244][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Depth
+[06/10 18:54:20.310494][info][16244][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 18:54:20.846794][info][16244][Pipeline.cpp:293] [CL8CA5300YD] Start streams done!
+[06/10 18:54:20.846825][info][16244][Pipeline.cpp:250] [CL8CA5300YD] Pipeline start done!
+[06/10 18:54:21.210691][info][16940][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Color
+[06/10 18:54:21.243493][info][28604][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Depth
+[06/10 18:54:22.078931][warning][4088][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset!
+[06/10 18:54:25.114907][warning][4088][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**41 logs in 3035ms**]
+[06/10 18:54:26.216230][info][8628][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=30.169830fps
+[06/10 18:54:26.216319][info][4088][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=30.169830fps
+[06/10 18:54:26.245769][info][28604][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.181892fps
+[06/10 18:54:26.245859][info][9648][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.187925fps
+[06/10 18:54:31.158018][warning][4088][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**80 logs in 6043ms**]
+[06/10 18:54:31.222255][info][19212][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:54:31.222575][info][4088][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:54:31.253930][info][28604][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 18:54:31.254045][info][9648][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 18:54:36.227621][info][19196][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.970030fps
+[06/10 18:54:36.227729][info][4088][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 18:54:36.259159][info][28604][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 18:54:36.259259][info][9648][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 18:54:41.233433][info][16940][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 18:54:41.233543][info][4088][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.970030fps
+[06/10 18:54:41.262247][info][28604][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.982012fps
+[06/10 18:54:41.262332][info][9648][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.982012fps
+[06/10 18:54:43.202587][warning][4088][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**147 logs in 12044ms**]
+[06/10 18:54:46.240007][info][8628][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 18:54:46.240111][info][4088][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 18:54:46.274805][info][28604][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.922203fps
+[06/10 18:54:46.274861][info][9648][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.922203fps
+[06/10 18:54:49.929975][info][16244][Pipeline.cpp:367] [CL8CA5300YD] Try to stop pipeline!
+[06/10 18:54:49.929993][info][16244][Pipeline.cpp:343] [CL8CA5300YD] Try to stop streams!
+[06/10 18:54:49.930009][info][16244][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Depth
+[06/10 18:54:50.690833][info][16244][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Depth
+[06/10 18:54:50.691231][info][16244][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Depth
+[06/10 18:54:50.691250][info][16244][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Color
+[06/10 18:54:52.827143][info][16244][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Color
+[06/10 18:54:52.827424][info][16244][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Color
+[06/10 18:54:52.827429][info][16244][Pipeline.cpp:363] [CL8CA5300YD] Stop streams done!
+[06/10 18:54:52.827457][info][16244][Pipeline.cpp:392] [CL8CA5300YD] Stop pipeline done!
+[06/10 18:54:52.827493][info][16244][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x1BDB766B1B0
+[06/10 18:54:52.827616][info][16244][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 18:54:52.827654][info][16244][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 18:54:52.886829][warning][17420][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**65 logs in 9684ms, last: 18:54:50.679367**]
+[06/10 19:03:01.388649][info][25924][DeviceManager.cpp:25] Current found device(s): (1)
+[06/10 19:03:01.388673][info][25924][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 19:03:01.388679][info][25924][DeviceManager.cpp:405] Enable net device enumeration: true
+[06/10 19:03:02.414234][info][25924][DeviceManager.cpp:25] Current device(s) list: (1)
+[06/10 19:03:02.414263][info][25924][DeviceManager.cpp:34] 	- Name: FemtoBolt, PID: 0x066b, SN/ID: CL8CA5300YD, Connection: USB3.1
+[06/10 19:03:02.571634][info][25924][DeviceManager.cpp:199] Device created successfully! Name: Femto Bolt, PID: 0x066b, SN/ID: CL8CA5300YD FW: 1.0.9
+[06/10 19:03:02.571665][info][25924][Pipeline.cpp:54] [CL8CA5300YD] Pipeline created with device: {name: Femto Bolt, sn: CL8CA5300YD}, @0x208719CBF10
+[06/10 19:03:02.584990][info][25924][RawPhaseStreamer.cpp:482] Succeed to load depth engine plugin
+[06/10 19:03:03.136657][info][17912][RawPhaseStreamer.cpp:512] initNvramData: metadataHeader.size: 481712, metadataHeader.width: 0, metadataHeader.height: 0
+[06/10 19:03:03.795015][info][25924][Pipeline.cpp:228] [CL8CA5300YD] Check and set config done!
+[06/10 19:03:03.795085][info][25924][Pipeline.cpp:266] [CL8CA5300YD] Try to start streams!
+[06/10 19:03:03.795139][info][25924][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 19:03:03.795168][info][25924][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Color
+[06/10 19:03:03.795181][info][25924][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Color, format: MJPG, width: 1920, height: 1080, fps: 30}
+[06/10 19:03:03.813250][info][25924][VideoSensor.cpp:58] [CL8CA5300YD] Try to start stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 19:03:03.813270][info][25924][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPED to STARTING@Depth
+[06/10 19:03:03.813279][info][25924][VideoSensor.cpp:127] [CL8CA5300YD] Start backend stream: {type: Depth, format: Y16, width: 640, height: 576, fps: 30}
+[06/10 19:03:04.339383][info][25924][Pipeline.cpp:293] [CL8CA5300YD] Start streams done!
+[06/10 19:03:04.339402][info][25924][Pipeline.cpp:250] [CL8CA5300YD] Pipeline start done!
+[06/10 19:03:04.715133][info][17912][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Color
+[06/10 19:03:04.744537][info][5968][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STARTING to STREAMING@Depth
+[06/10 19:03:05.642309][warning][11568][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset!
+[06/10 19:03:08.646442][warning][11568][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**38 logs in 3004ms**]
+[06/10 19:03:09.747804][info][15052][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=30.200676fps
+[06/10 19:03:09.747917][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=30.206676fps
+[06/10 19:03:09.778947][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=30.188681fps
+[06/10 19:03:09.779038][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=30.194677fps
+[06/10 19:03:14.655566][warning][11568][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**86 logs in 6009ms**]
+[06/10 19:03:14.755014][info][22884][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 19:03:14.755131][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 19:03:14.782215][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.982012fps
+[06/10 19:03:14.782303][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.982012fps
+[06/10 19:03:19.761456][info][1664][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 19:03:19.761560][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 19:03:19.790512][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 19:03:19.790599][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 19:03:24.768070][info][15052][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 19:03:24.768154][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 19:03:24.796474][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 19:03:24.796564][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.964043fps
+[06/10 19:03:26.704675][warning][11568][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**140 logs in 12049ms**]
+[06/10 19:03:29.775268][info][1664][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 19:03:29.775367][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 19:03:29.803654][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 19:03:29.803740][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 19:03:34.781483][info][1664][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 19:03:34.781563][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 19:03:34.812154][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 19:03:34.812246][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 19:03:39.788663][info][22884][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.952078fps
+[06/10 19:03:39.788744][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.952078fps
+[06/10 19:03:39.818780][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.958059fps
+[06/10 19:03:39.818870][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 19:03:44.794968][info][15052][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 19:03:44.795074][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 19:03:44.827265][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 19:03:44.827322][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.952078fps
+[06/10 19:03:49.801641][info][15052][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 19:03:49.801921][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 19:03:49.831952][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.970030fps
+[06/10 19:03:49.832251][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.970030fps
+[06/10 19:03:50.775954][warning][27448][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**324 logs in 24071ms, last: 19:03:50.703046**]
+[06/10 19:03:54.808731][info][17912][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.958059fps
+[06/10 19:03:54.808837][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.958059fps
+[06/10 19:03:54.838536][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.964043fps
+[06/10 19:03:54.838627][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 19:03:59.815340][info][17912][VideoSensor.cpp:153] [CL8CA5300YD] Color backend frame callback, frameRate=29.964043fps
+[06/10 19:03:59.815461][info][11568][SensorBase.cpp:379] [CL8CA5300YD] Color Streaming... frameRate=29.964043fps
+[06/10 19:03:59.846008][info][5968][VideoSensor.cpp:153] [CL8CA5300YD] Depth backend frame callback, frameRate=29.952078fps
+[06/10 19:03:59.846065][info][7208][SensorBase.cpp:379] [CL8CA5300YD] Depth Streaming... frameRate=29.958059fps
+[06/10 19:04:00.569810][info][25924][Pipeline.cpp:367] [CL8CA5300YD] Try to stop pipeline!
+[06/10 19:04:00.569828][info][25924][Pipeline.cpp:343] [CL8CA5300YD] Try to stop streams!
+[06/10 19:04:00.569842][info][25924][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Depth
+[06/10 19:04:01.314771][info][25924][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Depth
+[06/10 19:04:01.315405][info][25924][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Depth
+[06/10 19:04:01.315441][info][25924][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STREAMING to STOPPING@Color
+[06/10 19:04:03.569584][info][25924][SensorBase.cpp:210] [CL8CA5300YD] Stream state changed from STOPPING to STOPPED@Color
+[06/10 19:04:03.570187][info][25924][Pipeline.cpp:357] [CL8CA5300YD] Sensor stream stopped, sensorType=Color
+[06/10 19:04:03.570199][info][25924][Pipeline.cpp:363] [CL8CA5300YD] Stop streams done!
+[06/10 19:04:03.570258][info][25924][Pipeline.cpp:392] [CL8CA5300YD] Stop pipeline done!
+[06/10 19:04:03.570327][info][25924][Pipeline.cpp:65] [CL8CA5300YD] Pipeline destroyed! @0x208719CBF10
+[06/10 19:04:03.570592][info][25924][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 19:04:03.570678][info][25924][SensorBase.cpp:47] [CL8CA5300YD] SensorBase is destroyed
+[06/10 19:04:04.420872][warning][1224][Pipeline.cpp:324] [CL8CA5300YD] Output frameset queue is full, drop oldest frameset! [**93 logs in 13644ms, last: 19:04:01.285364**]

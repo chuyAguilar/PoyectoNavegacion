@@ -585,3 +585,122 @@ Si las vistas siguen la punta coherentemente, **iter 3 está cumplido**.
 4. **pyigtl bloquea sin cliente Slicer**. Conectar OpenIGTLink ANTES de correr tracker.py (ver memory `project_pyigtl_bloquea_sin_cliente.md`).
 
 5. **Jerarquía con BoneToMarker0 en root**: si Physical_Points se crea en root, BoneToMarker0 va en root. Si Physical_Points se anida bajo Marker0ToTracker, BoneToMarker0 también. Mantener consistencia.
+
+---
+
+## ITER 3 — Troubleshooting consolidado (lecciones de la primera reproducción)
+
+Esta sección documenta los fixes específicos descubiertos al reproducir el flujo de iter 3 por primera vez. Cada fix es respuesta a un síntoma observable, NO un capricho. Si reproducís el flujo y aparece el síntoma, aplicá el fix.
+
+### Síntoma 1 — StylusTip aparece muy lejos del dodecaedro virtual
+
+**Indicador**: en la 3D View ves el `StylusTip` (punto rojo) separado del extremo del locator del stylus (línea cyan). Cuando movés el stylus, el punto se mueve pero NO sobre la punta física.
+
+**Causa real (no es del script del StylusTip)**: la cadena de transforms `Marker0ToTracker · DodecaedroToMarker0 · StylusTipToDodecaedro` está inconsistente con la transform directa `DodecaedroToTracker`. El script de crear el StylusTip está bien — el problema está aguas arriba.
+
+**Sub-causas posibles**:
+- **A**: `DodecaedroToMarker0` está en root, debería estar bajo `Marker0ToTracker`.
+- **B**: El Observer Python que recalcula `DodecaedroToMarker0` no está activo (se perdió al reiniciar la escena o cerrar el módulo Transform Processor).
+
+**Diagnóstico** (siempre correr antes de cualquier fix):
+
+```python
+import vtk, numpy as np
+m_dt = vtk.vtkMatrix4x4()
+slicer.util.getNode("DodecaedroToTracker").GetMatrixTransformToWorld(m_dt)
+centro_dod = [m_dt.GetElement(i,3) for i in range(3)]
+tip = slicer.util.getNode("StylusTip")
+pos_tip = [0,0,0]; tip.GetNthControlPointPositionWorld(0, pos_tip)
+dist = np.linalg.norm(np.array(centro_dod) - np.array(pos_tip))
+print(f"Distancia centro_dod -> tip: {dist:.1f} mm  (esperado ~91 mm)")
+```
+
+- Si distancia ≈ 91 mm: todo bien, problema es solo cosmético del locator visual.
+- Si distancia >> 91 mm: aplicar fix.
+
+**Fix**:
+
+```python
+# Verificar y corregir jerarquía
+dod = slicer.util.getNode("DodecaedroToMarker0")
+if dod.GetParentTransformNode() is None or dod.GetParentTransformNode().GetName() != "Marker0ToTracker":
+    m0 = slicer.util.getNode("Marker0ToTracker")
+    dod.SetAndObserveTransformNodeID(m0.GetID())
+    print("DodecaedroToMarker0 reanidado bajo Marker0ToTracker")
+
+# Reinstalar Observer Python
+import vtk
+m0_node = slicer.util.getNode("Marker0ToTracker")
+dt_node = slicer.util.getNode("DodecaedroToTracker")
+d2m0_node = slicer.util.getNode("DodecaedroToMarker0")
+def recompute_d2m0(caller=None, event=None):
+    m_inv = vtk.vtkMatrix4x4()
+    m0_node.GetMatrixTransformToWorld(m_inv)
+    vtk.vtkMatrix4x4.Invert(m_inv, m_inv)
+    m_dt = vtk.vtkMatrix4x4()
+    dt_node.GetMatrixTransformToWorld(m_dt)
+    m_new = vtk.vtkMatrix4x4()
+    vtk.vtkMatrix4x4.Multiply4x4(m_inv, m_dt, m_new)
+    d2m0_node.SetMatrixTransformToParent(m_new)
+recompute_d2m0()
+dt_node.AddObserver(slicer.vtkMRMLLinearTransformNode.TransformModifiedEvent, recompute_d2m0)
+m0_node.AddObserver(slicer.vtkMRMLLinearTransformNode.TransformModifiedEvent, recompute_d2m0)
+print("Observer Python reinstalado.")
+```
+
+### Síntoma 2 — BoneSTL_Points NO se superponen a Physical_Points
+
+**Indicador**: después de Update Registration el RMS es bajo (< 3 mm), pero al armar la jerarquía visualmente los puntos del STL y los Physical_Points están separados varias decenas de mm.
+
+**Causa**: jerarquía de `BoneToMarker0` mal armada. La transform existe pero está aplicada en un frame incorrecto.
+
+**Fix dependiendo de dónde se creó Physical_Points**:
+
+- Si `Physical_Points` está en **ROOT** (sin padre) → `BoneToMarker0` debe quedar en **ROOT** también, con `Segmentation_Bone_CT`, `BoneSTL_Points` y `202: AXIAL` como hijos.
+
+- Si `Physical_Points` está bajo **Marker0ToTracker** → `BoneToMarker0` debe ir **bajo Marker0ToTracker**, con los mismos hijos.
+
+**Verificación**:
+
+```python
+import numpy as np
+b = slicer.util.getNode("BoneSTL_Points")
+p = slicer.util.getNode("Physical_Points")
+n = min(b.GetNumberOfControlPoints(), p.GetNumberOfControlPoints())
+errors = []
+for i in range(n):
+    bp = [0,0,0]; b.GetNthControlPointPositionWorld(i, bp)
+    pp = [0,0,0]; p.GetNthControlPointPositionWorld(i, pp)
+    errors.append(np.linalg.norm(np.array(bp) - np.array(pp)))
+print(f"Errores por punto (mm): {[round(e,1) for e in errors]}")
+print(f"RMS: {np.sqrt(np.mean([e**2 for e in errors])):.2f} mm")
+```
+
+Si RMS > 5 mm después de armar la jerarquía → revisar paternidad.
+
+### Síntoma 3 — Volumen DICOM no aparece en las vistas
+
+**Causa común**: el volumen no está asignado como background de las slices Red/Yellow/Green.
+
+**Fix**: ver §J6.
+
+### Síntoma 4 — Las 3 vistas (R/Y/G) muestran el MISMO corte
+
+**Causa**: Volume Reslice Driver configurado con `Mode = Inplane` en las 3 vistas → todas se alinean al plano XY del driver.
+
+**Fix**: cambiar Mode a:
+- Red → `Axial` (o `Position` si no existe).
+- Yellow → `Sagittal` (o `Position`).
+- Green → `Coronal` (o `Position`).
+
+### Mantenimiento del Observer Python
+
+El Observer Python puede perderse en estos eventos:
+- Cerrar/reabrir Slicer.
+- Cerrar la escena (`File → Close Scene`).
+- Reset del módulo Transform Processor.
+- Operaciones que reinstancian los nodos `Marker0ToTracker` o `DodecaedroToTracker`.
+
+**Regla de oro**: si en cualquier momento la distancia centro_dod → tip deja de dar ~91 mm, re-aplicar §J3 y volver a verificar.
+
+**Verificación periódica recomendada**: correr el script de §J4 cada vez que reabras la sesión, antes de hacer cualquier paired-point o navegación.
