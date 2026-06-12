@@ -1,0 +1,21 @@
+# Matriz StylusTipToDodecaedro 4x4 — iter 4
+# Fecha UTC: 2026-06-12T00:40:10.008175+00:00
+# Geometria: iter4/data/reference_dodecaedro_calibrado.txt (sha256 0fe724a600f94e3a)
+# Poses: 637 inliers de 684 (93.1%)
+# Markers/pose promedio: 4.13
+#
+# METODO PRINCIPAL (esfera + transform):
+#   Offset (mm): [+1.886, +2.092, -89.895]
+#   Magnitud:    89.939 mm
+#   Std (mm):    [1.673, 1.784, 0.581]
+#   RMSE esfera: 0.586 mm
+#
+# CROSS-CHECK (AX=b, Yaniv 2015):
+#   Offset (mm): [+1.508, +2.237, -86.788]
+#   AX=b RMSE:   1.098 mm
+#   Diff vs esfera: 3.133 mm
+#
+    1.000000     0.000000     0.000000     1.886361
+    0.000000     1.000000     0.000000     2.092007
+    0.000000     0.000000     1.000000   -89.894743
+    0.000000     0.000000     0.000000     1.000000
