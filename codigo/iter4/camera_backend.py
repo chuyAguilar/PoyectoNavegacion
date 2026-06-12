@@ -261,6 +261,17 @@ class FemtoBoltBackend(CameraBackend):
         if frames is None:
             return None, None, None
 
+        # Instrumentacion diagnostico D2C (2026-06-11): guardar el depth CRUDO
+        # (640x576, frame del sensor depth) ANTES de alinear, para poder
+        # comparar offline la alineacion del SDK contra una alineacion manual
+        # con la calibracion de fabrica. No afecta el flujo normal.
+        self.last_depth_raw = None
+        raw_df = frames.get_depth_frame()
+        if raw_df is not None:
+            raw = np.frombuffer(raw_df.get_data(), dtype=np.uint16)
+            raw = raw.reshape(raw_df.get_height(), raw_df.get_width())
+            self.last_depth_raw = raw.astype(np.float32) * raw_df.get_depth_scale()
+
         if self.align_filter is not None:
             frames = self.align_filter.process(frames)
             if not frames:

@@ -586,6 +586,11 @@ def main():
     parser.add_argument("--min-frames-validos", type=int, default=DEFAULT_MIN_FRAMES_VALIDOS)
     parser.add_argument("--max-frames", type=int, default=0,
                         help="Submuestreo a N frames (0=todos).")
+    parser.add_argument("--sparse", dest="sparse", action="store_true", default=True,
+                        help="jac_sparsity + tr_solver lsmr (default ON). Sin esto, "
+                             "el Jacobiano denso es inviable con >500 frames.")
+    parser.add_argument("--no-sparse", dest="sparse", action="store_false",
+                        help="Jacobiano denso (modo iter 3; solo con --max-frames <=500).")
     parser.add_argument("--loss", default="huber",
                         choices=["linear", "soft_l1", "huber", "cauchy", "arctan"])
     parser.add_argument("--method", default="trf", choices=["trf", "dogbox", "lm"])
@@ -618,6 +623,20 @@ def main():
         sys.exit(1)
     geom_anclada = geom_teorica[args.ancla].copy()
     log_info("      Ancla: ID %d (centro fijo)" % args.ancla)
+
+    # Consistencia residuos/sparsity/conteos: descartar detecciones cuyo ID
+    # no este en la geometria (calcular_residuos las saltea, pero los conteos
+    # de residuos y el patron de sparsity las contarian).
+    n_drop = 0
+    for fd in frames_full:
+        malos = [m for m in fd["detecciones"] if m not in geom_teorica]
+        for m in malos:
+            del fd["detecciones"][m]
+            if "corners_depth_mm" in fd:
+                fd["corners_depth_mm"].pop(m, None)
+            n_drop += 1
+    if n_drop:
+        log_warn("      %d detecciones con ID fuera de la geometria, descartadas." % n_drop)
 
     log_info("[3/5] Estimando poses iniciales...")
     frames_validos, poses_iniciales = [], []
@@ -661,8 +680,26 @@ def main():
         log_info("      RMSE inicial 3D: %.4f mm" % rmse_init_3d)
 
     log_info("[5/5] Ejecutando bundle adjustment...")
-    log_info("      Method: %s, Loss: %s, f_scale: %.2f" %
-             (args.method, args.loss, args.huber_f_scale))
+    log_info("      Method: %s, Loss: %s, f_scale: %.2f, sparse: %s" %
+             (args.method, args.loss, args.huber_f_scale, str(args.sparse)))
+    extra_ls = {}
+    if args.sparse:
+        # Sin sparsity, scipy estima el Jacobiano denso por diferencias
+        # finitas: n_params+1 evaluaciones por iteracion + O(n_res*n_params)
+        # de RAM. Con 2300 frames eso son ~14k evaluaciones y ~13 GB -> se
+        # "cuelga" (leccion 2026-06-11). Con jac_sparsity, scipy agrupa
+        # columnas estructuralmente ortogonales y baja a ~100 evaluaciones.
+        log_info("      Construyendo jac_sparsity...")
+        A = construir_jac_sparsity(frames_validos, ids_orden, args.ancla,
+                                   offsets_geom, n_geom_params, n_pose_params,
+                                   use_depth)
+        if A.shape != (len(res_init), len(params_init)):
+            log_error("jac_sparsity inconsistente: %s vs (%d, %d). "
+                      "Correr con --no-sparse y reportar." %
+                      (str(A.shape), len(res_init), len(params_init)))
+            sys.exit(1)
+        log_info("      Sparsity OK: %s, nnz=%d" % (str(A.shape), A.nnz))
+        extra_ls = dict(jac_sparsity=A, tr_solver="lsmr", x_scale="jac")
     t0 = time.time()
     resultado = least_squares(
         calcular_residuos, params_init,
@@ -671,6 +708,7 @@ def main():
               use_depth, args.sigma_2d, args.sigma_3d),
         method=args.method, loss=args.loss, f_scale=args.huber_f_scale,
         max_nfev=args.max_nfev, verbose=args.verbose,
+        **extra_ls,
     )
     t_ba = time.time() - t0
 
