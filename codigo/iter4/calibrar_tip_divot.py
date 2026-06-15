@@ -307,6 +307,26 @@ def main():
         rms = float(np.sqrt(np.mean((A @ x - b) ** 2)))
         return x, rms
 
+    # === rechazo de posturas outlier (robustez ante 1 mala captura) ===
+    # Una postura con pocos markers buenos o una orientacion mala produce un
+    # offset lejano que infla el spread (visto 2026-06-15: postura 6 con
+    # Y=+17 vs ~0-2). Se descartan las posturas a >3*MAD de la mediana del
+    # offset y se recalcula. Necesita >= MIN_POSTURAS inliers.
+    off_x = np.array([resolver(p)[0] for p in posturas])
+    med = np.median(off_x, axis=0)
+    mad = np.median(np.abs(off_x - med), axis=0) * 1.4826 + 1e-6
+    dist_post = np.abs(off_x - med) / mad
+    inlier = (dist_post < 3.0).all(axis=1)
+    if inlier.sum() < MIN_POSTURAS:
+        # demasiadas dispersas: no descartar, usar todas y advertir
+        inlier = np.ones(len(posturas), dtype=bool)
+        log_warn("Posturas muy dispersas: no se pudo aislar outliers.")
+    elif inlier.sum() < len(posturas):
+        fuera = [k + 1 for k in range(len(posturas)) if not inlier[k]]
+        log_warn(f"Posturas outlier descartadas: {fuera} "
+                 f"(offset lejos del consenso).")
+    posturas = [p for k, p in enumerate(posturas) if inlier[k]]
+
     todos = [i for p in posturas for i in p]
     offset, rms = resolver(todos)
     log_stats(f"Offset tip (frame dodecaedro): [{offset[0]:+.3f}, {offset[1]:+.3f}, "
@@ -335,12 +355,12 @@ def main():
     np.save(args.output_matriz + ".npy", matriz)
     assert np.load(args.output_matriz + ".npy").shape == (4, 4)
     with open(args.output_matriz + ".txt", "w") as f:
-        f.write("# Matriz StylusTipToDodecaedro 4x4 — calibracion por DIVOT (iter 4)\n")
+        f.write("# Matriz StylusTipToDodecaedro 4x4 \u2014 calibracion por DIVOT (iter 4)\n")
         f.write(f"# Fecha UTC: {datetime.now(timezone.utc).isoformat()}\n")
         f.write(f"# Placa: {PLACA_VERSION}, marker ID {args.plate_id} @ {args.plate_mm} mm\n")
         f.write(f"# Divot {args.divot}: {np.round(p_divot, 3).tolist()} mm\n")
         f.write(f"# Geometria dodecaedro: {rb_cfg['geometry_file']} (sha {geom_sha[:16]})\n")
-        f.write(f"# Samples: {len(todos)} en {len(posturas)} posturas\n")
+        f.write(f"# Samples: {len(todos)} en {len(posturas)} posturas (inliers)\n")
         f.write(f"# Offset (mm): [{offset[0]:+.3f}, {offset[1]:+.3f}, {offset[2]:+.3f}]\n")
         f.write(f"# Magnitud: {np.linalg.norm(offset):.3f} mm\n")
         f.write(f"# RMS global: {rms:.3f} mm, spread: {np.round(spread, 3).tolist()} mm\n#\n")

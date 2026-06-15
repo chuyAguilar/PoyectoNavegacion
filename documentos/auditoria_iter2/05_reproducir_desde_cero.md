@@ -2,6 +2,30 @@
 
 **Fecha**: 2026-05-20. Guía para usar el sistema MIRAI con un dodecaedro distinto al actual (otro tamaño, otros IDs, otro diccionario ArUco).
 
+## ⚠️ ACTUALIZACIÓN ITER 4 (2026-06-15) — cambios respecto a esta guía
+
+Esta guía es de iter 2 (webcam). Para iter 4 (Femto Bolt) cambia lo siguiente:
+
+- **Todos los scripts están en `codigo\iter4\`** y el config es
+  `iter4\tracker_config.yaml`. Anteponer `iter4\` a los comandos.
+- **El paso 3.6 (pivote) quedó OBSOLETO.** El pivote clásico no reproduce con
+  la cámara lateral del Femto Bolt. La calibración del tip ahora es por
+  **DOCK / template** con la placa impresa `stl\placa_dock_v3\`:
+  ```powershell
+  python iter4\calibrar_tip_divot.py --divot DOCK --plate-id 2 --plate-mm 59.6 `
+      --output-matriz iter4\data\StylusTipToDodecaedro_viejo_dock
+  ```
+  (Encajar el stylus en el dock, rotar el conjunto frente a la cámara, ESPACIO
+  en 4-6 orientaciones, q. Buscar spread <1.5 mm. Ver `stl\placa_dock_v3\README.md`.)
+- **El marker del paciente (Marker0) mide 80.0 mm**, no 60.8 (config iter 4).
+- **Captura del BA: SIEMPRE fuera de la caja de luz** (multipath del depth ToF).
+- La nota §7.2 (BA denso por bug de sparsity) ya NO aplica: en iter 4 el
+  `jac_sparsity` está conectado y validado (default `--sparse` ON). Si un BA
+  no converge, ver memoria `stylus-impreso-diagnostico-ba`.
+- Pre-requisito: depende de `pyorbbecsdk2` (no el viejo `pyorbbecsdk`).
+
+El resto del pipeline (generar geometría, captura, topología, BA) es conceptualmente igual.
+
 ## Resumen ejecutivo
 
 **Sí, el sistema es replicable.** Todo lo que cambia entre dodecaedros está configurable por:

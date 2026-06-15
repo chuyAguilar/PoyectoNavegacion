@@ -71,7 +71,7 @@ markers:
 # IDs y tamano nuevos para iter 4 (anotar abajo cuando esten definitivos).
 rigid_bodies:
   - name: Dodecaedro
-    geometry_file: iter4/data/reference_stylus_impreso.txt
+    geometry_file: data/reference_stylus_impreso.txt
     # marker_mm propiedad de iter 4: 13.4 mm (antes 16 en iter 3).
     marker_mm: 16.0
 

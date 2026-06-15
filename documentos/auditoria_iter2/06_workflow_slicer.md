@@ -6,6 +6,26 @@
 
 ---
 
+## ⚠️ ACTUALIZACIÓN ITER 4 (2026-06-15) — leer antes de seguir
+
+El flujo de Slicer de abajo (jerarquía, Observer Python §J3, verificación §J4,
+Reslice Driver, troubleshooting) **sigue válido sin cambios**. Solo cambian
+estos datos respecto a iter 2/3:
+
+| Dato | iter 2/3 (texto viejo) | iter 4 (usar esto) |
+|---|---|---|
+| **Archivo del tip** | `codigo\StylusTipToDodecaedro.npy` | `codigo\iter4\data\StylusTipToDodecaedro_viejo_dock.npy` |
+| **Cómo se calibró el tip** | pivote clásico (`test_pivote.py`) | calibración por DOCK (`iter4\calibrar_tip_divot.py --divot DOCK`, spread 0.92 mm) |
+| **Marker del paciente (Marker0)** | 60.8 mm | **80.0 mm** (`iter4\tracker_config.yaml`) |
+| **Distancia centro_dod → tip (§J4)** | ~91 mm | **~93 mm** (magnitud del dock) |
+| **Tracker** | `python tracker.py` | `python iter4\tracker.py --config iter4\tracker_config.yaml` |
+
+En TODOS los snippets de Python de abajo, reemplazar la ruta del `.npy` por la
+de iter 4. Los nombres de transforms (`Marker0ToTracker`, `DodecaedroToTracker`,
+`StylusTipToDodecaedro`) NO cambian.
+
+---
+
 ## 0. Prerequisitos (antes de abrir Slicer)
 
 | Item | Cómo verificar |

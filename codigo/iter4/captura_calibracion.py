@@ -56,9 +56,34 @@ def log_stats(msg): print(f"[STATS] {msg}")
 # I/O helpers
 # ============================================================================
 
+def _resolver_ruta(p, cfg_dir):
+    """Resuelve una ruta del config probando, en orden: tal cual (absoluta o
+    relativa al cwd), relativa al directorio del config. Devuelve la primera
+    que existe; si ninguna, deja la original (el error posterior es claro).
+    Esto hace que los scripts corran desde CUALQUIER carpeta (codigo\ o
+    codigo\iter4\), no solo desde donde el path del config fue escrito.
+    """
+    if not p:
+        return p
+    from pathlib import Path as _P
+    for cand in (_P(p), cfg_dir / p):
+        if cand.exists():
+            return str(cand)
+    return p
+
+
 def cargar_config(ruta):
+    from pathlib import Path as _P
+    cfg_dir = _P(ruta).resolve().parent
     with open(ruta, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        cfg = yaml.safe_load(f)
+    for rb in cfg.get("rigid_bodies", []) or []:
+        if rb.get("geometry_file"):
+            rb["geometry_file"] = _resolver_ruta(rb["geometry_file"], cfg_dir)
+    cam = cfg.get("camera", {}) or {}
+    if cam.get("calibration_file"):
+        cam["calibration_file"] = _resolver_ruta(cam["calibration_file"], cfg_dir)
+    return cfg
 
 
 def cargar_rb_ids(ruta_geometria):

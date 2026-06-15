@@ -34,9 +34,28 @@ from camera_backend import create_backend
 # ============================================================================
 
 def cargar_config(ruta):
-    """Carga el archivo YAML de configuracion."""
+    """Carga el YAML de config y resuelve las rutas de archivos (geometry_file,
+    calibration_file) probando relativas al cwd y al directorio del config.
+    Asi el tracker corre desde cualquier carpeta (codigo\\ o codigo\\iter4\\)."""
+    cfg_dir = Path(ruta).resolve().parent
     with open(ruta, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        cfg = yaml.safe_load(f)
+
+    def _resolver(p):
+        if not p:
+            return p
+        for cand in (Path(p), cfg_dir / p):
+            if cand.exists():
+                return str(cand)
+        return p
+
+    for rb in cfg.get("rigid_bodies", []) or []:
+        if rb.get("geometry_file"):
+            rb["geometry_file"] = _resolver(rb["geometry_file"])
+    cam = cfg.get("camera", {}) or {}
+    if cam.get("calibration_file"):
+        cam["calibration_file"] = _resolver(cam["calibration_file"])
+    return cfg
 
 
 def cargar_calibracion(ruta):

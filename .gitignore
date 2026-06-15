@@ -14,6 +14,16 @@ __pycache__/
 *.npz
 # Si algunos de los archivos .npy/.npz son requeridos para ejecución (ej. calibración base), coméntalos arriba o añádelos con !*.npy
 
+# Productos de calibracion ESPECIFICOS del hardware fisico de cada equipo.
+# NO se versionan: cada equipo (camara + dodecaedro + stylus) genera los suyos
+# localmente. Asi dos equipos con el mismo repo (ej. Femto Bolt vs webcam, IDs
+# 170-180 vs 151-161) NO se pisan las calibraciones en git.
+#   - geometrias CALIBRADAS post-BA (las TEORICAS reference_*.txt si se versionan)
+#   - matrices del tip (StylusTipToDodecaedro*)
+*_calibrado.txt
+StylusTipToDodecaedro*.txt
+StylusTipToDodecaedro*.h5
+
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db
@@ -29,3 +39,13 @@ desktop.ini
 *.swp
 
 /documentos/VERONICA/
+
+# Binarios pesados NO-core (ruido en el panel de cambios):
+#   - stl/pruebas/: modelos experimentales y descargados de terceros (cases de
+#     camara con sus images/README/LICENSE, prototipos viejos). ~50 MB.
+#   - capturas/: videos de prueba (.mp4) de iteraciones pasadas.
+# Si algun archivo de estas carpetas es importante, sacarlo del ignore con
+# una linea "!ruta/al/archivo".
+stl/pruebas/
+capturas/
+*.mp4
