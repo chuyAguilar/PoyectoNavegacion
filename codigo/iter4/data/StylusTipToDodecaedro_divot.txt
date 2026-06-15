@@ -1,14 +1,14 @@
 # Matriz StylusTipToDodecaedro 4x4 — calibracion por DIVOT (iter 4)
-# Fecha UTC: 2026-06-13T01:20:19.882231+00:00
-# Placa: placa_calibracion_v2_impresa_2026-06-12, marker ID 1 @ 59.55 mm
-# Divot B: [0.0, -49.821, -3.5] mm
-# Geometria dodecaedro: iter4/data/reference_dodecaedro_calibrado.txt (sha 0fe724a600f94e3a)
-# Samples: 234 en 7 posturas
-# Offset (mm): [+4.919, +2.693, -96.609]
-# Magnitud: 96.771 mm
-# RMS global: 3.409 mm, spread: [2.633, 4.944, 0.78] mm
+# Fecha UTC: 2026-06-15T19:03:46.659510+00:00
+# Placa: placa_calibracion_v2_impresa_2026-06-12, marker ID 2 @ 59.6 mm
+# Divot DOCK: [-48.523, -59.76, 20.598] mm
+# Geometria dodecaedro: iter4/data/reference_stylus_impreso.txt (sha c8214285b0f64b52)
+# Samples: 268 en 8 posturas
+# Offset (mm): [-0.875, -2.691, -126.097]
+# Magnitud: 126.129 mm
+# RMS global: 5.267 mm, spread: [4.697, 6.707, 3.725] mm
 #
-    1.000000     0.000000     0.000000     4.919449
-    0.000000     1.000000     0.000000     2.693070
-    0.000000     0.000000     1.000000   -96.608643
+    1.000000     0.000000     0.000000    -0.874772
+    0.000000     1.000000     0.000000    -2.691033
+    0.000000     0.000000     1.000000  -126.097396
     0.000000     0.000000     0.000000     1.000000

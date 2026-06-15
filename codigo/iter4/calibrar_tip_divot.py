@@ -66,11 +66,12 @@ DIVOTS = {
     "B": np.array([0.0, -50.0 * ESCALA_XY, -3.5]),
     "C": np.array([40.0 * ESCALA_XY, -50.0 * ESCALA_XY, -3.5]),
     # DOCK de la placa v3 (template completo, stylus impreso con esfera r1):
-    # CENTRO DE LA ESFERA en el frame del marker ID 2. Coordenadas CAD
-    # NOMINALES (re-medir escala al imprimir y aplicar como en A/B/C).
+    # CENTRO DE LA ESFERA en el frame del marker ID 2.
+    # AS-BUILT pieza impresa 2026-06-15: placa midio 149.4 mm (nominal 150.0)
+    # -> escala XY 0.99600 aplicada a X,Y. Z (altura de impresion) sin escalar.
     # Protocolo: stylus encajado fijo; entre posturas se reorienta el
-    # CONJUNTO entero frente a la camara. Usar con --plate-id 2.
-    "DOCK": np.array([-48.718, -60.0, 20.598]),
+    # CONJUNTO entero frente a la camara. Usar con --plate-id 2 --plate-mm 59.6.
+    "DOCK": np.array([-48.718 * (149.4 / 150.0), -60.0 * (149.4 / 150.0), 20.598]),
 }
 PLACA_VERSION = "placa_calibracion_v2_impresa_2026-06-12"
 
