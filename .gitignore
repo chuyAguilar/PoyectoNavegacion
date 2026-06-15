@@ -17,6 +17,11 @@ __pycache__/
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Logs que cambian en cada corrida (ruido en el panel de cambios)
+*.log.txt
+**/Log/*.txt
 
 # Directorios de IDEs (opcional)
 .vscode/

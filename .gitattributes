@@ -1,0 +1,29 @@
+# Normalizacion de fin de linea (evita el ciclo CRLF<->LF que reaparece
+# en el panel de cambios). Git guarda LF en el repo; en Windows el working
+# tree usa CRLF para archivos de texto.
+* text=auto
+
+# Codigo y datos de texto: LF en el repo
+*.py    text eol=lf
+*.txt   text eol=lf
+*.md    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.json  text eol=lf
+*.csv   text eol=lf
+
+# Scripts de Windows: CRLF
+*.ps1   text eol=crlf
+*.bat   text eol=crlf
+
+# Binarios: nunca tocar
+*.stl       binary
+*.3mf       binary
+*.npy       binary
+*.npz       binary
+*.h5        binary
+*.mp4       binary
+*.png       binary
+*.jpg       binary
+*.pdf       binary
+*.svg       binary
