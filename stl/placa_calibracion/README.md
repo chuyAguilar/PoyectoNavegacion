@@ -9,10 +9,26 @@ ground truth para validar el sistema completo.
 
 | Archivo | Qué es | Impresión |
 |---|---|---|
-| `placa_calibracion_v1.stl` | Placa 140×120×6 con recess, 3 divots y agujeros | PLANA sobre la cama, 0.2 mm de capa, 4+ perímetros, relleno ≥40% |
+| `placa_calibracion_v2_marker_integrado.stl` | **RECOMENDADA.** Placa con el marker ID 1 modelado en relieve (una pieza, sin papel) | Ver instrucciones v2 abajo |
+| `placa_calibracion_v1.stl` | Variante con recess para marker de papel | PLANA sobre la cama, 0.2 mm de capa |
 | `cuna_soporte_40deg.stl` | Cuña opcional 40° con ranura para la placa | Cualquier orientación |
-| `marker_id1_60mm_A4.pdf` | Marker ID 1 (DICT_ARUCO_MIP_36h12) a 60.0 mm | **AL 100%**, sin "ajustar a página" |
-| `placa_calibracion_v1_diagrama.png` | Diagrama acotado | — |
+| `marker_id1_60mm_A4.pdf` | Marker ID 1 en papel (solo para la v1) | **AL 100%**, sin "ajustar a página" |
+| `placa_calibracion_v1_diagrama.png` | Diagrama acotado (válido para ambas) | — |
+| `placa_v2_validacion_marker.png` | Patrón del relieve vs referencia cv2 | — |
+
+## Impresión de la v2 (marker integrado)
+
+1. PLANA sobre la cama (cara del marker hacia ARRIBA), capa 0.2 mm,
+   4+ perímetros, relleno ≥40%. Altura total: 6.0 mm.
+2. Filamento **BLANCO MATE** de base. En el slicer, agregar **cambio de
+   color a NEGRO MATE en z = 5.5 mm** (las últimas ~3 capas).
+   - Las celdas del marker están en relieve de 0.5 mm sobre un campo
+     rehundido: el cambio de color pinta solo celdas + superficie general.
+   - PrusaSlicer/Bambu/Cura: "Add color change" / M600 a 5.5 mm.
+3. Evitar filamentos brillantes (reflejos especulares matan la detección).
+4. Ventaja vs papel: registro marker↔divots perfecto (misma pieza),
+   sin pegado, sin escala de impresora. El frame y las coordenadas de los
+   divots son idénticos a la v1 (mismo script, sin cambios).
 
 ## Armado (una sola vez)
 
