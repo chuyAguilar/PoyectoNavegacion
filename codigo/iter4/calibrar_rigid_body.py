@@ -226,7 +226,7 @@ def estimar_pose_inicial(detecciones, geom_teorica, K, dist):
     if not ok:
         return None
     # Filtro Z<0: poses con tvec[2]<=0 son la solucion espejada (iter 4 lecciones)
-    if float(tvec[2]) <= 0:
+    if float(tvec[2].item()) <= 0:
         return None
     return rvec.flatten(), tvec.flatten()
 
