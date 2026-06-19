@@ -105,12 +105,15 @@ Test-Path iter4\data\camera_calibration_webcam.yml
 
 # B. Calibración del rigid body (solo si el dodecaedro es NUEVO)
 
-> **Si ya existe el archivo `iter4\data\reference_dodecaedro_calibrado.txt`,
-> saltear toda la sección B e ir a la C.** Para verificar si existe:
+> **Si ya existe la geometría calibrada del doctor
+> (`iter4\data\reference_dodecaedro_doctor_calibrado.txt`) y el BA de esa corrida
+> convergió bien, saltear toda la sección B e ir a la C.** Para verificar si
+> existe:
 > ```powershell
-> Test-Path iter4\data\reference_dodecaedro_calibrado.txt
+> Test-Path iter4\data\reference_dodecaedro_doctor_calibrado.txt
 > ```
-> Si dice `True`, saltear a la sección C.
+> Si dice `True` (y confiás en esa calibración), saltear a la sección C. Si tenés
+> dudas de que el BA haya cerrado bien, rehacé la sección B.
 
 Esta sección genera la "geometría" del dodecaedro (la posición 3D exacta de cada
 marker), necesaria para que el tracker calcule la pose.
@@ -124,12 +127,21 @@ Anotar:
 
 ### B.2 — Generar la geometría teórica
 
-> **Equipo IDs 151–161**: este archivo YA está generado en el repo
-> (`reference_dodecaedro_doctor.txt`). Podés saltear este paso B.2 y usar ese
-> archivo como `--teorico` en B.5. El comando con el que se generó fue:
+> **Equipo IDs 151–161 (el del doctor)**: generá la semilla teórica con TU valor
+> de marker medido con calibrador. En este equipo el marker midió **16.58 mm** y
+> la arista **20 mm**:
 > ```powershell
-> python iter4\generar_reference_dodecaedro.py --id-top 151 --ids-superior 152,153,154,155,156 --ids-inferior 157,158,159,160,161 --edge-mm 20 --marker-mm 16 --output iter4\data\reference_dodecaedro_doctor.txt
+> python iter4\generar_reference_dodecaedro.py --id-top 151 --ids-superior 152,153,154,155,156 --ids-inferior 157,158,159,160,161 --edge-mm 20 --marker-mm 16.58 --output iter4\data\reference_dodecaedro_doctor.txt
 > ```
+>
+> ⚠️ **REGLA DEL `marker_mm`**: el valor que uses acá (16.58) tiene que ser **el
+> mismo** en B.4 (limpieza) y B.5 (BA). Si mezclás 16 y 16.58 entre pasos, la
+> geometría queda inconsistente. En este manual ya está puesto 16.58 en los tres.
+>
+> ⚠️ **El orden de `--ids-inferior` importa.** Si el anillo de abajo está pegado
+> en otra rotación, el BA no converge (lo vas a ver en B.5 con el anillo inferior
+> desplazado ~23 mm). Si pasa eso, NO adivines: corré el diagnóstico **B.4.5** y
+> regenerá con el orden que te indique.
 
 Para un dodecaedro distinto, reemplazar los valores por los tuyos:
 
@@ -143,34 +155,84 @@ en la cara): reducir `marker_mm`.
 
 ### B.3 — Capturar dataset para el bundle adjustment
 
-Montar el dodecaedro dentro de la caja de luz, frente a la cámara. Ejecutar y,
-durante 90 segundos, **rotar el dodecaedro lentamente** mostrando TODAS las caras
-(TOP, anillo superior, anillo inferior) en muchas orientaciones:
+Montar el dodecaedro dentro de la caja de luz, frente a la cámara.
+
+> ⚠️ **OBLIGATORIO `--geometry-file`.** El script, si no le pasás esta bandera,
+> usa por default `reference_dodecaedro.txt` (IDs **170–180**) y va a buscar los
+> markers equivocados. Para el equipo del doctor hay que forzar su geometría:
 
 ```powershell
-python iter4\captura_calibracion.py --config iter4\tracker_config_doctor.yaml --duracion 90 --output iter4\data\captura_ba.npz
+python iter4\captura_calibracion.py --config iter4\tracker_config_doctor.yaml --geometry-file iter4\data\reference_dodecaedro_doctor.txt --duracion 90 --output iter4\data\captura_ba.npz
 ```
 
+Durante los 90 segundos, **rotar el dodecaedro lentamente** mostrando TODAS las
+caras en muchas orientaciones.
+
+> ⚠️ **COBERTURA PAREJA — el error más común.** El anillo **inferior** (157–161)
+> es el que menos se ve y el que rompe el BA. Incliná el dodecaedro de modo que
+> el anillo de abajo mire a la cámara **tanto como el de arriba**. Mientras corre,
+> la ventana muestra la cobertura de cada ID a la derecha: **no termines hasta que
+> los IDs 157–161 estén en verde** y con un conteo parecido a los de arriba.
+
 Al terminar reporta cobertura por marker (todos deben decir `OK`) y "Frames
-útiles". Buscar >1500 frames útiles.
+útiles". Buscar **>1500 frames útiles** y que **ningún ID quede con muchas menos
+detecciones que el resto** (apuntá a que el anillo inferior tenga al menos la
+mitad de detecciones que el superior; si quedan en ~60 vs ~180, recapturá).
 
 ### B.4 — (Si hubo IDs fantasma) limpiar la captura
 
-El detector puede generar falsos positivos. Limpiarlos antes del BA:
+El detector puede generar falsos positivos. Limpiarlos antes del BA. **Equipo del
+doctor** (su geometría + su marker 16.58):
 
 ```powershell
-python iter4\limpiar_captura_fantasmas.py --input iter4\data\captura_ba.npz --teorico iter4\data\reference_dodecaedro.txt --marker-mm 13.4 --output iter4\data\captura_ba_limpia.npz
+python iter4\limpiar_captura_fantasmas.py --input iter4\data\captura_ba.npz --teorico iter4\data\reference_dodecaedro_doctor.txt --marker-mm 16.58 --output iter4\data\captura_ba_limpia.npz
 ```
 
+> ⚠️ Usá **siempre** `reference_dodecaedro_doctor.txt` y `--marker-mm 16.58`. Si
+> ponés la geometría genérica (`reference_dodecaedro.txt`, 170–180), ningún marker
+> coincide, la lista queda vacía y el script crashea en `np.concatenate`.
+
 (Si no querés limpiar, usar `captura_ba.npz` directamente en el paso B.5.)
+
+### B.4.5 — (Diagnóstico) Verificar la topología del dodecaedro
+
+**Cuándo correr esto**: solo si el BA (B.5) **no converge** y ves un anillo entero
+con desplazamientos grandes (~23 mm). Sirve para saber si el problema es el
+**orden de pegado** de los IDs o la **cobertura** de la captura. No cambia nada por
+sí solo: es una medición.
+
+Estima la pose de cada marker por separado y mide las distancias reales entre
+ellos para reconstruir el orden físico de los anillos:
+
+```powershell
+python iter4\calibrar_topologia.py --input iter4\data\captura_ba_limpia.npz --id-top 151 --edge-mm 20 --marker-mm 16.58
+```
+
+**Cómo interpretar la salida:**
+
+- **Los pares matchean dentro de ~3 mm, pero el orden detectado del anillo
+  inferior NO es `157→158→159→160→161`** → están bien medidos pero pegados en otra
+  rotación. Regenerá la geometría teórica (B.2) cambiando `--ids-inferior` por el
+  orden que reporta el script, y volvé a correr B.5. **No hace falta recapturar.**
+- **Las distancias NO matchean / el script se queja / faltan markers** → es
+  problema de **cobertura o calidad** de la captura. Volvé a **B.3** y capturá de
+  nuevo mostrando mejor el anillo flojo.
+
+> ⚠️ Ojo: el "orden detectado" puede ser una elección cíclica arbitraria (ej.
+> `[158,159,160,161,157]` es la misma topología que `[157,158,159,160,161]`). No
+> tomes la diferencia con el teórico como error de pegado **a menos que las
+> distancias entre pares confirmen el desfase**. Ante la duda, primero descartá
+> cobertura (rehacer B.3); cambiar el orden sin confirmar no arregla un BA que
+> falla por dataset malo.
 
 ### B.5 — Ejecutar el bundle adjustment
 
 `--ancla` = ID del TOP, `--marker-mm` = tu valor:
 
-**Equipo IDs 151–161** (ancla 151, marker 16, su geometría y su salida):
+**Equipo IDs 151–161 (el del doctor)** — ancla 151, marker 16.58, su geometría y
+su salida:
 ```powershell
-python iter4\calibrar_rigid_body.py --input iter4\data\captura_ba_limpia.npz --teorico iter4\data\reference_dodecaedro_doctor.txt --output iter4\data\reference_dodecaedro_doctor_calibrado.txt --ancla 151 --marker-mm 16.0 --no-depth --max-frames 800 --max-nfev 1000
+python iter4\calibrar_rigid_body.py --input iter4\data\captura_ba_limpia.npz --teorico iter4\data\reference_dodecaedro_doctor.txt --output iter4\data\reference_dodecaedro_doctor_calibrado.txt --ancla 151 --marker-mm 16.58 --no-depth --max-frames 800 --max-nfev 1000
 ```
 
 Para otro dodecaedro (plantilla genérica):
@@ -178,10 +240,31 @@ Para otro dodecaedro (plantilla genérica):
 python iter4\calibrar_rigid_body.py --input iter4\data\captura_ba_limpia.npz --teorico iter4\data\reference_dodecaedro.txt --output iter4\data\reference_dodecaedro_calibrado.txt --ancla 170 --marker-mm 13.4 --no-depth --max-frames 800 --max-nfev 1000
 ```
 
-**Objetivo**: `RMSE 2D` final **< 1.0 px** y `Desplazamientos` máximos **< 5 mm**.
-Si el RMSE no baja y la geometría no se mueve, revisar la memoria
-`stylus-impreso-diagnostico-ba`. El archivo
-`reference_dodecaedro_calibrado.txt` queda generado.
+**Cómo leer el resultado (no alcanza con que termine):**
+
+1. **`RMSE 2D` final < 1.0 px.** Si dice `El BA NO converge satisfactoriamente` y
+   el RMSE queda en 3 px o más, NO sirve: la geometría que generó está mal y el
+   tip va a salir mal. No sigas a la sección C.
+2. **`Desplazamientos respecto a geometria teorica` < 5 mm en TODOS los markers.**
+   Si un anillo entero aparece con **~23 mm** de desplazamiento, es la firma de
+   **anillo rotado** (orden de IDs equivocado) o de **mala cobertura** de ese
+   anillo en la captura.
+3. **Mirá el `n=` (detecciones) por marker.** Si un anillo tiene 3–4 veces menos
+   detecciones que el otro (ej. inferior n≈60 vs superior n≈180), el problema es
+   **cobertura**: rehacé la captura (B.3) mostrando mejor ese anillo.
+
+**Si no converge, en este orden:**
+- (a) ¿Cobertura despareja? → repetir **B.3** con el anillo flojo mejor expuesto.
+- (b) ¿Cobertura pareja pero un anillo sigue a ~23 mm? → correr **B.4.5**
+  (diagnóstico de topología) y regenerar la geometría con el orden real.
+
+El archivo `reference_dodecaedro_doctor_calibrado.txt` queda generado **solo si el
+BA cerró bien**.
+
+> 🔧 **Nota (bug ya corregido).** Si en `[3/5] Estimando poses iniciales` aparece
+> `TypeError: only 0-dimensional arrays can be converted to Python scalars`, es un
+> bug de numpy 2.x ya arreglado en el repo (`calibrar_rigid_body.py`, uso de
+> `tvec[2].item()`). Asegurate de tener el último `git pull`.
 
 ---
 
@@ -639,22 +722,35 @@ re-centrarse en la zona que tocás. Si siguen la punta, la navegación funciona.
 ### Checklist rápido
 
 ```
+[ ] git pull al dia (incluye fixes de codigo).
 [ ] PowerShell en codigo\ con (.venv) activado.
-[ ] iter4\data\reference_dodecaedro_calibrado.txt existe (o seccion B).
+[ ] B.2: reference_dodecaedro_doctor.txt regenerado con marker 16.58.
+[ ] B.3: captura con --geometry-file; anillo inferior (157-161) en verde.
+[ ] B.5: reference_dodecaedro_doctor_calibrado.txt existe Y el BA convergio
+        (RMSE 2D < 1 px, desplazamientos < 5 mm). Si no, B.4.5 o recapturar.
 [ ] Tip calibrado por DOCK (seccion C): spread < 1.5 mm.
 [ ] Slicer: OpenIGTLink conectado ANTES de correr el tracker.
 [ ] Tracker corriendo (--config tracker_config_doctor.yaml): N >= 3 markers.
-[ ] E.2-E.6: tip cargado, Observer instalado, Check1 < 1mm, Check2 ~ 93mm.
+[ ] E.2-E.6: tip cargado, Observer instalado, Check1 < 1mm, Check2 ~ magnitud tip.
 [ ] F: STL cargado, puntos marcados, RMS < 1.5 mm, jerarquia armada.
 [ ] (Opcional) G: navegacion tomografica.
 ```
+
+> **Recordá el `marker_mm` del doctor**: en B.2, B.4 y B.5 usá **16.58** (no 16).
+> Y en todo comando del manual que diga `reference_dodecaedro.txt` o
+> `--marker-mm 13.4`, cambialo por `reference_dodecaedro_doctor.txt` y `16.58`.
 
 ### Problemas comunes
 
 | Síntoma | Causa | Solución |
 |---|---|---|
+| La captura busca IDs **170–180** aunque tu stylus sea 151–161 | Falta `--geometry-file`; el script usa por default `reference_dodecaedro.txt` | Agregar `--geometry-file iter4\data\reference_dodecaedro_doctor.txt` (B.3) |
+| La cámara "abre 3 s y se cierra" sin imagen | La cámara no entrega frames (30 lecturas vacías → aborta) | Cerrar todo programa que use la webcam (Slicer/Zoom/Cámara), revisar `source: 0` en el config |
+| `limpiar_captura_fantasmas.py` crashea en `np.concatenate` | `--teorico` con geometría equivocada (170–180): ningún marker coincide | Usar `reference_dodecaedro_doctor.txt` y `--marker-mm 16.58` (B.4) |
+| BA: `TypeError: only 0-dimensional arrays...` en `estimar_pose_inicial` | Bug numpy 2.x (`float(tvec[2])`) | Ya corregido en el repo (`tvec[2].item()`): hacer `git pull` |
+| BA `NO converge`, un anillo con desplazamientos **~23 mm** | Cobertura despareja de ese anillo, o IDs pegados en otra rotación | (a) recapturar B.3 mostrando ese anillo; (b) si la cobertura es pareja, correr B.4.5 y regenerar la geometría con el orden real |
 | El tracker se cuelga en el primer frame | Slicer no conectado | Conectar OpenIGTLink (E.1) ANTES de correr el tracker |
-| `FileNotFoundError: ...reference_dodecaedro_calibrado.txt` | Falta la geometría | Correr la sección B |
+| `FileNotFoundError: ...reference_dodecaedro_doctor_calibrado.txt` | Falta la geometría calibrada | Correr la sección B completa (genera ese archivo) |
 | Pocos markers / detección intermitente | Distancia o luz | Acercar a 50–60 cm, mejorar luz, marcadores negros mate |
 | Check 2 ≠ 93 mm | Observer no activo | Repetir E.4 y E.5 |
 | StylusTip lejos del stylus virtual | Cadena rota o Observer caído | Repetir E.4, E.5, verificar E.6 |

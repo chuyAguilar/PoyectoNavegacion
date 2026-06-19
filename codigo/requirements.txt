@@ -23,6 +23,9 @@ pyigtl>=0.3.1              # Server TCP para enviar TransformMessage a Slicer.
 # ===== Femto Bolt / Orbbec depth camera (iter 4) =====
 pyorbbecsdk2>=2.0.18         # SDK oficial Orbbec v2 (renombrado en PyPI desde 2.0.18). El modulo se importa como pyorbbecsdk (sin "2").
 
+# ===== Registro por superficie / nube de puntos (iter 4) =====
+open3d>=0.18               # Nube de puntos, voxel downsample, FPFH+RANSAC, ICP, TSDF. Registro CT<->superficie.
+
 # ===== Tests =====
 pytest>=7.4                # Suite de tests pytest (55+ tests en iter 2).
 
