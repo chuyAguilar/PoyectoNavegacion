@@ -83,7 +83,7 @@ def mask_marker(depth_m, corners, escala=1.8):
 
 
 def aislar_bone_depth(depth_m, K, zmin, zmax, plano_mm=6.0, altura_min_mm=12.0,
-                      eps_mm=12.0, min_pts=150):
+                      eps_mm=12.0, min_pts=150, marker_t=None, roi_m=None):
     """Devuelve un depth donde SOLO quedan los pixeles del hueso (mesa y fondo a 0).
     Reusa: recorte Z -> quitar plano (mesa) -> filtro de altura -> cluster mayor.
     Hacerlo ANTES de integrar evita meter la mesa en el volumen TSDF."""
@@ -95,6 +95,14 @@ def aislar_bone_depth(depth_m, K, zmin, zmax, plano_mm=6.0, altura_min_mm=12.0,
         return None
     us = uu[valido]; vs = vv[valido]; z = depth_m[valido]
     pts = np.stack([(us - cx) * z / fx, (vs - cy) * z / fy, z], axis=1)
+    # Recorte por ROI: conservar solo lo que esta cerca del marcador (descarta
+    # objetos/desorden lejanos). El objeto a escanear esta cerca del marcador.
+    if marker_t is not None and roi_m:
+        d = np.linalg.norm(pts - marker_t.reshape(1, 3), axis=1)
+        roi_keep = d < roi_m
+        us, vs, z, pts = us[roi_keep], vs[roi_keep], z[roi_keep], pts[roi_keep]
+        if len(pts) < min_pts:
+            return None
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(pts)
     keep = np.ones(len(pts), dtype=bool)
@@ -141,6 +149,7 @@ def main():
     ap.add_argument("--frames", type=int, default=50, help="Frames a promediar por vista.")
     ap.add_argument("--voxel-mm", type=float, default=1.5, help="Tamano de voxel TSDF (mm).")
     ap.add_argument("--zmin", type=float, default=0.40, help="Profundidad min del hueso (m).")
+    ap.add_argument("--roi-cm", type=float, default=30.0, help="Radio alrededor del marcador a conservar (cm). 0 = sin recorte.")
     ap.add_argument("--zmax", type=float, default=0.80, help="Profundidad max integrada (m).")
     ap.add_argument("--dist-min", type=float, default=0.45)
     ap.add_argument("--dist-max", type=float, default=0.72)
@@ -219,7 +228,8 @@ def main():
             if not (args.dist_min <= d <= args.dist_max):
                 log(f"Marcador a {d*100:.1f} cm (fuera de rango): descartada."); continue
             depth_masked = mask_marker(depth_avg, rc2)
-            depth_bone = aislar_bone_depth(depth_masked, K, args.zmin, args.zmax)
+            depth_bone = aislar_bone_depth(depth_masked, K, args.zmin, args.zmax,
+                                           marker_t=t, roi_m=(args.roi_cm/100.0 if args.roi_cm else None))
             if depth_bone is None:
                 log("No pude aislar el hueso en esta vista: descartada."); continue
             color_o3d = o3d.geometry.Image(cv2.cvtColor(rgb_v, cv2.COLOR_BGR2RGB).copy())
@@ -232,7 +242,8 @@ def main():
             extr = np.eye(4); extr[:3, :3] = R; extr[:3, 3] = t  # marcador->camara
             volume.integrate(rgbd, intr, extr)
             n_vistas += 1
-            log(f"Vista {n_vistas} integrada (marcador a {d*100:.1f} cm).")
+            n_bone = int(np.count_nonzero(depth_bone))
+            log(f"Vista {n_vistas} integrada (marcador a {d*100:.1f} cm, {n_bone} px del objeto).")
 
     cam.close()
     cv2.destroyAllWindows()

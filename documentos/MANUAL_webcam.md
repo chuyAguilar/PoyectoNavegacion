@@ -131,16 +131,21 @@ Anotar:
 > de marker medido con calibrador. En este equipo el marker midió **16.58 mm** y
 > la arista **20 mm**:
 > ```powershell
-> python iter4\generar_reference_dodecaedro.py --id-top 151 --ids-superior 152,153,154,155,156 --ids-inferior 157,158,159,160,161 --edge-mm 20 --marker-mm 16.58 --output iter4\data\reference_dodecaedro_doctor.txt
+> python iter4\generar_reference_dodecaedro.py --id-top 151 --ids-superior 152,153,154,155,156 --ids-inferior 158,159,160,161,157 --edge-mm 20 --marker-mm 16.58 --output iter4\data\reference_dodecaedro_doctor.txt
 > ```
+>
+> ✅ **ORDEN REAL CONFIRMADO (2026-06-22)**: el anillo inferior de ESTE dodecaedro
+> está pegado como **`158,159,160,161,157`** (rotado una posición respecto al
+> teórico `157,158,...`). Con ese orden el BA convergió (desplazamientos < 2.1 mm).
+> Ya está puesto arriba. Si alguna vez se rearma el dodecaedro, reconfirmar con B.4.5.
 >
 > ⚠️ **REGLA DEL `marker_mm`**: el valor que uses acá (16.58) tiene que ser **el
 > mismo** en B.4 (limpieza) y B.5 (BA). Si mezclás 16 y 16.58 entre pasos, la
 > geometría queda inconsistente. En este manual ya está puesto 16.58 en los tres.
 >
-> ⚠️ **El orden de `--ids-inferior` importa.** Si el anillo de abajo está pegado
-> en otra rotación, el BA no converge (lo vas a ver en B.5 con el anillo inferior
-> desplazado ~23 mm). Si pasa eso, NO adivines: corré el diagnóstico **B.4.5** y
+> ⚠️ **El orden de `--ids-inferior` importa.** Si el anillo de abajo estuviera en
+> otra rotación, el BA no converge (anillo inferior desplazado ~23 mm = la
+> distancia entre markers vecinos). Si pasa, NO adivines: corré **B.4.5** y
 > regenerá con el orden que te indique.
 
 Para un dodecaedro distinto, reemplazar los valores por los tuyos:
