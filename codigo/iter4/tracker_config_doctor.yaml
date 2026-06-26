@@ -71,9 +71,12 @@ markers:
 # IDs y tamano nuevos para iter 4 (anotar abajo cuando esten definitivos).
 rigid_bodies:
   - name: Dodecaedro
-    geometry_file: data/reference_dodecaedro_doctor_calibrado.txt
-    # marker_mm propiedad de iter 4: 13.4 mm (antes 16 en iter 3).
-    marker_mm: 16.0
+    # Dodecaedro v2 COMPARTIDO (IDs 3-13). La geometria es propiedad fisica
+    # del cumulo de marcadores -> independiente de la camara: la calibro Milton
+    # con la Femto y se comparte por git (1.26px global, validada). El doctor NO
+    # recalibra el dodecaedro; solo verifica IDs/orientacion (identificar_ids).
+    geometry_file: data/reference_dodecaedro_v2_calibrado.txt
+    marker_mm: 14.6
 
 
 # =====================================================================

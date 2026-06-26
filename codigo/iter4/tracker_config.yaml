@@ -71,9 +71,11 @@ markers:
 # IDs y tamano nuevos para iter 4 (anotar abajo cuando esten definitivos).
 rigid_bodies:
   - name: Dodecaedro
-    geometry_file: data/reference_dodecaedro_calibrado.txt
-    # marker_mm propiedad de iter 4: 13.4 mm (antes 16 en iter 3).
-    marker_mm: 13.4
+    geometry_file: data/reference_dodecaedro_v2_calibrado.txt
+    # Dodecaedro v2 COMPARTIDO (IDs 3-13), calibrado por BA 2026-06-25.
+    # marker_mm: lado del cuadrado negro = 14.6 mm. Geometria validada por
+    # reproyeccion independiente: 1.26px global, todos <1.8px.
+    marker_mm: 14.6
 
 
 # =====================================================================

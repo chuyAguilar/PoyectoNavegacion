@@ -55,6 +55,8 @@ def main():
         geom_path = str(Path(__file__).parent / geom_path)
     geom = cargar_rigid_body(geom_path)
     rb_ids = set(geom.keys())
+    min_markers = cfg.get("rigid_bodies_quality", {}).get("min_markers", 3)
+    print(f"[Jitter] Exigiendo min {min_markers} marcadores (igual que el tracker real).")
     print(f"[Jitter] Rigid body IDs: {sorted(rb_ids)}")
     print("[Jitter] SOSTEN EL DODECAEDRO QUIETO. Midiendo...")
 
@@ -86,6 +88,8 @@ def main():
         if res is None:
             continue
         rvec, tvec, n = res
+        if n < min_markers:
+            continue  # mismo gate que el tracker real
         tvecs.append(tvec.flatten())
         rvecs.append(rvec.flatten())
         n_marks.append(n)

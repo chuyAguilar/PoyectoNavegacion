@@ -212,6 +212,28 @@ def filtrar_detecciones(corners_all, ids_all, rb_ids):
     return detecciones
 
 
+def filtrar_whitelist(corners_all, ids_all, ids_conocidos):
+    """Whitelist de IDs: conserva solo detecciones cuyo ID esta en ids_conocidos.
+
+    Descarta fantasmas (stickers, texturas, logos) que el detector permisivo
+    decodifica como IDs ajenos. No toca los DetectorParameters. Asi el overlay
+    y la cobertura solo muestran marcadores reales del dodecaedro.
+    Devuelve (corners_filtrados, ids_filtrados) con el mismo formato que
+    detectMarkers; ids = None si no queda nada.
+    """
+    if ids_all is None:
+        return corners_all, ids_all
+    keep = [i for i, mid in enumerate(ids_all.flatten().tolist())
+            if int(mid) in ids_conocidos]
+    if len(keep) == len(ids_all):
+        return corners_all, ids_all
+    if not keep:
+        return (), None
+    corners_f = tuple(corners_all[i] for i in keep)
+    ids_f = ids_all[keep]
+    return corners_f, ids_f
+
+
 def muestrear_depth_corners(corners_2d, depth_mm, win=DEPTH_SAMPLE_WIN):
     """Para cada esquina (x, y) toma la mediana de la ventana win*win alrededor
     en depth_mm. Ignora ceros (depth invalido). Devuelve array (4,) en mm o
@@ -422,6 +444,9 @@ def main():
                 corners_all, ids_all, _ = detector.detectMarkers(gray)
             else:
                 corners_all, ids_all, _ = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=params)
+
+            # Whitelist: tira IDs ajenos (fantasmas) antes de dibujar/contar.
+            corners_all, ids_all = filtrar_whitelist(corners_all, ids_all, rb_ids)
 
             detecciones = filtrar_detecciones(corners_all, ids_all, rb_ids)
 

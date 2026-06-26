@@ -22,6 +22,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from scipy.spatial.transform import Rotation as _Rot
 import pyigtl
 import yaml
 
@@ -320,6 +321,45 @@ def estimar_pose_rigid_body(detecciones, rigid_body_geom, K, dist):
                 all_object_pts, all_image_pts, K, dist, rvec, tvec
             )
 
+            # --- RECHAZO DE OUTLIERS (iter 5) ---
+            # Un marcador mal detectado (esquina equivocada, casi coplanar,
+            # intermitente) corrompe el PnP conjunto. Calculamos el error de
+            # reproyeccion POR MARCADOR, descartamos los que se salen y
+            # re-resolvemos solo con los buenos. Quita los picos de orientacion
+            # que metia un marcador con reproyeccion alta (diagnostico estatico).
+            errs = np.array([
+                float(np.mean(np.linalg.norm(
+                    cv2.projectPoints(obj_m, rvec, tvec, K, dist)[0].reshape(4, 2)
+                    - img_m, axis=1)))
+                for obj_m, img_m in zip(object_pts_list, image_pts_list)
+            ])
+            umbral = max(2.0, 2.5 * float(np.median(errs)))
+            inliers = errs <= umbral
+            # Requiere >=3 inliers (2 casi coplanares dan pose degenerada).
+            if 3 <= int(inliers.sum()) < n_usados:
+                obj_in = np.concatenate(
+                    [object_pts_list[i] for i in range(n_usados) if inliers[i]],
+                    axis=0).astype(np.float32)
+                img_in = np.concatenate(
+                    [image_pts_list[i] for i in range(n_usados) if inliers[i]],
+                    axis=0).astype(np.float32)
+                ok2, rvec2, tvec2 = cv2.solvePnP(
+                    obj_in, img_in, K, dist, rvec.copy(), tvec.copy(),
+                    useExtrinsicGuess=True, flags=cv2.SOLVEPNP_ITERATIVE)
+                if ok2:
+                    rvec2, tvec2 = cv2.solvePnPRefineLM(obj_in, img_in, K, dist, rvec2, tvec2)
+                    # ACEPTAR SOLO si la pose refinada esta CERCA de la original.
+                    # Quitar un marcador malo refina (mm/grados), NO salta. Un salto
+                    # grande = re-solve degenerado -> revertir a la pose con todos.
+                    R1, _ = cv2.Rodrigues(rvec)
+                    R2, _ = cv2.Rodrigues(rvec2)
+                    d_ang = np.degrees(np.arccos(np.clip(
+                        (np.trace(R1.T @ R2) - 1.0) / 2.0, -1.0, 1.0)))
+                    d_t = float(np.linalg.norm(tvec2.flatten() - tvec.flatten()))
+                    if d_ang < 15.0 and d_t < 20.0:
+                        rvec, tvec = rvec2, tvec2
+                        n_usados = int(inliers.sum())
+
     if not ok:
         return None
 
@@ -425,9 +465,19 @@ def main():
         rigid_body_ids.update(rb_geom.keys())
         print(f"[Rigid body '{nombre}'] IDs: {sorted(rb_geom.keys())}")
 
+    # === Whitelist de IDs ===
+    # IDs que el tracker realmente usa (rigid body + marcadores individuales).
+    # Todo lo demas (fantasmas de stickers/texturas que el detector permisivo
+    # decodifica como IDs ajenos) se descarta justo tras detectar. No toca los
+    # DetectorParameters; independiente de camara, sirve igual al doctor.
+    ids_conocidos = set(rigid_body_ids) | set(markers_individuales.keys())
+    print(f"[Whitelist] IDs aceptados: {sorted(ids_conocidos)}")
+
     # === Filtros (opcional) ===
     filtros_individuales = {}
     filtros_rigid_bodies = {}
+    filtros_rigid_bodies_rot = {}
+    prev_quat = {}
     if cfg["filtering"]["enabled"]:
         for mid in markers_individuales:
             filtros_individuales[mid] = [
@@ -438,6 +488,10 @@ def main():
             filtros_rigid_bodies[nombre] = [
                 OneEuroFilter(cfg["filtering"]["min_cutoff"],
                               cfg["filtering"]["beta"]) for _ in range(3)
+            ]
+            filtros_rigid_bodies_rot[nombre] = [
+                OneEuroFilter(cfg["filtering"]["min_cutoff"],
+                              cfg["filtering"]["beta"]) for _ in range(4)
             ]
         print("[Filtrado] 1-Euro filter activado.")
 
@@ -496,6 +550,14 @@ def main():
                     gray, aruco_dict, parameters=params
                 )
 
+            # Whitelist: descarta IDs ajenos (fantasmas) antes de procesar.
+            if ids is not None and len(ids) > 0:
+                keep = [i for i, mid in enumerate(ids.flatten().tolist())
+                        if int(mid) in ids_conocidos]
+                if len(keep) < len(ids):
+                    corners = tuple(corners[i] for i in keep)
+                    ids = ids[keep] if keep else None
+
             display = frame.copy() if show_window else None
 
             if ids is not None and len(ids) > 0:
@@ -532,6 +594,21 @@ def main():
                             [f[j].filtrar(tvec_flat[j], t_now) for j in range(3)]
                         )
                         tvec = tvec_filt.reshape(3, 1)
+
+                    # Filtrar ROTACION (cuaternion 1-Euro, con continuidad de signo).
+                    # Antes solo se filtraba la posicion -> la orientacion temblaba.
+                    if nombre in filtros_rigid_bodies_rot:
+                        fr = filtros_rigid_bodies_rot[nombre]
+                        q = _Rot.from_rotvec(rvec.flatten()).as_quat()  # [x,y,z,w]
+                        pq = prev_quat.get(nombre)
+                        if pq is not None and float(np.dot(q, pq)) < 0.0:
+                            q = -q   # hemisferio consistente, evita saltos de signo
+                        qf = np.array([fr[j].filtrar(float(q[j]), t_now) for j in range(4)])
+                        nq = float(np.linalg.norm(qf))
+                        if nq > 1e-9:
+                            qf = qf / nq
+                            prev_quat[nombre] = qf
+                            rvec = _Rot.from_quat(qf).as_rotvec().reshape(3, 1)
 
                     M = rvec_tvec_a_matriz(rvec, tvec)
                     msg = pyigtl.TransformMessage(M, device_name=f"{nombre}ToTracker")
