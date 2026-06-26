@@ -24,6 +24,12 @@ __pycache__/
 StylusTipToDodecaedro*.txt
 StylusTipToDodecaedro*.h5
 
+# EXCEPCION: el dodecaedro v2 es COMPARTIDO (mismo objeto fisico para ambos
+# equipos). Su geometria calibrada es propiedad fisica del cumulo de marcadores,
+# INDEPENDIENTE de la camara, asi que SI se versiona para que el doctor la reciba
+# por git pull. (Las calibraciones de TIP siguen siendo por-equipo -> ignoradas.)
+!codigo/iter4/data/reference_dodecaedro_v2_calibrado.txt
+
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db
