@@ -1,7 +1,7 @@
 # Convención del dodecaedro compartido (stylus) — reproducibilidad
 
 **Fecha:** 2026-06-22
-**Aplica a:** el dodecaedro impreso NUEVO que comparten Dr. Milton (Femto Bolt) y el doctor colaborador (webcam global shutter). Mismo stylus físico para ambos.
+**Aplica a:** el DISEÑO de dodecaedro (IDs 3–13) que usan Dr. Milton (Femto Bolt) y el doctor colaborador (webcam global shutter). OJO: cada uno tiene su PROPIA impresión y su propio stylus → cada uno calibra su geometría y su tip por separado (ver 'Qué se comparte y qué NO').
 
 ## Asignación de IDs (ArUco DICT_ARUCO_MIP_36h12)
 
@@ -23,14 +23,17 @@ Regla fija para las 11 caras: **vista cada cara con el marcador "derecho" (ID le
 
 El bundle adjustment resuelve la pose completa (posición Y orientación) de cada marcador, así que **matemáticamente la orientación consistente NO es obligatoria** para que el tracking funcione. Se mantiene por **reproducibilidad**: build documentable, geometría teórica de partida más cercana a la real (BA converge mejor) y verificable de un vistazo. Si se rearma o reimprime el dodecaedro, seguir esta misma regla.
 
-## Calibraciones compartidas vs por-equipo
+## Qué se comparte y qué NO (CORREGIDO 2026-06-26)
 
-Como es el **mismo stylus físico**, estas calibraciones se generan una vez (Milton, con la Femto) y se versionan para que el doctor haga `pull` y entre directo:
+**La geometría calibrada por BA es de UNA impresión física — NO es compartible.** Cada impresión 3D tiene las posiciones de los marcadores ligeramente distintas (tolerancias), y el BA fija la pose de cada marcador a ESE objeto. Usar la geometría de otra impresión da spread enorme (lo vimos: 15 mm en el dodecaedro del doctor usando mi geometría calibrada). Lo mismo el tip: depende del stylus físico.
 
-- **Geometría BA**: `reference_dodecaedro_v2_calibrado.txt` — física, compartible.
-- **Pivote/tip**: `StylusTipToDodecaedro_v2.*` — físico, compartible.
+Por lo tanto **cada equipo calibra lo suyo**:
+- **Geometría BA** (`reference_dodecaedro_<equipo>_calibrado.txt`): POR-IMPRESIÓN. Ver `GUIA_calibrar_dodecaedro_propio.md`.
+- **Tip/pivote** (`StylusTipToDodecaedro_<equipo>_dock.*`): POR-STYLUS.
+- **Calibración intrínseca de cámara** (`.yml`): POR-CÁMARA.
+- **Marcador 0 del paciente**: por-equipo.
 
-Por-equipo (NO se comparte): **calibración intrínseca de cámara** (Femto de fábrica vs `.yml` de la global shutter) y el **marcador 0 del paciente**.
+**Lo único compartido es el DISEÑO**: IDs 3–13, la asignación de anillos, la convención de orientación y el software/flujo. Dos personas con impresiones distintas siguen el mismo diseño pero calibran cada una por separado.
 
 ## Parámetros de calibración (rellenar al medir)
 
