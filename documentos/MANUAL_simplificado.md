@@ -71,12 +71,13 @@ Procedimiento en la ventana:
 4. **Reorientar el conjunto entero** y repetir hasta **6 orientaciones distintas**.
 5. **q** para terminar y calcular.
 
-**Verificar el resultado** (en la terminal, al final):
+**Verificar el resultado** (bloque `RESULTADO DE LA CALIBRACION DEL TIP` al final):
 
-- **`Spread maximo` < 1.5 mm** (`[BUENO]` o `[EXCELENTE]`).
-- **`magnitud`** del offset ≈ la distancia física **centro del dodecaedro → punta**
-  medida con calibrador **de TU stylus** (no es el ~93 mm del stylus viejo; medí
-  el tuyo). Si el spread queda >1.5 mm, repetir con orientaciones más variadas.
+- **`LARGO del stylus`**: la distancia centro del dodecaedro → punta. Debe coincidir
+  con lo que medís con calibrador en TU stylus (es propio de cada stylus, no el ~93 mm
+  del viejo).
+- **`Calidad`**: el `spread` debe ser **< 1.5 mm** (`[BUENO]`/`[EXCELENTE]`). Si queda
+  `[REGULAR]` o peor, repetí con orientaciones más variadas (inclinaciones distintas).
 
 Queda generado **`iter4\data\StylusTipToDodecaedro_doctor_dock.npy`** (y `.txt`).
 
@@ -116,7 +117,11 @@ uso en Slicer.
 5. Tildar **`Active`**.
 6. **Ahora sí, ir a PowerShell y correr el tracker (Paso 3).**
 7. Volver a Slicer: en `Data` deben aparecer **`Marker0ToTracker`** y
-   **`DodecaedroToTracker`** actualizándose. Mové el stylus para confirmar.
+   **`DodecaedroToTracker`** actualizándose. **OJO: cada nodo solo aparece cuando
+   la cámara VE su marcador.** Mostrá a la cámara **el dodecaedro (stylus)** Y **el
+   marcador del paciente (ID 0)** hasta que los DOS estén en `Data`. Si falta
+   `Marker0ToTracker`, es que el marcador del paciente todavía no se vio — sin él,
+   los pasos 4.4 y 4.5 fallan.
 
 Si no aparecen: confirmar que el tracker corre y que el firewall no bloquea el
 puerto 18944.
@@ -164,6 +169,14 @@ el Transform Processor, que a veces deja de actualizarse). Pegar todo el bloque:
 
 ```python
 import vtk
+
+# Chequeo: ambos nodos del tracker deben existir (aparecen al VER su marcador).
+faltan = [n for n in ["Marker0ToTracker", "DodecaedroToTracker"]
+          if not slicer.mrmlScene.GetFirstNodeByName(n)]
+if faltan:
+    raise RuntimeError("Faltan nodos del tracker: " + ", ".join(faltan) +
+        ". Mostra a la camara el marcador del paciente (ID 0) y el dodecaedro "
+        "hasta que ambos aparezcan en Data, y volve a pegar este bloque.")
 
 m0_node = slicer.util.getNode("Marker0ToTracker")
 dt_node = slicer.util.getNode("DodecaedroToTracker")

@@ -329,22 +329,29 @@ def main():
 
     todos = [i for p in posturas for i in p]
     offset, rms = resolver(todos)
-    log_stats(f"Offset tip (frame dodecaedro): [{offset[0]:+.3f}, {offset[1]:+.3f}, "
-              f"{offset[2]:+.3f}] mm, magnitud {np.linalg.norm(offset):.2f} mm")
-    log_stats(f"RMS residual global: {rms:.3f} mm")
-
     por_postura = np.array([resolver(p)[0] for p in posturas])
     spread = por_postura.std(axis=0)
-    for k, (p, op) in enumerate(zip(posturas, por_postura)):
-        log_info(f"  postura {k+1} (n={len(p)}): "
-                 f"[{op[0]:+.3f}, {op[1]:+.3f}, {op[2]:+.3f}] mm")
-    log_stats(f"Spread entre posturas: [{spread[0]:.3f}, {spread[1]:.3f}, "
-              f"{spread[2]:.3f}] mm")
     smax = spread.max()
     nivel = ("EXCELENTE" if smax < 0.5 else "BUENO" if smax < 1.0 else
              "REGULAR" if smax < 2.0 else "INSUFICIENTE")
-    log_stats(f"[{nivel}] Spread maximo: {smax:.2f} mm")
-    log_info("Referencia: magnitud nominal por caliper ~92.4 mm (2026-06-12).")
+
+    # Detalle por postura (diagnostico)
+    for k, (p, op) in enumerate(zip(posturas, por_postura)):
+        log_info(f"  postura {k+1} (n={len(p)}): "
+                 f"[{op[0]:+.3f}, {op[1]:+.3f}, {op[2]:+.3f}] mm")
+
+    # === RESUMEN LEGIBLE ===
+    log_stats("=" * 60)
+    log_stats("RESULTADO DE LA CALIBRACION DEL TIP")
+    log_stats(f"  LARGO del stylus (centro del dodecaedro -> punta): "
+              f"{np.linalg.norm(offset):.1f} mm")
+    log_stats(f"  Punta en el frame del dodecaedro (x, y, z): "
+              f"[{offset[0]:+.1f}, {offset[1]:+.1f}, {offset[2]:+.1f}] mm")
+    log_stats(f"  Calidad: spread {smax:.2f} mm [{nivel}]  |  RMS {rms:.2f} mm  "
+              f"(objetivo: spread < 1.5 mm)")
+    log_stats("=" * 60)
+    log_info("Para validar: el LARGO de arriba debe coincidir con la distancia")
+    log_info("centro-del-dodecaedro -> punta medida con calibrador en TU stylus.")
 
     np.savez_compressed(args.output_samples, R=Rs, t=ts, divot=args.divot,
                         p_divot=p_divot,
