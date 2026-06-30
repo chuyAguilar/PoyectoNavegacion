@@ -4,7 +4,7 @@ Abrir **PowerShell** y activar el entorno (todos los comandos PowerShell se corr
 desde aquí):
 
 ```powershell
-cd C:\Dev\Dr.Milton\PoyectoNavegacion\codigo
+cd C:\dev\PoyectoNavegacion\codigo 
 .\.venv\Scripts\activate
 git pull
 ```

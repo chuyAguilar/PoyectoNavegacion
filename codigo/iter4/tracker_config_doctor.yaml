@@ -14,7 +14,7 @@ camera:
 
   # ===== Solo para camera_type: webcam =====
   # (ignorados si camera_type: femtobolt — el SDK maneja todo)
-  source: 0
+  source: 1
   width: 640
   height: 480
   fps: 30
@@ -25,7 +25,7 @@ camera:
   # Para webcam: ruta al .yml de calibracion manual (MRPT-style).
   # Para femtobolt: vacio para usar calibracion de fabrica del SDK,
   #                 o ruta a un .yml para override (formato data/femtobolt_calibration.yml).
-  calibration_file: data/camera_calibration_webcam.yml
+  calibration_file: data/globalshutter.yml
 
 
 # =====================================================================
