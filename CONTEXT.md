@@ -167,11 +167,20 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 - **Smoke test del entorno:** Parte 1 (sanidad del `.venv` + imports, incl.
   `pyorbbecsdk`) **verificada OK 2026-08-13**. Parte 2 (tracker en vivo +
   detección de IDs 3–13) pendiente, se hará al conectar la cámara para operar.
-- **GUI / panel de control** (brief-01, iter 1): **construido y verificado
-  headless** (`codigo/iter4/gui/`: panel + estado + recetas + procesos +
-  sonda_camara). Semáforos desde disco, gating duro del tracker (incl.
-  intrínsecos), Detener por 'q', asistente "dodecaedro nuevo".
-  **Pendiente: verificación con cámara en vivo.**
+- **GUI / panel de control** (brief-01, iter 1): **VERIFICADO EN VIVO (núcleo)
+  2026-08-13** con la Femto real (`codigo/iter4/gui/`: panel + estado + recetas
+  + procesos + sonda_camara): panel y 7 semáforos, probar cámara, verificar IDs
+  (3–13), y tracker → OpenIGTLink → Slicer con poses estables y cierre limpio
+  por 'q'. Quedan pendientes verificaciones **opcionales** (no bloquean
+  operación; requieren al doctor y/o la placa dock): botón Detener en vivo (ya
+  OK headless), captura + BA live, calibración de punta dock live, y el
+  asistente "dodecaedro nuevo" punta a punta.
+- **FPS ~16–17 con Femto RGB en el tracker** (observado en vivo 2026-08-13):
+  esperado — el backend habilita depth+align del SDK aunque solo se use el RGB.
+  Optimización pendiente (p.ej. no habilitar el stream de depth en este modo).
+- **Detección ~3–4 markers/vista en la sesión 2026-08-13** (referencia
+  histórica: 5–6): revisar distancia (50–70 cm), ángulo y luz antes de tocar
+  parámetros del detector.
 - **Marker0 rígido y corto**: montaje pendiente para eliminar el brazo de palanca
   (ADR-013), relevante también para el paired-point.
 - **Stylus impreso nuevo** (IDs 181–191): geometría CAD buena, pero falta pose

@@ -351,5 +351,7 @@ sonda empírica demostró que `CTRL_BREAK` mata duro SIN correr el `finally`
 visible). La GUI **no muta configs**: al dar de alta una geometría nueva
 muestra la instrucción para editar el YAML a mano (candidato a iter 2).
 Dependencia nueva: PySide6 (LGPL) en el venv. Verificado headless (BA real,
-fail-loud, Detener); la operación con cámara en vivo queda pendiente de
-verificación con hardware.
+fail-loud, Detener) **+ EN VIVO (núcleo) 2026-08-13** con la Femto real
+(panel y semáforos, probar cámara, verificar IDs, tracker → OpenIGTLink →
+Slicer con cierre limpio); pendientes las verificaciones opcionales con
+hardware (dock, BA live, asistente "dodecaedro nuevo").
