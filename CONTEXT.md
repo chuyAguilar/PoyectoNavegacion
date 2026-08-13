@@ -167,14 +167,14 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 - **Smoke test del entorno:** Parte 1 (sanidad del `.venv` + imports, incl.
   `pyorbbecsdk`) **verificada OK 2026-08-13**. Parte 2 (tracker en vivo +
   detección de IDs 3–13) pendiente, se hará al conectar la cámara para operar.
-- **GUI / panel de control** (brief-01, iter 1): **VERIFICADO EN VIVO (núcleo)
-  2026-08-13** con la Femto real (`codigo/iter4/gui/`: panel + estado + recetas
-  + procesos + sonda_camara): panel y 7 semáforos, probar cámara, verificar IDs
-  (3–13), y tracker → OpenIGTLink → Slicer con poses estables y cierre limpio
-  por 'q'. Quedan pendientes verificaciones **opcionales** (no bloquean
-  operación; requieren al doctor y/o la placa dock): botón Detener en vivo (ya
-  OK headless), captura + BA live, calibración de punta dock live, y el
-  asistente "dodecaedro nuevo" punta a punta.
+- **GUI / panel de control** (brief-01, iter 1): **VERIFICADO EN VIVO
+  2026-08-13** con la Femto real (`codigo/iter4/gui/`): panel y 7 semáforos,
+  probar cámara, verificar IDs (3–13), tracker → OpenIGTLink → Slicer con
+  cierre limpio, **Detener del panel** (con ventana → 'q'; sin ventana →
+  terminate), y el **asistente "dodecaedro nuevo"** encadenando captura → BA
+  con fail-loud. **Único residual:** calibración de punta por dock en vivo
+  (falta la placa física). Nota: el BA no convergió sobre una captura corta de
+  60 s (cobertura floja) — tema de DATOS, no del panel.
 - **FPS ~16–17 con Femto RGB en el tracker** (observado en vivo 2026-08-13):
   esperado — el backend habilita depth+align del SDK aunque solo se use el RGB.
   Optimización pendiente (p.ej. no habilitar el stream de depth en este modo).
