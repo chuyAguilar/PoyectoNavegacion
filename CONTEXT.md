@@ -54,7 +54,8 @@
     Registration Wizard, Volume Reslice Driver). Corre aparte; no se controla
     directo, se le pasan scripts para su consola Python.
   - `open3d` 0.18 en el venv (usado por `femto_pruebas/`, hoy en pausa).
-  - **PySide6 NO está instalado** aún (se instalará para la GUI, ver §6).
+  - **PySide6 6.11.1** instalado en el venv (GUI del panel, brief-01; en
+    `requirements.txt` como `pyside6>=6.7,<7`).
 - **Dos cámaras, dos contextos (ambas activas):** Femto Bolt (RGB) = contexto
   principal (`tracker_config.yaml`, Marker0 80 mm); webcam **global shutter** =
   contexto "doctor" (`tracker_config_doctor.yaml` + `data/globalshutter.yml`,
@@ -94,6 +95,19 @@
     `--marker-mm 13.4`). Para el dodecaedro v2 hay que pasar **`--ancla 3
     --marker-mm 14.6`** explícitos, o el BA calibra contra el rigid body
     equivocado. (Trampa detectada al sondear el código, 2026-08-13.)
+14. **`captura_calibracion.py --geometry-file` sin valor cae en
+    `iter4/data/reference_dodecaedro.txt`** (teórica VIEJA, IDs 170–180) porque
+    ese archivo existe — antes de mirar el config. Con el dodecaedro v2 captura
+    **0 frames útiles en silencio**. Pasar `--geometry-file` explícito SIEMPRE
+    (la GUI ya lo hace).
+15. **El BA contradice a ADR-008 si se corre con defaults sobre un dataset
+    Femto:** `use_depth` default ON activa residuos 3D. Pasar **`--no-depth`**
+    explícito (y `--no-sparse` para el dataset v2, ADR-009). Además el
+    `--output` default pisaría `reference_dodecaedro_calibrado.txt` (del stylus
+    viejo): salida siempre explícita.
+16. **`calibrar_tip_divot.py` se AUTOCIERRA a los `--timeout` segundos
+    (default 600)**: si la sesión de posturas se alarga, termina solo y
+    resuelve con lo capturado (o falla con <4 posturas).
 
 ## 5. Metodología de trabajo (cómo colaboramos humano + IA)
 
@@ -153,8 +167,11 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 - **Smoke test del entorno:** Parte 1 (sanidad del `.venv` + imports, incl.
   `pyorbbecsdk`) **verificada OK 2026-08-13**. Parte 2 (tracker en vivo +
   detección de IDs 3–13) pendiente, se hará al conectar la cámara para operar.
-- **GUI / panel de control** (brief-01): en curso por la metodología (PySide6,
-  orquesta los scripts + semáforos de prerrequisitos).
+- **GUI / panel de control** (brief-01, iter 1): **construido y verificado
+  headless** (`codigo/iter4/gui/`: panel + estado + recetas + procesos +
+  sonda_camara). Semáforos desde disco, gating duro del tracker (incl.
+  intrínsecos), Detener por 'q', asistente "dodecaedro nuevo".
+  **Pendiente: verificación con cámara en vivo.**
 - **Marker0 rígido y corto**: montaje pendiente para eliminar el brazo de palanca
   (ADR-013), relevante también para el paired-point.
 - **Stylus impreso nuevo** (IDs 181–191): geometría CAD buena, pero falta pose

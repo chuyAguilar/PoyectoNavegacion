@@ -140,6 +140,25 @@ arma la cadena de transforms (§4), corre el **Fiducial Registration Wizard**
 del CT con el **Volume Reslice Driver**. El procedimiento paso a paso está en
 `documentos/MANUAL_simplificado.md`.
 
+### 3.7 Panel de control (GUI) — `codigo/iter4/gui/`
+
+Panel de escritorio **PySide6** (brief-01) que **solo orquesta** los scripts
+existentes — no reimplementa tracking ni calibración (ADR-017):
+
+- `estado.py` — semáforos leyendo el **estado real del repo** (config del
+  perfil, geometría calibrada, intrínsecos, punta y su coherencia por sha16,
+  puerto 18944, entorno). Usable por consola (`--perfil ... [--puntas]`).
+- `recetas.py` — composición de comandos con **todos los args explícitos**
+  (neutraliza los defaults del stylus viejo, CONTEXT §4.13–15).
+- `procesos.py` — subprocesos (uno a la vez), stdout en vivo, Detener por el
+  camino nativo (`'q'` a la ventana OpenCV) con escalada a `terminate()`.
+- `sonda_camara.py` — chequeo corto de cámara bajo demanda (subproceso con
+  watchdog; nunca dentro del proceso GUI).
+- `panel.py` — ventana única: perfil, semáforos, acciones (Verificar /
+  Calibrar / Operar), asistente "dodecaedro nuevo" (captura → BA) y log.
+
+Lanzamiento: `python iter4\gui\panel.py` (desde `codigo\`, con el venv).
+
 ## 4. Flujo de datos y cadena de transforms en Slicer
 
 El tracker emite dos transforms crudos (frame del tracker/cámara):
@@ -203,6 +222,7 @@ C:\Dev\Dr.Milton\PoyectoNavegacion\
 │   │   ├── calibrar_tip_divot.py               # calibración por dock/divot
 │   │   ├── identificar_ids.py                  # verificar IDs/orientación
 │   │   ├── test_*.py                           # diagnósticos
+│   │   ├── gui\                                # panel de control PySide6 (brief-01)
 │   │   └── data\                               # reference_*, capturas, tips, calibraciones
 │   └── historico\                  # snapshots de iteraciones previas
 ├── femto_pruebas\                  # rama nube de puntos (EN STAND BY)
@@ -247,4 +267,3 @@ C:\Dev\Dr.Milton\PoyectoNavegacion\
   aparte (marker 16.58 mm). Este documento describe la máquina **BigDaddy** con el
   dodecaedro **v2 (IDs 3–13)**; si el otro equipo sigue vivo, se documenta aparte.
   (Confirmar cuando aplique — no bloquea.)
-```

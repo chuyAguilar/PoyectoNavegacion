@@ -29,6 +29,7 @@
 | 014 | Femto/nube de puntos en stand by; continuar con paired-point | Aceptada |
 | 015 | Config canónica = `tracker_config.yaml` (Femto RGB, Marker0 80 mm, tip existente) | Aceptada |
 | 016 | Cámara global shutter para el contexto "doctor" (webcam) | Aceptada |
+| 017 | Panel de control PySide6 que solo orquesta (brief-01) | Aceptada |
 
 ---
 
@@ -325,3 +326,30 @@ con el objeto en mano. **Convive** con la Femto (ADR-015), que sigue siendo la
 cámara principal del contexto BigDaddy; se usan en **contextos distintos**. La
 geometría del dodecaedro v2 es cámara-independiente (propiedad física), así que se
 comparte entre ambos contextos sin recalibrar.
+
+---
+
+## ADR-017 — Panel de control PySide6 que solo orquesta (brief-01)
+**Fecha:** 2026-08-13 · **Estado:** Aceptada
+
+**Contexto.** El pipeline eran pasos sueltos por consola, fáciles de correr en
+el orden equivocado o con prerrequisitos rotos (tracker sin geometría calibrada,
+punta de otro ensamble). Varios defaults de los scripts apuntan al stylus viejo
+y fallan en silencio con el v2 (CONTEXT §4.13–15).
+
+**Decisión.** Panel **PySide6** en `codigo/iter4/gui/` que **solo orquesta**:
+semáforos que leen el disco, subprocesos con args siempre explícitos, candado
+de un proceso a la vez, log verbose en vivo, gating duro del tracker (entorno +
+config + geometría calibrada + intrínsecos + puerto), y coherencia
+punta↔geometría por el sha16 del header del `.txt` de la punta. **Detener** usa
+el camino nativo (`'q'` por PostMessage a la ventana OpenCV del script): la
+sonda empírica demostró que `CTRL_BREAK` mata duro SIN correr el `finally`
+(cámara/servidor quedarían tomados), así que la escalada es `'q'` →
+`terminate()`.
+
+**Consecuencias.** Fail-loud operativo (rojo + acción deshabilitada + motivo
+visible). La GUI **no muta configs**: al dar de alta una geometría nueva
+muestra la instrucción para editar el YAML a mano (candidato a iter 2).
+Dependencia nueva: PySide6 (LGPL) en el venv. Verificado headless (BA real,
+fail-loud, Detener); la operación con cámara en vivo queda pendiente de
+verificación con hardware.

@@ -26,6 +26,9 @@ pyorbbecsdk2>=2.0.18         # SDK oficial Orbbec v2 (renombrado en PyPI desde 2
 # ===== Registro por superficie / nube de puntos (iter 4) =====
 open3d>=0.18               # Nube de puntos, voxel downsample, FPFH+RANSAC, ICP, TSDF. Registro CT<->superficie.
 
+# ===== GUI / panel de control (brief-01, iter4) =====
+pyside6>=6.7,<7            # Panel Qt que orquesta los scripts (codigo/iter4/gui/). Validado con 6.11.1. LGPL.
+
 # ===== Tests =====
 pytest>=7.4                # Suite de tests pytest (55+ tests en iter 2).
 
