@@ -1,89 +1,97 @@
-# CLAUDE.md — Dr. Milton's Surgical Navigation Project
+# CLAUDE.md — Proyecto de Navegación Quirúrgica de Dr. Milton
 
-This file provides instructions for Claude when working on this specific project. Keep it short and focused. The detailed technical knowledge lives in the three skills:
+Instrucciones para Claude al trabajar en este proyecto. Breve y enfocado.
 
-- `surgical-navigation-aruco`: technical knowledge about ArUco tracking, pose estimation, bundle adjustment
-- `slicer-igt-workflow`: 3D Slicer + SlicerIGT specific knowledge
-- `surgical-nav-project-context`: this specific project's setup, file structure, decisions
+## LEER PRIMERO: los 3 documentos vivos (MVD)
 
-## Project Description
+Antes de tocar código, leer los tres documentos maestros en la raíz del repo. Son
+la fuente de verdad y se mantienen actualizados:
 
-Surgical navigation system for orthopedic spine surgery. Tracks instruments and patient anatomy with optical (ArUco) markers and visualizes spatial coherence in 3D Slicer. Currently in iteration 2 (replication with improvements).
+- **`ARCHITECTURE.md`** — el *qué*: topología, componentes, flujo de datos, cadena
+  de transforms, estructura del repo.
+- **`DECISIONS.md`** — el *porqué*: registro de decisiones (ADRs), con historia.
+- **`CONTEXT.md`** — las *reglas y el estado*: restricciones no negociables,
+  entorno/máquinas, y qué está hecho / en pausa / WIP.
 
-## Working Style Preferences
+Conocimiento técnico detallado en las skills: `surgical-navigation-aruco`
+(ArUco, pose, bundle adjustment), `slicer-igt-workflow` (3D Slicer + SlicerIGT),
+`surgical-nav-project-context` (setup e historia del proyecto).
 
-### Communication
+## Descripción
 
-- Respond in **Spanish** (the user prefers Spanish).
-- Be direct and honest, including about uncertainty.
-- Don't over-apologize when something doesn't work; focus on diagnosis and fix.
-- Push back on assumptions if data suggests otherwise.
+Sistema de navegación quirúrgica óptica para cirugía ortopédica de columna.
+Trackea instrumentos y anatomía con marcadores ArUco + cámara y visualiza la
+coherencia espacial en 3D Slicer. **Vía activa:** registro **paired-point** con la
+Femto Bolt como cámara RGB. La rama de nube de puntos (depth) está en pausa
+(ver `DECISIONS.md` ADR-014).
 
-### Technical approach
+## Estilo de trabajo
 
-- **Validate quantitatively at each step.** Don't accept "it looks good" as success criteria.
-- **One change at a time** when debugging. Don't change multiple things and hope.
-- **Diagnostic scripts before fixes.** Inspect what's actually happening before guessing.
-- **Hard-won lessons from iteration 1**: see the project-context skill.
+- Responder en **español**. Directo y honesto, incluida la incertidumbre.
+- **Validar cuantitativamente en cada paso.** No aceptar "se ve bien".
+- **Un cambio a la vez** al debuggear. Diagnóstico antes que fix.
+- Scripts no triviales: **verbose paso a paso**, no quedarse mudo.
+- Metodología MVD + orquestación (ver `CONTEXT.md` §5): leer los 3 MVD, plan antes
+  de ejecutar, verificar empíricamente antes de declarar "hecho", y **actualizar
+  los MVD al cerrar cada iteración**.
 
-### Code style
+## Entorno y comandos
 
-- Python scripts go in `C:\Dev\PoyectoNavegacion\codigo\`.
-- Use venv at `.venv\`.
-- Comments in Spanish when explaining decisions, English in code is fine.
-- Save outputs (transforms, captures) with descriptive names + metadata.
-
-## Common Commands
+- Raíz: `C:\Dev\Dr.Milton\PoyectoNavegacion`. Código activo: `codigo\iter4\`.
+- Todo git y shell desde **PowerShell** (nunca desde el sandbox Linux; deja lock
+  huérfano sobre NTFS).
 
 ```powershell
-# Activate environment
-cd C:\Dev\PoyectoNavegacion\codigo
+# Activar entorno
+cd C:\Dev\Dr.Milton\PoyectoNavegacion\codigo
 .\.venv\Scripts\activate
 
-# Run main tracker (multi-marker)
-python tracker.py --config tracker_config.yaml
+# Verificar IDs/orientación del dodecaedro (v2 compartido, IDs 3-13)
+python iter4\identificar_ids.py --config iter4\tracker_config.yaml
 
-# Capture dataset for bundle adjustment
-python captura_calibracion.py --duracion 60
+# Tracker principal (Slicer conectado ANTES) — config canónica = Femto RGB
+python iter4\tracker.py --config iter4\tracker_config.yaml
 
-# Run bundle adjustment
-python calibrar_rigid_body.py --max_frames 300
+# Capturar dataset para bundle adjustment
+python iter4\captura_calibracion.py --duracion 60
 
-# Pivot calibration
-python test_pivote.py --duracion 45
+# Bundle adjustment
+python iter4\calibrar_rigid_body.py --max-frames 500 --max-nfev 3000
+
+# Calibración de la punta por dock
+python iter4\calibrar_tip_divot.py --config iter4\tracker_config.yaml --divot DOCK --plate-id 2 --plate-mm 59.6
 ```
 
-## Critical Project-Specific Things to Remember
+## Cosas críticas (detalle completo en `CONTEXT.md` §4)
 
-1. **Use `reference_dodecaedro_calibrado.txt`**, NOT theoretical, after bundle adjustment.
-2. **Slicer hierarchy for paired-point registration** is documented in `slicer-igt-workflow` skill — follow it exactly.
-3. **Iteration 2 uses marker IDs 1-11**, not 151-161 from iteration 1. Marker 0 is still for the bone reference.
-4. **Camera config**: MSMF backend + MJPG codec, otherwise FPS drops to 5.
-5. **Don't send video** through pyigtl (set `send_video: false`), it kills performance.
+1. **Geometría `reference_*_calibrado.txt`** (BA), nunca la teórica.
+2. **Dos cámaras, dos contextos (ambas activas):** contexto principal = Femto Bolt
+   (RGB), `tracker_config.yaml`, Marker0 80 mm; contexto "doctor" = webcam **global
+   shutter**, `tracker_config_doctor.yaml` + `data/globalshutter.yml`, Marker0
+   60 mm. Dodecaedro v2 (IDs 3-13, marker 14.6 mm) y tip
+   `StylusTipToDodecaedro_femto_dock` se comparten.
+3. **`calibrar_rigid_body.py`**: defaults son del stylus viejo (`--ancla 170
+   --marker-mm 13.4`). Para v2 pasar **`--ancla 3 --marker-mm 14.6`**. Webcam:
+   backend MSMF + códec MJPG o el FPS cae a 5.
+4. **No enviar video** por pyigtl (`send_video: false`).
+5. **pyigtl bloquea si Slicer no está conectado** → conectar Slicer ANTES.
+6. **Jerarquía de Slicer** para paired-point: seguir `MANUAL_simplificado.md` y la
+   skill `slicer-igt-workflow` al pie de la letra.
+7. **Geometría y calibración de punta = mismo ensamble.** No mezclar.
 
-## When the User Says "Continue"
+## Al retomar ("continúa")
 
-The user typically resumes work mid-task. To handle this:
+1. Leer los **3 MVD** y los archivos recientes de `codigo\iter4\`.
+2. Revisar `CONTEXT.md` §6 (estado hecho/pausa/WIP).
+3. Una sola pregunta de aclaración si el estado es ambiguo, y proceder.
 
-1. Read the latest files in `C:\Dev\PoyectoNavegacion\codigo\` to understand current state.
-2. Check the project-context skill for the typical workflow.
-3. Ask one clarifying question if state is ambiguous, then proceed.
+## Archivos clave
 
-## What Has Been Achieved (Reference State)
-
-Iteration 1 final metrics:
-- Tracking: 28-30 FPS stable
-- Pivot calibration std: 1.7 mm
-- Reproducibility: <1 mm in X-Y
-- Registration RMS: 3.46 mm
-- Visual spatial coherence: working in 3D Slicer
-
-Iteration 2 goal: reproduce this in <6 hours, achieve <2 mm RMS.
-
-## Important Files to Know About
-
-- `tracker.py` — main tracking pipeline (multi-marker rigid body support)
-- `tracker_config.yaml` / `tracker_config_v2.yaml` — configuration
-- `data/reference_dodecaedro*.txt` — rigid body geometry files
-- `StylusTipToDodecaedro.h5` — current pivot calibration loaded in Slicer
-- See `surgical-nav-project-context` skill for complete file structure.
+- `codigo\iter4\tracker.py` — pipeline de tracking (rigid body multi-marcador).
+- `codigo\iter4\tracker_config.yaml` — config canónica (contexto Femto).
+  `tracker_config_doctor.yaml` — contexto doctor (webcam global shutter +
+  `data/globalshutter.yml`).
+- `codigo\iter4\data\reference_dodecaedro_v2_calibrado.txt` — geometría del rigid body.
+- `codigo\iter4\data\StylusTipToDodecaedro_femto_dock.npy` — calibración de punta vigente.
+- `documentos\MANUAL_simplificado.md` — runbook operativo paso a paso
+  (⚠ pendiente reapuntar de la config webcam a `tracker_config.yaml`).
