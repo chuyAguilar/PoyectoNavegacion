@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-panel.py — Panel de control GUI (brief-01, iter 1). PySide6.
+panel.py — Panel de control GUI (brief-01 + refinamiento brief-02). PySide6.
 
 Ventana unica: selector de perfil + semaforos de prerrequisitos + botones que
 lanzan los scripts EXISTENTES como subprocesos (la GUI solo orquesta, no
 reescribe logica) + panel de log con la salida en vivo.
 
-Grupos de acciones (brief §4):
+Grupos de acciones:
   1 Verificar/Preparar: identificar IDs, probar camara (bajo demanda).
-  2 Calibrar: capturar dataset BA, correr BA, calibrar punta (dock),
-    asistente "dodecaedro nuevo" (captura -> BA -> geometria calibrada).
+  2 Calibrar (orden brief-02 M4): asistente "dodecaedro nuevo" (captura ->
+    cobertura -> BA, en asistente.py), calibrar punta (dock). Los botones
+    sueltos de captura/BA se quitaron en brief-02 M4 (redundantes con el
+    asistente y peligrosos con defaults del stylus viejo); un BA sobre un
+    dataset viejo sin recapturar queda disponible SOLO por CLI.
   3 Operar: tracker (gating duro + recordatorio de Slicer), detener.
 
 Uso (desde codigo\, con el venv):
@@ -21,23 +24,24 @@ Teclas: F5 = refrescar semaforos.
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 import time
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QSettings, Qt, QTimer, Signal
-from PySide6.QtGui import QFont, QGuiApplication, QKeySequence, QShortcut
+from PySide6.QtGui import QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
-    QDoubleSpinBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QApplication, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
+    QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox,
     QVBoxLayout, QWidget,
 )
 
 import estado
+import perfil_editor
 import procesos
 import recetas
+from asistente import AsistenteDodecaedro
 
 COLORES = {
     estado.VERDE: "#1e8e3e",
@@ -45,8 +49,6 @@ COLORES = {
     estado.ROJO: "#c5221f",
     estado.GRIS: "#8a8a8a",
 }
-
-RE_NOMBRE_VALIDO = re.compile(r"^[A-Za-z0-9_\-]+$")
 
 
 class FilaSemaforo(QWidget):
@@ -85,206 +87,6 @@ class _Puente(QObject):
     """Callbacks del Lanzador (hilos de trabajo) -> señales Qt (hilo GUI)."""
     linea = Signal(str)
     fin = Signal(object, int)
-
-
-# ============================================================================
-# Dialogos de parametros (defaults desde recetas.py; todo editable y visible)
-# ============================================================================
-
-def _geometrias(solo_teoricas=False):
-    todas = sorted(estado.DIR_DATA.glob("reference_*.txt"))
-    if solo_teoricas:
-        return [p for p in todas if "calibrado" not in p.name.lower()]
-    # teoricas primero, calibradas despues (para elegir semillas comodo)
-    teo = [p for p in todas if "calibrado" not in p.name.lower()]
-    cal = [p for p in todas if "calibrado" in p.name.lower()]
-    return teo + cal
-
-
-def _datasets():
-    return sorted(estado.DIR_DATA.glob("*.npz"),
-                  key=lambda p: p.stat().st_mtime, reverse=True)
-
-
-class DialogoCaptura(QDialog):
-    """Parametros de captura_calibracion.py. geometry_file SIEMPRE explicito
-    (el default del script cae en la teorica vieja — CONTEXT §4)."""
-
-    def __init__(self, parent, ruta_cfg, cfg):
-        super().__init__(parent)
-        self.setWindowTitle("Capturar dataset para BA")
-        self.ruta_cfg = ruta_cfg
-        form = QFormLayout(self)
-        self.combo_geom = QComboBox()
-        geom_perfil = estado.geometria_del_perfil(cfg, ruta_cfg)
-        for p in _geometrias():
-            self.combo_geom.addItem(p.name, str(p))
-        if geom_perfil is not None:
-            i = self.combo_geom.findText(Path(geom_perfil).name)
-            if i >= 0:
-                self.combo_geom.setCurrentIndex(i)
-        form.addRow("Geometria (para IDs):", self.combo_geom)
-        self.spin_dur = QSpinBox()
-        self.spin_dur.setRange(10, 600)
-        self.spin_dur.setValue(60)
-        self.spin_dur.setSuffix(" s")
-        form.addRow("Duracion:", self.spin_dur)
-        slug = recetas.slug_de_perfil(ruta_cfg)
-        self.edit_out = QLineEdit(f"iter4/data/captura_ba_{slug}.npz")
-        form.addRow("Dataset de salida:", self.edit_out)
-        self.spin_min = QSpinBox()
-        self.spin_min.setRange(1, 6)
-        self.spin_min.setValue(2)
-        form.addRow("Min markers por frame:", self.spin_min)
-        botones = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
-                                   | QDialogButtonBox.StandardButton.Cancel)
-        botones.accepted.connect(self.accept)
-        botones.rejected.connect(self.reject)
-        form.addRow(botones)
-        self.receta = None
-
-    def accept(self):
-        try:
-            self.receta = recetas.receta_captura(
-                self.ruta_cfg,
-                geometry_file=self.combo_geom.currentData(),
-                duracion=self.spin_dur.value(),
-                output=self.edit_out.text().strip(),
-                min_markers=self.spin_min.value(),
-            )
-        except (ValueError, FileNotFoundError) as e:
-            QMessageBox.warning(self, "Captura", str(e))
-            return
-        super().accept()
-
-    @staticmethod
-    def pedir(parent, ruta_cfg, cfg):
-        d = DialogoCaptura(parent, ruta_cfg, cfg)
-        return d.receta if d.exec() == QDialog.DialogCode.Accepted else None
-
-
-class DialogoBA(QDialog):
-    """Parametros de calibrar_rigid_body.py. Defaults v2 (--ancla 3
-    --marker-mm 14.6 --no-sparse --no-depth, ADR-008/009, CONTEXT §4.13)."""
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.setWindowTitle("Bundle adjustment (offline)")
-        form = QFormLayout(self)
-        self.combo_in = QComboBox()
-        for p in _datasets():
-            self.combo_in.addItem(p.name, str(p))
-        form.addRow("Dataset (.npz):", self.combo_in)
-        self.combo_teo = QComboBox()
-        for p in _geometrias():
-            self.combo_teo.addItem(p.name, str(p))
-        i = self.combo_teo.findText("reference_dodecaedro_v2.txt")
-        if i >= 0:
-            self.combo_teo.setCurrentIndex(i)
-        self.combo_teo.currentIndexChanged.connect(self._teorico_cambiado)
-        form.addRow("Teorica semilla:", self.combo_teo)
-        self.edit_out = QLineEdit()
-        form.addRow("Geometria de salida:", self.edit_out)
-        self.spin_ancla = QSpinBox()
-        self.spin_ancla.setRange(0, 999)
-        self.spin_ancla.setValue(recetas.BA_V2["ancla"])
-        form.addRow("Ancla (ID):", self.spin_ancla)
-        self.spin_mm = QDoubleSpinBox()
-        self.spin_mm.setRange(5.0, 50.0)
-        self.spin_mm.setDecimals(1)
-        self.spin_mm.setSingleStep(0.1)
-        self.spin_mm.setValue(recetas.BA_V2["marker_mm"])
-        self.spin_mm.setSuffix(" mm")
-        form.addRow("Lado del marker:", self.spin_mm)
-        self.spin_frames = QSpinBox()
-        self.spin_frames.setRange(0, 5000)
-        self.spin_frames.setValue(recetas.BA_V2["max_frames"])
-        form.addRow("Max frames (0=todos):", self.spin_frames)
-        self.spin_nfev = QSpinBox()
-        self.spin_nfev.setRange(10, 10000)
-        self.spin_nfev.setValue(recetas.BA_V2["max_nfev"])
-        form.addRow("Max nfev:", self.spin_nfev)
-        self.chk_nosparse = QCheckBox("(el dataset v2 lo exige — ADR-009)")
-        self.chk_nosparse.setChecked(True)
-        form.addRow("--no-sparse:", self.chk_nosparse)
-        self.chk_nodepth = QCheckBox("(BA solo-2D — ADR-008)")
-        self.chk_nodepth.setChecked(True)
-        form.addRow("--no-depth:", self.chk_nodepth)
-        botones = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
-                                   | QDialogButtonBox.StandardButton.Cancel)
-        botones.accepted.connect(self.accept)
-        botones.rejected.connect(self.reject)
-        form.addRow(botones)
-        self.receta = None
-        self._teorico_cambiado()
-
-    def _teorico_cambiado(self, *_):
-        teo = self.combo_teo.currentData()
-        if not teo:
-            return
-        stem = Path(teo).stem
-        propuesta = f"iter4/data/{stem}_calibrado.txt"
-        if (estado.RAIZ_CODIGO / propuesta).exists():
-            propuesta = f"iter4/data/{stem}_recalibrado.txt"
-        self.edit_out.setText(propuesta)
-        try:
-            ids = estado.parsear_geometria(teo)
-            if ids and self.spin_ancla.value() not in ids:
-                self.spin_ancla.setValue(min(ids))
-        except OSError:
-            pass
-
-    def _crear(self, sobrescribir=False):
-        return recetas.receta_ba(
-            input_npz=self.combo_in.currentData(),
-            teorico=self.combo_teo.currentData(),
-            output=self.edit_out.text().strip(),
-            ancla=self.spin_ancla.value(),
-            marker_mm=self.spin_mm.value(),
-            max_frames=self.spin_frames.value(),
-            max_nfev=self.spin_nfev.value(),
-            no_sparse=self.chk_nosparse.isChecked(),
-            no_depth=self.chk_nodepth.isChecked(),
-            sobrescribir=sobrescribir,
-        )
-
-    def accept(self):
-        teo = self.combo_teo.currentData()
-        if teo:
-            try:
-                ids = estado.parsear_geometria(teo)
-                if ids and self.spin_ancla.value() not in ids:
-                    QMessageBox.warning(
-                        self, "BA", f"El ancla ID {self.spin_ancla.value()} no "
-                        f"esta en la teorica ({Path(teo).name}: IDs "
-                        f"{min(ids)}-{max(ids)}). El BA abortaria.")
-                    return
-            except OSError as e:
-                QMessageBox.warning(self, "BA", f"Teorica ilegible: {e}")
-                return
-        try:
-            self.receta = self._crear()
-        except (ValueError, FileNotFoundError) as e:
-            if "CALIBRADA" in str(e):
-                r = QMessageBox.question(
-                    self, "BA — sobrescribir",
-                    str(e) + "\n\n¿Sobrescribir de todos modos?")
-                if r != QMessageBox.StandardButton.Yes:
-                    return
-                try:
-                    self.receta = self._crear(sobrescribir=True)
-                except (ValueError, FileNotFoundError) as e2:
-                    QMessageBox.warning(self, "BA", str(e2))
-                    return
-            else:
-                QMessageBox.warning(self, "BA", str(e))
-                return
-        super().accept()
-
-    @staticmethod
-    def pedir(parent):
-        d = DialogoBA(parent)
-        return d.receta if d.exec() == QDialog.DialogCode.Accepted else None
 
 
 class DialogoDivot(QDialog):
@@ -349,238 +151,171 @@ class DialogoDivot(QDialog):
         return d.receta if d.exec() == QDialog.DialogCode.Accepted else None
 
 
-class AsistenteDodecaedro(QDialog):
-    """Flujo "dar de alta un dodecaedro nuevo" (brief §2.4): teorica semilla ->
-    capturar dataset -> correr BA -> geometria *_calibrado.txt. Encadena los
-    scripts existentes en el orden correcto; NO edita el YAML del perfil
-    (decision §E.1: la GUI muestra la instruccion final)."""
+class DialogoCalibrarCamara(QDialog):
+    """Parametros de iter4/calibrar_camara.py (M3b): tablero del repo
+    (9x6 casillas = esquinas interiores 8x5 @ 25 mm, readme §8)."""
+
+    def __init__(self, parent, ruta_cfg):
+        super().__init__(parent)
+        self.setWindowTitle("Calibrar camara con tablero")
+        self.ruta_cfg = ruta_cfg
+        form = QFormLayout(self)
+        slug = recetas.slug_de_perfil(ruta_cfg)
+        self.edit_out = QLineEdit(f"iter4/data/camera_calibration_{slug}.yml")
+        form.addRow("Salida (.yml):", self.edit_out)
+        self.spin_cols = QSpinBox()
+        self.spin_cols.setRange(3, 20)
+        self.spin_cols.setValue(8)
+        form.addRow("Esquinas interiores (horiz):", self.spin_cols)
+        self.spin_rows = QSpinBox()
+        self.spin_rows.setRange(3, 20)
+        self.spin_rows.setValue(5)
+        form.addRow("Esquinas interiores (vert):", self.spin_rows)
+        self.spin_sq = QDoubleSpinBox()
+        self.spin_sq.setRange(5.0, 100.0)
+        self.spin_sq.setDecimals(1)
+        self.spin_sq.setValue(25.0)
+        self.spin_sq.setSuffix(" mm")
+        form.addRow("Lado de la celda:", self.spin_sq)
+        self.spin_min = QSpinBox()
+        self.spin_min.setRange(5, 60)
+        self.spin_min.setValue(12)
+        form.addRow("Vistas minimas:", self.spin_min)
+        nota = QLabel("Patron del repo: data/recursos/"
+                      "calibration_pattern_9x6_25mm.pdf impreso al 100% sobre "
+                      "superficie rigida. ESPACIO=capturar vista (15-30, "
+                      "variadas), q=calibrar y guardar. Criterio: RMSE < 1 px.")
+        nota.setWordWrap(True)
+        form.addRow(nota)
+        botones = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
+                                   | QDialogButtonBox.StandardButton.Cancel)
+        botones.accepted.connect(self.accept)
+        botones.rejected.connect(self.reject)
+        form.addRow(botones)
+        self.receta = None
+
+    def accept(self):
+        try:
+            self.receta = recetas.receta_calibrar_camara(
+                self.ruta_cfg,
+                output=self.edit_out.text().strip(),
+                cols=self.spin_cols.value(),
+                rows=self.spin_rows.value(),
+                square_mm=self.spin_sq.value(),
+                min_vistas=self.spin_min.value(),
+            )
+        except (ValueError, FileNotFoundError) as e:
+            QMessageBox.warning(self, "Calibrar camara", str(e))
+            return
+        super().accept()
+
+
+class DialogoIntrinsecos(QDialog):
+    """M3: gestion de intrinsecos del perfil activo.
+    (a) Correr una calibracion con tablero (calibrar_camara.py).
+    (b) Apuntar camera.calibration_file del perfil a un .yml validado —
+        UNICA mutacion de config permitida (ADR-018): edicion textual
+        quirurgica con backup, via perfil_editor.py."""
 
     def __init__(self, panel):
         super().__init__(panel)
-        self.setWindowTitle("Asistente: dodecaedro nuevo (captura → BA)")
         self.panel = panel
-        self.resize(560, 460)
+        self.setWindowTitle("Calibracion de camara e intrinsecos (M3)")
+        self.resize(520, 260)
         caja = QVBoxLayout(self)
 
-        form = QFormLayout()
-        self.combo_teo = QComboBox()
-        for p in _geometrias(solo_teoricas=True):
-            self.combo_teo.addItem(p.name, str(p))
-        self.combo_teo.currentIndexChanged.connect(self._teorica_cambiada)
-        form.addRow("Teorica semilla (IDs nuevos):", self.combo_teo)
-        self.edit_nombre = QLineEdit("reference_dodecaedro_nuevo")
-        form.addRow("Nombre base de salida:", self.edit_nombre)
-        self.spin_ancla = QSpinBox()
-        self.spin_ancla.setRange(0, 999)
-        form.addRow("Ancla (ID, cara superior):", self.spin_ancla)
-        self.spin_mm = QDoubleSpinBox()
-        self.spin_mm.setRange(5.0, 50.0)
-        self.spin_mm.setDecimals(1)
-        self.spin_mm.setValue(recetas.BA_V2["marker_mm"])
-        self.spin_mm.setSuffix(" mm")
-        form.addRow("Lado del marker:", self.spin_mm)
-        self.spin_dur = QSpinBox()
-        self.spin_dur.setRange(10, 600)
-        self.spin_dur.setValue(60)
-        self.spin_dur.setSuffix(" s")
-        form.addRow("Duracion de captura:", self.spin_dur)
-        caja.addLayout(form)
+        cfg = panel._cfg or {}
+        cam = cfg.get("camera", {}) or {}
+        ctype = str(cam.get("camera_type", "?")).lower()
+        actual = cam.get("calibration_file") or "(vacio = fabrica del SDK)"
+        texto = (f"Perfil: {Path(panel.perfil_activo()).name}  |  "
+                 f"camera_type: {ctype}\n"
+                 f"calibration_file actual: {actual}")
+        if ctype == "femtobolt":
+            texto += ("\nNota: la Femto usa calibracion de FABRICA; apuntar "
+                      "un .yml aqui es solo para overrides especiales.")
+        info = QLabel(texto)
+        info.setWordWrap(True)
+        caja.addWidget(info)
 
-        self.lbl_captura = QLabel("1) Capturar dataset: pendiente")
-        self.lbl_ba = QLabel("2) Bundle adjustment: pendiente")
-        self.lbl_resumen = QLabel("")
-        self.lbl_resumen.setWordWrap(True)
-        self.lbl_resumen.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse)
-        caja.addWidget(self.lbl_captura)
-        caja.addWidget(self.lbl_ba)
-        caja.addWidget(self.lbl_resumen)
+        btn_correr = QPushButton("Correr calibracion con tablero…")
+        btn_correr.clicked.connect(self._correr)
+        caja.addWidget(btn_correr)
 
-        fila_botones = QHBoxLayout()
-        self.btn_capturar = QPushButton("1) Capturar dataset")
-        self.btn_ba = QPushButton("2) Correr BA")
-        self.btn_ba.setEnabled(False)
-        self.btn_copiar = QPushButton("Copiar ruta de la geometria")
-        self.btn_copiar.setEnabled(False)
-        fila_botones.addWidget(self.btn_capturar)
-        fila_botones.addWidget(self.btn_ba)
-        fila_botones.addWidget(self.btn_copiar)
-        caja.addLayout(fila_botones)
+        caja.addWidget(QLabel("O apuntar el perfil a un .yml existente:"))
+        fila = QHBoxLayout()
+        self.combo_yml = QComboBox()
+        for p in sorted(estado.DIR_DATA.glob("*.yml")):
+            self.combo_yml.addItem(p.name, str(p))
+        fila.addWidget(self.combo_yml, stretch=1)
+        btn_examinar = QPushButton("Examinar…")
+        btn_examinar.clicked.connect(self._examinar)
+        fila.addWidget(btn_examinar)
+        caja.addLayout(fila)
+        btn_apuntar = QPushButton("Validar y apuntar el perfil al .yml elegido")
+        btn_apuntar.clicked.connect(self._apuntar)
+        caja.addWidget(btn_apuntar)
 
-        self.btn_capturar.clicked.connect(self._capturar)
-        self.btn_ba.clicked.connect(self._correr_ba)
-        self.btn_copiar.clicked.connect(self._copiar)
-        self._teorica_cambiada()
+        cierre = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        cierre.rejected.connect(self.reject)
+        caja.addWidget(cierre)
 
-    # ------------------------------------------------------------------
-    def _teorica_cambiada(self, *_):
-        teo = self.combo_teo.currentData()
-        if not teo:
+    def _correr(self):
+        d = DialogoCalibrarCamara(self, self.panel.perfil_activo())
+        if d.exec() == QDialog.DialogCode.Accepted and d.receta:
+            self.accept()   # cerrar para ver el log en el panel
+            self.panel.lanzar_receta(d.receta)
+
+    def _examinar(self):
+        ruta, _f = QFileDialog.getOpenFileName(
+            self, "Elegir .yml de calibracion", str(estado.DIR_DATA),
+            "Calibracion (*.yml *.yaml)")
+        if not ruta:
+            return
+        i = self.combo_yml.findData(ruta)
+        if i < 0:
+            etiqueta = Path(ruta).name
+            if Path(ruta).resolve().parent != estado.DIR_DATA.resolve():
+                etiqueta += " (fuera de data\\)"
+            self.combo_yml.addItem(etiqueta, ruta)
+            i = self.combo_yml.count() - 1
+        self.combo_yml.setCurrentIndex(i)
+
+    def _apuntar(self):
+        ruta_yml = self.combo_yml.currentData()
+        if not ruta_yml:
+            QMessageBox.warning(self, "Intrinsecos", "No hay .yml elegido.")
+            return
+        err = perfil_editor.validar_yml_intrinsecos(ruta_yml)
+        if err:
+            QMessageBox.warning(self, "Intrinsecos",
+                                f"El .yml NO valida como calibracion: {err}")
+            return
+        perfil = self.panel.perfil_activo()
+        valor = perfil_editor.valor_para_perfil(ruta_yml, estado.DIR_DATA)
+        try:
+            actual, nueva = perfil_editor.previsualizar_cambio(perfil, valor)
+        except (ValueError, OSError) as e:
+            QMessageBox.critical(self, "Intrinsecos", str(e))
+            return
+        r = QMessageBox.question(
+            self, "Confirmar edicion del perfil (ADR-018)",
+            f"Se editara {Path(perfil).name} — UNICA linea, con backup "
+            f"timestampeado:\n\n"
+            f"  ANTES:    {actual.strip()}\n"
+            f"  DESPUES:  {nueva.strip()}\n\n¿Aplicar?")
+        if r != QMessageBox.StandardButton.Yes:
             return
         try:
-            ids = estado.parsear_geometria(teo)
-            if ids:
-                self.spin_ancla.setValue(min(ids))
-        except OSError:
-            pass
-
-    def _nombre(self):
-        return self.edit_nombre.text().strip()
-
-    def _dataset(self):
-        slug = self._nombre().replace("reference_", "")
-        return f"iter4/data/captura_ba_{slug}.npz"
-
-    def _salida(self):
-        return f"iter4/data/{self._nombre()}_calibrado.txt"
-
-    def _validar_campos(self):
-        if not self.combo_teo.currentData():
-            QMessageBox.warning(self, "Asistente", "No hay teorica semilla "
-                                "(reference_*.txt sin 'calibrado') en data\\.")
-            return False
-        if not RE_NOMBRE_VALIDO.match(self._nombre()):
-            QMessageBox.warning(self, "Asistente", "Nombre base invalido: usar "
-                                "solo letras, numeros, '_' y '-'.")
-            return False
-        teo = self.combo_teo.currentData()
-        ids = estado.parsear_geometria(teo)
-        if not ids:
-            QMessageBox.warning(self, "Asistente",
-                                f"La teorica {Path(teo).name} no tiene lineas "
-                                f"validas (vacia/corrupta).")
-            return False
-        if self.spin_ancla.value() not in ids:
-            QMessageBox.warning(self, "Asistente",
-                                f"El ancla ID {self.spin_ancla.value()} no esta "
-                                f"en la teorica (IDs {min(ids)}-{max(ids)}).")
-            return False
-        return True
-
-    def _set_campos(self, habilitar):
-        for w in (self.combo_teo, self.edit_nombre, self.spin_ancla,
-                  self.spin_mm, self.spin_dur):
-            w.setEnabled(habilitar)
-
-    # ------------------------------------------------------------------
-    def _capturar(self):
-        if not self._validar_campos():
+            backup, _a, _n = perfil_editor.aplicar_cambio(perfil, valor)
+        except (ValueError, OSError) as e:
+            QMessageBox.critical(self, "Intrinsecos", f"NO aplicado: {e}")
             return
-        try:
-            receta = recetas.receta_captura(
-                self.panel.perfil_activo(),
-                geometry_file=self.combo_teo.currentData(),
-                duracion=self.spin_dur.value(),
-                output=self._dataset(),
-            )
-        except (ValueError, FileNotFoundError) as e:
-            QMessageBox.warning(self, "Asistente", str(e))
-            return
-        self.lbl_captura.setText("1) Capturar dataset: CORRIENDO "
-                                 "(rota el dodecaedro mostrando TODAS las caras)")
-        self.btn_capturar.setEnabled(False)
-        self.btn_ba.setEnabled(False)
-        self._set_campos(False)
-        if not self.panel.lanzar_receta(receta, origen=self):
-            # cancelado (overwrite) o no se pudo lanzar: restaurar honesto
-            self.lbl_captura.setText("1) Capturar dataset: no lanzado (cancelado "
-                                     "o proceso ocupado)")
-            self.btn_capturar.setEnabled(True)
-            self._set_campos(True)
-
-    def _correr_ba(self):
-        try:
-            receta = recetas.receta_ba(
-                input_npz=self._dataset(),
-                teorico=self.combo_teo.currentData(),
-                output=self._salida(),
-                ancla=self.spin_ancla.value(),
-                marker_mm=self.spin_mm.value(),
-            )
-        except (ValueError, FileNotFoundError) as e:
-            if "CALIBRADA" in str(e):
-                r = QMessageBox.question(self, "Asistente — sobrescribir",
-                                         str(e) + "\n\n¿Sobrescribir?")
-                if r != QMessageBox.StandardButton.Yes:
-                    return
-                receta = recetas.receta_ba(
-                    input_npz=self._dataset(),
-                    teorico=self.combo_teo.currentData(),
-                    output=self._salida(),
-                    ancla=self.spin_ancla.value(),
-                    marker_mm=self.spin_mm.value(),
-                    sobrescribir=True,
-                )
-            else:
-                QMessageBox.warning(self, "Asistente", str(e))
-                return
-        self.lbl_ba.setText("2) Bundle adjustment: CORRIENDO (puede tardar "
-                            "MINUTOS largos; el progreso de scipy se ve en el log)")
-        self.btn_ba.setEnabled(False)
-        self.btn_capturar.setEnabled(False)
-        self._set_campos(False)
-        if not self.panel.lanzar_receta(receta, origen=self):
-            self.lbl_ba.setText("2) Bundle adjustment: no lanzado (cancelado "
-                                "o proceso ocupado)")
-            self.btn_ba.setEnabled(True)
-            self.btn_capturar.setEnabled(True)
-            self._set_campos(True)
-
-    def _copiar(self):
-        ruta_para_yaml = f"data/{self._nombre()}_calibrado.txt"
-        QGuiApplication.clipboard().setText(ruta_para_yaml)
-        self.panel.log_msg(f"asistente: copiado al portapapeles: {ruta_para_yaml}")
-
-    # ------------------------------------------------------------------
-    def proceso_termino(self, receta, rc, buffer):
-        """Llamado por el panel al terminar un proceso lanzado por este
-        asistente. La cadena se corta VISIBLEMENTE si un paso falla."""
-        if receta.clave == "captura":
-            if rc == 0:
-                utiles = ""
-                for ln in reversed(buffer):
-                    m = re.search(r"Frames utiles:\s*(\d+)", ln)
-                    if m:
-                        utiles = f" ({m.group(1)} frames utiles)"
-                        break
-                self.lbl_captura.setText(f"1) Capturar dataset: OK{utiles} "
-                                         f"→ {self._dataset()}")
-                self.lbl_ba.setText("2) Bundle adjustment: listo para correr")
-                self.btn_ba.setEnabled(True)
-            else:
-                self.lbl_captura.setText(
-                    f"1) Capturar dataset: FALLO (exit {rc}) — revisar el log; "
-                    f"la cadena se corta aca")
-            self.btn_capturar.setEnabled(True)
-            self._set_campos(True)
-        elif receta.clave == "ba":
-            if rc == 0:
-                rmse = ""
-                for ln in buffer:
-                    m = re.search(r"RMSE 2D:\s*([\d.]+)\s*->\s*([\d.]+)\s*px", ln)
-                    if m:
-                        rmse = f"RMSE 2D {m.group(1)} → {m.group(2)} px. "
-                salida_abs = estado.RAIZ_CODIGO / self._salida()
-                existe = salida_abs.exists()
-                self.lbl_ba.setText(f"2) Bundle adjustment: OK → {self._salida()}"
-                                    if existe else
-                                    f"2) BA termino exit 0 pero NO se encuentra "
-                                    f"{self._salida()} — revisar el log")
-                self.lbl_resumen.setText(
-                    f"{rmse}ADVERTENCIA (ADR-003): el RMSE que reporta el BA no "
-                    f"es confiable por si solo — validar por reproyeccion "
-                    f"independiente antes de operar.\n\n"
-                    f"Para usar la geometria nueva, editar el perfil YAML a "
-                    f"mano (la GUI no muta configs):\n"
-                    f"  rigid_bodies[0].geometry_file: data/{self._nombre()}"
-                    f"_calibrado.txt")
-                self.btn_copiar.setEnabled(existe)
-            else:
-                self.lbl_ba.setText(f"2) Bundle adjustment: FALLO (exit {rc}) — "
-                                    f"revisar el log; la cadena se corta aca")
-                self.btn_ba.setEnabled(True)
-            self.btn_capturar.setEnabled(True)
-            self._set_campos(True)
+        self.panel.log_msg(f"perfil editado (ADR-018): {Path(perfil).name} -> "
+                           f"calibration_file: {valor}")
+        self.panel.log_msg(f"  backup: {backup.name}")
+        self.panel.refrescar()
+        self.accept()
 
 
 # ============================================================================
@@ -590,7 +325,7 @@ class AsistenteDodecaedro(QDialog):
 class Panel(QMainWindow):
     def __init__(self, perfil_inicial=None):
         super().__init__()
-        self.setWindowTitle("Panel de Navegacion Quirurgica — brief-01 (iter 1)")
+        self.setWindowTitle("Panel de Navegacion Quirurgica — brief-02 (iter 2)")
         self.resize(980, 760)
         self.settings = QSettings("PoyectoNavegacion", "PanelGUI")
         self.filas = {}
@@ -634,18 +369,20 @@ class Panel(QMainWindow):
         c1 = QVBoxLayout(g1)
         self.btn_ids = QPushButton("Verificar IDs")
         self.btn_camara = QPushButton("Probar camara")
+        self.btn_calcam = QPushButton("Calibracion de camara…")
         c1.addWidget(self.btn_ids)
         c1.addWidget(self.btn_camara)
+        c1.addWidget(self.btn_calcam)
         c1.addStretch(1)
+        # brief-02 M4: asistente primero, dock despues; sin botones sueltos
+        # de captura/BA (viven dentro del asistente).
         g2 = QGroupBox("2 · Calibrar")
         c2 = QVBoxLayout(g2)
-        self.btn_captura = QPushButton("Capturar dataset BA…")
-        self.btn_ba = QPushButton("Correr BA…")
-        self.btn_divot = QPushButton("Calibrar punta (dock)…")
         self.btn_asistente = QPushButton("Asistente: dodecaedro nuevo…")
-        for b in (self.btn_captura, self.btn_ba, self.btn_divot,
-                  self.btn_asistente):
-            c2.addWidget(b)
+        self.btn_divot = QPushButton("Calibrar punta (dock)…")
+        c2.addWidget(self.btn_asistente)
+        c2.addWidget(self.btn_divot)
+        c2.addStretch(1)
         g3 = QGroupBox("3 · Operar")
         c3 = QVBoxLayout(g3)
         self.btn_tracker = QPushButton("Arrancar tracker")
@@ -661,8 +398,8 @@ class Panel(QMainWindow):
 
         self.botones = {
             "ids": self.btn_ids, "camara": self.btn_camara,
-            "captura": self.btn_captura, "ba": self.btn_ba,
-            "divot": self.btn_divot, "asistente": self.btn_asistente,
+            "calcam": self.btn_calcam,
+            "asistente": self.btn_asistente, "divot": self.btn_divot,
             "tracker": self.btn_tracker, "detener": self.btn_detener,
         }
 
@@ -682,10 +419,9 @@ class Panel(QMainWindow):
         self.combo.currentIndexChanged.connect(self._perfil_cambiado)
         self.btn_ids.clicked.connect(self._accion_ids)
         self.btn_camara.clicked.connect(self._accion_camara)
-        self.btn_captura.clicked.connect(self._accion_captura)
-        self.btn_ba.clicked.connect(self._accion_ba)
-        self.btn_divot.clicked.connect(self._accion_divot)
+        self.btn_calcam.clicked.connect(self._accion_calcam)
         self.btn_asistente.clicked.connect(self._accion_asistente)
+        self.btn_divot.clicked.connect(self._accion_divot)
         self.btn_tracker.clicked.connect(self._accion_tracker)
         self.btn_detener.clicked.connect(self._accion_detener)
 
@@ -711,6 +447,11 @@ class Panel(QMainWindow):
     def _perfil_cambiado(self, _idx):
         self.settings.setValue("perfil_activo", self.perfil_activo())
         self.resultado_camara = None
+        # El asistente depende del perfil (semilla default, recetas): se
+        # descarta y se recrea al reabrir.
+        if self.asistente is not None:
+            self.asistente.close()
+            self.asistente = None
         self.refrescar()
 
     def log_msg(self, texto):
@@ -718,6 +459,10 @@ class Panel(QMainWindow):
 
     def _linea_hijo(self, texto):
         self.log.appendPlainText(texto)
+        # brief-02 M5: feed en vivo al origen (monitor del BA en el asistente)
+        if self.origen_actual is not None and hasattr(self.origen_actual,
+                                                      "linea_hijo"):
+            self.origen_actual.linea_hijo(texto)
 
     # ------------------------------------------------------------------
     def refrescar(self):
@@ -725,7 +470,6 @@ class Panel(QMainWindow):
         if not ruta:
             return
         self.chequeos, self._cfg = estado.evaluar_todo(ruta)
-        # resultado de la sonda de camara (si es de este perfil) pisa el GRIS
         if self.resultado_camara and self.resultado_camara[0] == ruta:
             self.chequeos = [self.resultado_camara[1] if c.clave == "camara"
                              else c for c in self.chequeos]
@@ -752,19 +496,15 @@ class Panel(QMainWindow):
         def verde(k):
             return k in self._chk and self._chk[k].estado == estado.VERDE
 
-        def no_rojo(k):
-            return k in self._chk and self._chk[k].estado != estado.ROJO
-
         libre = not corriendo
         self.btn_ids.setEnabled(libre and verde("entorno") and verde("config"))
         self.btn_camara.setEnabled(libre and verde("config"))
-        self.btn_captura.setEnabled(libre and verde("entorno")
-                                    and verde("config") and no_rojo("geometria"))
-        self.btn_ba.setEnabled(libre and verde("entorno"))
-        self.btn_divot.setEnabled(libre and verde("entorno")
-                                  and verde("config") and verde("geometria"))
+        self.btn_calcam.setEnabled(libre and verde("entorno")
+                                   and verde("config"))
         self.btn_asistente.setEnabled(libre and verde("entorno")
                                       and verde("config"))
+        self.btn_divot.setEnabled(libre and verde("entorno")
+                                  and verde("config") and verde("geometria"))
         ok, malos = estado.apto_para_tracker(self.chequeos)
         self.btn_tracker.setEnabled(libre and ok)
         self.btn_tracker.setToolTip(
@@ -783,7 +523,7 @@ class Panel(QMainWindow):
             QMessageBox.warning(self, "Panel", "Ya hay un proceso corriendo. "
                                 "Usar 'Detener proceso' primero.")
             return False
-        if receta.clave != "ba":  # el BA ya valida overwrite en su dialogo
+        if receta.clave != "ba":  # el BA ya valida overwrite en el asistente
             existentes = [o for o in receta.outputs
                           if (estado.RAIZ_CODIGO / o).exists()]
             if existentes:
@@ -834,26 +574,19 @@ class Panel(QMainWindow):
     def _accion_camara(self):
         self.lanzar_receta(recetas.receta_sonda_camara(self.perfil_activo()))
 
-    def _accion_captura(self):
-        receta = DialogoCaptura.pedir(self, self.perfil_activo(), self._cfg)
-        if receta:
-            self.lanzar_receta(receta)
-
-    def _accion_ba(self):
-        receta = DialogoBA.pedir(self)
-        if receta:
-            self.lanzar_receta(receta)
-
-    def _accion_divot(self):
-        receta = DialogoDivot.pedir(self, self.perfil_activo())
-        if receta:
-            self.lanzar_receta(receta)
+    def _accion_calcam(self):
+        DialogoIntrinsecos(self).exec()
 
     def _accion_asistente(self):
         if self.asistente is None:
             self.asistente = AsistenteDodecaedro(self)
         self.asistente.show()
         self.asistente.raise_()
+
+    def _accion_divot(self):
+        receta = DialogoDivot.pedir(self, self.perfil_activo())
+        if receta:
+            self.lanzar_receta(receta)
 
     def _accion_tracker(self):
         cfg = self._cfg or {}
@@ -890,11 +623,12 @@ class Panel(QMainWindow):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Panel de control (brief-01).")
+    ap = argparse.ArgumentParser(description="Panel de control (brief-02).")
     ap.add_argument("--perfil", default=None,
                     help="Perfil inicial (ruta o nombre del yaml).")
     ap.add_argument("--selftest", action="store_true",
-                    help="Abre, refresca, imprime estados y botones, cierra solo.")
+                    help="Abre, refresca, imprime estados/botones/asistente, "
+                         "cierra solo.")
     args = ap.parse_args()
 
     app = QApplication(sys.argv)
@@ -912,6 +646,16 @@ def main():
             for clave, boton in panel.botones.items():
                 print(f"[panel-selftest] boton_{clave}_habilitado="
                       f"{boton.isEnabled()}")
+            # brief-02 M1: evidencia de la semilla default del asistente
+            a = AsistenteDodecaedro(panel)
+            print(f"[panel-selftest] asistente_semilla_default="
+                  f"{a.combo_teo.currentText()}")
+            print(f"[panel-selftest] asistente_semilla_info="
+                  f"{a.lbl_ids_semilla.text()}")
+            print(f"[panel-selftest] asistente_ba_defaults="
+                  f"frames={a.spin_frames.value()},nfev={a.spin_nfev.value()},"
+                  f"autocorte={a.chk_autocorte.isChecked()}")
+            a.deleteLater()
             print("[panel-selftest] cerrando OK")
             panel.close()
             app.quit()

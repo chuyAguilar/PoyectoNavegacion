@@ -30,6 +30,7 @@
 | 015 | Config canónica = `tracker_config.yaml` (Femto RGB, Marker0 80 mm, tip existente) | Aceptada |
 | 016 | Cámara global shutter para el contexto "doctor" (webcam) | Aceptada |
 | 017 | Panel de control PySide6 que solo orquesta (brief-01) | Aceptada |
+| 018 | La GUI puede mutar solo `camera.calibration_file` (quirúrgico) | Aceptada |
 
 ---
 
@@ -355,3 +356,28 @@ fail-loud, Detener) **+ EN VIVO (núcleo) 2026-08-13** con la Femto real
 (panel y semáforos, probar cámara, verificar IDs, tracker → OpenIGTLink →
 Slicer con cierre limpio); pendientes las verificaciones opcionales con
 hardware (dock, BA live, asistente "dodecaedro nuevo").
+
+---
+
+## ADR-018 — La GUI puede mutar SOLO `camera.calibration_file` (edición quirúrgica)
+**Fecha:** 2026-08-13 · **Estado:** Aceptada
+
+**Contexto.** brief-02 M3: gestionar la calibración de cámara desde el panel
+requiere apuntar el perfil a un `.yml` nuevo. La regla de brief-01 era "la GUI
+no muta configs" (ADR-017); un round-trip de PyYAML destruiría los comentarios
+de los configs (documentan el tuning del detector).
+
+**Decisión.** Excepción ÚNICA y acotada: el panel puede editar la línea
+`calibration_file:` de un `tracker_config*.yaml`, con estas guardas
+(`gui/perfil_editor.py`): (a) reemplazo TEXTUAL de esa única línea —
+comentarios y EOLs del resto intactos byte a byte; (b) backup timestampeado
+ANTES de escribir; (c) confirmación mostrando el antes/después exacto; (d)
+aborta sin tocar nada si el patrón no aparece EXACTAMENTE una vez; (e) el
+`.yml` destino se valida antes (camera_matrix/distortion_coefficients); (f)
+verificación post-escritura. Todo lo demás del YAML sigue inmutable para la GUI.
+
+**Consecuencias.** Recalibrar y apuntar la cámara sin editar YAML a mano. El
+comentario inline de la línea editada (si lo había) se reemplaza con el valor
+viejo que describía. Verificado headless sobre copia real del perfil (diff de
+1 línea, backup idéntico, YAML re-parsea). Editar `geometry_file` u otras
+claves queda explícitamente FUERA (el asistente sigue mostrando la instrucción).

@@ -142,20 +142,33 @@ del CT con el **Volume Reslice Driver**. El procedimiento paso a paso está en
 
 ### 3.7 Panel de control (GUI) — `codigo/iter4/gui/`
 
-Panel de escritorio **PySide6** (brief-01) que **solo orquesta** los scripts
-existentes — no reimplementa tracking ni calibración (ADR-017):
+Panel de escritorio **PySide6** (brief-01 + brief-02) que **solo orquesta**
+los scripts existentes — no reimplementa tracking ni calibración (ADR-017;
+única excepción acotada: ADR-018):
 
 - `estado.py` — semáforos leyendo el **estado real del repo** (config del
   perfil, geometría calibrada, intrínsecos, punta y su coherencia por sha16,
   puerto 18944, entorno). Usable por consola (`--perfil ... [--puntas]`).
 - `recetas.py` — composición de comandos con **todos los args explícitos**
-  (neutraliza los defaults del stylus viejo, CONTEXT §4.13–15).
+  (neutraliza los defaults del stylus viejo, CONTEXT §4.13–17).
 - `procesos.py` — subprocesos (uno a la vez), stdout en vivo, Detener por el
   camino nativo (`'q'` a la ventana OpenCV) con escalada a `terminate()`.
 - `sonda_camara.py` — chequeo corto de cámara bajo demanda (subproceso con
   watchdog; nunca dentro del proceso GUI).
+- `asistente.py` — alta de dodecaedro: [teórica existente | GENERAR desde IDs
+  nuevos] → captura → chequeo de cobertura → BA con monitor de estancamiento
+  y auto-corte (`corregir_giro_esquinas.py` documentado como escape manual).
+- `ba_monitor.py` — cobertura del dataset (frames/marker, pares únicos y
+  débiles) y detector de estancamiento del BA (umbrales visibles, calibrados
+  con datos reales; los pares de caras antípodas nunca son co-visibles).
+- `perfil_editor.py` — la única mutación de config permitida (ADR-018):
+  edición quirúrgica de `camera.calibration_file` con backup.
 - `panel.py` — ventana única: perfil, semáforos, acciones (Verificar /
-  Calibrar / Operar), asistente "dodecaedro nuevo" (captura → BA) y log.
+  Calibrar / Operar), diálogos de intrínsecos y dock, log en vivo.
+
+Script nuevo fuera de `gui\`: **`iter4/calibrar_camara.py`** — calibración
+intrínseca con tablero de ajedrez 8×5 @ 25 mm (alternativa OpenCV a MRPT,
+readme §8; exporta el YAML que leen los backends).
 
 Lanzamiento: `python iter4\gui\panel.py` (desde `codigo\`, con el venv).
 

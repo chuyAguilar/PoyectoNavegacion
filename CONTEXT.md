@@ -108,6 +108,11 @@
 16. **`calibrar_tip_divot.py` se AUTOCIERRA a los `--timeout` segundos
     (default 600)**: si la sesión de posturas se alarga, termina solo y
     resuelve con lo capturado (o falla con <4 posturas).
+17. **`generar_reference_dodecaedro.py --output` default cae en `codigo\data\`**
+    (ruta relativa al CWD — carpeta equivocada que además crea en silencio) y
+    sus IDs/tamaño default son del stylus viejo (170–180, 13.4 mm). Pasar
+    `--output iter4/data/...` y el layout completo explícitos (la GUI ya lo
+    hace, brief-02 M2).
 
 ## 5. Metodología de trabajo (cómo colaboramos humano + IA)
 
@@ -175,6 +180,18 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
   con fail-loud. **Único residual:** calibración de punta por dock en vivo
   (falta la placa física). Nota: el BA no convergió sobre una captura corta de
   60 s (cobertura floja) — tema de DATOS, no del panel.
+- **GUI / panel de control (brief-02, iter 2): 5 mejoras implementadas y
+  verificadas headless 2026-08-13.** M1 semilla default v2 + IDs visibles; M2
+  alta de dodecaedro con IDs NUEVOS (generar teórica desde inputs → captura →
+  BA, `corregir_giro_esquinas.py` documentado como escape); M3 intrínsecos
+  desde el panel (`iter4/calibrar_camara.py` nuevo + apuntar el perfil con
+  edición quirúrgica y backup, ADR-018); M4 grupo Calibrar limpio (los botones
+  sueltos de captura/BA fuera — un BA sobre un dataset viejo queda SOLO por
+  CLI); M5 cobertura pre-BA + monitor de estancamiento con auto-corte
+  (umbrales calibrados con datos reales: antípodas in-co-visibles, pares
+  débiles). **Pendiente de verificación con cámara en vivo:** captura del
+  asistente con IDs nuevos y `calibrar_camara.py` interactivo (+ el residual
+  del dock de brief-01).
 - **FPS ~16–17 con Femto RGB en el tracker** (observado en vivo 2026-08-13):
   esperado — el backend habilita depth+align del SDK aunque solo se use el RGB.
   Optimización pendiente (p.ej. no habilitar el stream de depth en este modo).

@@ -35,7 +35,9 @@ VENTANAS = {
     "captura": "Captura calibracion iter4 - q para salir antes",
     "divot": "Calibracion divot iter4",
     "tracker": "Tracker Multi-Marker - q para salir",
-    "ba": None,  # sin ventana (batch de consola)
+    "ba": None,             # sin ventana (batch de consola)
+    "generar": None,        # sin ventana (generacion instantanea, brief-02 M2)
+    "calibrar_camara": "Calibracion camara iter4 - ESPACIO captura, q calibra",
 }
 
 # Slug corto por perfil para nombrar outputs (captura_ba_<slug>.npz, etc.).
@@ -219,6 +221,80 @@ def receta_tracker(ruta_cfg):
         argv=argv,
         ventana_titulo=VENTANAS["tracker"],
         usa_camara=True,
+    )
+
+
+def receta_generar_teorica(output, id_top, ids_superior, ids_inferior,
+                           edge_mm=17.5, marker_mm=BA_V2["marker_mm"]):
+    """Genera la teorica semilla con generar_reference_dodecaedro.py (M2).
+
+    OJO (trampa CONTEXT §4, detectada 2026-08-13): el --output default del
+    script cae en codigo\\data\\ (relativo al CWD, carpeta equivocada que
+    ademas crea en silencio) y sus IDs default son del stylus viejo (170-180)
+    -> TODO explicito siempre. La validacion geometrica exhaustiva del script
+    (11 invariantes) es la autoridad: si falla, aborta sin escribir.
+    """
+    if not output:
+        raise ValueError("receta_generar_teorica: output es obligatorio "
+                         "(el default del script cae en codigo\\data\\)")
+    ids_superior = [int(x) for x in ids_superior]
+    ids_inferior = [int(x) for x in ids_inferior]
+    if len(ids_superior) != 5 or len(ids_inferior) != 5:
+        raise ValueError("receta_generar_teorica: los anillos llevan 5 IDs "
+                         f"cada uno (recibidos {len(ids_superior)} sup / "
+                         f"{len(ids_inferior)} inf)")
+    todos = [int(id_top)] + ids_superior + ids_inferior
+    if len(set(todos)) != 11:
+        raise ValueError(f"receta_generar_teorica: los 11 IDs deben ser "
+                         f"unicos; recibidos {todos}")
+    argv = [
+        _python(), "-u", "iter4/generar_reference_dodecaedro.py",
+        "--output", _rel(output),
+        "--edge-mm", str(float(edge_mm)),
+        "--marker-mm", str(float(marker_mm)),
+        "--id-top", str(int(id_top)),
+        "--ids-superior", ",".join(str(x) for x in ids_superior),
+        "--ids-inferior", ",".join(str(x) for x in ids_inferior),
+    ]
+    return Receta(
+        clave="generar",
+        descripcion=(f"Generar teorica del dodecaedro (top {id_top}, "
+                     f"sup {ids_superior}, inf {ids_inferior}; validacion "
+                     f"geometrica incluida)"),
+        argv=argv,
+        ventana_titulo=None,
+        usa_camara=False,
+        outputs=[_rel(output)],
+        timeout_s=30.0,
+    )
+
+
+def receta_calibrar_camara(ruta_cfg, output, cols=8, rows=5, square_mm=25.0,
+                           min_vistas=12, timeout=900):
+    """Calibracion intrinseca con tablero (M3b, iter4/calibrar_camara.py).
+    Tablero del proyecto: 9x6 casillas -> esquinas interiores 8x5 @ 25 mm
+    (codigo/readme.md §8). output SIEMPRE explicito (sin default-trampa)."""
+    if not output:
+        raise ValueError("receta_calibrar_camara: output es obligatorio")
+    argv = [
+        _python(), "-u", "iter4/calibrar_camara.py",
+        "--config", _rel(ruta_cfg),
+        "--output", _rel(output),
+        "--cols", str(int(cols)),
+        "--rows", str(int(rows)),
+        "--square-mm", str(float(square_mm)),
+        "--min-vistas", str(int(min_vistas)),
+        "--timeout", str(int(timeout)),
+    ]
+    return Receta(
+        clave="calibrar_camara",
+        descripcion=(f"Calibrar camara con tablero {cols}x{rows} @ "
+                     f"{square_mm} mm (ESPACIO=vista, q=calibrar; "
+                     f"autocierre {timeout}s)"),
+        argv=argv,
+        ventana_titulo=VENTANAS["calibrar_camara"],
+        usa_camara=True,
+        outputs=[_rel(output)],
     )
 
 
