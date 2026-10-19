@@ -10,7 +10,7 @@ En este orden:
 
 1. Lee completos `docs/constitution.md`, `memory.md` y `docs/CONTEXT.md`.
 2. Lee completos, del spec activo, `spec.md` y `tasks.md`, los que existan. El spec activo es el que nombra `memory.md`, siempre con las mismas palabras: «Spec activo: `specs/NNN-nombre/`» (o «Spec activo: ningún spec activo»).
-3. Consulta `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` y `docs/BACKLOG.md` por sección: primero su índice, después solo la sección que haga falta.
+3. Consulta `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/BACKLOG.md` y `docs/PRUEBAS.md` por sección: primero su índice, después solo la sección que haga falta.
 4. `docs/history/` solo cuando haga falta saber cómo se llegó a algo. Es copia literal y no se edita.
 
 Antes de escribir código, lee el que ya existe en `codigo/iter4/` (y `codigo/iter4/gui/`). No reinventes lo que hay.
@@ -41,6 +41,8 @@ En el mismo cambio que la fase, antes de que el autor haga el commit:
 
 ## 4. Reglas de operación
 
+- **Los roles.** Cuatro archivos en `.claude/agents/`: `direccion` (la sesión principal; el autor la abre con `claude --agent direccion`), y `planificacion`, `desarrollo` y `pruebas`, subagentes que solo lanza la dirección, uno a la vez y con su propio contexto. Las rutinas son skills en `.claude/skills/`: `planear` (la usa `planificacion`), `fase` y `cerrar-fase` (las usa `desarrollo`); la dirección no tiene `Skill` y se las encarga.
+  Los subagentes no preguntan: si algo los para, devuelven una sola línea, «Parado: por qué». `pruebas` no escribe código y solo escribe `docs/PRUEBAS.md` (al final) y `Claude outputs/pruebas/`; lo que necesita hardware lo deja como protocolo para el autor.
 - **Git.** Ningún agente ejecuta `git commit` ni `git push` (principio 1): `.claude/settings.json` lo niega. Git de lectura, `git mv` y `git rm --cached` sí, y **siempre desde PowerShell**, nunca desde un sandbox Linux (principio 9). No se reescribe el historial.
 - **Datos de paciente (principio 5).** No se leen ni se editan `herramientas/A/`, `*.nrrd`, `*.dcm` ni `documentos/VERONICA/`; `settings.json` lo niega. Una negación no se rodea: se dice en el reporte.
 - **La cadena (principio 6).** Una fase que toque `tracker.py`, `camera_backend.py`, el envío por `pyigtl` o los scripts de Slicer dice en su plan cómo verifica que la cadena sigue igual.
@@ -77,4 +79,6 @@ Al final de cada fase, el reporte completo va a `Claude outputs/fases/<NNN>/<fas
 - la suite con su tiempo, y que lo que no debía cambiar no cambió;
 - qué quedó pendiente o dudoso, y qué se anotó en el BACKLOG;
 - las sugerencias fuera de alcance;
-- el título del commit (en español, en imperativo, corto y sin coautor) y el `git add` exacto.
+- el título del commit (en español, en imperativo, corto y sin coautor) y el `git add` exacto, con la forma `git -C C:\Dev\OrtoMeta\PoyectoNavegacion add …`.
+
+Lo que `desarrollo` devuelve a la dirección, y lo único que esta ve, es un resumen de seis líneas como mucho: «Fase N: hecha» (o «parcial: qué falta»); el criterio clave con su número; la suite (cuántas, cuánto) y el «no cambió»; lo que fue al BACKLOG, si hay; el título del commit y el `git add`; «Reporte: `Claude outputs/fases/<NNN>/<fase>.md`». La dirección lee el reporte en el disco y se lo resume al autor.

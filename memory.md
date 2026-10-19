@@ -6,8 +6,9 @@ Spec activo: ningún spec activo
 
 ## Dónde estamos
 
-- Se está montando el método de trabajo (ADR-020) por etapas. **Etapa 1** (constitución, `CLAUDE.md`, este archivo, BACKLOG, plantilla de spec, `settings.json`) escrita el 2026-10-19, pendiente del commit del autor.
-- Lo siguiente: **etapa 2** (agentes `direccion`, `planificacion`, `desarrollo`, `pruebas`; skills `planear`, `fase`, `cerrar-fase`; `docs/PRUEBAS.md`). Después, el **spec 001 · limpieza y orden del repo** (BACKLOG B01–B06).
+- Se está montando el método de trabajo (ADR-020) por etapas. **Etapa 1** commiteada (`8f398da`). **Etapa 2** (agentes `direccion`, `planificacion`, `desarrollo`, `pruebas`; skills `planear`, `fase`, `cerrar-fase`; `docs/PRUEBAS.md`) escrita el 2026-10-19, pendiente del commit del autor.
+- Lo siguiente: el **spec 001 · limpieza y orden del repo** (BACKLOG B01–B06), ya con la sesión `claude --agent direccion`. La **etapa 3** (hooks) queda para cuando haga falta.
+- Hasta la etapa 3, cada papel lo limitan su lista de `tools` y su texto; `settings.json` niega commit, push y los datos de paciente para todos.
 - El autor tiene en mente una meta concreta para el repo que todavía no ha contado: va después del orden.
 - Último commit de código: `7ac5a43` (brief-02, GUI M1–M5, 2026-08-13). Sin cambios de código desde entonces.
 
@@ -31,7 +32,8 @@ Spec activo: ningún spec activo
 
 ## Pendientes del autor
 
-- Commit de la etapa 1.
+- Commit de la etapa 2.
+- Los commits se proponen con `git -C C:\Dev\OrtoMeta\PoyectoNavegacion …`: el autor a veces trabaja desde otra carpeta.
 
 ## Trampas de la sesión
 

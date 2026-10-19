@@ -221,11 +221,14 @@ Métrica histórica de referencia: RMS **3.46 mm** (iter 1) → **2.80 mm** (ite
 C:\Dev\OrtoMeta\PoyectoNavegacion\
 ├── CLAUDE.md, memory.md, PROJECT_BRIEF.md
 ├── docs\
-│   ├── constitution.md, BACKLOG.md
+│   ├── constitution.md, BACKLOG.md, PRUEBAS.md
 │   ├── ARCHITECTURE.md  DECISIONS.md  CONTEXT.md   # ← los 3 MVD
 │   └── history\                    # copia literal de lo hecho, no se edita
 ├── specs\_plantilla\               # plantilla de una meta (spec, plan, clarify, tasks)
-├── .claude\settings.json           # permisos del método
+├── .claude\
+│   ├── settings.json               # permisos del método
+│   ├── agents\                     # direccion, planificacion, desarrollo, pruebas
+│   └── skills\                     # planear, fase, cerrar-fase
 ├── codigo\
 │   ├── .venv\                      # Python 3.11.9
 │   ├── requirements.txt, readme.md
