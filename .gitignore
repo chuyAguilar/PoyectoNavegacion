@@ -30,6 +30,10 @@ StylusTipToDodecaedro*.h5
 # por git pull. (Las calibraciones de TIP siguen siendo por-equipo -> ignoradas.)
 !codigo/iter4/data/reference_dodecaedro_v2_calibrado.txt
 
+# EXCEPCION: los datos del replay de la suite (meta 001): un recorte pequeno de
+# una captura grabada y la referencia de poses contra la que se compara.
+!codigo/tests/data/*.npz
+
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db

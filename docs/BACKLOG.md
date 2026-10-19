@@ -7,7 +7,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | # | Qué | Prioridad | Destino |
 |---|---|---|---|
 | B01 | Scripts legacy y de diagnóstico sueltos en `iter4\` | Media | spec 001 |
-| B02 | La suite está rota y no hay comprobación de «no cambió» | Alta | spec 001 |
 | B03 | La calibración de punta vigente no tiene respaldo | Alta | spec 001 |
 | B04 | Docs viejas o duplicadas en la raíz (`PROJECT_BRIEF.md`, `briefs/`) | Media | spec 001 |
 | B05 | Ruido local y archivos muertos en `iter4\data\` | Baja | spec 001 |
@@ -22,6 +21,12 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B14 | Stylus impreso nuevo (IDs 181–191) | Baja | — |
 | B15 | Reintegrar el depth al BA | Baja | — |
 | B16 | Rama de registro por superficie (en pausa) | Baja | — |
+| B17 | 22 pruebas desfasadas en `xfail(strict=True)` | Media | — |
+| B18 | El filtro 1-Euro no tiene replay | Media | — |
+| B19 | `validar_prerrequisitos` deja un calibrado vacío | Alta | — |
+| B20 | Slicer carga la punta por fecha | Alta | — |
+| B21 | `opencv-python` frente a `opencv-contrib-python` | Baja | — |
+| B22 | Secuencias de escape inválidas en docstrings de `iter4\` | Baja | — |
 
 ## Abiertos
 
@@ -31,13 +36,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** paso 0 del método, 2026-10-19.
 - **Qué haría falta:** moverlos (no borrarlos) a `codigo\historico\iter4_diagnosticos\`, comprobando con grep que nadie los importa ni los nombra.
 - **Prioridad:** media.
-
-### B02 · La suite está rota y no hay comprobación de «no cambió»
-- **Qué:** los 3 archivos de `codigo\tests\` fallan al importar (`No module named 'calibrar_rigid_body'`): buscan en `codigo\` y el código vive en `codigo\iter4\`. Hoy no corre ninguna prueba. Tampoco hay replay sin cámara.
-- **Por qué queda:** sin suite no se puede verificar ningún cambio (principio 3).
-- **De dónde:** paso 0 del método, 2026-10-19.
-- **Qué haría falta:** repuntar los tests a `iter4\`; sumar `py_compile` de `iter4\` y `gui\`; un replay que corra la pose sobre un dataset grabado (p.ej. `captura_ba.npz`) y compare con una referencia guardada.
-- **Prioridad:** alta.
 
 ### B03 · La calibración de punta vigente no tiene respaldo
 - **Qué:** `StylusTipToDodecaedro_femto_dock.npy/.txt` está fuera de git (`.gitignore`: las puntas son por equipo). Si se pierde el disco, se pierde la punta vigente.
@@ -137,6 +135,50 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** el banco rígido con cubo distintivo (`stl/BaseMarcador/`).
 - **Prioridad:** baja.
 
+### B17 · 22 pruebas desfasadas en `xfail(strict=True)`
+- **Qué:** al repuntar la suite a `iter4\`, 22 de las 70 pruebas de los 3 archivos de mayo fallan porque el código cambió después (el plan estimó 11). Por familia: 7 esperan los IDs 151–161 y hoy son 170–180 (`reference_dodecaedro.txt` y los defaults de `generar_reference_dodecaedro.py`: `test_cargar_referencia_archivo_real`, `test_cargar_rb_ids_archivo_real`, `test_ids_default_son_iter1`, `test_distancia_top_cinturones_uniforme`, `test_adyacencia_antiprismatica`, `test_frame_right_handed_top`, `test_iter2_ids_1_11`); 1 compara con el histórico de iter 1 (`test_matches_historico_iter1`); 8 del BA de `calibrar_rigid_body.py`, que pasó a parametrización rígida y a pedir `use_depth`, `sigma_2d` y `sigma_3d` (`test_parametrizar_reconstruir_round_trip`, las 3 de `construir_jac_sparsity`, las 2 de `calcular_residuos`, `test_rmse_por_marker_agrupa_correctamente`, `test_ba_recupera_geometria_perturbada`); y 6 de `captura_calibracion.py`: `cargar_calibracion` (2, vive en `tracker.py`), `fourcc_int_a_str` (1, ya no existe), la firma nueva de `construir_metadata` (1), `resolver_geometry_path` relativo al CWD (1, `CONTEXT.md` §4.14) y `validar_prerrequisitos`, que ya no comprueba el archivo de intrínsecos (1).
+- **Por qué queda:** por decisión del autor (`clarify.md` P1 = b), la fase 1 las marca sin reescribirlas. Lo que vigilaban hoy no se vigila; en particular, el núcleo del BA queda casi sin pruebas.
+- **De dónde:** plan de la meta 001 · limpieza y orden del repo, P1; fase 1 · suite y replay, 2026-10-19.
+- **Qué haría falta:** por cada una, caracterizarla (que espere lo que el código hace hoy) o borrarla. La de los intrínsecos exige antes decidir si es a propósito (la Femto usa los de fábrica) o hay que restaurar el fallo fuerte (principio 7).
+- **Prioridad:** media (por la de los intrínsecos y las 8 del BA no es baja).
+
+### B18 · El filtro 1-Euro no tiene replay
+- **Qué:** el filtrado de posición y de cuaternión está dentro del lazo de `tracker.main()`; el replay de la suite cubre solo `estimar_pose_rigid_body` y la regla de `min_markers`.
+- **Por qué queda:** cubrirlo exige sacar el filtrado a una función de `tracker.py`, que es la cadena (principio 6).
+- **De dónde:** plan de la meta 001 · limpieza y orden del repo.
+- **Qué haría falta:** extraer el filtrado a una función sin cambiar su resultado, con replay antes y después, y sumarlo al replay.
+- **Prioridad:** media.
+
+### B19 · `validar_prerrequisitos` deja un calibrado vacío
+- **Qué:** en `calibrar_rigid_body.py` y `captura_calibracion.py` abre la salida en modo `"ab"` antes de correr para comprobar que se puede escribir; si el proceso falla después, queda un archivo de 0 bytes con nombre válido (el origen del `reference_dodecaedro_nuevo_calibrado.txt` de B05).
+- **Por qué queda:** la meta 001 no toca la lógica de los scripts activos.
+- **De dónde:** plan de la meta 001 · limpieza y orden del repo.
+- **Qué haría falta:** comprobar la carpeta sin crear el archivo y escribir solo al final.
+- **Prioridad:** alta (un calibrado vacío con nombre válido puede tomarse por bueno).
+
+### B20 · Slicer carga la punta por fecha
+- **Qué:** el snippet de `documentos/MANUAL_simplificado.md` §4.2 carga el `StylusTipToDodecaedro*.npy` más reciente por fecha de `iter4\data\`; un `git pull`, una copia o un movimiento cambian cuál, sin aviso en Slicer (`estado.py` sí avisa).
+- **Por qué queda:** toca lo que se carga en Slicer: necesita verificación en vivo.
+- **De dónde:** plan de la meta 001 · limpieza y orden del repo.
+- **Qué haría falta:** nombrar la punta explícita en el snippet y mover las puntas viejas (`StylusTipToDodecaedro.npy`, `_2`, `_divot`, `_viejo_dock`, del dodecaedro viejo) a `data\historico\`.
+- **Prioridad:** alta.
+
+### B21 · `opencv-python` frente a `opencv-contrib-python`
+- **Qué:** el venv y `requirements.txt` tienen `opencv-python` 4.11; `CONTEXT.md` §3 dice contrib.
+- **Por qué queda:** no afecta a nada de hoy.
+- **De dónde:** plan de la meta 001 · limpieza y orden del repo.
+- **Qué haría falta:** alinear el texto, o el paquete si algo de contrib hiciera falta.
+- **Prioridad:** baja.
+
+### B22 · Secuencias de escape inválidas en docstrings de `iter4\`
+- **Qué:** 14 scripts de `iter4\` y `gui\` (rutas Windows en el docstring, p.ej. `\)`) dan `DeprecationWarning: invalid escape sequence` al compilar; son los 14 avisos de la suite. En Python 3.12+ pasa a `SyntaxWarning`.
+- **Por qué queda:** con Python 3.11.9 no cambia nada; corregirlo toca scripts activos.
+- **De dónde:** fase 1 · suite y replay de la meta 001, 2026-10-19.
+- **Qué haría falta:** docstrings crudos (`r"""`) o barras dobles, al tocar cada script por otra razón o antes de subir de Python.
+- **Prioridad:** baja.
+
 ## Cerrados
 
-_Ninguno todavía._
+### B02 · La suite está rota y no hay comprobación de «no cambió»
+- **Qué era:** los 3 archivos de `codigo\tests\` no importaban (buscaban en `codigo\`) y no había replay sin cámara.
+- **Cerrado:** 2026-10-19, por la fase 1 · suite y replay de la meta 001 · limpieza y orden del repo: `pytest.ini` y `conftest.py`, los 3 tests repuntados (22 desfasadas en `xfail`, B17), `py_compile` de `iter4\` y `gui\`, el selftest del panel y el replay sobre un recorte de `captura_ba.npz` con referencia guardada. 110 pruebas: 88 pasan, 22 `xfail`, en ~6 s.

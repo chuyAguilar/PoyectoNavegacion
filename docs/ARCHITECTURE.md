@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-08-13. Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-19 (§6: la suite y el replay). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -231,7 +231,11 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   └── skills\                     # planear, fase, cerrar-fase
 ├── codigo\
 │   ├── .venv\                      # Python 3.11.9
-│   ├── requirements.txt, readme.md
+│   ├── requirements.txt, readme.md, pytest.ini
+│   ├── tests\                      # suite pytest (2026-10-19): conftest.py pone iter4\ y gui\ en sys.path
+│   │   ├── test_*.py                           # 3 de mayo repuntados + compilan, gui_headless, replay
+│   │   ├── replay_util.py                      # replay sin cámara de estimar_pose_rigid_body (CLI recortar/referencia)
+│   │   └── data\                               # recorte de captura_ba.npz y su referencia de poses (versionados)
 │   ├── iter4\                      # ← CÓDIGO ACTIVO
 │   │   ├── tracker.py                          # tracker principal
 │   │   ├── camera_backend.py                   # webcam | femtobolt
@@ -259,6 +263,15 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 > a `codigo\iter4\`, y la raíz del proyecto es `C:\Dev\OrtoMeta\PoyectoNavegacion`
 > (antes `C:\Dev\Dr.Milton\PoyectoNavegacion` y `C:\Dev\PoyectoNavegacion`). Los 3
 > MVD se movieron de la raíz a `docs\` el 2026-10-19.
+
+> **La suite (2026-10-19):** `codigo\.venv\Scripts\python.exe -m pytest codigo\tests -q`
+> corre en segundos sin cámara ni Slicer. La comprobación de «no cambió» es la suite
+> más el replay (`tests\test_replay.py`): el recorte `tests\data\replay_v2_femto.npz`
+> (302 frames de `captura_ba.npz`, paso 6) pasado por `tracker.estimar_pose_rigid_body`
+> con `iter4\tracker_config.yaml` da, frame a frame, las poses de
+> `replay_v2_femto_referencia.npz` (tolerancia 1e-6 mm y 1e-6°). La referencia no se
+> regenera sola: `replay_util.py referencia ... --sobrescribir`, a propósito y visible
+> en `git diff`. El filtro 1-Euro no entra (B18).
 
 ## 7. Frames de coordenadas y convenciones
 

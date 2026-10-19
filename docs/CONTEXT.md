@@ -154,6 +154,8 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
   dodecaedro v2, spread ~1.8 mm).
 - Jerarquía de transforms en Slicer + registro **paired-point** (RMS 2.80–3.46 mm
   histórico) y navegación tomográfica (iter 3, los cortes del CT siguen al stylus).
+- Suite pytest sin cámara (2026-10-19, meta 001): `py_compile`, selftest del panel
+  y replay de la pose contra una referencia guardada (`docs/ARCHITECTURE.md` §6).
 
 ### Vía activa
 

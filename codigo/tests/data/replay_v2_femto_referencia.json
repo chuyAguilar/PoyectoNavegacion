@@ -1,0 +1,20 @@
+{
+  "config": "iter4/tracker_config.yaml",
+  "dataset": "tests/data/replay_v2_femto.npz",
+  "dataset_sha256": "5b150d5a403ff9363fb4defb8d6a7018f1c417531dd074a66a35ef68ff3598d9",
+  "fecha_utc": "2026-10-19T23:36:37Z",
+  "frames": 302,
+  "frames_con_pose": 275,
+  "geometria": "iter4/data/reference_dodecaedro_v2_calibrado.txt",
+  "geometria_sha256": "11b0846fc5b5d43f531956341b032a85bcb2d4b92dda980eb1173076b2e11b05",
+  "mediana_n_usados": 4.0,
+  "min_markers": 3,
+  "numpy": "1.26.4",
+  "opencv": "4.11.0",
+  "python": "3.11.9",
+  "recorte": {
+    "origen": "iter4/data/captura_ba.npz",
+    "origen_sha256": "4ee6cfece4a5f1c116f10c875e3767ccd03b130f768b548f6bb51200a6a9f593",
+    "paso": 6
+  }
+}
