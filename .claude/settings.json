@@ -38,7 +38,8 @@
       "Bash(tail *)",
       "Bash(grep *)",
       "Bash(rg *)",
-      "Bash(find *)"
+      "Bash(find *)",
+      "PowerShell(git mv:*)"
     ],
     "deny": [
       "Bash(git commit *)",
