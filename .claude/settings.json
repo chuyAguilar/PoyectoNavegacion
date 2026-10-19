@@ -1,0 +1,51 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "autoMemoryEnabled": false,
+  "permissions": {
+    "allow": [
+      "Bash(codigo/.venv/Scripts/python.exe *)",
+      "Bash(timeout * codigo/.venv/Scripts/python.exe *)",
+      "PowerShell(codigo\\.venv\\Scripts\\python.exe *)",
+      "PowerShell(.\\.venv\\Scripts\\python.exe *)",
+      "PowerShell(& .\\.venv\\Scripts\\python.exe *)",
+      "Bash(git --no-optional-locks log *)",
+      "Bash(git --no-optional-locks status *)",
+      "Bash(git --no-optional-locks diff *)",
+      "Bash(git --no-optional-locks show *)",
+      "PowerShell(git status *)",
+      "PowerShell(git log *)",
+      "PowerShell(git diff *)",
+      "PowerShell(git show *)",
+      "PowerShell(git ls-files *)",
+      "Bash(wc *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(find *)"
+    ],
+    "deny": [
+      "Bash(git commit *)",
+      "Bash(git * commit *)",
+      "Bash(git push *)",
+      "Bash(git * push *)",
+      "PowerShell(git commit *)",
+      "PowerShell(git * commit *)",
+      "PowerShell(git push *)",
+      "PowerShell(git * push *)",
+      "Read(herramientas/A/**)",
+      "Edit(herramientas/A/**)",
+      "Read(**/*.nrrd)",
+      "Edit(**/*.nrrd)",
+      "Read(**/*.dcm)",
+      "Edit(**/*.dcm)",
+      "Read(documentos/VERONICA/**)",
+      "Edit(documentos/VERONICA/**)"
+    ]
+  }
+}

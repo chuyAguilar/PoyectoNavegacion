@@ -31,6 +31,8 @@
 | 016 | Cámara global shutter para el contexto "doctor" (webcam) | Aceptada |
 | 017 | Panel de control PySide6 que solo orquesta (brief-01) | Aceptada |
 | 018 | La GUI puede mutar solo `camera.calibration_file` (quirúrgico) | Aceptada |
+| 019 | Los datos de paciente siguen versionados; los agentes no los leen | Aceptada |
+| 020 | Método de trabajo por specs, con constitución y el autor como único que commitea | Aceptada |
 
 ---
 
@@ -375,6 +377,48 @@ ANTES de escribir; (c) confirmación mostrando el antes/después exacto; (d)
 aborta sin tocar nada si el patrón no aparece EXACTAMENTE una vez; (e) el
 `.yml` destino se valida antes (camera_matrix/distortion_coefficients); (f)
 verificación post-escritura. Todo lo demás del YAML sigue inmutable para la GUI.
+
+---
+
+## ADR-019 — Los datos de paciente siguen versionados; los agentes no los leen
+**Fecha:** 2026-10-19 · **Estado:** Aceptada
+
+**Contexto.** Al montar el método (paso 0) apareció que git versiona 449
+archivos DICOM (`herramientas/A/`, ~228 MB, desde 2026-05-26) y un volumen CT
+(`codigo/historico/iter2/202 AXIAL.nrrd`, 87 MB, desde 2026-06-15).
+`CONTEXT.md` §2 decía que el DICOM no se sube a repos.
+
+**Decisión.** El autor decide **dejarlos en el árbol y en el historial**: el
+repo lo usan solo médicos del equipo. A cambio, ningún agente los lee, los edita
+ni los envía a servicios externos: `.claude/settings.json` niega `Read`/`Edit`
+de `herramientas/A/**`, `**/*.nrrd`, `**/*.dcm` y `documentos/VERONICA/**`.
+`CONTEXT.md` §2 se corrige en el mismo cambio.
+
+**Consecuencias.** No se reescribe el historial. Si el repo se abre a gente
+fuera del equipo médico, esta decisión se reabre. El `.git` sigue pesando por
+estos binarios (BACKLOG).
+
+---
+
+## ADR-020 — Método de trabajo por specs, con constitución y el autor como único que commitea
+**Fecha:** 2026-10-19 · **Estado:** Aceptada
+
+**Contexto.** La metodología MVD + briefs (CONTEXT §5) dejaba que el
+implementador hiciera commit y push, y repartía el estado entre briefs, MVD y
+la memoria privada de cada sesión.
+
+**Decisión.** Se adopta el método de segmentadorDicom, por etapas:
+`docs/constitution.md` (lo que no se negocia; cambiarlo exige un ADR),
+`CLAUDE.md` como instrucción de herramienta, `memory.md` como estado,
+`docs/BACKLOG.md` como lo pendiente y `specs/NNN-nombre/` (spec → plan
+autorizado → fases) en lugar de `briefs/`. **Ningún agente hace commit ni push**:
+los hace el autor (negado en `.claude/settings.json`). Los 3 MVD pasan a `docs/`.
+Lo único que no se puede romper nunca es la cadena tracker → OpenIGTLink →
+Slicer y su jerarquía (principio 6); lo demás puede cambiar con su plan.
+
+**Consecuencias.** Hay dos paradas del autor: la autorización de cada plan y
+cada commit. La etapa 2 (agentes por papel y skills) y la 3 (hooks) vienen
+después. Los `briefs/` existentes quedan como historia.
 
 **Consecuencias.** Recalibrar y apuntar la cámara sin editar YAML a mano. El
 comentario inline de la línea editada (si lo había) se reemplaza con el valor

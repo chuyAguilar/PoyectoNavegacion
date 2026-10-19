@@ -215,12 +215,17 @@ Método activo: **paired-point** con el Fiducial Registration Wizard.
 
 Métrica histórica de referencia: RMS **3.46 mm** (iter 1) → **2.80 mm** (iter 3).
 
-## 6. Estructura del repositorio (verificada 2026-08-13)
+## 6. Estructura del repositorio (verificada 2026-08-13; método de trabajo, 2026-10-19)
 
 ```
-C:\Dev\Dr.Milton\PoyectoNavegacion\
-├── CLAUDE.md, PROJECT_BRIEF.md
-├── ARCHITECTURE.md  DECISIONS.md  CONTEXT.md   # ← los 3 MVD (nuevos)
+C:\Dev\OrtoMeta\PoyectoNavegacion\
+├── CLAUDE.md, memory.md, PROJECT_BRIEF.md
+├── docs\
+│   ├── constitution.md, BACKLOG.md
+│   ├── ARCHITECTURE.md  DECISIONS.md  CONTEXT.md   # ← los 3 MVD
+│   └── history\                    # copia literal de lo hecho, no se edita
+├── specs\_plantilla\               # plantilla de una meta (spec, plan, clarify, tasks)
+├── .claude\settings.json           # permisos del método
 ├── codigo\
 │   ├── .venv\                      # Python 3.11.9
 │   ├── requirements.txt, readme.md
@@ -248,9 +253,9 @@ C:\Dev\Dr.Milton\PoyectoNavegacion\
 ```
 
 > **Nota de reestructuración:** el código de tracking se movió de `codigo\` (raíz)
-> a `codigo\iter4\`, y la raíz del proyecto es `C:\Dev\Dr.Milton\PoyectoNavegacion`
-> (antes `C:\Dev\PoyectoNavegacion`). El `CLAUDE.md` todavía tiene las rutas viejas
-> (pendiente de actualizar).
+> a `codigo\iter4\`, y la raíz del proyecto es `C:\Dev\OrtoMeta\PoyectoNavegacion`
+> (antes `C:\Dev\Dr.Milton\PoyectoNavegacion` y `C:\Dev\PoyectoNavegacion`). Los 3
+> MVD se movieron de la raíz a `docs\` el 2026-10-19.
 
 ## 7. Frames de coordenadas y convenciones
 

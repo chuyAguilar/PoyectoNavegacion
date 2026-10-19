@@ -55,3 +55,9 @@ desktop.ini
 stl/pruebas/
 capturas/
 *.mp4
+
+# Reportes de los agentes (método, ADR-020): viven en el disco, fuera de git.
+Claude outputs/
+
+# Configuracion local de Claude Code (la compartida es .claude/settings.json).
+.claude/settings.local.json

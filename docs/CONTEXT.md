@@ -28,9 +28,12 @@
 ## 2. Seguridad y privacidad
 
 - **Datos de paciente (CT/DICOM).** El STL del hueso proviene del CT de un
-  paciente. El DICOM y datos identificables **no se suben a repos** ni salen del
-  entorno local sin necesidad. `.gitignore` debe excluir DICOM/volúmenes. Tratar
-  cualquier dato clínico con cuidado; ante duda, no exponerlo.
+  paciente. El DICOM (`herramientas/A/`) y el volumen CT
+  (`codigo/historico/iter2/202 AXIAL.nrrd`) **sí están versionados**: el repo es
+  de uso del equipo médico y el autor decidió dejarlos en el árbol (ADR-019).
+  Ningún agente los lee ni los envía a servicios externos (`docs/constitution.md`
+  principio 5; `.claude/settings.json`). Tratar cualquier dato clínico con
+  cuidado; ante duda, no exponerlo.
 - **Fallar fuerte, no en silencio.** Un sistema que se niega a arrancar y dice por
   qué es mejor que uno que hace lo incorrecto callado. Los scripts deben validar
   sus entradas (geometría, config, calibración presente y coherente) y abortar con
@@ -42,8 +45,9 @@
 - **Máquina principal:** `BigDaddy` (Windows 10/11). GPU **RTX 3060** (suficiente
   para inferencia si se retoma deep learning). Todos los comandos de shell se
   corren desde **PowerShell**.
-- **Raíz del proyecto:** `C:\Dev\Dr.Milton\PoyectoNavegacion` (antes
-  `C:\Dev\PoyectoNavegacion` — rutas viejas en docs por corregir).
+- **Raíz del proyecto:** `C:\Dev\OrtoMeta\PoyectoNavegacion` (antes
+  `C:\Dev\Dr.Milton\PoyectoNavegacion` y `C:\Dev\PoyectoNavegacion`; quedan rutas
+  viejas fuera de `docs\`, ver `docs/BACKLOG.md`).
 - **Código activo:** `codigo\iter4\`. Entorno virtual: `codigo\.venv\`
   (**Python 3.11.9**, fijado en `.python-version`).
 - **Stack de software:**
@@ -118,6 +122,11 @@
 
 Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 
+> **2026-10-19:** se monta el método por specs (`docs/constitution.md`,
+> `CLAUDE.md`, `memory.md`, `specs/`). Donde choque con lo de abajo, mandan la
+> constitución y `CLAUDE.md`; en particular, ningún agente hace commit ni push:
+> los hace el autor.
+
 - **Leer los 3 MVD (`ARCHITECTURE.md`, `DECISIONS.md`, `CONTEXT.md`) ANTES de
   tocar código.** Son la fuente de verdad.
 - **Roles:** el doctor + orquestador (Cowork) planean y escriben un `brief.md`
@@ -165,10 +174,11 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 - **`MANUAL_simplificado.md`** es el runbook del **contexto doctor** (webcam
   global shutter) — correcto para ese contexto. Pendientes menores: su encabezado
   tiene la ruta vieja `C:\dev\PoyectoNavegacion\codigo` (corregir a
-  `C:\Dev\Dr.Milton\PoyectoNavegacion\codigo`), y falta un runbook equivalente
+  `C:\Dev\OrtoMeta\PoyectoNavegacion\codigo`), y falta un runbook equivalente
   para el contexto Femto (`tracker_config.yaml`) si se quiere.
-- **`CLAUDE.md`** actualizado 2026-08-13 (rutas nuevas, estado al día, apunta a
-  los 3 MVD).
+- **`CLAUDE.md`** reescrito 2026-10-19 como instrucción de herramienta del método
+  (constitución, `memory.md`, specs); el anterior está en
+  `docs/history/CLAUDE_2026-08-13.md`.
 - **Smoke test del entorno:** Parte 1 (sanidad del `.venv` + imports, incl.
   `pyorbbecsdk`) **verificada OK 2026-08-13**. Parte 2 (tracker en vivo +
   detección de IDs 3–13) pendiente, se hará al conectar la cámara para operar.

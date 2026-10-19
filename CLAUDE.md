@@ -1,97 +1,80 @@
-# CLAUDE.md — Proyecto de Navegación Quirúrgica de Dr. Milton
+# CLAUDE.md — instrucciones para Claude Code en PoyectoNavegacion
 
-Instrucciones para Claude al trabajar en este proyecto. Breve y enfocado.
+Instrucción de herramienta: cómo se trabaja en este repo. No es documentación del proyecto ni repite sus principios.
+Los principios están en `docs/constitution.md`, que manda sobre este archivo; aquí se remite a ellos por su número.
+El conocimiento técnico detallado está en las skills `surgical-navigation-aruco`, `slicer-igt-workflow` y `surgical-nav-project-context`.
 
-## LEER PRIMERO: los 3 documentos vivos (MVD)
+## 1. Al arrancar
 
-Antes de tocar código, leer los tres documentos maestros en la raíz del repo. Son
-la fuente de verdad y se mantienen actualizados:
+En este orden:
 
-- **`ARCHITECTURE.md`** — el *qué*: topología, componentes, flujo de datos, cadena
-  de transforms, estructura del repo.
-- **`DECISIONS.md`** — el *porqué*: registro de decisiones (ADRs), con historia.
-- **`CONTEXT.md`** — las *reglas y el estado*: restricciones no negociables,
-  entorno/máquinas, y qué está hecho / en pausa / WIP.
+1. Lee completos `docs/constitution.md`, `memory.md` y `docs/CONTEXT.md`.
+2. Lee completos, del spec activo, `spec.md` y `tasks.md`, los que existan. El spec activo es el que nombra `memory.md`, siempre con las mismas palabras: «Spec activo: `specs/NNN-nombre/`» (o «Spec activo: ningún spec activo»).
+3. Consulta `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` y `docs/BACKLOG.md` por sección: primero su índice, después solo la sección que haga falta.
+4. `docs/history/` solo cuando haga falta saber cómo se llegó a algo. Es copia literal y no se edita.
 
-Conocimiento técnico detallado en las skills: `surgical-navigation-aruco`
-(ArUco, pose, bundle adjustment), `slicer-igt-workflow` (3D Slicer + SlicerIGT),
-`surgical-nav-project-context` (setup e historia del proyecto).
+Antes de escribir código, lee el que ya existe en `codigo/iter4/` (y `codigo/iter4/gui/`). No reinventes lo que hay.
+Si al retomar el estado es ambiguo, una sola pregunta al autor y se sigue.
 
-## Descripción
+## 2. El flujo de una meta
 
-Sistema de navegación quirúrgica óptica para cirugía ortopédica de columna.
-Trackea instrumentos y anatomía con marcadores ArUco + cámara y visualiza la
-coherencia espacial en 3D Slicer. **Vía activa:** registro **paired-point** con la
-Femto Bolt como cámara RGB. La rama de nube de puntos (depth) está en pausa
-(ver `DECISIONS.md` ADR-014).
+Quién hace cada cosa está en el principio 1. Los pasos:
 
-## Estilo de trabajo
+1. **El spec.** `specs/NNN-nombre/spec.md` trae el qué, el porqué y el criterio de cierre medible (principio 3). La plantilla está en `specs/_plantilla/`.
+2. **El plan.** `plan.md`: los archivos que se crean o modifican, las funciones con su firma, las fases con su criterio, lo que irá al BACKLOG, los ADR propuestos y las preguntas abiertas. Sin código.
+3. **Las respuestas.** Van en `clarify.md`: la pregunta, las opciones, la respuesta del autor y la fecha.
+4. **La autorización.** Cuando el autor autoriza el plan, la primera línea de `tasks.md` dice «Plan autorizado por el autor el AAAA-MM-DD». Sin esa línea no se implementa nada (principio 2).
+5. **Las fases.** Una casilla por fase en `tasks.md`. Se implementa solo esa fase, se mide su criterio y se marca la casilla con el número obtenido y la fecha.
+6. **El commit.** Uno por fase, y lo hace el autor con el título y el `git add` que se le proponen. La fase siguiente empieza después de su commit.
 
-- Responder en **español**. Directo y honesto, incluida la incertidumbre.
-- **Validar cuantitativamente en cada paso.** No aceptar "se ve bien".
-- **Un cambio a la vez** al debuggear. Diagnóstico antes que fix.
-- Scripts no triviales: **verbose paso a paso**, no quedarse mudo.
-- Metodología MVD + orquestación (ver `CONTEXT.md` §5): leer los 3 MVD, plan antes
-  de ejecutar, verificar empíricamente antes de declarar "hecho", y **actualizar
-  los MVD al cerrar cada iteración**.
+Una decisión que no es trivial se propone como ADR en `plan.md`. Una dependencia nueva se propone en el plan con su porqué: solo vale lo que declara `codigo/requirements.txt`.
 
-## Entorno y comandos
+## 3. Cerrar una fase
 
-- Raíz: `C:\Dev\Dr.Milton\PoyectoNavegacion`. Código activo: `codigo\iter4\`.
-- Todo git y shell desde **PowerShell** (nunca desde el sandbox Linux; deja lock
-  huérfano sobre NTFS).
+En el mismo cambio que la fase, antes de que el autor haga el commit:
+
+- **`memory.md`:** la meta y la fase, lo siguiente, lo abierto y los pendientes del autor. Como máximo 12 KB.
+- **`docs/BACKLOG.md`:** la entrada se escribe cuando se decide no hacerlo ahora. Dice qué es, por qué queda, de dónde viene, qué haría falta y su prioridad (alta: puede dar un resultado equivocado o impide usar el sistema; media: mejora clara sin riesgo; baja: espera datos o solo si estorba). Lo cerrado pasa a «Cerrados» con la fecha y qué lo cerró.
+- **Los índices:** quien añade, cierra o cambia una entrada de `docs/DECISIONS.md` o `docs/BACKLOG.md` actualiza su índice en el mismo cambio.
+- **`docs/ARCHITECTURE.md`,** si cambió la estructura o un contrato, en presente y con su fecha. **`docs/CONTEXT.md` §6,** si cambió el estado hecho/pausa/WIP.
+- **Las líneas:** ninguna línea de `docs/` (fuera de `history/`), de `memory.md` ni de `specs/` pasa de 2 000 caracteres.
+
+## 4. Reglas de operación
+
+- **Git.** Ningún agente ejecuta `git commit` ni `git push` (principio 1): `.claude/settings.json` lo niega. Git de lectura, `git mv` y `git rm --cached` sí, y **siempre desde PowerShell**, nunca desde un sandbox Linux (principio 9). No se reescribe el historial.
+- **Datos de paciente (principio 5).** No se leen ni se editan `herramientas/A/`, `*.nrrd`, `*.dcm` ni `documentos/VERONICA/`; `settings.json` lo niega. Una negación no se rodea: se dice en el reporte.
+- **La cadena (principio 6).** Una fase que toque `tracker.py`, `camera_backend.py`, el envío por `pyigtl` o los scripts de Slicer dice en su plan cómo verifica que la cadena sigue igual.
+- **Verificación.** Antes de dar una fase por terminada: la suite en verde, con su tiempo, y la comprobación de «no cambió» que fije el spec (suite + replay sobre un dataset grabado, cuando exista). Lo que necesita cámara o Slicer se verifica en vivo con el autor y se reporta el número.
+- **Tras editar** un `.py`: `py_compile` y conteo de líneas (Edit/Write han truncado archivos antes).
+- **Hardware.** Slicer (OpenIGTLink IF activo) se conecta ANTES de arrancar el tracker: `pyigtl` bloquea. Webcam con backend MSMF + MJPG. El resto de trampas, en `docs/CONTEXT.md` §4.
+- **Idioma.** Español para las personas (docs, reportes, mensajes); inglés para los identificadores. Directo y honesto, incluida la incertidumbre.
+- **Alcance.** Lo que convendría hacer y no se pidió va al BACKLOG o a las sugerencias del reporte, no al código.
+- **Sin memoria privada.** Lo que haya que recordar va a `memory.md` o a `docs/`, nunca a la memoria privada de Claude Code (`autoMemoryEnabled: false`).
+
+## 5. Entorno
+
+- Windows 11 (máquina BigDaddy, RTX 3060). Shell: PowerShell para git; Git Bash disponible.
+- Raíz: `C:\Dev\OrtoMeta\PoyectoNavegacion`. Código activo: `codigo\iter4\`. Python 3.11.9 en `codigo\.venv`; dependencias en `codigo\requirements.txt`.
+- Las pruebas: `codigo\.venv\Scripts\python.exe -m pytest codigo\tests -q`; cuántas son, cuánto tardan y su estado, en `memory.md`.
+- 3D Slicer 5.x + SlicerIGT corre aparte: no se controla directo; se le pasan scripts para su consola Python.
+
+Comandos de operación (desde `codigo\`, con el venv). Los argumentos van explícitos (principio 7):
 
 ```powershell
-# Activar entorno
-cd C:\Dev\Dr.Milton\PoyectoNavegacion\codigo
-.\.venv\Scripts\activate
-
-# Verificar IDs/orientación del dodecaedro (v2 compartido, IDs 3-13)
 python iter4\identificar_ids.py --config iter4\tracker_config.yaml
-
-# Tracker principal (Slicer conectado ANTES) — config canónica = Femto RGB
-python iter4\tracker.py --config iter4\tracker_config.yaml
-
-# Capturar dataset para bundle adjustment
-python iter4\captura_calibracion.py --duracion 60
-
-# Bundle adjustment
-python iter4\calibrar_rigid_body.py --max-frames 500 --max-nfev 3000
-
-# Calibración de la punta por dock
+python iter4\tracker.py --config iter4\tracker_config.yaml          # Slicer conectado ANTES
+python iter4\gui\panel.py                                          # panel de control
+python iter4\calibrar_rigid_body.py --ancla 3 --marker-mm 14.6 --no-depth --no-sparse --output <explícito>
 python iter4\calibrar_tip_divot.py --config iter4\tracker_config.yaml --divot DOCK --plate-id 2 --plate-mm 59.6
 ```
 
-## Cosas críticas (detalle completo en `CONTEXT.md` §4)
+## 6. Cómo reportar
 
-1. **Geometría `reference_*_calibrado.txt`** (BA), nunca la teórica.
-2. **Dos cámaras, dos contextos (ambas activas):** contexto principal = Femto Bolt
-   (RGB), `tracker_config.yaml`, Marker0 80 mm; contexto "doctor" = webcam **global
-   shutter**, `tracker_config_doctor.yaml` + `data/globalshutter.yml`, Marker0
-   60 mm. Dodecaedro v2 (IDs 3-13, marker 14.6 mm) y tip
-   `StylusTipToDodecaedro_femto_dock` se comparten.
-3. **`calibrar_rigid_body.py`**: defaults son del stylus viejo (`--ancla 170
-   --marker-mm 13.4`). Para v2 pasar **`--ancla 3 --marker-mm 14.6`**. Webcam:
-   backend MSMF + códec MJPG o el FPS cae a 5.
-4. **No enviar video** por pyigtl (`send_video: false`).
-5. **pyigtl bloquea si Slicer no está conectado** → conectar Slicer ANTES.
-6. **Jerarquía de Slicer** para paired-point: seguir `MANUAL_simplificado.md` y la
-   skill `slicer-igt-workflow` al pie de la letra.
-7. **Geometría y calibración de punta = mismo ensamble.** No mezclar.
+Al final de cada fase, el reporte completo va a `Claude outputs/fases/<NNN>/<fase>.md`, fuera de git. Corto y sin adjetivos:
 
-## Al retomar ("continúa")
-
-1. Leer los **3 MVD** y los archivos recientes de `codigo\iter4\`.
-2. Revisar `CONTEXT.md` §6 (estado hecho/pausa/WIP).
-3. Una sola pregunta de aclaración si el estado es ambiguo, y proceder.
-
-## Archivos clave
-
-- `codigo\iter4\tracker.py` — pipeline de tracking (rigid body multi-marcador).
-- `codigo\iter4\tracker_config.yaml` — config canónica (contexto Femto).
-  `tracker_config_doctor.yaml` — contexto doctor (webcam global shutter +
-  `data/globalshutter.yml`).
-- `codigo\iter4\data\reference_dodecaedro_v2_calibrado.txt` — geometría del rigid body.
-- `codigo\iter4\data\StylusTipToDodecaedro_femto_dock.npy` — calibración de punta vigente.
-- `documentos\MANUAL_simplificado.md` — runbook operativo paso a paso
-  (⚠ pendiente reapuntar de la config webcam a `tracker_config.yaml`).
+- qué archivos cambiaron;
+- qué criterio se verificó y con qué número;
+- la suite con su tiempo, y que lo que no debía cambiar no cambió;
+- qué quedó pendiente o dudoso, y qué se anotó en el BACKLOG;
+- las sugerencias fuera de alcance;
+- el título del commit (en español, en imperativo, corto y sin coautor) y el `git add` exacto.
