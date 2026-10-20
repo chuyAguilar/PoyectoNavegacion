@@ -9,7 +9,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B07 | Marker0 rígido y corto (brazo de palanca) | Alta | — |
 | B08 | Runbook para el contexto Femto | Media | — |
 | B09 | FPS ~16–17 con la Femto en modo RGB | Media | — |
-| B10 | Verificaciones en vivo pendientes del brief-02 y del snippet de Slicer con la ruta nueva | Media | — |
+| B10 | Verificaciones en vivo pendientes del brief-02 | Media | — |
 | B11 | Binarios pesados versionados (`.ply`, PDF, PPTX, `.h5`) | Media | — |
 | B12 | Detección de 3–4 markers por vista | Baja | — |
 | B13 | `.git` sin compactar (691 MB sueltos) | Baja | — |
@@ -46,11 +46,11 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** no abrir el stream de depth en modo solo RGB; medir FPS antes y después.
 - **Prioridad:** media.
 
-### B10 · Verificaciones en vivo pendientes del brief-02 y del snippet de Slicer con la ruta nueva
-- **Qué:** la captura del asistente con IDs nuevos, `calibrar_camara.py` interactivo y la calibración de punta por dock desde el panel. Desde la fase 4 · textos de la meta 001 (2026-10-19), también el snippet de `documentos/MANUAL_simplificado.md` §4.2 con la ruta nueva (`C:\Dev\OrtoMeta\PoyectoNavegacion\codigo\iter4\data`).
-- **Por qué queda:** necesita hardware (y la placa dock física); el snippet necesita Slicer (`clarify.md` P6 = a de la meta 001).
-- **De dónde:** `docs/CONTEXT.md` §6; plan de la meta 001 · limpieza y orden del repo, fase 4 · textos.
-- **Qué haría falta:** una sesión con cámara; reportar números. Para el snippet: pegarlo en la consola Python de Slicer y leer la traslación del nodo `StylusTipToDodecaedro`; esperado [+0.904, +5.471, −201.808] mm, magnitud 201.884 mm (fuera de Slicer, con la misma lógica de búsqueda, da eso).
+### B10 · Verificaciones en vivo pendientes del brief-02
+- **Qué:** la captura del asistente con IDs nuevos, `calibrar_camara.py` interactivo y la calibración de punta por dock desde el panel. (El snippet de `documentos/MANUAL_simplificado.md` §4.2 con la ruta nueva, que se sumó en la fase 4 de la meta 001, quedó verificado en vivo por el autor el 2026-10-19: traslación [0.904, 5.471, −201.808] mm, la esperada; `docs/PRUEBAS.md` P01.)
+- **Por qué queda:** necesita hardware y la placa dock física.
+- **De dónde:** `docs/CONTEXT.md` §6.
+- **Qué haría falta:** una sesión con cámara; reportar números.
 - **Prioridad:** media.
 
 ### B11 · Binarios pesados versionados

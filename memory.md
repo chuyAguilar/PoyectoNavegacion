@@ -1,13 +1,13 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-19 (fase 4 · textos de la meta 001)._
+_Actualizado: 2026-10-19 (cierre de la meta 001)._
 
-Spec activo: `specs/001-limpieza/`
+Spec activo: ningún spec activo
 
 ## Dónde estamos
 
 - Se está montando el método de trabajo (ADR-020) por etapas. **Etapa 1** commiteada (`8f398da`). **Etapa 2** (agentes `direccion`, `planificacion`, `desarrollo`, `pruebas`; skills `planear`, `fase`, `cerrar-fase`; `docs/PRUEBAS.md`) commiteada (`edb9aa0`).
-- **Meta 001 · limpieza y orden del repo** (BACKLOG B01–B06): plan autorizado el 2026-10-19. Fase 1 · suite y replay: `2ce4b5d`. Fase 2 · respaldo de la punta (B03): `8f33b3a` (ADR-021). Fase 3 · movimientos (B01, B05): `30437e4`. **Fase 4 · textos (B04, B06): hecha el 2026-10-19, pendiente del commit del autor.** Con ella la meta cumple su criterio de cierre (B01–B06 en «Cerrados»); queda solo la prueba del snippet en Slicer, en B10 (P6 = a). Lo siguiente: que la dirección cierre la meta (y pase `memory.md` a «ningún spec activo» o al spec de la meta que el autor tiene en mente). La **etapa 3** (hooks) queda para cuando haga falta.
+- **Meta 001 · limpieza y orden del repo** (BACKLOG B01–B06): plan autorizado el 2026-10-19. Fase 1 · suite y replay: `2ce4b5d`. Fase 2 · respaldo de la punta (B03): `8f33b3a` (ADR-021). Fase 3 · movimientos (B01, B05): `30437e4`. Fase 4 · textos (B04, B06): `e52f58c`. **Cerrada el 2026-10-19:** B01–B06 en «Cerrados»; pruebas P01 sobre `e52f58c`, veredicto «pasa», con el snippet de Slicer verificado en vivo por el autor ([0.904, 5.471, −201.808] mm). Lo siguiente: la meta que el autor tiene en mente (spec 002). La **etapa 3** (hooks) queda para cuando haga falta.
 - Línea base de «no cambió» desde la fase 3 (la fase 4 la mantiene): 100 pruebas, 78 pasan, 22 `xfail`; replay 302 frames, 275 con pose, mediana 4 markers, 0.0 mm/0.0°; selftest del panel rc 0 con perfil `tracker_config.yaml` (7 semáforos, `apto_tracker=SI`); el panel ve 2 perfiles (`tracker_config.yaml`, `tracker_config_doctor.yaml`); punta más reciente de `iter4/data/`: `StylusTipToDodecaedro_femto_dock.npy`.
 - Fase 4: `PROJECT_BRIEF.md` y `briefs/` están en `docs/history/` (`git mv`, literales). Las rutas vivas dicen `C:\Dev\OrtoMeta\PoyectoNavegacion` (manuales, `codigo/readme.md`, 3 scripts de `femto_pruebas/`, cabecera de la punta vigente y de su respaldo); los históricos (`codigo/historico/`, `documentos/auditoria_iter2/`, `documentos/tecnicos/`, `docs/history/`) conservan las viejas (P5 = b).
 - Hasta la etapa 3, cada papel lo limitan su lista de `tools` y su texto; `settings.json` niega commit, push y los datos de paciente para todos.
@@ -35,8 +35,7 @@ Spec activo: `specs/001-limpieza/`
 
 ## Pendientes del autor
 
-- Commit de la fase 4 · textos (título y `git add` en `Claude outputs/fases/001/fase-4.md`). Los 4 renombres ya están en el índice (`git mv`); el `git add` suma los editados.
-- En la próxima sesión con Slicer: pegar el snippet de `MANUAL_simplificado.md` §4.2 con la ruta nueva y leer la traslación de `StylusTipToDodecaedro` (esperado [+0.904, +5.471, −201.808] mm, 201.884 mm), B10.
+- Contar la meta siguiente (spec 002).
 - Decidir si B17 (22 pruebas en `xfail`, 8 del BA) sube de prioridad; y B19/B20 (alta), que vienen del plan. B20 (Slicer carga la punta por fecha) sigue igual tras la fase 4: el snippet aún elige por mtime.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/`: el autor a veces trabaja desde otra carpeta y desde Git Bash, donde `\` se come la ruta (2026-10-19).
 
