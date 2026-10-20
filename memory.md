@@ -7,11 +7,12 @@ Spec activo: `specs/001-limpieza/`
 ## Dónde estamos
 
 - Se está montando el método de trabajo (ADR-020) por etapas. **Etapa 1** commiteada (`8f398da`). **Etapa 2** (agentes `direccion`, `planificacion`, `desarrollo`, `pruebas`; skills `planear`, `fase`, `cerrar-fase`; `docs/PRUEBAS.md`) commiteada (`edb9aa0`).
-- **Meta 001 · limpieza y orden del repo** (BACKLOG B01–B06): plan autorizado el 2026-10-19. Fase 1 · suite y replay: commiteada (`2ce4b5d`). **Fase 2 · respaldo de la punta (B03): hecha el 2026-10-19, pendiente del commit del autor**; el ADR-021 (P3 = A') lo escribe la dirección y aún no está en `docs/DECISIONS.md`. Lo siguiente: fase 3 · movimientos (B01, B05). La **etapa 3** (hooks) queda para cuando haga falta.
-- Línea base de «no cambió» (fase 1): 110 pruebas, 88 pasan, 22 `xfail`; replay 302 frames, 275 con pose, mediana 4 markers, 0.0 mm/0.0°; selftest del panel rc 0 con perfil `tracker_config.yaml` (7 semáforos, `apto_tracker=SI`); punta más reciente de `iter4/data/`: `StylusTipToDodecaedro_femto_dock.npy`. Los números de la fase 3 del plan (102/91/11) parten de la estimación vieja: con los reales son 100 recogidas, 78 pasan, 22 `xfail`.
+- **Meta 001 · limpieza y orden del repo** (BACKLOG B01–B06): plan autorizado el 2026-10-19. Fase 1 · suite y replay: commiteada (`2ce4b5d`). Fase 2 · respaldo de la punta (B03): commiteada (`8f33b3a`, con el ADR-021). **Fase 3 · movimientos (B01, B05): hecha el 2026-10-19, pendiente del commit del autor.** Lo siguiente: fase 4 · textos (B04, B06). La **etapa 3** (hooks) queda para cuando haga falta.
+- Línea base de «no cambió» desde la fase 3: 100 pruebas, 78 pasan, 22 `xfail` (`test_compilan` bajó de 29 a 19 por los 10 scripts movidos); replay 302 frames, 275 con pose, mediana 4 markers, 0.0 mm/0.0°; selftest del panel rc 0 con perfil `tracker_config.yaml` (7 semáforos, `apto_tracker=SI`); el panel ve 2 perfiles (`tracker_config.yaml`, `tracker_config_doctor.yaml`); punta más reciente de `iter4/data/`: `StylusTipToDodecaedro_femto_dock.npy`.
+- Fase 3: los 10 diagnósticos y legacy de `iter4/` están en `codigo/historico/iter4_diagnosticos/` (con `README.md`); `tracker_config_webcam.yaml`, `tracker_config_stylus_impreso.yaml` y `reference_stylus_impreso_calibrado.txt` en `iter4/data/historico/`. `pytest-cache-files-xrzp8j4c/` estaba versionado y salió con `git rm --cached` (el plan lo creía fuera de git).
 - Hasta la etapa 3, cada papel lo limitan su lista de `tools` y su texto; `settings.json` niega commit, push y los datos de paciente para todos.
 - El autor tiene en mente una meta concreta para el repo que todavía no ha contado: va después del orden.
-- Último commit de código: `7ac5a43` (brief-02, GUI M1–M5, 2026-08-13). Sin cambios en `codigo/iter4/` desde entonces; la fase 1 solo toca `codigo/tests/`, `codigo/pytest.ini` y `.gitignore`.
+- Último commit de código: `7ac5a43` (brief-02, GUI M1–M5, 2026-08-13). La lógica de `codigo/iter4/` no ha cambiado desde entonces: la fase 3 solo mueve archivos y cambia una línea de docstring de `calibrar_rigid_body.py`.
 
 ## Estado técnico (resumen; el detalle está en `docs/CONTEXT.md` §6)
 
@@ -21,7 +22,7 @@ Spec activo: `specs/001-limpieza/`
 
 ## La suite
 
-- `codigo/tests/`: **en verde** desde la fase 1 (2026-10-19). 110 pruebas: 88 pasan, 22 `xfail(strict=True)` desfasadas (B17); ~6 s de pared (3.7 s de pytest). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`.
+- `codigo/tests/`: **en verde** desde la fase 1 (2026-10-19). Desde la fase 3, 100 pruebas: 78 pasan, 22 `xfail(strict=True)` desfasadas (B17), 8 avisos (B22); ~5 s de pared (3.3 s de pytest). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`.
 - Comprobación de «no cambió»: la suite + el replay (`tests/test_replay.py`, recorte `tests/data/replay_v2_femto.npz` contra `replay_v2_femto_referencia.npz`) + `panel.py --selftest` (`tests/test_gui_headless.py`). Detalle en `docs/ARCHITECTURE.md` §6.
 - La referencia del replay depende del sha256 de `reference_dodecaedro_v2_calibrado.txt` y de `min_markers` de `tracker_config.yaml`: si cambian, el test lo dice; se regenera solo a propósito (`replay_util.py referencia ... --sobrescribir`).
 
@@ -34,7 +35,7 @@ Spec activo: `specs/001-limpieza/`
 
 ## Pendientes del autor
 
-- Commit de la fase 2 · respaldo de la punta (título y `git add` en `Claude outputs/fases/001/fase-2.md`), junto con el ADR-021 de la dirección. Tras el commit, `git ls-files codigo/iter4/data/respaldo_puntas` debe listar el `.npy` y el `.txt`; git guarda el `.txt` con EOL LF (`.gitattributes`), así que solo el `.npy` es idéntico byte a byte en un checkout limpio.
+- Commit de la fase 3 · movimientos (título y `git add` en `Claude outputs/fases/001/fase-3.md`). Los renombres y el borrado de la caché ya están en el índice (`git mv`, `git rm --cached`); el `git add` suma los editados y el `README.md` nuevo.
 - Decidir si B17 (22 pruebas en `xfail`, 8 del BA) sube de prioridad; y B19/B20 (alta), que vienen del plan.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/`: el autor a veces trabaja desde otra carpeta y desde Git Bash, donde `\` se come la ruta (2026-10-19).
 

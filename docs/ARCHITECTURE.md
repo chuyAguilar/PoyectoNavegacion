@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-19 (§6: la suite y el replay; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-19 (§6: la suite y el replay, y los diagnósticos fuera de `iter4\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -243,16 +243,18 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   ├── camera_backend.py                   # webcam | femtobolt
 │   │   ├── tracker_config.yaml                 # config Femto (default)
 │   │   ├── tracker_config_doctor.yaml          # config webcam (paired-point)
-│   │   ├── tracker_config_webcam.yaml, *_stylus_impreso.yaml
 │   │   ├── captura_calibracion.py              # dataset para BA
 │   │   ├── calibrar_rigid_body.py              # bundle adjustment
 │   │   ├── calibrar_tip_divot.py               # calibración por dock/divot
+│   │   ├── calibrar_camara.py                  # intrínsecos desde el panel (brief-02)
 │   │   ├── identificar_ids.py                  # verificar IDs/orientación
-│   │   ├── test_*.py                           # diagnósticos
+│   │   ├── calibrar_topologia.py, limpiar_captura_fantasmas.py, corregir_giro_esquinas.py, generar_reference_dodecaedro.py
 │   │   ├── gui\                                # panel de control PySide6 (brief-01)
 │   │   └── data\                               # reference_*, capturas, tips, calibraciones
-│   │       └── respaldo_puntas\                # copia versionada de la punta vigente (§3.4, ADR-021)
+│   │       ├── respaldo_puntas\                # copia versionada de la punta vigente (§3.4, ADR-021)
+│   │       └── historico\                      # configs webcam y stylus impreso, retirados del panel (2026-10-19)
 │   └── historico\                  # snapshots de iteraciones previas
+│       └── iter4_diagnosticos\     # diagnósticos y legacy de iter4 (test_pivote, test_jitter…), sin mantener (2026-10-19)
 ├── femto_pruebas\                  # rama nube de puntos (EN STAND BY)
 ├── stl\                            # dodecaedro, placas dock/divot, BaseMarcador, STL del hueso
 ├── herramientas\                   # pivotes/offsets legacy (.h5)

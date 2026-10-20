@@ -196,8 +196,8 @@ python captura_calibracion.py --duracion 60
 # Bundle adjustment
 python calibrar_rigid_body.py --max_frames 300
 
-# Calibración por pivote
-python test_pivote.py --duracion 45
+# Calibración por pivote (legacy, ADR-010): test_pivote.py se movió a
+# codigo\historico\iter4_diagnosticos\ el 2026-10-19 (meta 001) y ya no se mantiene
 ```
 
 ---

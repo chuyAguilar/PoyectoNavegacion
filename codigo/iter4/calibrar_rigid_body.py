@@ -14,7 +14,7 @@ Combinar ambas fuentes da convergencia mas robusta y geometria con escala fija.
 
 Defaults sigma:
   sigma_2d = 1.0 px  (ArUco subpix, valor canonico)
-  sigma_3d = 5.0 mm  (medido empiricamente con medir_sigma_depth.py, ver memoria
+  sigma_3d = 5.0 mm  (medido empiricamente con historico/iter4_diagnosticos/medir_sigma_depth.py, ver memoria
                      'sigma-depth-femtobolt-empirico')
 
 Compatible con datasets de iter 3 (sin depth): si has_depth=False en el .npz,

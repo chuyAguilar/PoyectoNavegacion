@@ -6,9 +6,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 
 | # | Qué | Prioridad | Destino |
 |---|---|---|---|
-| B01 | Scripts legacy y de diagnóstico sueltos en `iter4\` | Media | spec 001 |
 | B04 | Docs viejas o duplicadas en la raíz (`PROJECT_BRIEF.md`, `briefs/`) | Media | spec 001 |
-| B05 | Ruido local y archivos muertos en `iter4\data\` | Baja | spec 001 |
 | B06 | Rutas viejas (`Dr.Milton`, `C:\dev\PoyectoNavegacion`) fuera de `docs\` | Media | spec 001 |
 | B07 | Marker0 rígido y corto (brazo de palanca) | Alta | — |
 | B08 | Runbook para el contexto Femto | Media | — |
@@ -29,26 +27,12 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 
 ## Abiertos
 
-### B01 · Scripts legacy y de diagnóstico sueltos en `iter4\`
-- **Qué:** sin referencias en la GUI ni en docs: `hello_femtobolt`, `leer_calibracion_femtobolt`, `medir_sigma_depth`, `test_backends`, `test_distancia_conocida`, `test_distancia_regla`, `test_jitter_tracking`. Con pocas: `test_pivote` (legacy, ADR-010), `test_alineacion_d2c`, `calibrar_topologia`, `limpiar_captura_fantasmas`, `test_deteccion_marker`. Los `test_*.py` de `iter4\` no son de pytest, y confunden.
-- **Por qué queda:** ordenar exige comprobar antes que nada los importe; va con su plan.
-- **De dónde:** paso 0 del método, 2026-10-19.
-- **Qué haría falta:** moverlos (no borrarlos) a `codigo\historico\iter4_diagnosticos\`, comprobando con grep que nadie los importa ni los nombra.
-- **Prioridad:** media.
-
 ### B04 · Docs viejas o duplicadas en la raíz
 - **Qué:** `PROJECT_BRIEF.md` (2026-06-15, describe iter 4 temprana y el stylus 170–180; lo cubren los MVD) y `briefs/` (lo reemplazan los `specs/`, ADR-020).
 - **Por qué queda:** van a `docs/history/` como copia literal, en el spec de limpieza.
 - **De dónde:** paso 0 del método, 2026-10-19.
 - **Qué haría falta:** `git mv` a `docs/history/`, y quitar las referencias que queden.
 - **Prioridad:** media.
-
-### B05 · Ruido local y archivos muertos en `iter4\data\`
-- **Qué:** `codigo\pytest-cache-files-xrzp8j4c\`, `reference_dodecaedro_nuevo_calibrado.txt` (0 bytes, del BA que no convergió el 2026-08-13), y geometrías o configs sin referencias: `reference_dodecaedro_doctor/_v2_fix/_v2_real.txt`, `reference_stylus_impreso_calibrado.txt`, `tracker_config_webcam.yaml` y `tracker_config_stylus_impreso.yaml` (1 referencia cada una).
-- **Por qué queda:** un archivo de 0 bytes con nombre de calibrado puede tomarse como geometría válida.
-- **De dónde:** paso 0 del método, 2026-10-19.
-- **Qué haría falta:** borrar el ruido local; mover lo muerto a `iter4\data\historico\`.
-- **Prioridad:** baja.
 
 ### B06 · Rutas viejas fuera de `docs\`
 - **Qué:** `documentos/MANUAL_simplificado.md` (`C:\dev\PoyectoNavegacion\codigo`), `PROJECT_BRIEF.md` y otros manuales nombran rutas que ya no existen.
@@ -110,7 +94,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** su geometría CAD es buena, pero falta pose robusta con rechazo de outliers y `marker_mm 15.7`; su BA se atora.
 - **Por qué queda:** no urgente.
 - **De dónde:** `docs/CONTEXT.md` §6.
-- **Qué haría falta:** retomar si se cambia de stylus.
+- **Qué haría falta:** retomar si se cambia de stylus. Su config (`tracker_config_stylus_impreso.yaml`) y su geometría calibrada están en `iter4\data\historico\` desde la fase 3 · movimientos de la meta 001 (2026-10-19): para usarlo, devolver el config a `iter4\` (el panel solo ve `iter4\tracker_config*.yaml`) y revisar sus rutas relativas.
 - **Prioridad:** baja.
 
 ### B15 · Reintegrar el depth al BA
@@ -163,13 +147,21 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** baja.
 
 ### B22 · Secuencias de escape inválidas en docstrings de `iter4\`
-- **Qué:** 14 scripts de `iter4\` y `gui\` (rutas Windows en el docstring, p.ej. `\)`) dan `DeprecationWarning: invalid escape sequence` al compilar; son los 14 avisos de la suite. En Python 3.12+ pasa a `SyntaxWarning`.
+- **Qué:** 14 scripts de `iter4\` y `gui\` (rutas Windows en el docstring, p.ej. `\)`) dan `DeprecationWarning: invalid escape sequence` al compilar; eran los 14 avisos de la suite. Desde la fase 3 · movimientos de la meta 001 (2026-10-19), 6 de ellos están en `codigo\historico\iter4_diagnosticos\` y quedan 8 avisos (`calibrar_camara`, `calibrar_tip_divot`, `captura_calibracion`, `identificar_ids`, `limpiar_captura_fantasmas`, `gui\ba_monitor`, `gui\estado`, `gui\panel`). En Python 3.12+ pasa a `SyntaxWarning`.
 - **Por qué queda:** con Python 3.11.9 no cambia nada; corregirlo toca scripts activos.
 - **De dónde:** fase 1 · suite y replay de la meta 001, 2026-10-19.
 - **Qué haría falta:** docstrings crudos (`r"""`) o barras dobles, al tocar cada script por otra razón o antes de subir de Python.
 - **Prioridad:** baja.
 
 ## Cerrados
+
+### B01 · Scripts legacy y de diagnóstico sueltos en `iter4\`
+- **Qué era:** 10 scripts de diagnóstico y legacy en `iter4\` que nadie importaba ni nombraba; los `test_*.py` no eran de pytest y confundían.
+- **Cerrado:** 2026-10-19, por la fase 3 · movimientos de la meta 001 · limpieza y orden del repo: `git mv` (renombres, sin tocar contenido) de `hello_femtobolt`, `leer_calibracion_femtobolt`, `medir_sigma_depth`, `test_backends`, `test_distancia_conocida`, `test_distancia_regla`, `test_jitter_tracking`, `test_pivote`, `test_alineacion_d2c` y `test_deteccion_marker` a `codigo\historico\iter4_diagnosticos\`, con su `README.md`. Se quedan en `iter4\` `calibrar_topologia` y `limpiar_captura_fantasmas` (pasos de la GUIA y de los manuales). El docstring de `calibrar_rigid_body.py` y `codigo/readme.md` nombran la ruta nueva; `PROJECT_BRIEF.md` (va a `docs/history/` en la fase 4) y el ADR-010 conservan la vieja.
+
+### B05 · Ruido local y archivos muertos en `iter4\data\`
+- **Qué era:** ruido local, un calibrado de 0 bytes con nombre válido y geometrías o configs sin uso.
+- **Cerrado:** 2026-10-19, por la fase 3 · movimientos de la meta 001 · limpieza y orden del repo: borrados `codigo\pytest-cache-files-xrzp8j4c\` (estaba versionado: 2 archivos de caché de pytest, `git rm --cached`) y `reference_dodecaedro_nuevo_calibrado.txt` (0 bytes); a `iter4\data\historico\` `reference_stylus_impreso_calibrado.txt` (movimiento de disco, ignorado) y, por P4 = a, `tracker_config_webcam.yaml` y `tracker_config_stylus_impreso.yaml` (`git mv`; el panel pasa de 4 a 2 perfiles). Se quedan `reference_dodecaedro_doctor.txt` (GUIA y `MANUAL_webcam.md`) y `_v2_fix`/`_v2_real` (procedencia de la geometría vigente). 0 archivos de 0 bytes en `iter4\data\`. La causa del calibrado vacío sigue abierta en B19.
 
 ### B02 · La suite está rota y no hay comprobación de «no cambió»
 - **Qué era:** los 3 archivos de `codigo\tests\` no importaban (buscaban en `codigo\`) y no había replay sin cámara.
