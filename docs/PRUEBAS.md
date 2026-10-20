@@ -7,6 +7,7 @@ Lo escribe solo el agente de pruebas (principio 1; ADR-020), sobre HEAD commitea
 | # | Meta y fase | Commit probado | Fecha | Veredicto |
 |---|---|---|---|---|
 | P01 | Meta 001, fases 1–4 · limpieza y orden | e52f58c | 2026-10-19 | pasa |
+| P02 | Cámara global shutter 1 · flujo actual con el perfil doctor | 6431bc6 | 2026-10-19/20 | cadena pasa; calibración intrínseca no concluyente |
 
 ## Formato de una entrada
 
@@ -49,3 +50,32 @@ Las validaciones de las iteraciones 1–4 (RMS de registro 3.46 → 2.80 mm, BA 
 - En vivo: snippet de Slicer del 2026-10-19: «Usando el tip mas reciente: StylusTipToDodecaedro_femto_dock.npy» y «OK: nodo creado». Traslación del nodo `StylusTipToDodecaedro` leída por el autor (2026-10-19, e52f58c, 3 decimales): [0.904, 5.471, −201.808] mm; coincide con lo esperado (el autor dictó 0.99 por error de tecleo y lo corrigió).
 - Veredicto: pasa.
 
+## P02 · Cámara global shutter 1 · el flujo actual con el perfil doctor
+- Commit probado: 6431bc6 · Fecha: 2026-10-19/20 (sin cámara el 19; en vivo con el autor el 19/20)
+- Alcance real: el autor paró al ver los transforms en Slicer. No se hizo precisión quieto, punta, pivote ni escala. Marker0 de 80 mm en la prueba en vivo (el perfil de la parte sin cámara decía 60 mm).
+- Comprobaciones:
+
+| qué | cómo | resultado | número o evidencia |
+|---|---|---|---|
+| Suite | pytest | pasa | 100 recogidas, 78 pasan, 22 xfail, 0 fallos, 3.34 s |
+| Panel con el perfil doctor | panel --selftest | pasa | entorno, config, geometría (11 markers, IDs 3-13), intrínsecos, puerto VERDE; punta AMARILLO (cae en `_femto_dock`, 201.884 mm); cámara GRIS; apto_tracker=SI |
+| Calibración declarada | lectura | pasa | `globalshutter.yml` declara 640x480; el perfil la apunta con 640x480, MSMF, MJPG |
+| Dispositivo | en vivo | pasa | con la cámara 1 sola, Windows lista `Global Shutter Camera` (VID_32E4 PID_0234); source 0, MSMF, entrega 640x480 |
+| IDs | en vivo, `identificar_ids.py` | pasa | se vieron 0 y 3-13, todos; hasta 4 caras del dodecaedro a la vez |
+| Tracker a Slicer | en vivo | pasa | `Marker0ToTracker` y `DodecaedroToTracker` en Slicer, visibles en 3D; 1619 poses del dodecaedro, todas con 3 markers |
+| FPS | en vivo, log del tracker | reserva | 145 promedios: media 25.7, mín 19.7, máx 30 (esperado 28-30); el autor leyó ~20.5 en la ventana |
+| Jitter quieto | en vivo, últimas 60 poses | reserva | a ~45 cm: sd x 0.25, y 0.14, z 1.38 mm; rango z 6.3 mm (domina la profundidad); el autor lo vio con «bastante jitter» |
+| Calibración intrínseca | en vivo | no concluyente | no se midió reproyección ni escala; imagen pixelada y lente M12 posiblemente desenfocado según el autor; se recalibra en la meta 002 |
+| Liberar al cerrar | en vivo | pasa | el autor cerró la ventana por accidente; después, puerto 18944 sin conexiones y ningún python vivo |
+| Precisión quieto x3, punta, pivote, escala, check 4.6 | en vivo | no hecho | decisión del autor |
+
+- Fallos y hallazgos (sin pasos de reproducción mayores: se ven al usar el flujo):
+  1. Media. Nada compara el tamaño del frame con `image_width`/`image_height` del `.yml`: `WebcamBackend` aplica K de 640x480 a lo que entregue MSMF. Si el modo no se fija, la pose sale mal sin aviso. (En esta ronda la sonda mostró 640x480, así que no se manifestó.)
+  2. Media. FPS del tracker 25.7 de media (19.7-30) frente a 28-30 esperados; puede deberse a la exposición, la luz o la carga; no se aisló la causa.
+  3. Media. Jitter en profundidad: sd z 1.38 mm a ~45 cm, rango 6.3 mm, con markers de pocos píxeles (K de fx ~425). Afecta a cualquier medida de punta.
+  4. Media. Los ajustes de la cámara (exposición, etc.) se movieron a mano en ambas cámaras y no quedan registrados: la ronda no es reproducible en esas condiciones.
+  5. Baja. «Probar cámara» (`sonda_camara.py`) abre sin fijar 640x480 ni MJPG: su `WxH` no es lo que usa el tracker.
+  6. Baja. El panel solo lista perfiles versionados `iter4/tracker_config*.yaml`: un índice distinto de 1 obliga a editar uno versionado o crear un archivo en `iter4/`.
+- Lo dudoso: no se sabe si `globalshutter.yml` es de esta unidad. Sin reproyección ni escala no se puede decir si K es buena. No se aisló la causa del FPS ni del jitter. El FPS medido es el del tracker, no el de la cámara sola.
+- En vivo: números del autor en `Claude outputs/pruebas/camara-1/numeros_autor.md` y datos crudos en `en_vivo_datos/` (2026-10-19/20).
+- Veredicto: cadena hasta Slicer con la cámara 1: pasa. Calibración intrínseca: no concluyente, se recalibra en la meta 002.
