@@ -7,7 +7,7 @@
 > conserva, para no repetir errores ya pagados.
 >
 > Estados: `Aceptada` · `Reemplazada` · `En pausa` · `Propuesta`.
-> _Última actualización: 2026-08-13._
+> _Última actualización: 2026-10-19._
 
 Índice rápido:
 
@@ -33,6 +33,7 @@
 | 018 | La GUI puede mutar solo `camera.calibration_file` (quirúrgico) | Aceptada |
 | 019 | Los datos de paciente siguen versionados; los agentes no los leen | Aceptada |
 | 020 | Método de trabajo por specs, con constitución y el autor como único que commitea | Aceptada |
+| 021 | La punta vigente se respalda como copia versionada fuera del glob de Slicer | Aceptada |
 
 ---
 
@@ -425,3 +426,33 @@ comentario inline de la línea editada (si lo había) se reemplaza con el valor
 viejo que describía. Verificado headless sobre copia real del perfil (diff de
 1 línea, backup idéntico, YAML re-parsea). Editar `geometry_file` u otras
 claves queda explícitamente FUERA (el asistente sigue mostrando la instrucción).
+
+---
+
+## ADR-021 — La punta vigente se respalda como copia versionada fuera del glob de Slicer
+**Fecha:** 2026-10-19 · **Estado:** Aceptada
+
+**Contexto.** La calibración de punta vigente
+(`StylusTipToDodecaedro_femto_dock.npy/.txt`, contexto canónico, ADR-015) estaba
+fuera de git porque `.gitignore` excluye las puntas, que son por equipo
+(B03). Si se perdía el disco, se perdía la punta. Versionarla en su sitio
+tiene un riesgo: el snippet de Slicer (`MANUAL_simplificado.md` §4.2) y
+`estado.py` toman la `StylusTipToDodecaedro*.npy` más reciente de
+`iter4/data/`, y en la máquina del doctor un `git pull` la volvería la más
+reciente y Slicer cargaría una punta de otro ensamble (B20). Fuera de git
+(USB, nube) dependía de copiarla a mano y no tenía historia.
+
+**Decisión.** El autor elige (meta 001, `clarify.md` P3 = A', 2026-10-19) una
+**copia byte a byte** en `codigo/iter4/data/respaldo_puntas/`, versionada con
+dos excepciones `!` en `.gitignore`. El original sigue en `iter4/data/` y
+fuera de git; la copia, en una subcarpeta, no la ve ni el glob no recursivo de
+Slicer ni `estado.py`. El sha256 de referencia está en `ARCHITECTURE.md` §3.4.
+
+**Consecuencias.** La copia no sigue sola a la punta: quien recalibre la punta
+del contexto canónico copia de nuevo los dos archivos a `respaldo_puntas/`,
+actualiza el sha256 de `ARCHITECTURE.md` §3.4 y lo hace en el mismo commit.
+Restaurar es copiarla de vuelta a `iter4/data/`. El `.txt` se guarda con LF
+(`.gitattributes`), así que su sha256 tras un checkout es el del texto
+normalizado; el `.npy` es binario e idéntico. Las puntas de otros equipos
+siguen fuera de git. Cuando B20 haga que Slicer nombre la punta explícita, esta
+decisión se puede revisar.

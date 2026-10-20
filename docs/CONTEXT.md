@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-08-13._
+> _Última actualización: 2026-10-19 (§6: suite y respaldo de la punta)._
 
 ---
 
@@ -151,7 +151,8 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 - Geometría del dodecaedro **v2 compartido** (IDs 3–13) calibrada por BA, validada
   a 1.26 px.
 - Calibración de la punta por **dock** (`StylusTipToDodecaedro_femto_dock`,
-  dodecaedro v2, spread ~1.8 mm).
+  dodecaedro v2, spread ~1.8 mm); copia versionada en
+  `iter4/data/respaldo_puntas/` desde 2026-10-19 (ADR-021, `ARCHITECTURE.md` §3.4).
 - Jerarquía de transforms en Slicer + registro **paired-point** (RMS 2.80–3.46 mm
   histórico) y navegación tomográfica (iter 3, los cortes del CT siguen al stylus).
 - Suite pytest sin cámara (2026-10-19, meta 001): `py_compile`, selftest del panel

@@ -7,7 +7,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | # | Qué | Prioridad | Destino |
 |---|---|---|---|
 | B01 | Scripts legacy y de diagnóstico sueltos en `iter4\` | Media | spec 001 |
-| B03 | La calibración de punta vigente no tiene respaldo | Alta | spec 001 |
 | B04 | Docs viejas o duplicadas en la raíz (`PROJECT_BRIEF.md`, `briefs/`) | Media | spec 001 |
 | B05 | Ruido local y archivos muertos en `iter4\data\` | Baja | spec 001 |
 | B06 | Rutas viejas (`Dr.Milton`, `C:\dev\PoyectoNavegacion`) fuera de `docs\` | Media | spec 001 |
@@ -36,13 +35,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** paso 0 del método, 2026-10-19.
 - **Qué haría falta:** moverlos (no borrarlos) a `codigo\historico\iter4_diagnosticos\`, comprobando con grep que nadie los importa ni los nombra.
 - **Prioridad:** media.
-
-### B03 · La calibración de punta vigente no tiene respaldo
-- **Qué:** `StylusTipToDodecaedro_femto_dock.npy/.txt` está fuera de git (`.gitignore`: las puntas son por equipo). Si se pierde el disco, se pierde la punta vigente.
-- **Por qué queda:** decidir si se versiona como excepción (igual que la geometría v2) o se respalda fuera.
-- **De dónde:** paso 0 del método, 2026-10-19.
-- **Qué haría falta:** la decisión del autor; si se versiona, una excepción `!` en `.gitignore` y una nota en un ADR.
-- **Prioridad:** alta.
 
 ### B04 · Docs viejas o duplicadas en la raíz
 - **Qué:** `PROJECT_BRIEF.md` (2026-06-15, describe iter 4 temprana y el stylus 170–180; lo cubren los MVD) y `briefs/` (lo reemplazan los `specs/`, ADR-020).
@@ -182,3 +174,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 ### B02 · La suite está rota y no hay comprobación de «no cambió»
 - **Qué era:** los 3 archivos de `codigo\tests\` no importaban (buscaban en `codigo\`) y no había replay sin cámara.
 - **Cerrado:** 2026-10-19, por la fase 1 · suite y replay de la meta 001 · limpieza y orden del repo: `pytest.ini` y `conftest.py`, los 3 tests repuntados (22 desfasadas en `xfail`, B17), `py_compile` de `iter4\` y `gui\`, el selftest del panel y el replay sobre un recorte de `captura_ba.npz` con referencia guardada. 110 pruebas: 88 pasan, 22 `xfail`, en ~6 s.
+
+### B03 · La calibración de punta vigente no tiene respaldo
+- **Qué era:** `StylusTipToDodecaedro_femto_dock.npy/.txt` solo existía en este disco (`.gitignore`: las puntas son por equipo).
+- **Cerrado:** 2026-10-19, por la fase 2 · respaldo de la punta de la meta 001 · limpieza y orden del repo (P3 = A', ADR-021): copia byte a byte en `codigo\iter4\data\respaldo_puntas\` con dos excepciones en `.gitignore`, fuera del glob del snippet de Slicer y de `estado.py`; sha256 del `.npy` igual al original (`a3c83203…5ebf`). Queda versionada con el commit del autor.

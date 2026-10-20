@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-19 (§6: la suite y el replay). Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-19 (§6: la suite y el replay; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -121,6 +121,8 @@ distintos**, más una legacy:
 > **Calibración de punta vigente:** `data/StylusTipToDodecaedro_femto_dock.npy`
 > (corresponde a la geometría v2, magnitud ~201.8 mm, spread ~1.8 mm). Se usa
 > **esta** por ahora (decidido 2026-08-13).
+>
+> **Respaldo de la punta vigente (2026-10-19, ADR-021):** copia byte a byte, versionada, en `data/respaldo_puntas/StylusTipToDodecaedro_femto_dock.npy` (sha256 `a3c832038d1ec408406bfe66ac5bb5a318b02ef1cc1f325b0f54dd62289a5ebf`, igual al original) y su `.txt` (cabecera con el sha16 `11b0846fc5b5d43f` de la geometría v2; git lo guarda con EOL LF, así que su sha256 en un checkout limpio es el del texto normalizado, no el del original con CRLF). La subcarpeta queda fuera del glob no recursivo `StylusTipToDodecaedro*.npy` del snippet de Slicer (`MANUAL_simplificado.md` §4.2) y de `estado.listar_puntas()`: no cambia qué punta se carga. El original en `data/` sigue fuera de git (por equipo). Para restaurarla, se copia el `.npy` de vuelta a `data/` y se comprueba su sha256.
 >
 > **Acople crítico:** geometría del rigid body y calibración de la punta son del
 > **mismo ensamble físico**. No se mezclan geometrías (ver `DECISIONS.md` y
@@ -249,6 +251,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   ├── test_*.py                           # diagnósticos
 │   │   ├── gui\                                # panel de control PySide6 (brief-01)
 │   │   └── data\                               # reference_*, capturas, tips, calibraciones
+│   │       └── respaldo_puntas\                # copia versionada de la punta vigente (§3.4, ADR-021)
 │   └── historico\                  # snapshots de iteraciones previas
 ├── femto_pruebas\                  # rama nube de puntos (EN STAND BY)
 ├── stl\                            # dodecaedro, placas dock/divot, BaseMarcador, STL del hueso

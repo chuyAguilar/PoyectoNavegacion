@@ -34,6 +34,12 @@ StylusTipToDodecaedro*.h5
 # una captura grabada y la referencia de poses contra la que se compara.
 !codigo/tests/data/*.npz
 
+# EXCEPCION: respaldo de la punta vigente del contexto canonico (meta 001,
+# ADR-021). Es una COPIA en una subcarpeta para que ni el glob del snippet de
+# Slicer ni estado.py la vean; el original en iter4/data/ sigue fuera de git.
+!codigo/iter4/data/respaldo_puntas/StylusTipToDodecaedro_femto_dock.npy
+!codigo/iter4/data/respaldo_puntas/StylusTipToDodecaedro_femto_dock.txt
+
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db
