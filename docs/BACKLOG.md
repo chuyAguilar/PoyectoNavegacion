@@ -22,6 +22,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B20 | Slicer carga la punta por fecha | Alta | — |
 | B21 | `opencv-python` frente a `opencv-contrib-python` | Baja | — |
 | B22 | Secuencias de escape inválidas en docstrings de `iter4\` | Baja | — |
+| B23 | Explorar el tracker en una Jetson Orin Nano, con Slicer en BigDaddy | Baja | — |
 
 ## Abiertos
 
@@ -135,6 +136,14 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** con Python 3.11.9 no cambia nada; corregirlo toca scripts activos.
 - **De dónde:** fase 1 · suite y replay de la meta 001, 2026-10-19.
 - **Qué haría falta:** docstrings crudos (`r"""`) o barras dobles, al tocar cada script por otra razón o antes de subir de Python.
+- **Prioridad:** baja.
+
+### B23 · Explorar el tracker en una Jetson Orin Nano, con Slicer en BigDaddy
+- **Qué:** conectar las cámaras global shutter a una Jetson y correr ahí el tracker, viendo la navegación en Slicer en BigDaddy por la red. La cadena no cambiaría (principio 6): `pyigtl` ya publica por TCP (18944) y Slicer se conectaría a la IP de la Jetson en lugar de a `localhost`.
+- **El equipo (escaneo del autor, 2026-10-19):** Jetson Orin Nano Developer Kit Super (Yahboom, hostname `yahboom`); Ubuntu 22.04.5, aarch64, JetPack 6.2 (L4T R36.4.3), CUDA 12.6; modo MAXN_SUPER; 7.4 GB de RAM unificada (~5.2 GB libres) y ~11 GB de swap; NVMe con ~21 GB libres (88 % usado); escritorio gráfico con escritorio remoto (3389, 5900); Docker 27.5 con runtime de GPU; Tailscale. Comparte la máquina con Ollama (13 modelos, 37 GB en disco), JupyterLab, openclaw-gateway y CUPS.
+- **Por qué queda:** es exploración, no prioridad: el autor puede dejar el cable de las cámaras en BigDaddy (2026-10-19). Dudas sin medir: Ubuntu 22.04 trae Python 3.10, no el 3.11.9 del venv (instalar 3.11 o probar el código con 3.10); que `opencv-contrib-python` ≥ 4.7 instale por pip en aarch64 (o un contenedor); el backend `MSMF` es solo Windows y en Linux sería V4L2, que `camera_backend.py` no tiene probado; los FPS de decodificar MJPEG y detectar ArUco a 1920×1200 en su CPU, con 2 cámaras; la latencia por la red (LAN directa frente a Tailscale); y la memoria si Ollama tiene un modelo cargado a la vez. El panel (PySide6) podría correr por el escritorio remoto o quedarse en BigDaddy.
+- **De dónde:** el autor, 2026-10-19, al hablar de la meta siguiente (cables cortos de las cámaras).
+- **Qué haría falta:** una prueba corta antes de cualquier plan: en la Jetson, Python 3.10/3.11 con OpenCV ≥ 4.7, abrir una cámara con V4L2 + MJPG, detectar ArUco y medir FPS y latencia hacia Slicer en BigDaddy por la red; comparar con la alternativa barata (un cable USB 3 activo o extensor). Con números, decidir.
 - **Prioridad:** baja.
 
 ## Cerrados

@@ -33,6 +33,12 @@ Spec activo: ningún spec activo
 - No hay más carpetas privadas.
 - Modelos por papel: dirección y planificación con opus y esfuerzo medio; desarrollo con opus y esfuerzo alto; pruebas con sonnet.
 
+## La meta siguiente (en conversación, sin spec todavía)
+
+- El autor la está pensando; no escribir el spec 002 hasta que la cuente (2026-10-19).
+- Lo dicho: el primer paso no usa la Femto, sino cámaras global shutter SVPRO (sensor AR0234, 1920×1200, MJPEG hasta 90 fps, lente M12 de ~83–85°, UVC). Por ahora son 2. Probablemente sin calibrar. No se sabe si alguna es la de `data/globalshutter.yml` (640×480, contexto doctor). La resolución, que la decida el plan con medidas.
+- A aclarar en el spec: ADR-016 dice que la SVPRO AR0234 era rolling shutter; la ficha (y el AR0234 de onsemi) dice global shutter. Si se confirma, ADR nuevo (ADR-016 no se reescribe). `calibrar_camara.py` existe pero su prueba con cámara sigue en B10.
+
 ## Pendientes del autor
 
 - Contar la meta siguiente (spec 002).
