@@ -38,6 +38,10 @@ Spec activo: `specs/001-limpieza/`
 - Decidir si B17 (22 pruebas en `xfail`, 8 del BA) sube de prioridad; y B19/B20 (alta), que vienen del plan.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/`: el autor a veces trabaja desde otra carpeta y desde Git Bash, donde `\` se come la ruta (2026-10-19).
 
+## Para la etapa 3 (hooks)
+
+- Regla del autor (2026-10-19): cada fase se le presenta con un título descriptivo y lo que hará, antes de lanzarla. Hoy está en `.claude/agents/direccion.md`; cuando haya hooks, ver si alguno la refuerza (un hook no puede revisar lo que se escribe en el chat; como mucho, recordarla).
+
 ## Trampas de la sesión
 
 - `.git` tiene 691 MB en objetos sueltos (0 packs) y un temporal basura (`.git/objects/ad/tmp_obj_*`): B13.
