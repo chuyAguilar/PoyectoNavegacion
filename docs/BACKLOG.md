@@ -6,12 +6,10 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 
 | # | Qué | Prioridad | Destino |
 |---|---|---|---|
-| B04 | Docs viejas o duplicadas en la raíz (`PROJECT_BRIEF.md`, `briefs/`) | Media | spec 001 |
-| B06 | Rutas viejas (`Dr.Milton`, `C:\dev\PoyectoNavegacion`) fuera de `docs\` | Media | spec 001 |
 | B07 | Marker0 rígido y corto (brazo de palanca) | Alta | — |
 | B08 | Runbook para el contexto Femto | Media | — |
 | B09 | FPS ~16–17 con la Femto en modo RGB | Media | — |
-| B10 | Verificaciones en vivo pendientes del brief-02 | Media | — |
+| B10 | Verificaciones en vivo pendientes del brief-02 y del snippet de Slicer con la ruta nueva | Media | — |
 | B11 | Binarios pesados versionados (`.ply`, PDF, PPTX, `.h5`) | Media | — |
 | B12 | Detección de 3–4 markers por vista | Baja | — |
 | B13 | `.git` sin compactar (691 MB sueltos) | Baja | — |
@@ -26,20 +24,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B22 | Secuencias de escape inválidas en docstrings de `iter4\` | Baja | — |
 
 ## Abiertos
-
-### B04 · Docs viejas o duplicadas en la raíz
-- **Qué:** `PROJECT_BRIEF.md` (2026-06-15, describe iter 4 temprana y el stylus 170–180; lo cubren los MVD) y `briefs/` (lo reemplazan los `specs/`, ADR-020).
-- **Por qué queda:** van a `docs/history/` como copia literal, en el spec de limpieza.
-- **De dónde:** paso 0 del método, 2026-10-19.
-- **Qué haría falta:** `git mv` a `docs/history/`, y quitar las referencias que queden.
-- **Prioridad:** media.
-
-### B06 · Rutas viejas fuera de `docs\`
-- **Qué:** `documentos/MANUAL_simplificado.md` (`C:\dev\PoyectoNavegacion\codigo`), `PROJECT_BRIEF.md` y otros manuales nombran rutas que ya no existen.
-- **Por qué queda:** se corrige junto con la limpieza.
-- **De dónde:** `docs/CONTEXT.md` §6; paso 0 del método, 2026-10-19.
-- **Qué haría falta:** grep de `Dr.Milton` y `C:\dev\PoyectoNavegacion` y corregir a `C:\Dev\OrtoMeta\PoyectoNavegacion`.
-- **Prioridad:** media.
 
 ### B07 · Marker0 rígido y corto
 - **Qué:** el Marker0 en una varilla de ~21 cm convierte un giro de 12° en 45 mm de desfase del hueso.
@@ -62,11 +46,11 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** no abrir el stream de depth en modo solo RGB; medir FPS antes y después.
 - **Prioridad:** media.
 
-### B10 · Verificaciones en vivo pendientes del brief-02
-- **Qué:** la captura del asistente con IDs nuevos, `calibrar_camara.py` interactivo y la calibración de punta por dock desde el panel.
-- **Por qué queda:** necesita hardware (y la placa dock física).
-- **De dónde:** `docs/CONTEXT.md` §6.
-- **Qué haría falta:** una sesión con cámara; reportar números.
+### B10 · Verificaciones en vivo pendientes del brief-02 y del snippet de Slicer con la ruta nueva
+- **Qué:** la captura del asistente con IDs nuevos, `calibrar_camara.py` interactivo y la calibración de punta por dock desde el panel. Desde la fase 4 · textos de la meta 001 (2026-10-19), también el snippet de `documentos/MANUAL_simplificado.md` §4.2 con la ruta nueva (`C:\Dev\OrtoMeta\PoyectoNavegacion\codigo\iter4\data`).
+- **Por qué queda:** necesita hardware (y la placa dock física); el snippet necesita Slicer (`clarify.md` P6 = a de la meta 001).
+- **De dónde:** `docs/CONTEXT.md` §6; plan de la meta 001 · limpieza y orden del repo, fase 4 · textos.
+- **Qué haría falta:** una sesión con cámara; reportar números. Para el snippet: pegarlo en la consola Python de Slicer y leer la traslación del nodo `StylusTipToDodecaedro`; esperado [+0.904, +5.471, −201.808] mm, magnitud 201.884 mm (fuera de Slicer, con la misma lógica de búsqueda, da eso).
 - **Prioridad:** media.
 
 ### B11 · Binarios pesados versionados
@@ -154,6 +138,14 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** baja.
 
 ## Cerrados
+
+### B04 · Docs viejas o duplicadas en la raíz
+- **Qué era:** `PROJECT_BRIEF.md` (2026-06-15, iter 4 temprana y el stylus 170–180) y `briefs/` (los reemplazan los `specs/`, ADR-020) en la raíz.
+- **Cerrado:** 2026-10-19, por la fase 4 · textos de la meta 001 · limpieza y orden del repo: `git mv` a `docs/history/PROJECT_BRIEF.md` y `docs/history/briefs/` (con `historico/`), copia literal. Fuera de `docs/history/` y `specs/` solo los nombran `docs/ARCHITECTURE.md` §6 (dice que están en `docs/history/`), este BACKLOG, el ADR-020 (no se reescribe) y `documentos/auditoria_iter2/_archivo/` (histórico, P5).
+
+### B06 · Rutas viejas fuera de `docs\`
+- **Qué era:** `Dr.Milton` y `C:\dev\PoyectoNavegacion` en manuales, `codigo/readme.md`, scripts de `femto_pruebas/` y la cabecera de la punta vigente.
+- **Cerrado:** 2026-10-19, por la fase 4 · textos de la meta 001 · limpieza y orden del repo: solo el prefijo pasa a `C:\Dev\OrtoMeta\PoyectoNavegacion` en 13 líneas de 7 archivos vivos (`codigo/readme.md`, `MANUAL_simplificado.md` con el snippet de §4.2, `MANUAL_webcam.md`, `MANUAL_femtobolt.md` y 3 scripts de `femto_pruebas/`) y en la cabecera de `StylusTipToDodecaedro_femto_dock.txt` (la de `respaldo_puntas/` y la original, fuera de git; sha y matriz intactos, `.npy` sin tocar). El grep del plan da 0 líneas. Por P5 = b quedan literales los históricos (15 apariciones en 9 archivos de `codigo/historico/`, `documentos/auditoria_iter2/` y `documentos/tecnicos/`). La prueba del snippet en Slicer quedó en B10.
 
 ### B01 · Scripts legacy y de diagnóstico sueltos en `iter4\`
 - **Qué era:** 10 scripts de diagnóstico y legacy en `iter4\` que nadie importaba ni nombraba; los `test_*.py` no eran de pytest y confundían.

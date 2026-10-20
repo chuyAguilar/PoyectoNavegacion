@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-19 (§6: suite y respaldo de la punta)._
+> _Última actualización: 2026-10-19 (§6: suite y respaldo de la punta; §3 y §6: rutas viejas corregidas)._
 
 ---
 
@@ -46,8 +46,8 @@
   para inferencia si se retoma deep learning). Todos los comandos de shell se
   corren desde **PowerShell**.
 - **Raíz del proyecto:** `C:\Dev\OrtoMeta\PoyectoNavegacion` (antes
-  `C:\Dev\Dr.Milton\PoyectoNavegacion` y `C:\Dev\PoyectoNavegacion`; quedan rutas
-  viejas fuera de `docs\`, ver `docs/BACKLOG.md`).
+  `C:\Dev\Dr.Milton\PoyectoNavegacion` y `C:\Dev\PoyectoNavegacion`; los archivos
+  vivos se corrigieron el 2026-10-19, meta 001; los históricos las conservan).
 - **Código activo:** `codigo\iter4\`. Entorno virtual: `codigo\.venv\`
   (**Python 3.11.9**, fijado en `.python-version`).
 - **Stack de software:**
@@ -175,10 +175,10 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 ### WIP / deuda técnica pendiente
 
 - **`MANUAL_simplificado.md`** es el runbook del **contexto doctor** (webcam
-  global shutter) — correcto para ese contexto. Pendientes menores: su encabezado
-  tiene la ruta vieja `C:\dev\PoyectoNavegacion\codigo` (corregir a
-  `C:\Dev\OrtoMeta\PoyectoNavegacion\codigo`), y falta un runbook equivalente
-  para el contexto Femto (`tracker_config.yaml`) si se quiere.
+  global shutter) — correcto para ese contexto. Pendiente menor: falta un
+  runbook equivalente para el contexto Femto (`tracker_config.yaml`) si se
+  quiere. (Su ruta vieja se corrigió el 2026-10-19; el snippet de §4.2 con la
+  ruta nueva espera la prueba en Slicer, B10.)
 - **`CLAUDE.md`** reescrito 2026-10-19 como instrucción de herramienta del método
   (constitución, `memory.md`, specs); el anterior está en
   `docs/history/CLAUDE_2026-08-13.md`.

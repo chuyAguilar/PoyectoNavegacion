@@ -28,8 +28,8 @@ import slicer
 
 # ===================== EDITA ESTAS DOS RUTAS =====================
 RUTA_T = None  # None = usar la T_semilla mas reciente de transforms/
-RUTA_STL = r"C:\Dev\Dr.Milton\PoyectoNavegacion\stl\Segmentation_Bone_CT.stl"
-DIR_TRANSFORMS = r"C:\Dev\Dr.Milton\PoyectoNavegacion\femto_pruebas\transforms"
+RUTA_STL = r"C:\Dev\OrtoMeta\PoyectoNavegacion\stl\Segmentation_Bone_CT.stl"
+DIR_TRANSFORMS = r"C:\Dev\OrtoMeta\PoyectoNavegacion\femto_pruebas\transforms"
 # ================================================================
 
 import glob, os

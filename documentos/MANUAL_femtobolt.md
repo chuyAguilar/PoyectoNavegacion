@@ -44,7 +44,7 @@ está DENTRO de Slicer (menú `View → Python Console`).
 Abrir **PowerShell**. Ejecutar:
 
 ```powershell
-cd C:\Dev\Dr.Milton\PoyectoNavegacion\codigo
+cd C:\Dev\OrtoMeta\PoyectoNavegacion\codigo
 .\.venv\Scripts\activate
 ```
 
@@ -239,7 +239,7 @@ import numpy as np, vtk, glob, os
 
 # --- Cargar la matriz del tip (busca el archivo mas reciente automaticamente,
 #     asi funciona sin importar el nombre que le hayas puesto en la seccion C) ---
-data_dir = r"C:\Dev\Dr.Milton\PoyectoNavegacion\codigo\iter4\data"
+data_dir = r"C:\Dev\OrtoMeta\PoyectoNavegacion\codigo\iter4\data"
 candidatos = glob.glob(os.path.join(data_dir, "StylusTipToDodecaedro*.npy"))
 if not candidatos:
     raise FileNotFoundError(

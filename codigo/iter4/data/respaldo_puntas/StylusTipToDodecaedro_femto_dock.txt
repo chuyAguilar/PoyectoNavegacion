@@ -2,7 +2,7 @@
 # Fecha UTC: 2026-06-30T01:26:48.407967+00:00
 # Placa: placa_calibracion_v2_impresa_2026-06-12, marker ID 2 @ 59.6 mm
 # Divot DOCK: [-48.523, -59.76, 20.598] mm
-# Geometria dodecaedro: C:\Dev\Dr.Milton\PoyectoNavegacion\codigo\iter4\data\reference_dodecaedro_v2_calibrado.txt (sha 11b0846fc5b5d43f)
+# Geometria dodecaedro: C:\Dev\OrtoMeta\PoyectoNavegacion\codigo\iter4\data\reference_dodecaedro_v2_calibrado.txt (sha 11b0846fc5b5d43f)
 # Samples: 208 en 6 posturas (inliers)
 # Offset (mm): [+0.904, +5.471, -201.808]
 # Magnitud: 201.884 mm

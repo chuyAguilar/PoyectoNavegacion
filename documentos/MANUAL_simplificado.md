@@ -4,7 +4,7 @@ Abrir **PowerShell** y activar el entorno (todos los comandos PowerShell se corr
 desde aquí):
 
 ```powershell
-cd C:\dev\PoyectoNavegacion\codigo 
+cd C:\Dev\OrtoMeta\PoyectoNavegacion\codigo 
 .\.venv\Scripts\activate
 git pull
 ```
@@ -134,7 +134,7 @@ Abrir **`View → Python Console`** (`Ctrl+3`). Pegar:
 import numpy as np, vtk, glob, os
 
 # Carga el StylusTipToDodecaedro*.npy mas reciente de la carpeta data
-data_dir = r"C:\Dev\Dr.Milton\PoyectoNavegacion\codigo\iter4\data"
+data_dir = r"C:\Dev\OrtoMeta\PoyectoNavegacion\codigo\iter4\data"
 candidatos = glob.glob(os.path.join(data_dir, "StylusTipToDodecaedro*.npy"))
 if not candidatos:
     raise FileNotFoundError("No hay StylusTipToDodecaedro*.npy en " + data_dir +

@@ -109,7 +109,7 @@ El proyecto usa un entorno virtual en `codigo\.venv\`.
 
 ```powershell
 # Situarse en la carpeta del código
-cd C:\Dev\PoyectoNavegacion\codigo
+cd C:\Dev\OrtoMeta\PoyectoNavegacion\codigo
 
 # Crear el entorno virtual con la versión de Python seleccionada por pyenv
 python -m venv .venv
@@ -167,7 +167,7 @@ pyenv install 3.11.9
 pyenv versions
 
 # --- 3) Crear y activar el entorno virtual ---
-cd C:\Dev\PoyectoNavegacion\codigo
+cd C:\Dev\OrtoMeta\PoyectoNavegacion\codigo
 pyenv local 3.11.9
 python --version
 python -m venv .venv
@@ -184,7 +184,7 @@ pip install -r requirements.txt
 
 ```powershell
 # Activar el entorno (cada vez que abras una terminal nueva)
-cd C:\Dev\PoyectoNavegacion\codigo
+cd C:\Dev\OrtoMeta\PoyectoNavegacion\codigo
 .\.venv\Scripts\activate
 
 # Tracker principal (multi-marcador)

@@ -14,7 +14,7 @@ import vtk
 import slicer
 
 # La MALLA TSDF de la misma sesion del registro (esta en metros, frame del marcador)
-RUTA_MALLA = r"C:\Dev\Dr.Milton\PoyectoNavegacion\femto_pruebas\nubes\tsdf_20260616_223759_malla.ply"
+RUTA_MALLA = r"C:\Dev\OrtoMeta\PoyectoNavegacion\femto_pruebas\nubes\tsdf_20260616_223759_malla.ply"
 
 m = slicer.mrmlScene.GetFirstNodeByName('NubeCapturada')
 if m is None:

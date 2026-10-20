@@ -22,7 +22,7 @@ import vtk
 import slicer
 
 # ===================== EDITA SI USAS OTRO STYLUS =====================
-RUTA_PIVOTE = r"C:\Dev\Dr.Milton\PoyectoNavegacion\codigo\iter4\data\StylusTipToDodecaedro_viejo_dock.npy"
+RUTA_PIVOTE = r"C:\Dev\OrtoMeta\PoyectoNavegacion\codigo\iter4\data\StylusTipToDodecaedro_viejo_dock.npy"
 # =====================================================================
 
 M = np.load(RUTA_PIVOTE).astype(float)   # ya en mm

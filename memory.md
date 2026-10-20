@@ -1,18 +1,18 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-19._
+_Actualizado: 2026-10-19 (fase 4 · textos de la meta 001)._
 
 Spec activo: `specs/001-limpieza/`
 
 ## Dónde estamos
 
 - Se está montando el método de trabajo (ADR-020) por etapas. **Etapa 1** commiteada (`8f398da`). **Etapa 2** (agentes `direccion`, `planificacion`, `desarrollo`, `pruebas`; skills `planear`, `fase`, `cerrar-fase`; `docs/PRUEBAS.md`) commiteada (`edb9aa0`).
-- **Meta 001 · limpieza y orden del repo** (BACKLOG B01–B06): plan autorizado el 2026-10-19. Fase 1 · suite y replay: commiteada (`2ce4b5d`). Fase 2 · respaldo de la punta (B03): commiteada (`8f33b3a`, con el ADR-021). **Fase 3 · movimientos (B01, B05): hecha el 2026-10-19, pendiente del commit del autor.** Lo siguiente: fase 4 · textos (B04, B06). La **etapa 3** (hooks) queda para cuando haga falta.
-- Línea base de «no cambió» desde la fase 3: 100 pruebas, 78 pasan, 22 `xfail` (`test_compilan` bajó de 29 a 19 por los 10 scripts movidos); replay 302 frames, 275 con pose, mediana 4 markers, 0.0 mm/0.0°; selftest del panel rc 0 con perfil `tracker_config.yaml` (7 semáforos, `apto_tracker=SI`); el panel ve 2 perfiles (`tracker_config.yaml`, `tracker_config_doctor.yaml`); punta más reciente de `iter4/data/`: `StylusTipToDodecaedro_femto_dock.npy`.
-- Fase 3: los 10 diagnósticos y legacy de `iter4/` están en `codigo/historico/iter4_diagnosticos/` (con `README.md`); `tracker_config_webcam.yaml`, `tracker_config_stylus_impreso.yaml` y `reference_stylus_impreso_calibrado.txt` en `iter4/data/historico/`. `pytest-cache-files-xrzp8j4c/` estaba versionado y salió con `git rm --cached` (el plan lo creía fuera de git).
+- **Meta 001 · limpieza y orden del repo** (BACKLOG B01–B06): plan autorizado el 2026-10-19. Fase 1 · suite y replay: `2ce4b5d`. Fase 2 · respaldo de la punta (B03): `8f33b3a` (ADR-021). Fase 3 · movimientos (B01, B05): `30437e4`. **Fase 4 · textos (B04, B06): hecha el 2026-10-19, pendiente del commit del autor.** Con ella la meta cumple su criterio de cierre (B01–B06 en «Cerrados»); queda solo la prueba del snippet en Slicer, en B10 (P6 = a). Lo siguiente: que la dirección cierre la meta (y pase `memory.md` a «ningún spec activo» o al spec de la meta que el autor tiene en mente). La **etapa 3** (hooks) queda para cuando haga falta.
+- Línea base de «no cambió» desde la fase 3 (la fase 4 la mantiene): 100 pruebas, 78 pasan, 22 `xfail`; replay 302 frames, 275 con pose, mediana 4 markers, 0.0 mm/0.0°; selftest del panel rc 0 con perfil `tracker_config.yaml` (7 semáforos, `apto_tracker=SI`); el panel ve 2 perfiles (`tracker_config.yaml`, `tracker_config_doctor.yaml`); punta más reciente de `iter4/data/`: `StylusTipToDodecaedro_femto_dock.npy`.
+- Fase 4: `PROJECT_BRIEF.md` y `briefs/` están en `docs/history/` (`git mv`, literales). Las rutas vivas dicen `C:\Dev\OrtoMeta\PoyectoNavegacion` (manuales, `codigo/readme.md`, 3 scripts de `femto_pruebas/`, cabecera de la punta vigente y de su respaldo); los históricos (`codigo/historico/`, `documentos/auditoria_iter2/`, `documentos/tecnicos/`, `docs/history/`) conservan las viejas (P5 = b).
 - Hasta la etapa 3, cada papel lo limitan su lista de `tools` y su texto; `settings.json` niega commit, push y los datos de paciente para todos.
 - El autor tiene en mente una meta concreta para el repo que todavía no ha contado: va después del orden.
-- Último commit de código: `7ac5a43` (brief-02, GUI M1–M5, 2026-08-13). La lógica de `codigo/iter4/` no ha cambiado desde entonces: la fase 3 solo mueve archivos y cambia una línea de docstring de `calibrar_rigid_body.py`.
+- Último commit de código: `7ac5a43` (brief-02, GUI M1–M5, 2026-08-13). La lógica de `codigo/iter4/` no ha cambiado desde entonces: la fase 3 solo mueve archivos y cambia una línea de docstring de `calibrar_rigid_body.py`; la fase 4 en `iter4/` solo cambia la ruta (texto) de la cabecera de la punta.
 
 ## Estado técnico (resumen; el detalle está en `docs/CONTEXT.md` §6)
 
@@ -22,7 +22,7 @@ Spec activo: `specs/001-limpieza/`
 
 ## La suite
 
-- `codigo/tests/`: **en verde** desde la fase 1 (2026-10-19). Desde la fase 3, 100 pruebas: 78 pasan, 22 `xfail(strict=True)` desfasadas (B17), 8 avisos (B22); ~5 s de pared (3.3 s de pytest). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`.
+- `codigo/tests/`: **en verde** desde la fase 1 (2026-10-19). Desde la fase 3, 100 pruebas: 78 pasan, 22 `xfail(strict=True)` desfasadas (B17), 8 avisos (B22); ~5 s de pared (3.4 s de pytest, fase 4). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`.
 - Comprobación de «no cambió»: la suite + el replay (`tests/test_replay.py`, recorte `tests/data/replay_v2_femto.npz` contra `replay_v2_femto_referencia.npz`) + `panel.py --selftest` (`tests/test_gui_headless.py`). Detalle en `docs/ARCHITECTURE.md` §6.
 - La referencia del replay depende del sha256 de `reference_dodecaedro_v2_calibrado.txt` y de `min_markers` de `tracker_config.yaml`: si cambian, el test lo dice; se regenera solo a propósito (`replay_util.py referencia ... --sobrescribir`).
 
@@ -35,8 +35,9 @@ Spec activo: `specs/001-limpieza/`
 
 ## Pendientes del autor
 
-- Commit de la fase 3 · movimientos (título y `git add` en `Claude outputs/fases/001/fase-3.md`). Los renombres y el borrado de la caché ya están en el índice (`git mv`, `git rm --cached`); el `git add` suma los editados y el `README.md` nuevo.
-- Decidir si B17 (22 pruebas en `xfail`, 8 del BA) sube de prioridad; y B19/B20 (alta), que vienen del plan.
+- Commit de la fase 4 · textos (título y `git add` en `Claude outputs/fases/001/fase-4.md`). Los 4 renombres ya están en el índice (`git mv`); el `git add` suma los editados.
+- En la próxima sesión con Slicer: pegar el snippet de `MANUAL_simplificado.md` §4.2 con la ruta nueva y leer la traslación de `StylusTipToDodecaedro` (esperado [+0.904, +5.471, −201.808] mm, 201.884 mm), B10.
+- Decidir si B17 (22 pruebas en `xfail`, 8 del BA) sube de prioridad; y B19/B20 (alta), que vienen del plan. B20 (Slicer carga la punta por fecha) sigue igual tras la fase 4: el snippet aún elige por mtime.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/`: el autor a veces trabaja desde otra carpeta y desde Git Bash, donde `\` se come la ruta (2026-10-19).
 
 ## Para la etapa 3 (hooks)

@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-19 (§6: la suite y el replay, y los diagnósticos fuera de `iter4\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -221,11 +221,11 @@ Métrica histórica de referencia: RMS **3.46 mm** (iter 1) → **2.80 mm** (ite
 
 ```
 C:\Dev\OrtoMeta\PoyectoNavegacion\
-├── CLAUDE.md, memory.md, PROJECT_BRIEF.md
+├── CLAUDE.md, memory.md
 ├── docs\
 │   ├── constitution.md, BACKLOG.md, PRUEBAS.md
 │   ├── ARCHITECTURE.md  DECISIONS.md  CONTEXT.md   # ← los 3 MVD
-│   └── history\                    # copia literal de lo hecho, no se edita
+│   └── history\                    # copia literal de lo hecho, no se edita (PROJECT_BRIEF.md y briefs\ desde 2026-10-19)
 ├── specs\_plantilla\               # plantilla de una meta (spec, plan, clarify, tasks)
 ├── .claude\
 │   ├── settings.json               # permisos del método
