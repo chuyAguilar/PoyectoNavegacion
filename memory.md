@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-20 (meta 002, fase 1 parcial; sonda corregida tras la sesión en vivo)._
+_Actualizado: 2026-10-21 (meta 002, fase 1 hecha con la sesión en vivo; pendiente del commit del cierre)._
 
 Spec activo: `specs/002-calibracion-camaras/`
 
@@ -36,9 +36,8 @@ Spec activo: `specs/002-calibracion-camaras/`
 
 - Spec escrito el 2026-10-20 a pedido del autor, tras P02 (cámara 1: cadena pasa, calibración no concluyente; 25.7 fps; sd z 1.38 mm a ~45 cm). Decisiones del autor: ajustes de cámara fijos y automatizados; resolución elegida midiendo, la mayor con ≥ 60 fps de tracking; calibrar las dos, una por una; tablero impreso en 3D (STL en `Claude outputs/tablero/`, prueba 2×2 primero). La cámara 2 se prueba dentro de esta meta.
 - Plan (6 fases, revisión 1) autorizado el 2026-10-20; respuestas P1–P8 en `clarify.md`.
-- **Fase 1 · Sonda de controles, modos e identidad: parcial (2026-10-20).** Código sin cámara en `e27049e` (`camaras_uvc.py`, `sondear_camara.py` y pruebas). La sesión en vivo con la cámara 1 (puerto 1, instancia `6&325DB0BA&1&0000`; el enlace simbólico ya se lee) se paró: por MSMF la sonda dejó la exposición en 0 (≈6 fps en todos los modos) y `get()` seguía leyendo −6. Las cifras de FPS de `sonda_gs1_msmf.json` y `diag_*.json` no valen; sí valen: 1600×1200 entrega 1280×960, 800×600 MJPG y 320×240/800×600 YUY2 no dan frames, abrir por MSMF tarda ~10 s.
-- **Corrección de la sonda (2026-10-20, sin commit):** `--controles no|leer|probar` obligatorio; los modos van antes de cualquier control; por MSMF solo `no` (OpenCV 4.11 por MSMF no lee el valor real y `set(AUTO_EXPOSURE, v)` escribe `v` como exposición); leer y probar por DSHOW, que según `cap_dshow.cpp` lee el valor actual (sin confirmar en vivo); restauración con los auto primero; testigo de brillo y FPS antes y después; para si el tope no alcanza. Reporte y protocolo nuevo: `Claude outputs/fases/002/fase-1-correccion-hecha.md`. **Riesgo para la fase 2:** su plan aplica y lee de vuelta los controles por el backend del perfil (MSMF): por MSMF no se puede leer de vuelta; lo decide la dirección.
-- Al correr la sonda sin cámara para la corrección, la cámara 1 estaba conectada: DSHOW no la abrió («can't be used to capture by index»; quizá estaba en uso) y no se leyó ni escribió nada. Si DSHOW no abre la SVPRO por índice en vivo, la vía de controles por DSHOW no sirve: es lo primero que mide el protocolo.
+- **Fase 1 · Sonda de controles, modos e identidad: hecha (2026-10-21), pendiente del commit del cierre.** Código en `e27049e` y `f1536cf`; sesión en vivo del 2026-10-20/21 (`Claude outputs/fases/002/fase-1-en-vivo.md`; cierre en `fase-1-cierre.md`). Modos MSMF MJPG: ~90 fps de 320×240 a 1280×960 en las dos, ~30 a 1920×1080/1200. Controles por DSHOW (cám. 1): 10 de 12 verificados, `auto_exposure` no verificable, `wb_temperature` rechazado; DSHOW lee el estado real y los ajustes persisten en la cámara. Identidad: la serie `01.00.00` es igual en las dos; la primera conectada toma la instancia de la serie (`6&325DB0BA&1&0000`) en cualquier puerto, la segunda una por puerto; orden MSMF = índice OpenCV. Enmienda del autor (`clarify.md`): umbral de la elección ≥ 90 fps de tracking con ventana.
+- **Riesgo para la Fase 2 · Ajustes fijos, identidad y comprobación del tamaño al abrir** (en el reporte de cierre, para la dirección): `device_id` por instancia no identifica el puerto; propuesta: la ruta física del puerto (`DEVPKEY_Device_LocationPaths` del nodo USB padre, por CfgMgr32 con `ctypes`), a medir antes; los controles van por DSHOW (apertura corta antes de MSMF), sin `auto_exposure`; con dos cámaras el índice DSHOW no está medido. La exposición la fija la fase 3 mirando la saturación (brillo ~235 a −7/−8, luz nivel 2). El plan de la fase 2 lo ajusta planificación si la dirección lo decide.
 - **Rumbo del proyecto (autor, 2026-10-20):** se relevanta el proyecto y se mejora. De lo que hay se **rescata solo el tracking**; lo que va después (punta, registro paired-point, navegación en Slicer, runbooks) se rehará mejorado. Los perfiles anteriores (doctor, Femto) y `globalshutter.yml` ya no se usarán: solo los nuevos. No se distingue perfil del doctor y del autor. Pendiente: ADR que lo registre y qué significa para el principio 6.
 - **Optimizar el tracker** se hará aunque se llegue a 60 fps (autor, 2026-10-20): candidata a la meta siguiente.
 - **Context7 obligatorio** para dirección, planificación y desarrollo sobre cualquier librería o tecnología, actual o nueva (autor, 2026-10-20; en `.claude/agents/`). Context7 de la dirección: herramientas añadidas a `direccion.md`, efectivas al abrir una sesión nueva.
@@ -47,7 +46,7 @@ Spec activo: `specs/002-calibracion-camaras/`
 
 ## Pendientes del autor
 
-- Meta 002, fase 1: el commit de la corrección (título y `git add` en `Claude outputs/fases/002/fase-1-correccion-hecha.md`) y la sesión en vivo con el protocolo nuevo (Predeterminado + 60 Hz en AMCap y captura antes de cada corrida; captura después de cada corrida que escriba).
+- Meta 002, fase 1: el commit del cierre (título y `git add` en `Claude outputs/fases/002/fase-1-cierre.md`). Antes de la fase 2: que la dirección decida el riesgo de identidad y controles (reporte de cierre) y si la serie idéntica va al ADR-022 o al ADR-023.
 - Decidir si B17 (22 pruebas en `xfail`, 8 del BA) sube de prioridad; y B19/B20 (alta), que vienen del plan. B20 (Slicer carga la punta por fecha) sigue igual tras la fase 4: el snippet aún elige por mtime.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/`: el autor a veces trabaja desde otra carpeta y desde Git Bash, donde `\` se come la ruta (2026-10-19).
 

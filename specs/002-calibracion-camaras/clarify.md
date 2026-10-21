@@ -8,6 +8,11 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Respuesta del autor:** Puerto USB fijo (a): `device_id` en el perfil, enumeración por `ctypes`, cada cámara en su puerto etiquetado.
 - **Fecha:** 2026-10-20
 
+## Enmienda del umbral de FPS (autor, 2026-10-20)
+
+- En la sesión en vivo de la Fase 1 · Sonda de controles, modos e identidad, la cámara 1 dio ~90 fps de captura en MJPG por MSMF de 320×240 a 1280×960 (29–30 fps a 1920×1080 y 1920×1200). El autor: «si el máximo es 90, usemos esa sobre los 60». El umbral de la elección de resolución pasa de ≥ 60 a **≥ 90 fps** (de tracking con ventana, P2). Si ninguna resolución lo sostiene en tracking, se aplica lo mismo que el spec decía para 60: se reporta como hallazgo para la meta de optimizar el tracker y el autor elige con la tabla.
+- **Fecha:** 2026-10-20
+
 ## P2 · Qué cuenta como «FPS de tracking» para el umbral de 60
 
 - **Opciones:** (a) Recomendada: con la ventana del tracker (`imshow` + `waitKey(1)`), como se opera, y sin la impresión por frame de `verbose`; la tabla da también la cifra sin ventana. (b) Sin ventana: mide solo captura + detección + pose; da una resolución mayor, pero puede no sostenerse con la ventana abierta.

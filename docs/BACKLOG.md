@@ -24,6 +24,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B22 | Secuencias de escape inválidas en docstrings de `iter4\` | Baja | — |
 | B23 | Explorar el tracker en una Jetson Orin Nano, con Slicer en BigDaddy | Baja | — |
 | B24 | Frecuencia de la red (50/60 Hz) de las SVPRO, que OpenCV no fija | Baja | — |
+| B25 | La sonda pierde los modos medidos si salta el tope | Media | — |
+| B26 | Modos de las SVPRO que no sirven o no son estables | Baja | — |
 
 ## Abiertos
 
@@ -145,6 +147,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** es exploración, no prioridad: el autor puede dejar el cable de las cámaras en BigDaddy (2026-10-19). Dudas sin medir: Ubuntu 22.04 trae Python 3.10, no el 3.11.9 del venv (instalar 3.11 o probar el código con 3.10); que `opencv-contrib-python` ≥ 4.7 instale por pip en aarch64 (o un contenedor); el backend `MSMF` es solo Windows y en Linux sería V4L2, que `camera_backend.py` no tiene probado; los FPS de decodificar MJPEG y detectar ArUco a 1920×1200 en su CPU, con 2 cámaras; la latencia por la red (LAN directa frente a Tailscale); y la memoria si Ollama tiene un modelo cargado a la vez. El panel (PySide6) podría correr por el escritorio remoto o quedarse en BigDaddy.
 - **De dónde:** el autor, 2026-10-19, al hablar de la meta siguiente (cables cortos de las cámaras).
 - **Qué haría falta:** una prueba corta antes de cualquier plan: en la Jetson, Python 3.10/3.11 con OpenCV ≥ 4.7, abrir una cámara con V4L2 + MJPG, detectar ArUco y medir FPS y latencia hacia Slicer en BigDaddy por la red; comparar con la alternativa barata (un cable USB 3 activo o extensor). Con números, decidir.
+- **Lo que deja la meta 002 (2026-10-21, conversación con el autor):** lo que es de la cámara se conserva (modos: MJPG ~90 fps hasta 1280×960; serie `01.00.00` idéntica; ajustes guardados en la cámara; saturación según exposición) y la calibración intrínseca (`.yml`) vale en la Jetson tal cual si se usa la misma resolución y no se toca el foco. Se rehace lo que es de Windows: la sonda (`camaras_uvc.py`, la parte MSMF/DSHOW de `sondear_camara.py`), la escritura de controles (en Linux por V4L2; `v4l2-ctl` lista controles y modos con sus intervalos) y la identidad de cada cámara (en Linux probablemente por la ruta del puerto en `/dev/v4l/by-path/`, sin contrastar). Se mide de nuevo: los FPS de tracking en la CPU ARM. Para no repetir de más, la Fase 2 · Ajustes fijos, identidad y comprobación del tamaño al abrir debería declarar los ajustes en el perfil de forma independiente del sistema operativo, con una capa por sistema.
 - **Prioridad:** baja.
 
 ### B24 · Frecuencia de la red (50/60 Hz) de las SVPRO, que OpenCV no fija
@@ -152,6 +155,21 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** el plan de la meta 002 · Calibración de las cámaras global shutter lo deja fuera (se pone a mano a 60 Hz en AMCap antes de cada sesión) y no se sabe si persiste tras desenchufar.
 - **De dónde:** sesión en vivo de la fase 1 · Sonda de controles, modos e identidad, 2026-10-20; el plan de la meta 002 la manda aquí si se ve.
 - **Qué haría falta:** medir si los 60 Hz puestos en AMCap persisten tras desenchufar; si no, fijarlo por código (`IKsControl` con la propiedad de PowerLine de la unidad de proceso, por `ctypes`, o una dependencia que lo exponga), con su plan. Sube a media si el parpadeo afecta a la detección.
+- **Medido (2026-10-21, cierre de la fase 1):** en la cámara 1, los 60 Hz puestos en AMCap siguieron tras desenchufar y enchufar (los ajustes viven en la cámara). Falta verlo en la cámara 2 y comprobarlo al empezar cada sesión; fijarlo por código solo si se pierde.
+- **Prioridad:** baja.
+
+### B25 · La sonda pierde los modos medidos si salta el tope, y su presupuesto por modo se queda corto
+- **Qué:** en `sondear_camara.py`, `estado["modos"]` se asigna cuando `sondear_modos` termina; si el vigilante (`_vigilante`) salta antes, el JSON queda con `"timeout": true` y sin ninguna fila. Pasó en `modos_gs1_msmf_mjpg.json` y `modos_gs1_msmf_yuy2.json` (sesión del 2026-10-20): sus cifras solo quedaron en la consola y en `Claude outputs/fases/002/fase-1-en-vivo.md`. Además el presupuesto (`ABRIR_S + segundos + MARGEN_MODO_S` = 21 s con 5 s de captura) se queda corto: por MSMF a 90 fps cada modo tardó ~44–49 s (`total_s`; abrir ~10–11 s), y la comprobación por modo (`ABRIR_S + segundos`) no cuenta el resto.
+- **Por qué queda:** la fase 1 ya tiene sus números y la dirección cerró la fase sin abrir cámaras. No da un resultado equivocado: el JSON dice `timeout` y no trae filas.
+- **De dónde:** cierre de la fase 1 · Sonda de controles, modos e identidad (meta 002), 2026-10-21, al leer los JSON.
+- **Qué haría falta:** guardar cada fila al medirla (en el `estado` compartido con el vigilante) y subir el presupuesto por modo a lo medido (~50 s por MSMF). Lo mismo vale para `medir_modos.py` de la fase 3 · Enfoque y medición de resolución × formato, que aún no existe: conviene que su plan lo traiga desde el principio.
+- **Prioridad:** media.
+
+### B26 · Modos de las SVPRO que no sirven o no son estables
+- **Qué:** por MSMF con MJPG, 800×600 abre y no da frames (y gasta el tiempo de apertura); 1024×768 dio ~90 fps en la cámara 1 y ningún frame en la cámara 2; 1600×1200 entrega 1280×960; en YUY2, 960×720 no da frames y el resto va a ≤ 59 fps. Por MSMF, `get(CAP_PROP_FOURCC)` devuelve `0x00000016`, no `MJPG`: el formato obtenido no se puede leer de vuelta así.
+- **Por qué queda:** es informativo; la fase 3 · Enfoque y medición de resolución × formato elige entre los modos que sí funcionan.
+- **De dónde:** sesión en vivo de la fase 1 · Sonda de controles, modos e identidad (meta 002), 2026-10-20/21 (`Claude outputs/camaras/modos_*.json`).
+- **Qué haría falta:** nada, salvo que la resolución elegida sea una de estas; si la comprobación del tamaño de la fase 2 quiere verificar también el formato, que no use `get(CAP_PROP_FOURCC)` por MSMF.
 - **Prioridad:** baja.
 
 ## Cerrados
