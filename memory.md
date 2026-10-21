@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-20 (meta 002, fase 1 parcial)._
+_Actualizado: 2026-10-20 (meta 002, fase 1 parcial; sonda corregida tras la sesión en vivo)._
 
 Spec activo: `specs/002-calibracion-camaras/`
 
@@ -21,7 +21,7 @@ Spec activo: `specs/002-calibracion-camaras/`
 
 ## La suite
 
-- `codigo/tests/`: **en verde** desde la fase 1 (2026-10-19). Desde la fase 3 de la meta 001, 100 pruebas: 78 pasan, 22 `xfail(strict=True)` desfasadas (B17), 8 avisos (B22). Desde la fase 1 de la meta 002, 128: 106 pasan (28 nuevas, sin cámara), 22 `xfail`, 8 avisos; ~7 s de pared (3.9 s de pytest). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`.
+- `codigo/tests/`: **en verde** desde la fase 1 (2026-10-19). Desde la fase 3 de la meta 001, 100 pruebas: 78 pasan, 22 `xfail(strict=True)` desfasadas (B17), 8 avisos (B22). Desde la corrección de la fase 1 de la meta 002, 147: 125 pasan (47 nuevas, sin cámara), 22 `xfail`, 8 avisos; ~6 s de pared (3.7 s de pytest). `pytest.ini` ya pone `-q`: con el `-q` del comando no sale la línea de totales (`-rN` la da). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`.
 - Comprobación de «no cambió»: la suite + el replay (`tests/test_replay.py`, recorte `tests/data/replay_v2_femto.npz` contra `replay_v2_femto_referencia.npz`) + `panel.py --selftest` (`tests/test_gui_headless.py`). Detalle en `docs/ARCHITECTURE.md` §6.
 - La referencia del replay depende del sha256 de `reference_dodecaedro_v2_calibrado.txt` y de `min_markers` de `tracker_config.yaml`: si cambian, el test lo dice; se regenera solo a propósito (`replay_util.py referencia ... --sobrescribir`).
 
@@ -36,7 +36,9 @@ Spec activo: `specs/002-calibracion-camaras/`
 
 - Spec escrito el 2026-10-20 a pedido del autor, tras P02 (cámara 1: cadena pasa, calibración no concluyente; 25.7 fps; sd z 1.38 mm a ~45 cm). Decisiones del autor: ajustes de cámara fijos y automatizados; resolución elegida midiendo, la mayor con ≥ 60 fps de tracking; calibrar las dos, una por una; tablero impreso en 3D (STL en `Claude outputs/tablero/`, prueba 2×2 primero). La cámara 2 se prueba dentro de esta meta.
 - Plan (6 fases, revisión 1) autorizado el 2026-10-20; respuestas P1–P8 en `clarify.md`.
-- **Fase 1 · Sonda de controles, modos e identidad: parcial (2026-10-20).** Hechos sin cámara `iter4/camaras_uvc.py` (enumeración de Media Foundation por `ctypes`, `resolver_indice`), `iter4/sondear_camara.py` (controles, modos, `--solo-leer` para la persistencia, `--verificar-orden` para tapar una lente) y sus pruebas. Falta la sesión en vivo con el autor (protocolo en `Claude outputs/fases/002/fase-1.md`): sus números (controles aceptados, modos, `device_id` de cada puerto) los necesita la fase 2. El commit del código puede ir antes de la sesión. El GUID del enlace simbólico (`VIDCAP_SYMBOLIC_LINK`) solo se comprueba con una cámara conectada; el Windows SDK no está instalado en BigDaddy.
+- **Fase 1 · Sonda de controles, modos e identidad: parcial (2026-10-20).** Código sin cámara en `e27049e` (`camaras_uvc.py`, `sondear_camara.py` y pruebas). La sesión en vivo con la cámara 1 (puerto 1, instancia `6&325DB0BA&1&0000`; el enlace simbólico ya se lee) se paró: por MSMF la sonda dejó la exposición en 0 (≈6 fps en todos los modos) y `get()` seguía leyendo −6. Las cifras de FPS de `sonda_gs1_msmf.json` y `diag_*.json` no valen; sí valen: 1600×1200 entrega 1280×960, 800×600 MJPG y 320×240/800×600 YUY2 no dan frames, abrir por MSMF tarda ~10 s.
+- **Corrección de la sonda (2026-10-20, sin commit):** `--controles no|leer|probar` obligatorio; los modos van antes de cualquier control; por MSMF solo `no` (OpenCV 4.11 por MSMF no lee el valor real y `set(AUTO_EXPOSURE, v)` escribe `v` como exposición); leer y probar por DSHOW, que según `cap_dshow.cpp` lee el valor actual (sin confirmar en vivo); restauración con los auto primero; testigo de brillo y FPS antes y después; para si el tope no alcanza. Reporte y protocolo nuevo: `Claude outputs/fases/002/fase-1-correccion-hecha.md`. **Riesgo para la fase 2:** su plan aplica y lee de vuelta los controles por el backend del perfil (MSMF): por MSMF no se puede leer de vuelta; lo decide la dirección.
+- Al correr la sonda sin cámara para la corrección, la cámara 1 estaba conectada: DSHOW no la abrió («can't be used to capture by index»; quizá estaba en uso) y no se leyó ni escribió nada. Si DSHOW no abre la SVPRO por índice en vivo, la vía de controles por DSHOW no sirve: es lo primero que mide el protocolo.
 - **Rumbo del proyecto (autor, 2026-10-20):** se relevanta el proyecto y se mejora. De lo que hay se **rescata solo el tracking**; lo que va después (punta, registro paired-point, navegación en Slicer, runbooks) se rehará mejorado. Los perfiles anteriores (doctor, Femto) y `globalshutter.yml` ya no se usarán: solo los nuevos. No se distingue perfil del doctor y del autor. Pendiente: ADR que lo registre y qué significa para el principio 6.
 - **Optimizar el tracker** se hará aunque se llegue a 60 fps (autor, 2026-10-20): candidata a la meta siguiente.
 - **Context7 obligatorio** para dirección, planificación y desarrollo sobre cualquier librería o tecnología, actual o nueva (autor, 2026-10-20; en `.claude/agents/`). Context7 de la dirección: herramientas añadidas a `direccion.md`, efectivas al abrir una sesión nueva.
@@ -45,7 +47,7 @@ Spec activo: `specs/002-calibracion-camaras/`
 
 ## Pendientes del autor
 
-- Meta 002, fase 1: el commit (título y `git add` en el reporte) y la sesión en vivo con las dos cámaras SVPRO (puertos etiquetados, sonda por MSMF y DSHOW, persistencia, intercambio de puerto, `--verificar-orden`).
+- Meta 002, fase 1: el commit de la corrección (título y `git add` en `Claude outputs/fases/002/fase-1-correccion-hecha.md`) y la sesión en vivo con el protocolo nuevo (Predeterminado + 60 Hz en AMCap y captura antes de cada corrida; captura después de cada corrida que escriba).
 - Decidir si B17 (22 pruebas en `xfail`, 8 del BA) sube de prioridad; y B19/B20 (alta), que vienen del plan. B20 (Slicer carga la punta por fecha) sigue igual tras la fase 4: el snippet aún elige por mtime.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/`: el autor a veces trabaja desde otra carpeta y desde Git Bash, donde `\` se come la ruta (2026-10-19).
 

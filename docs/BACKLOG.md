@@ -23,6 +23,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B21 | `opencv-python` frente a `opencv-contrib-python` | Baja | — |
 | B22 | Secuencias de escape inválidas en docstrings de `iter4\` | Baja | — |
 | B23 | Explorar el tracker en una Jetson Orin Nano, con Slicer en BigDaddy | Baja | — |
+| B24 | Frecuencia de la red (50/60 Hz) de las SVPRO, que OpenCV no fija | Baja | — |
 
 ## Abiertos
 
@@ -144,6 +145,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** es exploración, no prioridad: el autor puede dejar el cable de las cámaras en BigDaddy (2026-10-19). Dudas sin medir: Ubuntu 22.04 trae Python 3.10, no el 3.11.9 del venv (instalar 3.11 o probar el código con 3.10); que `opencv-contrib-python` ≥ 4.7 instale por pip en aarch64 (o un contenedor); el backend `MSMF` es solo Windows y en Linux sería V4L2, que `camera_backend.py` no tiene probado; los FPS de decodificar MJPEG y detectar ArUco a 1920×1200 en su CPU, con 2 cámaras; la latencia por la red (LAN directa frente a Tailscale); y la memoria si Ollama tiene un modelo cargado a la vez. El panel (PySide6) podría correr por el escritorio remoto o quedarse en BigDaddy.
 - **De dónde:** el autor, 2026-10-19, al hablar de la meta siguiente (cables cortos de las cámaras).
 - **Qué haría falta:** una prueba corta antes de cualquier plan: en la Jetson, Python 3.10/3.11 con OpenCV ≥ 4.7, abrir una cámara con V4L2 + MJPG, detectar ArUco y medir FPS y latencia hacia Slicer en BigDaddy por la red; comparar con la alternativa barata (un cable USB 3 activo o extensor). Con números, decidir.
+- **Prioridad:** baja.
+
+### B24 · Frecuencia de la red (50/60 Hz) de las SVPRO, que OpenCV no fija
+- **Qué:** AMCap muestra «Frecuencia de PowerLine» en 50 Hz en la cámara 1; la red en México es de 60 Hz. Con luz de red, eso puede dar parpadeo (posible causa del de P02 con la caja al mínimo). Es un control UVC de la unidad de proceso que OpenCV no expone como `CAP_PROP_*`; hoy solo se cambia a mano en AMCap.
+- **Por qué queda:** el plan de la meta 002 · Calibración de las cámaras global shutter lo deja fuera (se pone a mano a 60 Hz en AMCap antes de cada sesión) y no se sabe si persiste tras desenchufar.
+- **De dónde:** sesión en vivo de la fase 1 · Sonda de controles, modos e identidad, 2026-10-20; el plan de la meta 002 la manda aquí si se ve.
+- **Qué haría falta:** medir si los 60 Hz puestos en AMCap persisten tras desenchufar; si no, fijarlo por código (`IKsControl` con la propiedad de PowerLine de la unidad de proceso, por `ctypes`, o una dependencia que lo exponga), con su plan. Sube a media si el parpadeo afecta a la detección.
 - **Prioridad:** baja.
 
 ## Cerrados

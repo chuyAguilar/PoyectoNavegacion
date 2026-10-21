@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -249,7 +249,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   ├── calibrar_camara.py                  # intrínsecos desde el panel (brief-02)
 │   │   ├── identificar_ids.py                  # verificar IDs/orientación
 │   │   ├── camaras_uvc.py                      # enumera las cámaras de Media Foundation (orden MSMF, instancia USB) por ctypes (2026-10-20, meta 002)
-│   │   ├── sondear_camara.py                   # sonda de una cámara: controles, modos, identidad; --verificar-orden (2026-10-20, meta 002); no la usa el tracker
+│   │   ├── sondear_camara.py                   # sonda de una cámara: modos (antes de tocar controles), identidad; --controles no|leer|probar (leer/probar solo por DSHOW, con testigo de brillo y FPS); --verificar-orden (2026-10-20, meta 002); no la usa el tracker
 │   │   ├── calibrar_topologia.py, limpiar_captura_fantasmas.py, corregir_giro_esquinas.py, generar_reference_dodecaedro.py
 │   │   ├── gui\                                # panel de control PySide6 (brief-01)
 │   │   └── data\                               # reference_*, capturas, tips, calibraciones
