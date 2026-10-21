@@ -27,7 +27,7 @@ Dónde está el plan, cuántos bytes mide, cuáles son las preguntas abiertas y 
 - Lee antes de proponer: el código de `codigo/iter4/` que la meta toca, `docs/PRUEBAS.md` por su índice, las trampas de `docs/CONTEXT.md` §4 y de `memory.md`. No reinventes lo que hay.
 - Si una fase toca `tracker.py`, `camera_backend.py`, el envío por `pyigtl` o lo que se carga en Slicer, el plan dice cómo se verifica que la cadena sigue igual (principio 6).
 - Lo que necesita cámara o Slicer se plantea como verificación en vivo con el autor, con el número que se espera.
-- Context7 solo para la API de las librerías (OpenCV, pyigtl, PySide6, scipy, numpy, pyorbbecsdk): por él no sale ninguna ruta ni dato clínico (principio 5).
+- **Context7, obligatorio (regla del autor, 2026-10-20):** cuando el plan propone usar una API o tecnología (OpenCV, pyigtl, Media Foundation, PySide6, scipy, numpy, pyorbbecsdk, y las nuevas que se adopten), la contrastas con su documentación actual por Context7 y el plan dice qué se consultó. Solo para la API: por él no sale ninguna ruta ni dato clínico (principio 5).
 - `git` de solo lectura, desde PowerShell y con `--no-optional-locks`. No corres la suite: lo que haya que medir para un plan se pide como fase de `desarrollo`.
 - Ninguna línea de lo que escribes pasa de 2 000 caracteres.
 - Una negación de permisos no se rodea: se dice en lo que devuelves.

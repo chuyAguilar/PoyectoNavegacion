@@ -2,7 +2,7 @@
 
 _Actualizado: 2026-10-19 (cierre de la meta 001)._
 
-Spec activo: ningún spec activo
+Spec activo: `specs/002-calibracion-camaras/`
 
 ## Dónde estamos
 
@@ -33,9 +33,13 @@ Spec activo: ningún spec activo
 - No hay más carpetas privadas.
 - Modelos por papel: dirección y planificación con opus y esfuerzo medio; desarrollo con opus y esfuerzo alto; pruebas con sonnet.
 
-## La meta siguiente (en conversación, sin spec todavía)
+## Meta 002 · Calibración de las cámaras global shutter
 
-- El autor la está pensando; no escribir el spec 002 hasta que la cuente (2026-10-19).
+- Spec escrito el 2026-10-20 a pedido del autor, tras P02 (cámara 1: cadena pasa, calibración no concluyente; 25.7 fps; sd z 1.38 mm a ~45 cm). Decisiones del autor: ajustes de cámara fijos y automatizados; resolución elegida midiendo, la mayor con ≥ 60 fps de tracking; calibrar las dos, una por una; tablero impreso en 3D (STL en `Claude outputs/tablero/`, prueba 2×2 primero). La cámara 2 se prueba dentro de esta meta.
+- Plan escrito (6 fases); respuestas P1–P8 en `clarify.md` (2026-10-20). Pendiente: relanzar `planificacion` con los cambios de abajo y la autorización del autor.
+- **Rumbo del proyecto (autor, 2026-10-20):** se relevanta el proyecto y se mejora. De lo que hay se **rescata solo el tracking**; lo que va después (punta, registro paired-point, navegación en Slicer, runbooks) se rehará mejorado. Los perfiles anteriores (doctor, Femto) y `globalshutter.yml` ya no se usarán: solo los nuevos. No se distingue perfil del doctor y del autor. Pendiente: ADR que lo registre y qué significa para el principio 6.
+- **Optimizar el tracker** se hará aunque se llegue a 60 fps (autor, 2026-10-20): candidata a la meta siguiente.
+- **Context7 obligatorio** para dirección, planificación y desarrollo sobre cualquier librería o tecnología, actual o nueva (autor, 2026-10-20; en `.claude/agents/`). Context7 de la dirección: herramientas añadidas a `direccion.md`, efectivas al abrir una sesión nueva.
 - Lo dicho: el primer paso no usa la Femto, sino cámaras global shutter SVPRO (sensor AR0234, 1920×1200, MJPEG hasta 90 fps, lente M12 de ~83–85°, UVC). Por ahora son 2. Probablemente sin calibrar. No se sabe si alguna es la de `data/globalshutter.yml` (640×480, contexto doctor). La resolución, que la decida el plan con medidas.
 - A aclarar en el spec: ADR-016 dice que la SVPRO AR0234 era rolling shutter; la ficha (y el AR0234 de onsemi) dice global shutter. Si se confirma, ADR nuevo (ADR-016 no se reescribe). `calibrar_camara.py` existe pero su prueba con cámara sigue en B10.
 

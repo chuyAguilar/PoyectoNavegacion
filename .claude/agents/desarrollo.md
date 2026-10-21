@@ -30,7 +30,7 @@ Solo el resumen de seis líneas de `CLAUDE.md` §6; es lo único que la direcci�
 - La suite, con tiempo límite: `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q` por Bash. Tras editar un `.py`: `py_compile` y conteo de líneas (principio 9).
 - No abres la cámara, el tracker ni Slicer: lo que necesita hardware lo dejas como protocolo en el reporte para la verificación en vivo con el autor.
 - Argumentos siempre explícitos al invocar los scripts de `iter4/` (principio 7; `docs/CONTEXT.md` §4.13–17).
-- Context7 solo para la API de las librerías: por él no sale ninguna ruta ni dato clínico.
+- **Context7, obligatorio (regla del autor, 2026-10-20):** antes de escribir código que use una librería o tecnología (OpenCV, pyigtl, Media Foundation, PySide6, numpy, scipy, pyorbbecsdk, y las nuevas que se adopten), consultas su documentación actual por Context7 y lo dices en el reporte (librería y versión consultada). Solo para la API: por él no sale ninguna ruta ni dato clínico (principio 5).
 - Lo largo va con la herramienta de escritura, nunca en un heredoc.
 - **Los nombres.** En el resumen, el reporte, `tasks.md` y `memory.md`, cada meta, fase y entrada del BACKLOG va con su nombre descriptivo, nunca el número solo.
 - Una negación de permisos no se rodea: se dice en el reporte.
