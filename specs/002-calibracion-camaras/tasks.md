@@ -1,4 +1,4 @@
-Plan autorizado por el autor el 2026-10-20
+Plan autorizado por el autor el 2026-10-21 (revisión 2; la revisión 1 se autorizó el 2026-10-20)
 
 # Tareas — Meta 002 · Calibración de las cámaras global shutter
 
@@ -6,8 +6,9 @@ La primera línea dice si el plan está autorizado. Cuando el autor lo autoriza,
 Una casilla por fase; el criterio es el del plan (`plan.md`, «Fases») y aquí no se repite, para que el arranque pese poco. `/fase <n>` la marca con el número obtenido y la fecha; el commit lo añade `/cerrar-fase` o la fase siguiente, cuando ya está en git.
 
 - [x] **Fase 1 · Sonda de controles, modos e identidad.** Criterio: el del plan. Código sin cámara en `e27049e`; corrección de la sonda (modos antes de controles, `--controles no|leer|probar`, por MSMF solo `no`) en `f1536cf`. Sesión en vivo con el autor el 2026-10-20/21 (caja en nivel 2; datos en `Claude outputs/camaras/`, resumen en `Claude outputs/fases/002/fase-1-en-vivo.md`). Número obtenido: **modos** (MSMF, MJPG, 90 pedidos): ~90 fps (89.6–90.2) de 320×240 a 1280×960 en las dos cámaras, ~30 a 1920×1080/1920×1200; 1600×1200 entrega 1280×960; 800×600 sin frames; 1024×768 inestable (cám. 1 sí, cám. 2 no); YUY2 ≤ 59 fps. **Controles** (DSHOW, cám. 1): 10 de 12 verificados (exposure, gain, auto_wb, brightness, contrast, saturation, sharpness, gamma, backlight, focus), `auto_exposure` no verificable (siempre −1), `wb_temperature` rechazado; restaura (testigo 30.0/30.5 fps, brillo 235.46/235.45); exposición −8 y ganancia 12 persisten tras desenchufar; los ajustes viven en cada cámara (cám. 2: focus 332). Por MSMF no se leen (OpenCV 4.11). **Identidad:** instancias distintas con las dos conectadas sí; estables en su puerto no (la primera conectada toma la de la serie); serie sí, pero `01.00.00` en las dos; el orden de conexión intercambia las instancias sí; orden de `listar_camaras_msmf()` = índice de OpenCV sí (2 de 2, tapando la lente). Cám. 2: sin `probar` ni persistencia (dirección: cubierto por la cám. 1). Suite 147: 125 pasan, 22 `xfail`, 3.65 s. Fecha: 2026-10-21. Commit: `e27049e`, `f1536cf`; el cierre, pendiente.
-- [ ] **Fase 2 · Ajustes fijos, identidad y comprobación del tamaño al abrir.** Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
-- [ ] **Fase 3 · Enfoque y medición de resolución × formato.** Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
-- [ ] **Fase 4 · Calibración de la cámara 1 y comprobación de escala.** Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
-- [ ] **Fase 5 · Calibración de la cámara 2.** Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
-- [ ] **Fase 6 · Comparación contra P02 y archivo de los perfiles viejos.** Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
+- [ ] **Fase 2a · Identidad por puerto y controles por DSHOW, medidos con las dos cámaras — pesada.** Criterio: el del plan (revisión 2). Número obtenido: —. Fecha: —. Commit: —.
+- [ ] **Fase 2b · Perfiles por cámara: identidad, ajustes y tamaño al abrir — pesada.** Criterio: el del plan (revisión 2). Número obtenido: —. Fecha: —. Commit: —.
+- [ ] **Fase 3 · Enfoque, exposición y medición de resolución × formato — pesada.** Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
+- [ ] **Fase 4 · Calibración de la cámara 1 y comprobación de escala — pesada.** Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
+- [ ] **Fase 5 · Calibración de la cámara 2 — ligera.** Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
+- [ ] **Fase 6 · Comparación contra P02 y archivo de los perfiles viejos — pesada.** Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.

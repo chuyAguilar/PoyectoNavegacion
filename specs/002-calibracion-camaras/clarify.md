@@ -54,3 +54,39 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** (a) Recomendada: la misma para las dos, la mayor que las dos sostienen a ≥ 60 fps de tracking: son el mismo modelo y así los números se comparan. (b) Cada una la suya, aunque difieran.
 - **Respuesta del autor:** La misma para las dos (a).
 - **Fecha:** 2026-10-20
+
+## P9 · Si la Fase 2 se parte en 2a (medir) y 2b (backend)
+
+- **Opciones:** (a) Recomendada: dos fases con su commit cada una. La 2a añade la ruta del puerto, la enumeración DSHOW y la capa de ajustes, y mide con las dos cámaras (identidad en 6 enumeraciones, orden DSHOW, MSMF frente a DSHOW, Auto de AMCap, coste, marca opcional) sin tocar el backend; la 2b toca `camera_backend.py` solo con eso medido. Si la medición falla, no se ha tocado el backend. Las fases 3–6 conservan su número. (b) Una sola Fase 2 con una parada interna entre medir y tocar el backend: un commit menos, pero si la medición obliga a cambiar el diseño, el commit mezcla código que se tira.
+- **Respuesta del autor:** Sí (a): Fase 2a (medir identidad y controles con las dos cámaras) y Fase 2b (perfiles y backend), un commit cada una.
+- **Fecha:** 2026-10-21
+
+## P10 · En qué unidad se declara la exposición en el perfil
+
+- **Opciones:** (a) Recomendada: en milisegundos (`exposure_ms`), una unidad física que no depende del sistema; la capa de Windows la convierte a log2 de segundos de DSHOW (3.906 ms → −8) y para si no es un valor representable, con los válidos cercanos; la de Linux la convertiría a las unidades de 100 µs de V4L2. Cuesta una conversión con prueba. (b) El valor nativo de cada sistema, en una sección por sistema (`windows: {exposure: -8}`): sin conversión, pero el perfil deja de ser independiente del sistema y cada valor hay que medirlo dos veces.
+- **Respuesta del autor:** Milisegundos (a): `exposure_ms` en el perfil; la capa de Windows convierte y para si no es representable.
+- **Fecha:** 2026-10-21
+
+## P11 · La tolerancia del umbral de 90 fps
+
+- **Opciones:** (a) Recomendada: ≥ 90 fps con un 2 % de tolerancia (≥ 88.2 fps sostenidos 30 s). En la Fase 1 la captura sola dio 89.6–90.2 fps a 90 pedidos: con ≥ 90.0 estricto, el ruido de la medida descartaría modos que sí van a 90. (b) ≥ 90.0 estricto. (c) Otra tolerancia que diga el autor.
+- **Respuesta del autor:** ≥ 88.2 fps (a), un 2 % bajo 90.
+- **Fecha:** 2026-10-21
+
+## P12 · El criterio de saturación para elegir la exposición
+
+- **Opciones:** (a) Recomendada: fracción de píxeles a 255 dentro de la envolvente de los markers del dodecaedro (con 10 px de margen) ≤ 1 %, y FPS de captura ≥ 88.2; entre las que cumplen, la de más markers por vista, y a igualdad la mayor exposición (menos ruido). Candidatas: 7.8, 3.9, 1.95, 0.98 y 0.49 ms, a 1280×960 MJPG. (b) Brillo medio de la imagen bajo un umbral (p. ej. ≤ 180): más simple, pero el brillo medio no ve la saturación local sobre los markers. (c) Otro umbral de fracción saturada.
+- **Respuesta del autor:** ≤ 1 % de píxeles a 255 sobre el dodecaedro (a).
+- **Fecha:** 2026-10-21
+
+## P13 · Si la marca en `focus` se usa al abrir, cuando la 2a la valide
+
+- **Opciones:** (a) Recomendada: sí. Si la 2a mide que escribir `focus` no cambia la imagen (brillo y nitidez dentro del 2 %) y que persiste tras desenchufar, cada perfil declara `marca: {focus: N}` con un valor distinto por cámara, y el backend para si el `focus` leído no es el suyo: detecta el intercambio de cámaras entre puertos. Cuesta una lectura en la apertura DSHOW que ya se hace. (b) No: solo etiquetas en cámara, cable y puerto; el intercambio no se detecta y va al BACKLOG con prioridad alta.
+- **Respuesta del autor:** Sí, si la Fase 2a lo valida (a): la marca en `focus` se comprueba al abrir.
+- **Fecha:** 2026-10-21
+
+## P14 · Qué se hace si la 2a muestra que MSMF pisa los controles de DSHOW o que el Auto de exposición no se desmarca
+
+- **Opciones:** (a) Recomendada: la 2b no empieza y planificación replantea la capa de Windows con `IAMCameraControl`/`IAMVideoProcAmp` directos por `ctypes` COM (sin dependencia nueva; el moniker ya lo da la enumeración DSHOW de la 2a): permite escribir con la bandera manual y leerla, y no abre el vídeo. Cuesta ~150 líneas de COM sin contraste en Context7 y su verificación en vivo. (b) Aceptarlo y documentarlo: el autor deja la exposición en manual con AMCap y el backend solo comprueba los valores. (c) Otra que diga el autor.
+- **Respuesta del autor:** Parar y decidir (b): si MSMF cambia los controles o la exposición no sale de Auto, la meta se para y el autor decide con los datos. No se replanea por adelantado la capa con `IAMCameraControl` directo.
+- **Fecha:** 2026-10-21
