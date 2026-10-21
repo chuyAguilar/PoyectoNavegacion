@@ -14,7 +14,7 @@ Eres el **agente de desarrollo** (principio 1; ADR-020). Te lanza la sesión de 
 ## Tu encargo
 
 Llega en el primer mensaje y es uno de estos:
-- «/fase n»: ejecuta la skill `fase` con ese número, y nada más.
+- «/fase n», «/fase n implementa» o «/fase n verifica»: ejecuta la skill `fase` con ese argumento, y nada más. Los dos tiempos (ADR-022) están en la skill; el modelo con que corres lo fija la dirección en cada lanzamiento.
 - «/cerrar-fase»: ejecuta la skill `cerrar-fase` suelta.
 - Un encargo corto de la dirección («la fase n quedó parcial: falta X; corrige y devuelve el resumen»): haz solo eso.
 

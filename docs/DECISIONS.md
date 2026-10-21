@@ -7,7 +7,7 @@
 > conserva, para no repetir errores ya pagados.
 >
 > Estados: `Aceptada` · `Reemplazada` · `En pausa` · `Propuesta`.
-> _Última actualización: 2026-10-19._
+> _Última actualización: 2026-10-21._
 
 Índice rápido:
 
@@ -34,6 +34,7 @@
 | 019 | Los datos de paciente siguen versionados; los agentes no los leen | Aceptada |
 | 020 | Método de trabajo por specs, con constitución y el autor como único que commitea | Aceptada |
 | 021 | La punta vigente se respalda como copia versionada fuera del glob de Slicer | Aceptada |
+| 022 | Fable solo para implementar: las fases pesadas en dos tiempos | Aceptada |
 
 ---
 
@@ -456,3 +457,47 @@ Restaurar es copiarla de vuelta a `iter4/data/`. El `.txt` se guarda con LF
 normalizado; el `.npy` es binario e idéntico. Las puntas de otros equipos
 siguen fuera de git. Cuando B20 haga que Slicer nombre la punta explícita, esta
 decisión se puede revisar.
+
+## ADR-022 — Fable solo para implementar: las fases pesadas en dos tiempos
+**Fecha:** 2026-10-21 · **Estado:** Aceptada
+
+**Contexto.** Fable tiene una cuota semanal. Una fase lanzada entera con un
+solo modelo gasta buena parte en trabajo mecánico que no lo necesita: correr la
+suite dos veces y leer su salida, la equivalencia (replay), escribir el reporte,
+`memory.md` y el BACKLOG, y proponer el commit. En Claude Code un subagente no
+puede lanzar otros subagentes (la herramienta `Agent` es de la sesión
+principal), así que `desarrollo` no puede repartir su trabajo entre modelos: el
+reparto lo hace la dirección, con el parámetro `model` de cada llamada a
+`Agent`, que manda sobre el `model:` del frontmatter. Es la misma decisión que
+el ADR-043 de SegmentadorDicom, traída por el autor (2026-10-21).
+
+**Decisión.**
+1. **El peso.** Cada fase del plan declara su peso: «pesada» (lógica nueva, un
+   fallo difícil, la cadena del principio 6) o «ligera» (textos, mover código,
+   ajustes, un caso más). Una fase sin peso cuenta como pesada.
+2. **Dos tiempos para las pesadas.** La dirección lanza primero
+   «/fase n implementa» con Fable: comprueba la marca, la casilla y el commit
+   anterior, lee el plan y el código, implementa, corre solo las pruebas de la
+   fase, mide el criterio y deja una nota en
+   `Claude outputs/fases/<NNN>/<fase>-implementa.md`; devuelve «Implementada:
+   criterio y número» o «Parado: por qué». Al volver, «/fase n verifica» con
+   sonnet: parte del árbol que dejó «implementa» (su nota y el `git diff`),
+   corre la suite completa dos veces y la equivalencia, marca la casilla, hace
+   el cierre (`memory.md`, BACKLOG, índices), escribe el reporte y propone el
+   commit; un arreglo pequeño lo hace él; si un fallo pide diseño, devuelve
+   «Parado: falla X» y la dirección relanza «implementa» con Fable.
+3. **Lo demás, sin Fable.** Fase ligera: «/fase n» de una vez, con opus.
+   «/cerrar-fase» y los encargos cortos («falta X; corrige»): sonnet u opus.
+   Planificación y pruebas: su modelo de siempre.
+4. **El respaldo.** Si Fable se queda sin cuota a media fase, la dirección
+   relanza «implementa» con opus y el mensaje «continúa la fase n implementa:
+   mira tasks.md y git status»; el trabajo ya está en el disco.
+
+**Consecuencias.** Fable trabaja solo en el código; la verificación, que es
+una parte grande de lo que gasta una fase, la hace sonnet. Una fase pesada son
+dos lanzamientos y dos resúmenes para la dirección, con el árbol sin commitear
+entre ellos (la dirección no escribe `memory.md`, `docs/` ni `.claude/`
+mientras tanto, como con cualquier fase). La skill `planear` pide el peso; la
+skill `fase` acepta «n», «n implementa» y «n verifica»; `desarrollo.md` y
+`direccion.md` lo recogen. El `model:` del frontmatter de `desarrollo` queda
+como valor por defecto: la dirección lo fija en cada lanzamiento.

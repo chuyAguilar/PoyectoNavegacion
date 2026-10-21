@@ -14,6 +14,7 @@ Planea la meta. No escribas código ni toques `codigo/`, `docs/` ni `memory.md`.
    - los archivos que crearás, modificarás o moverás;
    - las funciones y clases nuevas o cambiadas, con su firma;
    - las fases, cada una con su criterio de cierre medible (principio 3) y cómo se mide: suite, replay o sesión en vivo con el autor;
+   - el peso de cada fase (ADR-022): «pesada» (lógica nueva, un fallo difícil, la cadena del principio 6) o «ligera» (textos, mover código, ajustes, un caso más). Una fase sin peso cuenta como pesada;
    - si una fase toca la cadena tracker → OpenIGTLink → Slicer, cómo se verifica que sigue igual (principio 6);
    - lo que irá a `docs/BACKLOG.md`, con su prioridad;
    - los ADR que propones, si hay una decisión no trivial (no los escribas);

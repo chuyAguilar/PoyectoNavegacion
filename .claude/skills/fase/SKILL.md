@@ -1,10 +1,15 @@
 ---
 name: fase
 description: Implementa solo la fase n de tasks.md del spec activo, con la suite en verde, marca su casilla con el número obtenido y devuelve el resumen de seis líneas. La invoca el agente de desarrollo cuando la dirección lo lanza con «/fase n».
-argument-hint: "<n>"
+argument-hint: "<n> [implementa|verifica]"
 ---
 
 Implementa la fase $ARGUMENTS del spec activo (el que nombra `memory.md`), y solo esa.
+
+**Los dos tiempos (ADR-022).** El argumento es «n», «n implementa» o «n verifica».
+- **«n implementa»:** los pasos 1 a 4, más las pruebas de la fase (no la suite completa) y el criterio medido. Deja una nota en `Claude outputs/fases/<NNN>/<fase>-implementa.md` con lo hecho, el número obtenido y lo que falta verificar, y devuelve «Implementada: criterio y número» o «Parado: por qué». No marcas la casilla ni haces el cierre.
+- **«n verifica»:** partes del árbol que dejó «implementa»: lee esa nota y el `git diff`. Haces los pasos 5 a 8, con la suite completa dos veces y la equivalencia (replay). Un arreglo pequeño lo haces tú; si un fallo pide diseño, no lo tocas: devuelve «Parado: falla X».
+- **Solo «n»:** todos los pasos.
 
 1. **La marca.** La primera línea de `tasks.md` tiene que decir «Plan autorizado por el autor el AAAA-MM-DD». Si no lo dice, no hagas nada: devuelve «Parado: el plan no está autorizado».
 2. **La casilla.** Busca en `tasks.md` la de la fase $ARGUMENTS.

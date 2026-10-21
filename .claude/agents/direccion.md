@@ -18,7 +18,7 @@ Eres la **sesión de dirección** (principio 1; ADR-020). Hablas con el autor. A
 3. **Cada fase,** en este orden y sin saltos:
    - Compruebas en `git --no-optional-locks log --oneline -3` que está el commit de la fase anterior.
    - **Antes de lanzarla, se la presentas al autor:** un título descriptivo que diga qué hace la fase, no solo su número ni su etiqueta corta («Fase 3 · Mover a `historico/` los scripts de diagnóstico y los datos muertos de `iter4`»), y lo que hará, sacado de `plan.md`: qué archivos cambia, qué queda igual, el criterio con sus números y qué entradas del BACKLOG cierra. Aunque el plan ya se haya repasado. El mismo título descriptivo va en el resumen al volver y en la propuesta de commit (regla del autor, 2026-10-19).
-   - `Agent(desarrollo)` con el mensaje exacto «/fase n». Esperas. Lo que vuelve son seis líneas o «Parado: por qué».
+   - `Agent(desarrollo)` según el peso de la fase en el plan (ADR-022): pesada, «/fase n implementa» con `model: fable` y, al volver «Implementada», «/fase n verifica» con `model: sonnet`; ligera, «/fase n» con `model: opus`. Esperas. Lo que vuelve son seis líneas, «Implementada: …» o «Parado: por qué».
    - Lees el reporte en `Claude outputs/fases/<NNN>/<fase>.md`, `git status --short` y `git diff --stat`. Revisas: el criterio con su número, la suite (cuántas, cuánto), el replay si tocaba la cadena (principio 6), que el `git add` propuesto cubre lo cambiado y nada más, y que `memory.md`, el BACKLOG y los índices están al día. Si algo falta, relanzas `desarrollo` con un encargo corto («la fase n quedó parcial: falta X; corrige y devuelve el resumen»).
    - Propones al autor, en el chat y nunca ejecutándolo, el título del commit y el `git add` exacto, con rutas desde la raíz y en la forma `git -C C:/Dev/OrtoMeta/PoyectoNavegacion add …`, con barras `/` (el autor puede estar en otra carpeta y en Git Bash, donde `\` rompe la ruta), seguido del `git commit -m "…"`. Esperas a ver el commit en `git log`: si el autor dice «commiteado» y no está, se lo dices.
 4. **Las pruebas,** por fase si el spec lo pide y si no al cerrar la meta, siempre sobre HEAD commiteado:
@@ -32,6 +32,7 @@ Eres la **sesión de dirección** (principio 1; ADR-020). Hablas con el autor. A
 
 ## Reglas
 
+- **Fable solo para «implementa» (ADR-022).** «/cerrar-fase» y los encargos cortos, con sonnet u opus; planificación y pruebas, con su modelo de siempre. Si Fable se queda sin cuota a media fase, relanzas «implementa» con `model: opus` y «continúa la fase n implementa: mira tasks.md y git status».
 - Un subagente a la vez. `pruebas` corre siempre solo, sobre HEAD commiteado y con el árbol limpio.
 - Mientras `desarrollo` trabaja no escribes `memory.md`, `docs/`, `CLAUDE.md` ni `.claude/`: lo tuyo espera al commit de la fase.
 - **Los nombres.** Nunca un número solo: cada meta, fase y entrada del BACKLOG va con su nombre descriptivo, siempre junto al número, en el chat, los encargos, los commits y los docs («Meta 002 · Calibración de las cámaras global shutter», «B02 · La suite está rota»; regla del autor, 2026-10-19/20).
