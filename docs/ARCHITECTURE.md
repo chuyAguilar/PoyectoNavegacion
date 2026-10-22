@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -235,7 +235,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   ├── .venv\                      # Python 3.11.9
 │   ├── requirements.txt, readme.md, pytest.ini
 │   ├── tests\                      # suite pytest (2026-10-19): conftest.py pone iter4\ y gui\ en sys.path
-│   │   ├── test_*.py                           # 3 de mayo repuntados + compilan, gui_headless, replay; camaras_uvc y sondear_camara (sin cámara, 2026-10-20)
+│   │   ├── test_*.py                           # 3 de mayo repuntados + compilan, gui_headless, replay; camaras_uvc, ajustes_camara y sondear_camara (sin cámara, 2026-10-21)
 │   │   ├── replay_util.py                      # replay sin cámara de estimar_pose_rigid_body (CLI recortar/referencia)
 │   │   └── data\                               # recorte de captura_ba.npz y su referencia de poses (versionados)
 │   ├── iter4\                      # ← CÓDIGO ACTIVO
@@ -248,8 +248,9 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   ├── calibrar_tip_divot.py               # calibración por dock/divot
 │   │   ├── calibrar_camara.py                  # intrínsecos desde el panel (brief-02)
 │   │   ├── identificar_ids.py                  # verificar IDs/orientación
-│   │   ├── camaras_uvc.py                      # enumera las cámaras de Media Foundation (orden MSMF, instancia USB) por ctypes (2026-10-20, meta 002)
-│   │   ├── sondear_camara.py                   # sonda de una cámara: modos (antes de tocar controles), identidad; --controles no|leer|probar (leer/probar solo por DSHOW, con testigo de brillo y FPS); --verificar-orden (2026-10-20, meta 002); no la usa el tracker
+│   │   ├── camaras_uvc.py                      # enumera las cámaras de Media Foundation y de DirectShow (COM por ctypes) y da la ruta física de su puerto USB (CfgMgr32: LocationPaths del nodo padre); resolver_indice(puerto) por igualdad de ruta (2026-10-21, meta 002 fase 2a)
+│   │   ├── ajustes_camara.py                   # formato de camera.controls independiente del sistema (exposición en ms), validar/comparar, CapaWindowsDShow (escribe solo lo que difiere, relee, para si no coincide), capa_para_plataforma; Linux sin escribir (2026-10-21, meta 002 fase 2a); aún no lo usa el backend
+│   │   ├── sondear_camara.py                   # sonda de una cámara: modos (antes de tocar controles), identidad; --controles no|leer|probar; fase 2a: --puertos, --leer, --fijar, --tras-msmf, --verificar-orden --backend MSMF|DSHOW (2026-10-21, meta 002); no la usa el tracker
 │   │   ├── calibrar_topologia.py, limpiar_captura_fantasmas.py, corregir_giro_esquinas.py, generar_reference_dodecaedro.py
 │   │   ├── gui\                                # panel de control PySide6 (brief-01)
 │   │   └── data\                               # reference_*, capturas, tips, calibraciones

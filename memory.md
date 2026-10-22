@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-21 (meta 002, fase 1 hecha con la sesión en vivo; pendiente del commit del cierre)._
+_Actualizado: 2026-10-21 (meta 002, fase 2a hecha con la sesión en vivo; pendiente de su commit)._
 
 Spec activo: `specs/002-calibracion-camaras/`
 
@@ -21,7 +21,7 @@ Spec activo: `specs/002-calibracion-camaras/`
 
 ## La suite
 
-- `codigo/tests/`: **en verde** desde la fase 1 (2026-10-19). Desde la fase 3 de la meta 001, 100 pruebas: 78 pasan, 22 `xfail(strict=True)` desfasadas (B17), 8 avisos (B22). Desde la corrección de la fase 1 de la meta 002, 147: 125 pasan (47 nuevas, sin cámara), 22 `xfail`, 8 avisos; ~6 s de pared (3.7 s de pytest). `pytest.ini` ya pone `-q`: con el `-q` del comando no sale la línea de totales (`-rN` la da). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`.
+- `codigo/tests/`: **en verde** desde la fase 1 (2026-10-19). Desde la fase 3 de la meta 001, 100 pruebas: 78 pasan, 22 `xfail(strict=True)` desfasadas (B17), 8 avisos (B22). Desde la corrección de la fase 1 de la meta 002, 147: 125 pasan, 22 `xfail`. Desde la fase 2a, 212: 190 pasan (65 nuevas, sin cámara), 22 `xfail`, 8 avisos; ~6 s de pared (4.1 s de pytest). `pytest.ini` ya pone `-q`: con el `-q` del comando no sale la línea de totales (`-rN` la da). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`.
 - Comprobación de «no cambió»: la suite + el replay (`tests/test_replay.py`, recorte `tests/data/replay_v2_femto.npz` contra `replay_v2_femto_referencia.npz`) + `panel.py --selftest` (`tests/test_gui_headless.py`). Detalle en `docs/ARCHITECTURE.md` §6.
 - La referencia del replay depende del sha256 de `reference_dodecaedro_v2_calibrado.txt` y de `min_markers` de `tracker_config.yaml`: si cambian, el test lo dice; se regenera solo a propósito (`replay_util.py referencia ... --sobrescribir`).
 
@@ -36,8 +36,9 @@ Spec activo: `specs/002-calibracion-camaras/`
 
 - Spec escrito el 2026-10-20 a pedido del autor, tras P02 (cámara 1: cadena pasa, calibración no concluyente; 25.7 fps; sd z 1.38 mm a ~45 cm). Decisiones del autor: ajustes de cámara fijos y automatizados; resolución elegida midiendo, la mayor con ≥ 60 fps de tracking; calibrar las dos, una por una; tablero impreso en 3D (STL en `Claude outputs/tablero/`, prueba 2×2 primero). La cámara 2 se prueba dentro de esta meta.
 - Plan (6 fases, revisión 1) autorizado el 2026-10-20; respuestas P1–P8 en `clarify.md`.
-- **Fase 1 · Sonda de controles, modos e identidad: hecha (2026-10-21), pendiente del commit del cierre.** Código en `e27049e` y `f1536cf`; sesión en vivo del 2026-10-20/21 (`Claude outputs/fases/002/fase-1-en-vivo.md`; cierre en `fase-1-cierre.md`). Modos MSMF MJPG: ~90 fps de 320×240 a 1280×960 en las dos, ~30 a 1920×1080/1200. Controles por DSHOW (cám. 1): 10 de 12 verificados, `auto_exposure` no verificable, `wb_temperature` rechazado; DSHOW lee el estado real y los ajustes persisten en la cámara. Identidad: la serie `01.00.00` es igual en las dos; la primera conectada toma la instancia de la serie (`6&325DB0BA&1&0000`) en cualquier puerto, la segunda una por puerto; orden MSMF = índice OpenCV. Enmienda del autor (`clarify.md`): umbral de la elección ≥ 90 fps de tracking con ventana.
-- **Riesgo para la Fase 2 · Ajustes fijos, identidad y comprobación del tamaño al abrir** (en el reporte de cierre, para la dirección): `device_id` por instancia no identifica el puerto; propuesta: la ruta física del puerto (`DEVPKEY_Device_LocationPaths` del nodo USB padre, por CfgMgr32 con `ctypes`), a medir antes; los controles van por DSHOW (apertura corta antes de MSMF), sin `auto_exposure`; con dos cámaras el índice DSHOW no está medido. La exposición la fija la fase 3 mirando la saturación (brillo ~235 a −7/−8, luz nivel 2). El plan de la fase 2 lo ajusta planificación si la dirección lo decide.
+- **Fase 1 · Sonda de controles, modos e identidad: hecha y commiteada** (`e27049e`, `f1536cf`, cierre `06619cf`). Modos MSMF MJPG: ~90 fps de 320×240 a 1280×960 en las dos, ~30 a 1920×1080/1200. Controles por DSHOW: 10 de 12 verificados, `auto_exposure` no verificable, `wb_temperature` rechazado; los ajustes persisten en la cámara. La serie `01.00.00` es igual en las dos. Enmienda del autor (`clarify.md`): umbral de la elección ≥ 90 fps de tracking con ventana.
+- **Fase 2a · Identidad por puerto y controles por DSHOW, medidos con las dos cámaras: hecha (2026-10-21), pendiente del commit.** Sesión en vivo con el autor (`Claude outputs/fases/002/fase-2a-en-vivo.md`; reporte `fase-2a.md`). Identidad por la ruta del puerto 6 de 6: puerto 1 = `PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)`, puerto 2 = `…#USB(11)#USB(4)` (las dos cuelgan de un hub; si cambia el hub, cambian las rutas). Orden DSHOW = índice, 4 de 4. MSMF no pisa lo escrito por DSHOW (0 diferencias); escribir `exposure` desmarca el Auto de AMCap y muestra −8; la capa cuesta ~1.2 s. La marca en `focus` sirve (imagen igual; persiste; cám. 1 500, cám. 2 332): P13 = se usa. P14 no saltó. La cámara 2 está más desenfocada (nitidez 64.7 frente a 227): dato para la fase 3. Código nuevo: `ajustes_camara.py`; cambios en `camaras_uvc.py` y `sondear_camara.py`; el backend no se tocó.
+- **Siguiente · Fase 2b · Perfiles por cámara** (`camera_backend.py`, `tracker_config_gs1.yaml`/`gs2`): usa la ruta del puerto como identidad, `ajustes_camara` para los controles (DSHOW antes de MSMF, sin `auto_exposure`) y la marca `focus` (valor actual de cada cámara, o el que decida el autor).
 - **Rumbo del proyecto (autor, 2026-10-20):** se relevanta el proyecto y se mejora. De lo que hay se **rescata solo el tracking**; lo que va después (punta, registro paired-point, navegación en Slicer, runbooks) se rehará mejorado. Los perfiles anteriores (doctor, Femto) y `globalshutter.yml` ya no se usarán: solo los nuevos. No se distingue perfil del doctor y del autor. Pendiente: ADR que lo registre y qué significa para el principio 6.
 - **Optimizar el tracker** se hará aunque se llegue a 60 fps (autor, 2026-10-20): candidata a la meta siguiente.
 - **Context7 obligatorio** para dirección, planificación y desarrollo sobre cualquier librería o tecnología, actual o nueva (autor, 2026-10-20; en `.claude/agents/`). Context7 de la dirección: herramientas añadidas a `direccion.md`, efectivas al abrir una sesión nueva.
@@ -46,7 +47,7 @@ Spec activo: `specs/002-calibracion-camaras/`
 
 ## Pendientes del autor
 
-- Meta 002, fase 1: el commit del cierre (título y `git add` en `Claude outputs/fases/002/fase-1-cierre.md`). Antes de la fase 2: que la dirección decida el riesgo de identidad y controles (reporte de cierre) y si la serie idéntica va al ADR-022 o al ADR-023.
+- Meta 002, fase 2a: el commit (título y `git add` en `Claude outputs/fases/002/fase-2a.md`). Antes de la 2b: confirmar el valor de la marca `focus` de cada perfil; los ADR-023 y ADR-024 los escribe la dirección.
 - Decidir si B17 (22 pruebas en `xfail`, 8 del BA) sube de prioridad; y B19/B20 (alta), que vienen del plan. B20 (Slicer carga la punta por fecha) sigue igual tras la fase 4: el snippet aún elige por mtime.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/`: el autor a veces trabaja desde otra carpeta y desde Git Bash, donde `\` se come la ruta (2026-10-19).
 

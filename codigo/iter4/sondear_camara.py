@@ -23,9 +23,24 @@ set(CAP_PROP_AUTO_EXPOSURE, v) escribe v como valor de la exposicion. Por DSHOW,
 OpenCV lee el valor actual (cap_dshow.cpp: IAMCameraControl::GetRange y luego
 Get). Ademas, la escritura que no cambia la lectura se marca "no verificable".
 
-Con --verificar-orden, en vez de lo anterior abre por MSMF cada indice que
-enumera Media Foundation y da el brillo medio del frame: el autor tapa una
-lente y comprueba que el indice oscuro es el de la instancia de esa camara.
+Con --verificar-orden --backend MSMF|DSHOW, en vez de lo anterior abre por ese
+backend cada indice que enumera (Media Foundation o DirectShow) y da el brillo
+medio del frame: el autor tapa una lente y comprueba que el indice oscuro es el
+de la ruta de puerto de esa camara.
+
+Modos de la fase 2a (identidad por puerto y controles por DSHOW; cada
+medicion se guarda en el JSON al tenerla, B25):
+  --puertos                 enumera MSMF y DSHOW con indice, instancia, ruta
+                            del puerto y ubicacion;
+  --leer --puerto R         lee los controles por DSHOW (capa de ajustes);
+  --fijar "k=v,..." --puerto R
+                            aplica por la capa (escribe solo lo que difiere,
+                            relee) y los deja puestos; p. ej.
+                            "exposure_ms=1.953,gain=11";
+  --tras-msmf --puerto R --modo 640x480:MJPG --fps 90 --segundos 10
+                            lee por DSHOW, abre y captura por MSMF (testigo:
+                            brillo, nitidez, FPS, tamano real), cierra y relee:
+                            las diferencias dicen si MSMF piso lo escrito.
 
 Todo lleva tope de tiempo (--timeout) y libera la camara (principio 9); si el
 tope no alcanza para los modos pedidos, la sonda no empieza. Los argumentos van
@@ -37,6 +52,11 @@ explicitos (principio 7). Ejemplos:
         --timeout 300
     python iter4\\sondear_camara.py --source 0 --backend DSHOW --controles probar ^
         --salida "..\\Claude outputs\\camaras\\controles_gs1_dshow.json" --timeout 180
+    python iter4\\sondear_camara.py --puertos ^
+        --salida "..\\Claude outputs\\camaras\\puertos_cam1_p1.json" --timeout 60
+    python iter4\\sondear_camara.py --fijar "exposure_ms=1.953,gain=11" ^
+        --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(2)" ^
+        --salida "..\\Claude outputs\\camaras\\fijar_cam1.json" --timeout 60
 """
 from __future__ import annotations
 
@@ -51,21 +71,12 @@ from pathlib import Path
 
 import cv2
 
-# Nombre del control (el que usara el perfil) -> propiedad de cv2.
-CONTROLES: dict[str, int] = {
-    "exposure": cv2.CAP_PROP_EXPOSURE,
-    "auto_exposure": cv2.CAP_PROP_AUTO_EXPOSURE,
-    "gain": cv2.CAP_PROP_GAIN,
-    "auto_wb": cv2.CAP_PROP_AUTO_WB,
-    "wb_temperature": cv2.CAP_PROP_WB_TEMPERATURE,
-    "brightness": cv2.CAP_PROP_BRIGHTNESS,
-    "contrast": cv2.CAP_PROP_CONTRAST,
-    "saturation": cv2.CAP_PROP_SATURATION,
-    "sharpness": cv2.CAP_PROP_SHARPNESS,
-    "gamma": cv2.CAP_PROP_GAMMA,
-    "backlight": cv2.CAP_PROP_BACKLIGHT,
-    "focus": cv2.CAP_PROP_FOCUS,
-}
+import ajustes_camara
+import camaras_uvc
+
+# Nombre crudo del control -> propiedad de cv2 (los 12 que mide la sonda).
+# Una sola fuente: ajustes_camara.CONTROLES_SONDA (fase 2a).
+CONTROLES: dict[str, int] = ajustes_camara.CONTROLES_SONDA
 
 # Paso de prueba de los controles numericos. Si el paso no es multiplo del
 # paso real del dispositivo, el driver redondea y la lectura no coincide: eso
@@ -116,10 +127,16 @@ CONTROLES_LEER_S = ABRIR_S + 5.0
 CONTROLES_PROBAR_S = ABRIR_S + 60.0
 RESERVA_RESTAURAR_S = 15.0
 
-# Testigo de que la camara quedo igual: brillo medio y FPS antes y despues.
+# Testigo de que la camara quedo igual: brillo medio, nitidez y FPS antes y despues.
 TESTIGO_S = 2.0
 TOL_BRILLO = 0.10   # relativa
 TOL_FPS = 0.20      # relativa
+# La marca en `focus` (plan, fase 2a): el testigo no cambia si brillo y nitidez
+# quedan dentro del 2 % y los FPS dentro del 20 %.
+TOL_MARCA_BRILLO = 0.02
+TOL_MARCA_NITIDEZ = 0.02
+TOL_MARCA_FPS = 0.20
+CALENTAR_FRAMES = 6
 
 
 def _backend_cv2(nombre: str) -> int:
@@ -176,30 +193,51 @@ def brillo(cap, descartar: int = 2) -> float | None:
     return round(float(frame.mean()), 2)
 
 
+def nitidez(imagen) -> float:
+    """Varianza del laplaciano (en gris): sube con el enfoque; para la marca de la fase 2a."""
+    gris = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY) if imagen.ndim == 3 else imagen
+    return float(cv2.Laplacian(gris, cv2.CV_64F).var())
+
+
 def testigo(cap, segundos: float) -> dict:
-    """Brillo medio y FPS durante `segundos`: la huella de como esta la camara."""
-    medias, t0 = [], time.monotonic()
+    """Brillo medio, nitidez, FPS y tamano real durante `segundos`: la huella de la camara."""
+    medias, nitideces, tamano, t0 = [], [], None, time.monotonic()
     while time.monotonic() - t0 < segundos:
         ok, frame = cap.read()
         if ok and frame is not None:
             medias.append(float(frame.mean()))
+            nitideces.append(nitidez(frame))
+            tamano = {"ancho": int(frame.shape[1]), "alto": int(frame.shape[0])}
     dt = time.monotonic() - t0
     return {"frames": len(medias),
             "fps": round(len(medias) / dt, 2) if dt > 0 else 0.0,
-            "brillo": round(sum(medias) / len(medias), 2) if medias else None}
+            "brillo": round(sum(medias) / len(medias), 2) if medias else None,
+            "nitidez": round(sum(nitideces) / len(nitideces), 2) if nitideces else None,
+            "real": tamano}
 
 
 def comparar_testigos(antes: dict, despues: dict, tol_brillo: float = TOL_BRILLO,
-                      tol_fps: float = TOL_FPS) -> list[str]:
-    """Diferencias entre dos testigos fuera de tolerancia (relativa); vacia si quedo igual."""
+                      tol_fps: float = TOL_FPS, tol_nitidez: float | None = None) -> list[str]:
+    """Diferencias entre dos testigos fuera de tolerancia (relativa); vacia si quedo igual.
+
+    La nitidez solo se compara si se da `tol_nitidez` (los testigos de la fase 1 no la traen).
+    """
+    claves = [("brillo", tol_brillo), ("fps", tol_fps)]
+    if tol_nitidez is not None:
+        claves.append(("nitidez", tol_nitidez))
     difs = []
-    for clave, tol in (("brillo", tol_brillo), ("fps", tol_fps)):
+    for clave, tol in claves:
         a, d = antes.get(clave), despues.get(clave)
         if a is None or d is None:
             difs.append(f"{clave}: sin dato (antes {a}, despues {d})")
         elif abs(d - a) > tol * max(abs(a), 1e-9):
             difs.append(f"{clave}: {a:g} -> {d:g} (tolerancia {tol:.0%})")
     return difs
+
+
+def comparar_marca(antes: dict, despues: dict) -> list[str]:
+    """El criterio de la marca en `focus`: brillo y nitidez dentro del 2 %, FPS dentro del 20 %."""
+    return comparar_testigos(antes, despues, TOL_MARCA_BRILLO, TOL_MARCA_FPS, TOL_MARCA_NITIDEZ)
 
 
 def sondear_controles(cap, nombres: list[str], solo_leer: bool = False,
@@ -373,7 +411,6 @@ def sondear_modos(source: int, backend: str, modos: list[tuple[int, int, str]],
 
 def identidad(source: int) -> dict:
     """Lo que enumera Media Foundation y cual es la camara `source`."""
-    import camaras_uvc
     try:
         camaras = camaras_uvc.listar_camaras_msmf()
     except OSError as e:
@@ -384,13 +421,33 @@ def identidad(source: int) -> dict:
             "esta": asdict(propia) if propia else None}
 
 
-def verificar_orden(segundos_por_indice: float = 2.0) -> list[dict]:
-    """Abre por MSMF cada indice enumerado y da el brillo medio del frame."""
-    import camaras_uvc
-    filas = []
-    for c in camaras_uvc.listar_camaras_msmf():
-        fila = {"indice": c.indice, "nombre": c.nombre, "instancia": c.instancia}
-        cap = cv2.VideoCapture(c.indice, cv2.CAP_MSMF)
+def _listar(backend: str) -> list:
+    return camaras_uvc.listar_camaras_msmf() if backend.upper() == "MSMF" \
+        else camaras_uvc.listar_camaras_dshow()
+
+
+def puertos() -> dict:
+    """Las camaras por MSMF y por DSHOW, con indice, instancia, ruta del puerto y ubicacion."""
+    salida: dict = {}
+    for backend in BACKENDS:
+        try:
+            salida[backend] = [asdict(c) for c in _listar(backend)]
+        except OSError as e:
+            salida[backend] = {"error": str(e)}
+    return salida
+
+
+def verificar_orden(backend: str, segundos_por_indice: float = 2.0,
+                    filas: list[dict] | None = None) -> list[dict]:
+    """Abre por `backend` cada indice que enumera y da el brillo medio del frame.
+
+    `filas` es la lista del `estado` del vigilante: cada fila se anade al tenerla (B25).
+    """
+    filas = filas if filas is not None else []
+    for c in _listar(backend):
+        fila = {"indice": c.indice, "nombre": c.nombre, "instancia": c.instancia,
+                "ruta_puerto": c.ruta_puerto, "ubicacion": c.ubicacion}
+        cap = cv2.VideoCapture(c.indice, _backend_cv2(backend))
         try:
             if not cap.isOpened():
                 fila["error"] = "no abre"
@@ -405,9 +462,95 @@ def verificar_orden(segundos_por_indice: float = 2.0) -> list[dict]:
         finally:
             cap.release()
         filas.append(fila)
-        print(f"[sonda] indice {c.indice} [{c.instancia}]: brillo medio "
+        print(f"[sonda] {backend} indice {c.indice} [{c.ruta_puerto}]: brillo medio "
               f"{fila.get('brillo_medio')} {fila.get('error', '')}", flush=True)
     return filas
+
+
+def parsear_fijar(texto: str) -> dict:
+    """'exposure_ms=1.953,gain=11,auto_white_balance=false' -> controles del perfil.
+
+    true/false son bool; lo demas, numero. Si hay exposure_ms y no se dio
+    exposure_manual, se pone true (es lo que exige validar_controles).
+    """
+    controls: dict = {}
+    for trozo in [t.strip() for t in texto.split(",") if t.strip()]:
+        if "=" not in trozo:
+            raise ValueError(f"--fijar mal escrito: '{trozo}' (forma: nombre=valor)")
+        nombre, valor = (p.strip() for p in trozo.split("=", 1))
+        if valor.lower() in ("true", "false"):
+            controls[nombre] = valor.lower() == "true"
+        else:
+            try:
+                controls[nombre] = float(valor)
+            except ValueError:
+                raise ValueError(f"--fijar: '{nombre}' tiene que ser un numero o true/false, no '{valor}'")
+    if not controls:
+        raise ValueError("--fijar vacio")
+    if "exposure_ms" in controls and "exposure_manual" not in controls:
+        controls["exposure_manual"] = True
+    validos = ajustes_camara.validar_controles(controls)
+    ajustes_camara.a_nativos_dshow(validos)   # para aqui si la exposicion no es representable
+    return validos
+
+
+def leer_controles(puerto: str, capa=None) -> dict:
+    """Los controles de la camara del puerto por la capa (DSHOW), en unidades del perfil."""
+    capa = capa if capa is not None else ajustes_camara.CapaWindowsDShow()
+    t0 = time.monotonic()
+    leidos = capa.leer(puerto, list(ajustes_camara.CONTROLES_CV2))
+    return {"puerto": puerto, "leidos": leidos, "segundos": round(time.monotonic() - t0, 2)}
+
+
+def fijar(puerto: str, controls: dict, capa=None) -> dict:
+    """Aplica `controls` por la capa y los deja puestos; el resultado trae lo leido y lo escrito."""
+    capa = capa if capa is not None else ajustes_camara.CapaWindowsDShow()
+    return capa.aplicar(puerto, controls)
+
+
+def tras_msmf(puerto: str, modo: tuple[int, int, str], fps: float, segundos: float,
+              capa=None, resultado: dict | None = None) -> dict:
+    """Lee por DSHOW, abre y captura por MSMF con `modo`, cierra y relee.
+
+    `resultado` es el dict del `estado` del vigilante: se rellena paso a paso
+    (antes, msmf, despues, diferencias). Las diferencias (en unidades del
+    perfil) dicen si abrir por MSMF piso lo escrito por DSHOW.
+    """
+    capa = capa if capa is not None else ajustes_camara.CapaWindowsDShow()
+    r = resultado if resultado is not None else {}
+    nombres = list(ajustes_camara.CONTROLES_CV2)
+    r["puerto"] = puerto
+    r["antes"] = capa.leer(puerto, nombres)
+    print(f"[sonda] DSHOW antes: {r['antes']}", flush=True)
+    indice = camaras_uvc.resolver_indice(puerto, camaras_uvc.listar_camaras_msmf())
+    w, h, fcc = modo
+    msmf: dict = {"indice": indice, "pedido": {"ancho": w, "alto": h, "fourcc": fcc, "fps": fps}}
+    r["msmf"] = msmf
+    t0 = time.monotonic()
+    cap = cv2.VideoCapture(indice, cv2.CAP_MSMF)
+    try:
+        if not cap.isOpened():
+            msmf["error"] = f"no abre el indice MSMF {indice}"
+        else:
+            msmf["abrir_s"] = round(time.monotonic() - t0, 2)
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fcc))
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+            cap.set(cv2.CAP_PROP_FPS, fps)
+            for _ in range(CALENTAR_FRAMES):
+                ok, _f = cap.read()
+                if not ok:
+                    break
+            msmf["testigo"] = testigo(cap, segundos)
+    finally:
+        cap.release()
+        msmf["total_s"] = round(time.monotonic() - t0, 2)
+    print(f"[sonda] MSMF {w}x{h} {fcc}: {msmf.get('testigo')} {msmf.get('error', '')}", flush=True)
+    r["despues"] = capa.leer(puerto, nombres)
+    r["diferencias"] = ajustes_camara.comparar_controles(r["antes"], r["despues"])
+    print(f"[sonda] DSHOW despues: {r['despues']}; diferencias: {r['diferencias'] or 'ninguna'}",
+          flush=True)
+    return r
 
 
 def _vigilante(timeout: float, estado: dict, salida: Path | None) -> threading.Timer:
@@ -487,6 +630,89 @@ def _controles(args, estado: dict, limite: float) -> int:
     return rc
 
 
+def _fase_2a(ap, args, estado: dict, salida: Path) -> int:
+    """Los modos de la fase 2a: --puertos, --verificar-orden, --leer, --fijar, --tras-msmf.
+
+    Uno por corrida; cada medicion queda en `estado` al tenerla, y el vigilante
+    la guarda si salta el tope. 0 si se midio; 1 si algo fallo (el JSON dice que).
+    """
+    modos = [n for n in ("puertos", "verificar_orden", "leer", "fijar", "tras_msmf") if getattr(args, n)]
+    if len(modos) != 1:
+        ap.error("uno solo de --puertos, --verificar-orden, --leer, --fijar o --tras-msmf por corrida")
+    (modo,) = modos
+    if modo == "verificar_orden" and args.backend is None:
+        ap.error("--verificar-orden exige --backend MSMF|DSHOW explicito")
+    if modo in ("leer", "fijar", "tras_msmf") and not args.puerto:
+        ap.error(f"--{modo.replace('_', '-')} exige --puerto (la ruta_puerto que da --puertos)")
+    controls = None
+    if modo == "fijar":
+        try:
+            controls = parsear_fijar(args.fijar)
+        except ValueError as e:
+            ap.error(str(e))
+    modo_msmf = None
+    if modo == "tras_msmf":
+        if args.modo is None or args.fps is None or args.segundos is None:
+            ap.error("--tras-msmf exige --modo, --fps y --segundos")
+        try:
+            (modo_msmf,) = parsear_modos(args.modo)
+        except ValueError as e:
+            ap.error(str(e))
+
+    salida.parent.mkdir(parents=True, exist_ok=True)
+    estado["opencv"] = cv2.__version__
+    estado["modo"] = modo
+    vig = _vigilante(args.timeout, estado, salida)
+    rc = 0
+    try:
+        if modo == "puertos":
+            estado["puertos"] = puertos()
+            for backend, lista in estado["puertos"].items():
+                if isinstance(lista, dict):
+                    print(f"[sonda] {backend}: ERROR {lista['error']}")
+                    rc = 1
+                    continue
+                print(f"[sonda] {backend}: {len(lista)} camara(s)")
+                for c in lista:
+                    print(f"  {c['indice']}: {c['nombre']} [{c['instancia']}] puerto {c['ruta_puerto']} "
+                          f"({c['ubicacion']}; usb {c['instancia_usb']})")
+        elif modo == "verificar_orden":
+            estado["backend"] = args.backend
+            estado["verificar_orden"] = []
+            verificar_orden(args.backend, filas=estado["verificar_orden"])
+            if not estado["verificar_orden"]:
+                print(f"[sonda] ERROR: {args.backend} no enumera ninguna camara de video")
+                rc = 1
+        elif modo == "leer":
+            estado["leer"] = leer_controles(args.puerto)
+            print(f"[sonda] leidos ({estado['leer']['segundos']} s): {estado['leer']['leidos']}")
+        elif modo == "fijar":
+            estado["fijar"] = {"puerto": args.puerto, "controls": controls}
+            try:
+                estado["fijar"].update(fijar(args.puerto, controls))
+                print(f"[sonda] fijados en {estado['fijar']['segundos']} s; escritos "
+                      f"{estado['fijar']['escritos'] or 'ninguno'}; leidos {estado['fijar']['leidos']}")
+            except ajustes_camara.AjustesNoAplicados as e:
+                estado["fijar"].update(e.resultado)
+                estado["fijar"]["error"] = str(e)
+                print(f"[sonda] ERROR: {e}")
+                rc = 1
+        else:
+            estado["tras_msmf"] = {}
+            tras_msmf(args.puerto, modo_msmf, args.fps, args.segundos, resultado=estado["tras_msmf"])
+            if estado["tras_msmf"]["diferencias"] or "error" in estado["tras_msmf"]["msmf"]:
+                rc = 1
+    except (OSError, ValueError, RuntimeError) as e:
+        estado["error"] = str(e)
+        print(f"[sonda] ERROR: {e}")
+        rc = 1
+    finally:
+        vig.cancel()
+    salida.write_text(json.dumps(estado, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"[sonda] guardado {salida}")
+    return rc
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Sonda de controles, modos e identidad de una camara UVC.")
     ap.add_argument("--source", type=int, help="indice de la camara (orden MSMF)")
@@ -497,7 +723,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--fps", type=float, help="FPS que se piden en cada modo")
     ap.add_argument("--segundos", type=float, help="segundos de captura por modo")
     ap.add_argument("--verificar-orden", action="store_true",
-                    help="abre cada indice MSMF y da su brillo medio (tapar una lente)")
+                    help="abre cada indice del --backend y da su brillo medio (tapar una lente)")
+    ap.add_argument("--puertos", action="store_true",
+                    help="enumera MSMF y DSHOW con la ruta del puerto de cada camara")
+    ap.add_argument("--puerto", help="ruta del puerto (ruta_puerto de --puertos) para --leer, --fijar y --tras-msmf")
+    ap.add_argument("--leer", action="store_true", help="lee los controles por DSHOW (capa de ajustes)")
+    ap.add_argument("--fijar", help="controles a aplicar y dejar: 'exposure_ms=1.953,gain=11'")
+    ap.add_argument("--tras-msmf", action="store_true",
+                    help="lee por DSHOW, captura por MSMF (--modo, --fps, --segundos) y relee")
+    ap.add_argument("--modo", help="un modo 'AnchoxAlto:FOURCC' para --tras-msmf")
     ap.add_argument("--salida", required=True, help="JSON de salida")
     ap.add_argument("--timeout", type=float, required=True, help="tope en segundos")
     args = ap.parse_args(argv)
@@ -505,17 +739,8 @@ def main(argv: list[str] | None = None) -> int:
     salida = Path(args.salida)
     estado: dict = {"fecha": time.strftime("%Y-%m-%d %H:%M:%S"), "argv": sys.argv[1:] if argv is None else argv}
 
-    if args.verificar_orden:
-        salida.parent.mkdir(parents=True, exist_ok=True)
-        vig = _vigilante(args.timeout, estado, salida)
-        estado["verificar_orden"] = verificar_orden()
-        vig.cancel()
-        salida.write_text(json.dumps(estado, indent=2, ensure_ascii=False), encoding="utf-8")
-        print(f"[sonda] guardado {salida}")
-        if not estado["verificar_orden"]:
-            print("[sonda] ERROR: Media Foundation no enumera ninguna camara de video")
-            return 1
-        return 0
+    if args.puertos or args.verificar_orden or args.leer or args.fijar or args.tras_msmf:
+        return _fase_2a(ap, args, estado, salida)
 
     faltan = [n for n in ("source", "backend", "controles") if getattr(args, n) is None]
     if faltan:

@@ -1,25 +1,34 @@
 # -*- coding: utf-8 -*-
 """
-camaras_uvc.py -- Enumera las camaras de video de Media Foundation (meta 002, fase 1).
+camaras_uvc.py -- Enumera las camaras de video por Media Foundation y por
+DirectShow, con la ruta fisica de su puerto USB (meta 002, fases 1 y 2a).
 
-Da, por cada camara, el indice (el mismo orden que usa cv2.CAP_MSMF), el
-nombre y el enlace simbolico, y de este saca VID, PID e instancia USB. Sirve
-para identificar cada camara SVPRO por su instancia (puerto USB fijo y
-etiquetado; clarify.md P1) en vez de confiar en el indice.
+Da, por cada camara, el indice (el mismo orden que usa cv2.CAP_MSMF o
+cv2.CAP_DSHOW, segun la lista), el nombre y el enlace simbolico; de este saca
+VID, PID e instancia USB, y por CfgMgr32 la ruta fisica del puerto
+(DEVPKEY_Device_LocationPaths del nodo USB, p. ej.
+`PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(2)`) y su ubicacion
+(`Port_#0002.Hub_#0001`). El perfil identifica cada camara SVPRO por la ruta
+del puerto (clarify.md P1 y revision 2 del plan): la instancia no sirve (la
+primera conectada toma la de la serie en cualquier puerto) y la serie es
+`01.00.00` en las dos.
 
-Sin dependencia nueva: ctypes sobre ole32, mfplat y mf. No abre ninguna
-camara: solo enumera (no activa el IMFActivate).
+Sin dependencia nueva: ctypes sobre ole32, mfplat, mf, cfgmgr32 y oleaut32.
+No abre ninguna camara: solo enumera.
 
 Por que el orden coincide con OpenCV: el backend MSMF de OpenCV abre la camara
 `index` tomando el elemento `index` de MFEnumDeviceSources con el atributo
-MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE = VIDCAP_GUID, que es lo que hace aqui
-listar_camaras_msmf(). Se verifica en vivo (sondear_camara.py --verificar-orden).
+MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE = VIDCAP_GUID (listar_camaras_msmf); el
+backend DSHOW toma el elemento `index` de ICreateDevEnum sobre
+CLSID_VideoInputDeviceCategory (listar_camaras_dshow). Los dos se verifican en
+vivo tapando una lente (sondear_camara.py --verificar-orden --backend ...).
 
 Uso (solo lista; no necesita argumentos):
     python iter4\\camaras_uvc.py
 """
 from __future__ import annotations
 
+import ctypes
 import re
 import sys
 import uuid
@@ -33,7 +42,7 @@ from dataclasses import dataclass
 #             MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK
 #   mfapi.h : MF_VERSION = (MF_SDK_VERSION << 16) | MF_API_VERSION = 0x00020070,
 #             MFSTARTUP_FULL = 0
-#   objbase.h: COINIT_MULTITHREADED = 0
+#   objbase.h: COINIT_MULTITHREADED = 0, CLSCTX_INPROC_SERVER = 1
 # El SDK no esta instalado en BigDaddy (2026-10-20): los valores se comprueban
 # en ejecucion (si un GUID estuviera mal, MFEnumDeviceSources o
 # GetAllocatedString devuelven un HRESULT de error y aqui se para).
@@ -46,7 +55,10 @@ MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_SYMBOLIC_LINK = "58f0aad8-22bf-4f8a-bb
 MF_VERSION = 0x00020070
 MFSTARTUP_FULL = 0
 COINIT_MULTITHREADED = 0x0
+CLSCTX_INPROC_SERVER = 0x1
 RPC_E_CHANGED_MODE = 0x80010106
+S_OK = 0
+S_FALSE = 1
 
 # Indices de la vtable (mfobjects.h, IMFAttributesVtbl; IMFActivate hereda de
 # IMFAttributes, asi que los mismos indices valen para el IMFActivate):
@@ -60,16 +72,65 @@ VT_RELEASE = 2
 VT_GET_ALLOCATED_STRING = 13
 VT_SET_GUID = 24
 
+# DirectShow (fase 2a). GUIDs de uuids.h / strmif.h / ocidl.h / oaidl.h; no
+# contrastados por Context7 (2026-10-21: el indice de Win32 devolvio
+# IMoniker::BindToStorage, IEnumMoniker::Next e IPropertyBag::Read, no
+# ICreateDevEnum): se verifican en vivo tapando una lente.
+CLSID_SYSTEM_DEVICE_ENUM = "62be5d10-60eb-11d0-bd3b-00a0c911ce86"
+IID_ICREATE_DEV_ENUM = "29840822-5b84-11d0-bd3b-00a0c911ce86"
+CLSID_VIDEO_INPUT_DEVICE_CATEGORY = "860bb310-5d01-11d0-bd3b-00a0c911ce86"
+IID_IPROPERTY_BAG = "55272a00-42cb-11ce-8135-00aa004bb851"
+# Vtables: ICreateDevEnum (strmif.h): 3 CreateClassEnumerator.
+# IEnumMoniker (objidl.h): 3 Next, 4 Skip, 5 Reset, 6 Clone.
+# IMoniker (objidl.h): IUnknown 0-2, IPersist 3 GetClassID, IPersistStream
+#   4 IsDirty, 5 Load, 6 Save, 7 GetSizeMax, IMoniker 8 BindToObject,
+#   9 BindToStorage, ...
+# IPropertyBag (oaidl.h): 3 Read, 4 Write.
+VT_CREATE_CLASS_ENUMERATOR = 3
+VT_ENUM_NEXT = 3
+VT_BIND_TO_STORAGE = 9
+VT_BAG_READ = 3
+VT_BSTR = 8
+
+# CfgMgr32 (fase 2a). DEVPROPKEY de devpkey.h (fmtid, pid):
+#   DEVPKEY_Device_InstanceId     {78c34fc8-104a-4aca-9ea4-524d52996e57}, 256
+#   DEVPKEY_Device_LocationInfo   {a45c254e-df1c-4efd-8020-67d146a850e0}, 15
+#   DEVPKEY_Device_LocationPaths  {a45c254e-df1c-4efd-8020-67d146a850e0}, 37
+# Tipos (devpropdef.h): DEVPROP_TYPE_STRING = 0x12,
+#   DEVPROP_TYPE_STRING_LIST = DEVPROP_TYPE_STRING | DEVPROP_TYPEMOD_LIST (0x2000).
+# CONFIGRET (cfgmgr32.h): CR_SUCCESS = 0, CR_BUFFER_SMALL = 0x1A.
+# Context7 (/microsoftdocs/windows-driver-docs, 2026-10-21): la cadena
+# CM_Get_Device_Interface_Property(InstanceId) -> CM_Locate_DevNode ->
+# CM_Get_DevNode_Property con el bucle por CR_BUFFER_SMALL es la del ejemplo
+# oficial; los valores de las DEVPKEY no vienen en Context7 y se comprueban en
+# ejecucion (un CONFIGRET distinto de CR_SUCCESS para).
+DEVPKEY_DEVICE_INSTANCE_ID = ("78c34fc8-104a-4aca-9ea4-524d52996e57", 256)
+DEVPKEY_DEVICE_LOCATION_INFO = ("a45c254e-df1c-4efd-8020-67d146a850e0", 15)
+DEVPKEY_DEVICE_LOCATION_PATHS = ("a45c254e-df1c-4efd-8020-67d146a850e0", 37)
+DEVPROP_TYPE_STRING = 0x12
+DEVPROP_TYPE_STRING_LIST = 0x2012
+CR_SUCCESS = 0
+CR_BUFFER_SMALL = 0x1A
+CM_LOCATE_DEVNODE_NORMAL = 0
+
 
 @dataclass
 class CamaraUVC:
-    """Una camara tal como la enumera Media Foundation."""
+    """Una camara tal como la enumera Media Foundation o DirectShow.
+
+    `ruta_puerto`, `ubicacion` e `instancia_usb` (fase 2a) son del nodo USB
+    (el padre del `MI_00` en un dispositivo compuesto); None si no es USB o
+    no se pidieron.
+    """
     indice: int
     nombre: str
     enlace: str
     vid: str | None
     pid: str | None
     instancia: str | None
+    ruta_puerto: str | None = None
+    ubicacion: str | None = None
+    instancia_usb: str | None = None
 
 
 # ----------------------------------------------------------------------------
@@ -97,39 +158,61 @@ def extraer_ids(enlace: str) -> tuple[str | None, str | None, str | None]:
     return m.group(1).upper(), m.group(2).upper(), m.group(3).upper()
 
 
-def resolver_indice(device_id: str, camaras: list[CamaraUVC]) -> int:
-    """El indice de la unica camara cuya instancia contiene `device_id`.
+def primera_ruta(multi_sz: str | None) -> str | None:
+    """El primer elemento no vacio de una DEVPROP_TYPE_STRING_LIST (separada por NUL)."""
+    if not multi_sz:
+        return None
+    for trozo in multi_sz.split("\0"):
+        if trozo.strip():
+            return trozo.strip()
+    return None
 
-    La comparacion no distingue mayusculas. ValueError si ninguna o mas de una
-    coinciden (principio 7: no se adivina cual abrir).
+
+def resolver_indice(puerto: str, camaras: list[CamaraUVC]) -> int:
+    """El indice de la unica camara cuya `ruta_puerto` es igual a `puerto`.
+
+    Igualdad sin distinguir mayusculas, no subcadena: la ruta de un puerto es
+    prefijo de la de un puerto de un hub colgado de el. ValueError si ninguna
+    o mas de una coinciden (principio 7: no se adivina cual abrir).
     """
-    if not device_id or not str(device_id).strip():
-        raise ValueError("device_id vacio")
-    buscado = str(device_id).strip().upper()
+    if not puerto or not str(puerto).strip():
+        raise ValueError("puerto vacio")
+    buscado = str(puerto).strip().upper()
     hallados = [c for c in camaras
-                if c.instancia is not None and buscado in c.instancia.upper()]
+                if c.ruta_puerto is not None and c.ruta_puerto.strip().upper() == buscado]
     if len(hallados) == 1:
         return hallados[0].indice
-    lista = "; ".join(f"{c.indice}: {c.nombre} [{c.instancia}]" for c in camaras) \
+    lista = "; ".join(f"{c.indice}: {c.nombre} [{c.ruta_puerto}]" for c in camaras) \
         or "ninguna camara enumerada"
     if not hallados:
-        raise ValueError(f"device_id '{device_id}' no coincide con ninguna "
-                         f"camara conectada ({lista})")
-    raise ValueError(f"device_id '{device_id}' coincide con {len(hallados)} "
-                     f"camaras ({lista}); hace falta un trozo mas largo")
+        raise ValueError(f"el puerto '{puerto}' no coincide con ninguna camara "
+                         f"conectada ({lista})")
+    raise ValueError(f"el puerto '{puerto}' coincide con {len(hallados)} camaras "
+                     f"({lista}); no puede ser")
 
 
 # ----------------------------------------------------------------------------
-# Enumeracion por Media Foundation (ctypes, solo Windows)
+# COM por ctypes (solo Windows)
 # ----------------------------------------------------------------------------
 
-def _guid(texto: str):
-    import ctypes
+class GUID(ctypes.Structure):
+    _fields_ = [("Data1", ctypes.c_uint32), ("Data2", ctypes.c_uint16),
+                ("Data3", ctypes.c_uint16), ("Data4", ctypes.c_ubyte * 8)]
 
-    class GUID(ctypes.Structure):
-        _fields_ = [("Data1", ctypes.c_uint32), ("Data2", ctypes.c_uint16),
-                    ("Data3", ctypes.c_uint16), ("Data4", ctypes.c_ubyte * 8)]
 
+class DEVPROPKEY(ctypes.Structure):
+    """devpropdef.h: {GUID fmtid; DEVPROPID pid;}."""
+    _fields_ = [("fmtid", GUID), ("pid", ctypes.c_uint32)]
+
+
+class VARIANT(ctypes.Structure):
+    """oaidl.h en x64: vt + 3 reservados (8 bytes) + union de 16 bytes (24 en total)."""
+    _fields_ = [("vt", ctypes.c_ushort), ("r1", ctypes.c_ushort),
+                ("r2", ctypes.c_ushort), ("r3", ctypes.c_ushort),
+                ("bstrVal", ctypes.c_void_p), ("r4", ctypes.c_void_p)]
+
+
+def _guid(texto: str) -> GUID:
     u = uuid.UUID(texto)
     g = GUID()
     g.Data1 = u.time_low
@@ -147,20 +230,45 @@ def _hr_ok(hr: int, que: str) -> None:
 
 def _metodo(obj, indice: int, restype, *argtypes):
     """La funcion `indice` de la vtable del objeto COM `obj` (c_void_p)."""
-    import ctypes
     vtbl = ctypes.cast(obj, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
     proto = ctypes.WINFUNCTYPE(restype, ctypes.c_void_p, *argtypes)
     return proto(vtbl[indice])
 
 
 def _release(obj) -> None:
-    import ctypes
     if obj:
         _metodo(obj, VT_RELEASE, ctypes.c_ulong)(obj)
 
 
+def _ole32():
+    ole32 = ctypes.WinDLL("ole32")
+    ole32.CoInitializeEx.restype = ctypes.c_long
+    ole32.CoInitializeEx.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+    ole32.CoUninitialize.restype = None
+    ole32.CoTaskMemFree.restype = None
+    ole32.CoTaskMemFree.argtypes = [ctypes.c_void_p]
+    ole32.CoCreateInstance.restype = ctypes.c_long
+    ole32.CoCreateInstance.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32,
+                                       ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)]
+    return ole32
+
+
+def _com_iniciar(ole32) -> bool:
+    """CoInitializeEx; True si este hilo lo inicializo (y hay que cerrarlo)."""
+    hr = ole32.CoInitializeEx(None, COINIT_MULTITHREADED)
+    # S_OK (0) o S_FALSE (1): este hilo lo inicializo y hay que cerrarlo.
+    # RPC_E_CHANGED_MODE: COM ya estaba en otro modo; se usa tal cual.
+    com_propio = hr in (S_OK, S_FALSE)
+    if not com_propio and (hr & 0xFFFFFFFF) != RPC_E_CHANGED_MODE:
+        _hr_ok(hr, "CoInitializeEx")
+    return com_propio
+
+
+# ----------------------------------------------------------------------------
+# Enumeracion por Media Foundation
+# ----------------------------------------------------------------------------
+
 def _cadena(activate, guid_txt: str, ole32) -> str:
-    import ctypes
     valor = ctypes.c_wchar_p()
     largo = ctypes.c_uint32(0)
     clave = _guid(guid_txt)
@@ -175,24 +283,19 @@ def _cadena(activate, guid_txt: str, ole32) -> str:
         ole32.CoTaskMemFree(valor)
 
 
-def listar_camaras_msmf() -> list[CamaraUVC]:
+def listar_camaras_msmf(con_puerto: bool = True) -> list[CamaraUVC]:
     """Las camaras de video de Media Foundation, en el orden del indice MSMF.
 
-    Falla fuerte (OSError) si COM o Media Foundation no inicializan o si una
-    llamada devuelve error. No abre ninguna camara.
+    Con `con_puerto`, cada camara USB lleva su ruta de puerto (datos_puerto).
+    Falla fuerte (OSError) si COM, Media Foundation o CfgMgr32 fallan. No
+    abre ninguna camara.
     """
     if sys.platform != "win32":
         raise OSError("[camaras_uvc] solo Windows (Media Foundation)")
-    import ctypes
 
-    ole32 = ctypes.WinDLL("ole32")
+    ole32 = _ole32()
     mfplat = ctypes.WinDLL("mfplat")
     mf = ctypes.WinDLL("mf")
-    ole32.CoInitializeEx.restype = ctypes.c_long
-    ole32.CoInitializeEx.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
-    ole32.CoUninitialize.restype = None
-    ole32.CoTaskMemFree.restype = None
-    ole32.CoTaskMemFree.argtypes = [ctypes.c_void_p]
     mfplat.MFStartup.restype = ctypes.c_long
     mfplat.MFStartup.argtypes = [ctypes.c_ulong, ctypes.c_uint32]
     mfplat.MFShutdown.restype = ctypes.c_long
@@ -203,25 +306,22 @@ def listar_camaras_msmf() -> list[CamaraUVC]:
         ctypes.c_void_p, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p)),
         ctypes.POINTER(ctypes.c_uint32)]
 
-    hr = ole32.CoInitializeEx(None, COINIT_MULTITHREADED)
-    # S_OK (0) o S_FALSE (1): este hilo lo inicializo y hay que cerrarlo.
-    # RPC_E_CHANGED_MODE: COM ya estaba en otro modo; se usa tal cual.
-    com_propio = hr in (0, 1)
-    if not com_propio and (hr & 0xFFFFFFFF) != RPC_E_CHANGED_MODE:
-        _hr_ok(hr, "CoInitializeEx")
+    com_propio = _com_iniciar(ole32)
     try:
         _hr_ok(mfplat.MFStartup(MF_VERSION, MFSTARTUP_FULL), "MFStartup")
         try:
-            return _enumerar(ole32, mfplat, mf)
+            camaras = _enumerar(ole32, mfplat, mf)
         finally:
             mfplat.MFShutdown()
     finally:
         if com_propio:
             ole32.CoUninitialize()
+    if con_puerto:
+        _anotar_puertos(camaras)
+    return camaras
 
 
 def _enumerar(ole32, mfplat, mf) -> list[CamaraUVC]:
-    import ctypes
     attrs = ctypes.c_void_p()
     _hr_ok(mfplat.MFCreateAttributes(ctypes.byref(attrs), 1), "MFCreateAttributes")
     arreglo = ctypes.POINTER(ctypes.c_void_p)()
@@ -254,17 +354,258 @@ def _enumerar(ole32, mfplat, mf) -> list[CamaraUVC]:
         _release(attrs)
 
 
+# ----------------------------------------------------------------------------
+# Enumeracion por DirectShow (fase 2a)
+# ----------------------------------------------------------------------------
+
+def listar_camaras_dshow(con_puerto: bool = True) -> list[CamaraUVC]:
+    """Las camaras de video de DirectShow, en el orden del indice DSHOW de OpenCV.
+
+    ICreateDevEnum -> CreateClassEnumerator(CLSID_VideoInputDeviceCategory) ->
+    IEnumMoniker::Next -> IMoniker::BindToStorage(IPropertyBag) ->
+    Read("FriendlyName") y Read("DevicePath"). `enlace` es el DevicePath.
+    Falla fuerte (OSError) si COM falla. No abre ninguna camara.
+    """
+    if sys.platform != "win32":
+        raise OSError("[camaras_uvc] solo Windows (DirectShow)")
+
+    ole32 = _ole32()
+    oleaut32 = ctypes.WinDLL("oleaut32")
+    oleaut32.VariantClear.restype = ctypes.c_long
+    oleaut32.VariantClear.argtypes = [ctypes.c_void_p]
+
+    com_propio = _com_iniciar(ole32)
+    try:
+        camaras = _enumerar_dshow(ole32, oleaut32)
+    finally:
+        if com_propio:
+            ole32.CoUninitialize()
+    if con_puerto:
+        _anotar_puertos(camaras)
+    return camaras
+
+
+def _enumerar_dshow(ole32, oleaut32) -> list[CamaraUVC]:
+    dev_enum = ctypes.c_void_p()
+    clsid = _guid(CLSID_SYSTEM_DEVICE_ENUM)
+    iid = _guid(IID_ICREATE_DEV_ENUM)
+    _hr_ok(ole32.CoCreateInstance(ctypes.byref(clsid), None, CLSCTX_INPROC_SERVER,
+                                  ctypes.byref(iid), ctypes.byref(dev_enum)),
+           "CoCreateInstance(SystemDeviceEnum)")
+    enum_mk = ctypes.c_void_p()
+    try:
+        categoria = _guid(CLSID_VIDEO_INPUT_DEVICE_CATEGORY)
+        crear = _metodo(dev_enum, VT_CREATE_CLASS_ENUMERATOR, ctypes.c_long,
+                        ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p), ctypes.c_uint32)
+        hr = crear(dev_enum, ctypes.byref(categoria), ctypes.byref(enum_mk), 0)
+        _hr_ok(hr, "ICreateDevEnum::CreateClassEnumerator")
+        if hr == S_FALSE or not enum_mk:
+            return []    # ninguna camara en la categoria
+        siguiente = _metodo(enum_mk, VT_ENUM_NEXT, ctypes.c_long, ctypes.c_ulong,
+                            ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_ulong))
+        camaras = []
+        i = 0
+        while True:
+            moniker = ctypes.c_void_p()
+            traidos = ctypes.c_ulong(0)
+            hr = siguiente(enum_mk, 1, ctypes.byref(moniker), ctypes.byref(traidos))
+            _hr_ok(hr, "IEnumMoniker::Next")
+            if hr != S_OK or traidos.value != 1 or not moniker:
+                break
+            try:
+                nombre, enlace = _propiedades_moniker(moniker, oleaut32)
+            finally:
+                _release(moniker)
+            vid, pid, inst = extraer_ids(enlace)
+            camaras.append(CamaraUVC(i, nombre, enlace, vid, pid, inst))
+            i += 1
+        return camaras
+    finally:
+        _release(enum_mk)
+        _release(dev_enum)
+
+
+def _propiedades_moniker(moniker, oleaut32) -> tuple[str, str]:
+    """FriendlyName y DevicePath del IPropertyBag de un moniker de DirectShow."""
+    bag = ctypes.c_void_p()
+    iid = _guid(IID_IPROPERTY_BAG)
+    bind = _metodo(moniker, VT_BIND_TO_STORAGE, ctypes.c_long, ctypes.c_void_p,
+                   ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p))
+    _hr_ok(bind(moniker, None, None, ctypes.byref(iid), ctypes.byref(bag)),
+           "IMoniker::BindToStorage(IPropertyBag)")
+    leer = _metodo(bag, VT_BAG_READ, ctypes.c_long, ctypes.c_wchar_p,
+                   ctypes.POINTER(VARIANT), ctypes.c_void_p)
+    try:
+        valores = []
+        for propiedad in ("FriendlyName", "DevicePath"):
+            var = VARIANT()
+            hr = leer(bag, propiedad, ctypes.byref(var), None)
+            try:
+                if hr < 0:
+                    valores.append("")   # una camara virtual puede no tener DevicePath
+                elif var.vt != VT_BSTR or not var.bstrVal:
+                    raise OSError(f"[camaras_uvc] IPropertyBag::Read({propiedad}) "
+                                  f"no devolvio un BSTR (vt={var.vt})")
+                else:
+                    valores.append(ctypes.wstring_at(var.bstrVal))
+            finally:
+                oleaut32.VariantClear(ctypes.byref(var))
+        return valores[0], valores[1]
+    finally:
+        _release(bag)
+
+
+# ----------------------------------------------------------------------------
+# La ruta fisica del puerto por CfgMgr32 (fase 2a)
+# ----------------------------------------------------------------------------
+
+def _anotar_puertos(camaras: list[CamaraUVC]) -> None:
+    for c in camaras:
+        c.ruta_puerto, c.ubicacion, c.instancia_usb = datos_puerto(c.enlace)
+
+
+class _CfgMgr:
+    """Las llamadas de cfgmgr32.dll que hacen falta, con sus prototipos."""
+
+    def __init__(self) -> None:
+        ct = ctypes
+        dll = ct.WinDLL("cfgmgr32")
+        dll.CM_Get_Device_Interface_PropertyW.restype = ct.c_uint32
+        dll.CM_Get_Device_Interface_PropertyW.argtypes = [
+            ct.c_wchar_p, ct.c_void_p, ct.POINTER(ct.c_uint32), ct.c_void_p,
+            ct.POINTER(ct.c_uint32), ct.c_uint32]
+        dll.CM_Locate_DevNodeW.restype = ct.c_uint32
+        dll.CM_Locate_DevNodeW.argtypes = [ct.POINTER(ct.c_uint32), ct.c_wchar_p, ct.c_uint32]
+        dll.CM_Get_Parent.restype = ct.c_uint32
+        dll.CM_Get_Parent.argtypes = [ct.POINTER(ct.c_uint32), ct.c_uint32, ct.c_uint32]
+        dll.CM_Get_Device_ID_Size.restype = ct.c_uint32
+        dll.CM_Get_Device_ID_Size.argtypes = [ct.POINTER(ct.c_uint32), ct.c_uint32, ct.c_uint32]
+        dll.CM_Get_Device_IDW.restype = ct.c_uint32
+        dll.CM_Get_Device_IDW.argtypes = [ct.c_uint32, ct.c_wchar_p, ct.c_uint32, ct.c_uint32]
+        dll.CM_Get_DevNode_PropertyW.restype = ct.c_uint32
+        dll.CM_Get_DevNode_PropertyW.argtypes = [
+            ct.c_uint32, ct.c_void_p, ct.POINTER(ct.c_uint32), ct.c_void_p,
+            ct.POINTER(ct.c_uint32), ct.c_uint32]
+        self.dll = dll
+
+    @staticmethod
+    def _clave(devpkey: tuple[str, int]) -> DEVPROPKEY:
+        k = DEVPROPKEY()
+        k.fmtid = _guid(devpkey[0])
+        k.pid = devpkey[1]
+        return k
+
+    def _propiedad(self, llamar, devpkey: tuple[str, int], que: str) -> str:
+        """Una propiedad STRING o STRING_LIST (como str con NUL) con el bucle por CR_BUFFER_SMALL."""
+        clave = self._clave(devpkey)
+        tipo = ctypes.c_uint32(0)
+        tam = ctypes.c_uint32(0)
+        cr = llamar(ctypes.byref(clave), ctypes.byref(tipo), None, ctypes.byref(tam))
+        if cr != CR_BUFFER_SMALL:
+            raise OSError(f"[camaras_uvc] {que}: CONFIGRET 0x{cr:02X} al pedir el tamano")
+        buf = ctypes.create_unicode_buffer(max(tam.value // 2, 1) + 1)
+        tam = ctypes.c_uint32(ctypes.sizeof(buf))
+        cr = llamar(ctypes.byref(clave), ctypes.byref(tipo), buf, ctypes.byref(tam))
+        if cr != CR_SUCCESS:
+            raise OSError(f"[camaras_uvc] {que}: CONFIGRET 0x{cr:02X}")
+        if tipo.value not in (DEVPROP_TYPE_STRING, DEVPROP_TYPE_STRING_LIST):
+            raise OSError(f"[camaras_uvc] {que}: tipo DEVPROP 0x{tipo.value:X}, no STRING")
+        return buf[:tam.value // 2]
+
+    def instancia_de_interfaz(self, enlace: str) -> str:
+        """DEVPKEY_Device_InstanceId del enlace simbolico (con o sin el sufijo `\\global`)."""
+        dll = self.dll
+        intentos = [enlace]
+        if enlace.lower().endswith("\\global"):
+            intentos.append(enlace[:-len("\\global")])
+        ultimo = None
+        for ruta in intentos:
+            try:
+                return self._propiedad(
+                    lambda k, t, b, s: dll.CM_Get_Device_Interface_PropertyW(ruta, k, t, b, s, 0),
+                    DEVPKEY_DEVICE_INSTANCE_ID, "CM_Get_Device_Interface_PropertyW(InstanceId)"
+                ).rstrip("\0")
+            except OSError as e:
+                ultimo = e
+        raise OSError(f"{ultimo} (enlace {enlace!r})")
+
+    def nodo(self, instancia: str) -> int:
+        dev = ctypes.c_uint32(0)
+        cr = self.dll.CM_Locate_DevNodeW(ctypes.byref(dev), instancia, CM_LOCATE_DEVNODE_NORMAL)
+        if cr != CR_SUCCESS:
+            raise OSError(f"[camaras_uvc] CM_Locate_DevNodeW({instancia!r}): CONFIGRET 0x{cr:02X}")
+        return dev.value
+
+    def padre(self, dev: int) -> int:
+        p = ctypes.c_uint32(0)
+        cr = self.dll.CM_Get_Parent(ctypes.byref(p), dev, 0)
+        if cr != CR_SUCCESS:
+            raise OSError(f"[camaras_uvc] CM_Get_Parent: CONFIGRET 0x{cr:02X}")
+        return p.value
+
+    def instancia(self, dev: int) -> str:
+        n = ctypes.c_uint32(0)
+        cr = self.dll.CM_Get_Device_ID_Size(ctypes.byref(n), dev, 0)
+        if cr != CR_SUCCESS:
+            raise OSError(f"[camaras_uvc] CM_Get_Device_ID_Size: CONFIGRET 0x{cr:02X}")
+        buf = ctypes.create_unicode_buffer(n.value + 1)
+        cr = self.dll.CM_Get_Device_IDW(dev, buf, n.value + 1, 0)
+        if cr != CR_SUCCESS:
+            raise OSError(f"[camaras_uvc] CM_Get_Device_IDW: CONFIGRET 0x{cr:02X}")
+        return buf.value
+
+    def propiedad_nodo(self, dev: int, devpkey: tuple[str, int], que: str) -> str:
+        dll = self.dll
+        return self._propiedad(
+            lambda k, t, b, s: dll.CM_Get_DevNode_PropertyW(dev, k, t, b, s, 0), devpkey, que)
+
+
+def datos_puerto(enlace: str) -> tuple[str | None, str | None, str | None]:
+    """(ruta_puerto, ubicacion, instancia_usb) del nodo USB de un enlace simbolico.
+
+    Vale para el enlace de Media Foundation y para el DevicePath de DirectShow.
+    El nodo USB es el padre del `MI_00` (dispositivo compuesto) o el propio nodo
+    si no es compuesto. Si el enlace no es USB (camara virtual), (None, None,
+    None); un CONFIGRET de error en una camara USB levanta OSError.
+    """
+    if sys.platform != "win32":
+        raise OSError("[camaras_uvc] solo Windows (CfgMgr32)")
+    vid, _pid, _inst = extraer_ids(enlace)
+    if vid is None:
+        return None, None, None
+    cm = _CfgMgr()
+    instancia = cm.instancia_de_interfaz(enlace)
+    dev = cm.nodo(instancia)
+    if "&MI_" in instancia.upper():
+        dev = cm.padre(dev)
+    instancia_usb = cm.instancia(dev)
+    rutas = cm.propiedad_nodo(dev, DEVPKEY_DEVICE_LOCATION_PATHS, "DEVPKEY_Device_LocationPaths")
+    ubicacion = cm.propiedad_nodo(dev, DEVPKEY_DEVICE_LOCATION_INFO, "DEVPKEY_Device_LocationInfo")
+    return primera_ruta(rutas), ubicacion.rstrip("\0") or None, instancia_usb
+
+
 def main() -> int:
+    rc = 0
     try:
         camaras = listar_camaras_msmf()
     except OSError as e:
-        print(f"[camaras_uvc] ERROR: {e}")
+        print(f"[camaras_uvc] ERROR (MSMF): {e}")
         return 1
     print(f"[camaras_uvc] {len(camaras)} camara(s) de video (orden del indice MSMF):")
     for c in camaras:
         print(f"  {c.indice}: {c.nombre}  VID={c.vid} PID={c.pid} instancia={c.instancia}")
+        print(f"      puerto: {c.ruta_puerto}  ubicacion: {c.ubicacion}  usb: {c.instancia_usb}")
         print(f"      enlace: {c.enlace}")
-    return 0
+    try:
+        dshow = listar_camaras_dshow()
+    except OSError as e:
+        print(f"[camaras_uvc] ERROR (DSHOW): {e}")
+        return 1
+    print(f"[camaras_uvc] {len(dshow)} camara(s) de video (orden del indice DSHOW):")
+    for c in dshow:
+        print(f"  {c.indice}: {c.nombre}  instancia={c.instancia}  puerto: {c.ruta_puerto}")
+        print(f"      enlace: {c.enlace}")
+    return rc
 
 
 if __name__ == "__main__":

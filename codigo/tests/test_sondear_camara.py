@@ -297,3 +297,283 @@ def test_main_para_si_el_tope_no_alcanza(tmp_path, capsys) -> None:
                  "--modos", modos, "--fps", "90", "--segundos", "5",
                  "--salida", str(tmp_path / "s.json"), "--timeout", "300"])
     assert "el tope no alcanza" in capsys.readouterr().err
+
+
+# ----------------------------------------------------------------------------
+# Fase 2a: nitidez, marca, --puertos, --leer, --fijar, --tras-msmf, --verificar-orden
+# ----------------------------------------------------------------------------
+
+PUERTO_1 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(2)"
+PUERTO_2 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(3)"
+
+
+def _json(ruta):
+    import json
+    return json.loads(ruta.read_text(encoding="utf-8"))
+
+
+def _camara(indice: int, puerto: str, nombre: str = "Global Shutter Camera"):
+    import camaras_uvc as cu
+    return cu.CamaraUVC(indice, nombre, "x", "32E4", "0234", "6&1", puerto,
+                        "Port_#0002.Hub_#0001", "USB_VID_32E4_PID_0234_01.00.00")
+
+
+def test_controles_vienen_de_ajustes_camara() -> None:
+    import ajustes_camara
+    assert sc.CONTROLES is ajustes_camara.CONTROLES_SONDA
+
+
+def test_nitidez_sube_con_el_detalle() -> None:
+    lisa = np.full((64, 64, 3), 100, np.uint8)
+    rayas = lisa.copy()
+    rayas[:, ::2] = 200
+    assert sc.nitidez(lisa) == 0.0
+    assert sc.nitidez(rayas) > 100.0
+    assert sc.nitidez(rayas[:, :, 0]) == pytest.approx(sc.nitidez(rayas), rel=0.05)
+
+
+class VCTestigo:
+    """Entrega n frames con rayas (brillo 150) y luego nada."""
+
+    def __init__(self, *a, n: int = 5) -> None:
+        self.n = n
+
+    def isOpened(self) -> bool:
+        return True
+
+    def set(self, *a) -> bool:
+        return True
+
+    def get(self, *a) -> float:
+        return 0.0
+
+    def read(self):
+        if self.n <= 0:
+            return False, None
+        self.n -= 1
+        f = np.full((8, 16, 3), 100, np.uint8)
+        f[:, ::2] = 200
+        return True, f
+
+    def release(self) -> None:
+        pass
+
+
+def test_testigo_trae_nitidez_y_tamano() -> None:
+    t = sc.testigo(VCTestigo(), 0.05)
+    assert t["frames"] == 5 and t["brillo"] == 150.0 and t["nitidez"] > 0
+    assert t["real"] == {"ancho": 16, "alto": 8}
+
+
+def test_comparar_marca() -> None:
+    antes = {"brillo": 100.0, "fps": 90.0, "nitidez": 200.0}
+    assert sc.comparar_marca(antes, {"brillo": 101.5, "fps": 80.0, "nitidez": 203.0}) == []
+    difs = sc.comparar_marca(antes, {"brillo": 103.0, "fps": 89.0, "nitidez": 190.0})
+    assert [d.split(":")[0] for d in difs] == ["brillo", "nitidez"]
+    # Sin tol_nitidez (los testigos de la fase 1), la nitidez no se compara.
+    assert sc.comparar_testigos(antes, {"brillo": 100.0, "fps": 90.0}) == []
+
+
+def test_parsear_fijar() -> None:
+    c = sc.parsear_fijar("exposure_ms=1.953, gain=11,auto_white_balance=false")
+    assert c == {"exposure_ms": 1.953, "gain": 11.0, "auto_white_balance": False,
+                 "exposure_manual": True}
+    assert sc.parsear_fijar("focus=200") == {"focus": 200.0}
+
+
+@pytest.mark.parametrize("texto", ["", "gain", "gain=x", "auto_exposure=0", "exposure_ms=5.0"])
+def test_parsear_fijar_mal(texto: str) -> None:
+    with pytest.raises(ValueError):
+        sc.parsear_fijar(texto)
+
+
+def test_main_un_modo_de_la_2a_por_corrida(tmp_path) -> None:
+    with pytest.raises(SystemExit):
+        sc.main(["--puertos", "--leer", "--puerto", PUERTO_1,
+                 "--salida", str(tmp_path / "s.json"), "--timeout", "10"])
+
+
+def test_main_verificar_orden_exige_backend(tmp_path) -> None:
+    with pytest.raises(SystemExit):
+        sc.main(["--verificar-orden", "--salida", str(tmp_path / "s.json"), "--timeout", "10"])
+
+
+@pytest.mark.parametrize("modo", ["--leer", "--tras-msmf"])
+def test_main_leer_y_tras_msmf_exigen_puerto(tmp_path, modo: str) -> None:
+    with pytest.raises(SystemExit):
+        sc.main([modo, "--salida", str(tmp_path / "s.json"), "--timeout", "10"])
+
+
+def test_main_puertos(monkeypatch, tmp_path) -> None:
+    import camaras_uvc as cu
+    cam = _camara(0, PUERTO_1)
+    monkeypatch.setattr(cu, "listar_camaras_msmf", lambda con_puerto=True: [cam])
+    monkeypatch.setattr(cu, "listar_camaras_dshow", lambda con_puerto=True: [cam])
+    rc = sc.main(["--puertos", "--salida", str(tmp_path / "p.json"), "--timeout", "10"])
+    assert rc == 0
+    d = _json(tmp_path / "p.json")
+    assert d["modo"] == "puertos"
+    assert d["puertos"]["MSMF"][0]["ruta_puerto"] == PUERTO_1
+    assert d["puertos"]["DSHOW"][0]["instancia_usb"].endswith("01.00.00")
+
+
+def test_main_puertos_con_error_de_un_backend(monkeypatch, tmp_path) -> None:
+    import camaras_uvc as cu
+    monkeypatch.setattr(cu, "listar_camaras_msmf", lambda con_puerto=True: [])
+
+    def roto(con_puerto=True):
+        raise OSError("COM no inicializa")
+    monkeypatch.setattr(cu, "listar_camaras_dshow", roto)
+    rc = sc.main(["--puertos", "--salida", str(tmp_path / "p.json"), "--timeout", "10"])
+    assert rc == 1
+    d = _json(tmp_path / "p.json")
+    assert d["puertos"]["DSHOW"] == {"error": "COM no inicializa"} and d["puertos"]["MSMF"] == []
+
+
+class CapaFalsa:
+    """Una capa de ajustes que recuerda lo que le piden; `estado` es lo que 'tiene la camara'."""
+
+    def __init__(self, estado: dict) -> None:
+        self.estado = dict(estado)
+        self.aplicados: list[dict] = []
+        self.lecturas = 0
+
+    def leer(self, puerto, nombres):
+        self.lecturas += 1
+        return {n: self.estado.get(n, 0.0) for n in nombres}
+
+    def aplicar(self, puerto, controls):
+        import ajustes_camara
+        self.aplicados.append(dict(controls))
+        v = ajustes_camara.validar_controles(controls)
+        escritos = [n for n in v if n != "exposure_manual" and self.estado.get(n) != v[n]]
+        self.estado.update({n: v[n] for n in escritos})
+        return {"indice": 0, "antes": {}, "leidos": dict(self.estado), "escritos": escritos,
+                "set_false": [], "diferencias": [], "segundos": 0.5}
+
+
+def test_main_fijar_guarda_lo_escrito(monkeypatch, tmp_path) -> None:
+    import ajustes_camara
+    capa = CapaFalsa({"exposure_ms": 3.9062, "gain": 12.0})
+    monkeypatch.setattr(ajustes_camara, "CapaWindowsDShow", lambda: capa)
+    rc = sc.main(["--fijar", "exposure_ms=1.953,gain=12", "--puerto", PUERTO_1,
+                  "--salida", str(tmp_path / "f.json"), "--timeout", "10"])
+    assert rc == 0
+    d = _json(tmp_path / "f.json")
+    assert d["fijar"]["controls"] == {"exposure_ms": 1.953, "gain": 12.0, "exposure_manual": True}
+    assert d["fijar"]["escritos"] == ["exposure_ms"] and d["fijar"]["segundos"] == 0.5
+    assert capa.aplicados == [d["fijar"]["controls"]]
+
+
+def test_main_fijar_que_no_aplica_devuelve_1_y_guarda(monkeypatch, tmp_path) -> None:
+    import ajustes_camara
+
+    class CapaQueFalla(CapaFalsa):
+        def aplicar(self, puerto, controls):
+            raise ajustes_camara.AjustesNoAplicados(
+                "gain: declarado 12, leido 0",
+                {"leidos": {"gain": 0.0}, "escritos": ["gain"], "set_false": ["gain"], "segundos": 0.4})
+    monkeypatch.setattr(ajustes_camara, "CapaWindowsDShow", lambda: CapaQueFalla({}))
+    rc = sc.main(["--fijar", "gain=12", "--puerto", PUERTO_1,
+                  "--salida", str(tmp_path / "f.json"), "--timeout", "10"])
+    assert rc == 1
+    d = _json(tmp_path / "f.json")
+    assert d["fijar"]["set_false"] == ["gain"] and "declarado 12" in d["fijar"]["error"]
+
+
+def test_main_leer(monkeypatch, tmp_path) -> None:
+    import ajustes_camara
+    capa = CapaFalsa({"exposure_ms": 3.9062, "gain": 12.0, "focus": 332.0})
+    monkeypatch.setattr(ajustes_camara, "CapaWindowsDShow", lambda: capa)
+    rc = sc.main(["--leer", "--puerto", PUERTO_2, "--salida", str(tmp_path / "l.json"), "--timeout", "10"])
+    assert rc == 0
+    d = _json(tmp_path / "l.json")
+    assert d["leer"]["leidos"]["focus"] == 332.0 and d["leer"]["puerto"] == PUERTO_2
+    assert set(d["leer"]["leidos"]) == set(ajustes_camara.CONTROLES_CV2)
+
+
+def _preparar_tras_msmf(monkeypatch, capa, vc) -> None:
+    import ajustes_camara
+    import camaras_uvc as cu
+    monkeypatch.setattr(ajustes_camara, "CapaWindowsDShow", lambda: capa)
+    monkeypatch.setattr(cu, "listar_camaras_msmf", lambda con_puerto=True: [_camara(1, PUERTO_1)])
+    monkeypatch.setattr(sc.cv2, "VideoCapture", vc)
+
+
+def test_tras_msmf_sin_diferencias(monkeypatch, tmp_path) -> None:
+    capa = CapaFalsa({"exposure_ms": 3.9062, "gain": 12.0})
+    abiertos: list[tuple] = []
+
+    class VC(VCTestigo):
+        def __init__(self, *a) -> None:
+            abiertos.append(a)
+            super().__init__(n=20)
+    _preparar_tras_msmf(monkeypatch, capa, VC)
+    rc = sc.main(["--tras-msmf", "--puerto", PUERTO_1, "--modo", "640x480:MJPG", "--fps", "90",
+                  "--segundos", "0.05", "--salida", str(tmp_path / "t.json"), "--timeout", "10"])
+    assert rc == 0
+    assert abiertos == [(1, sc.cv2.CAP_MSMF)]        # el indice MSMF del puerto, por MSMF
+    t = _json(tmp_path / "t.json")["tras_msmf"]
+    assert t["antes"] == t["despues"] and t["diferencias"] == [] and capa.lecturas == 2
+    assert t["msmf"]["pedido"] == {"ancho": 640, "alto": 480, "fourcc": "MJPG", "fps": 90.0}
+    assert t["msmf"]["testigo"]["real"] == {"ancho": 16, "alto": 8} and "total_s" in t["msmf"]
+
+
+def test_tras_msmf_con_diferencias_devuelve_1(monkeypatch, tmp_path) -> None:
+    class CapaQueMSMFPisa(CapaFalsa):
+        def leer(self, puerto, nombres):
+            r = super().leer(puerto, nombres)
+            self.estado["exposure_ms"] = 15.625     # la "camara" vuelve a -6 tras la primera lectura
+            return r
+    _preparar_tras_msmf(monkeypatch, CapaQueMSMFPisa({"exposure_ms": 3.9062, "gain": 12.0}), VCTestigo)
+    rc = sc.main(["--tras-msmf", "--puerto", PUERTO_1, "--modo", "640x480:MJPG", "--fps", "90",
+                  "--segundos", "0.05", "--salida", str(tmp_path / "t.json"), "--timeout", "10"])
+    assert rc == 1
+    t = _json(tmp_path / "t.json")["tras_msmf"]
+    assert t["diferencias"] == ["exposure_ms: declarado 3.9062, leido 15.625"]
+
+
+def test_tras_msmf_deja_lo_medido_en_el_estado_del_vigilante(monkeypatch, tmp_path) -> None:
+    """B25 no se repite: el estado del vigilante ya trae `antes` y `msmf` si la captura se cuelga."""
+    import json
+    capa = CapaFalsa({"exposure_ms": 3.9062})
+    visto: dict = {}
+
+    class VigilanteFalso:
+        def cancel(self) -> None:
+            pass
+
+    def vigilante(timeout, estado, salida):
+        visto["estado"] = estado
+        return VigilanteFalso()
+
+    class VCColgado(VCTestigo):
+        def read(self):
+            raise KeyboardInterrupt    # la captura no vuelve; el vigilante haria os._exit
+    _preparar_tras_msmf(monkeypatch, capa, VCColgado)
+    monkeypatch.setattr(sc, "_vigilante", vigilante)
+    with pytest.raises(KeyboardInterrupt):
+        sc.main(["--tras-msmf", "--puerto", PUERTO_1, "--modo", "640x480:MJPG", "--fps", "90",
+                 "--segundos", "1", "--salida", str(tmp_path / "t.json"), "--timeout", "10"])
+    t = visto["estado"]["tras_msmf"]
+    assert t["antes"]["exposure_ms"] == 3.9062 and t["msmf"]["indice"] == 1
+    assert "despues" not in t
+    json.dumps(visto["estado"])     # serializable tal cual, como lo escribiria el vigilante
+
+
+def test_verificar_orden_dshow_con_ruta(monkeypatch) -> None:
+    import camaras_uvc as cu
+    cams = [_camara(0, PUERTO_1, "A"), _camara(1, PUERTO_2, "B")]
+    pedidos: list[tuple] = []
+
+    class VC(VCTestigo):
+        def __init__(self, *a) -> None:
+            pedidos.append(a)
+            super().__init__(n=3)
+    monkeypatch.setattr(cu, "listar_camaras_dshow", lambda con_puerto=True: cams)
+    monkeypatch.setattr(sc.cv2, "VideoCapture", VC)
+    filas: list[dict] = []
+    sc.verificar_orden("DSHOW", 0.01, filas)
+    assert pedidos == [(0, sc.cv2.CAP_DSHOW), (1, sc.cv2.CAP_DSHOW)]
+    assert [f["ruta_puerto"] for f in filas] == [PUERTO_1, PUERTO_2]
+    assert all(f["brillo_medio"] == 150.0 for f in filas)
