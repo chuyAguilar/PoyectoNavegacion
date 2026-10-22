@@ -27,6 +27,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B25 | La sonda pierde los modos medidos si salta el tope | Media | — |
 | B26 | Modos de las SVPRO que no sirven o no son estables | Baja | — |
 | B27 | `tracker.abrir_camara`, función que nadie llama | Baja | — |
+| B28 | `tracker.py` lanzado a mano abre MSMF con la aceleración HW encendida | Media | — |
+| B29 | «Probar cámara» del panel no comprueba la marca ni aplica los ajustes | Media | — |
+| B30 | Leer la marca y aplicar los controles en una sola apertura DSHOW | Baja | — |
 
 ## Abiertos
 
@@ -174,6 +177,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** es informativo; la fase 3 · Enfoque y medición de resolución × formato elige entre los modos que sí funcionan.
 - **De dónde:** sesión en vivo de la fase 1 · Sonda de controles, modos e identidad (meta 002), 2026-10-20/21 (`Claude outputs/camaras/modos_*.json`).
 - **Qué haría falta:** nada, salvo que la resolución elegida sea una de estas; si la comprobación del tamaño de la fase 2 quiere verificar también el formato, que no use `get(CAP_PROP_FOURCC)` por MSMF.
+- **Al día (2026-10-22, fase 2b):** la comprobación de tamaño del backend compara el frame, no el FOURCC, y detecta el caso de 1600×1200 que entrega 1280×960 (prueba sin cámara).
 - **Prioridad:** baja.
 
 ### B27 · `tracker.abrir_camara`, función que nadie llama
@@ -181,6 +185,27 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** no estorba y `tracker.py` es la cadena (principio 6): la meta 002 no lo toca.
 - **De dónde:** plan de la meta 002 · Calibración de las cámaras global shutter, al buscar quién abre la cámara; confirmado por grep en la fase 2a, 2026-10-21.
 - **Qué haría falta:** quitarla (o usarla) en una fase que ya toque `tracker.py`, con la suite y el replay.
+- **Prioridad:** baja.
+
+### B28 · `tracker.py` lanzado a mano abre MSMF con la aceleración HW encendida
+- **Qué:** `OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0` baja la apertura de una SVPRO de 43–51 s a 3.6–4.0 s sin cambiar los fps (sesión en vivo de la fase 2b, 2026-10-21/22). El código la pone en `camaras_uvc` al importarse, pero cv2 solo la ve si se puso antes de cargarse: `cv2.pyd` del venv (4.11) lleva el CRT estático y copia el entorno al cargarse (comprobado sin cámara con `OPENCV_IO_ENABLE_OPENEXR`). `tracker.py` importa `cv2` (línea 23) antes que `camera_backend` (línea 30), así que lanzado a mano desde PowerShell sigue con la aceleración encendida; el backend lo dice en su log («Aceleracion HW de MSMF ENCENDIDA: cv2 se cargo antes…») y `tests/test_aceleracion_msmf.py` lo fija. Desde el panel no pasa: `procesos.entorno_hijo` se la pasa apagada a sus procesos.
+- **Por qué queda:** el encargo de la corrección de la fase 2b dice que `tracker.py` no cambia (principio 6).
+- **De dónde:** corrección de la fase 2b · Perfiles por cámara: identidad, ajustes y tamaño al abrir (meta 002), 2026-10-22.
+- **Qué haría falta:** una línea en `tracker.py`, `import camaras_uvc` antes de `import cv2`, en una fase que ya toque el tracker (con la suite, el replay y la comprobación de la cadena); mientras tanto, lanzar a mano con `$env:OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS='0'`. Cambiar entonces la prueba `test_tracker_importa_cv2_antes_y_no_la_ve`.
+- **Prioridad:** media.
+
+### B29 · «Probar cámara» del panel no comprueba la marca ni aplica los ajustes
+- **Qué:** `gui/sonda_camara.py` resuelve el índice por el puerto, abre por MSMF y lee un frame, pero no lee la marca ni aplica `controls`: con las cámaras intercambiadas de puerto da «OK» (el tracker y el backend sí paran).
+- **Por qué queda:** en la fase 2b la sonda se dejó corta para caber en los 20 s del vigilante del panel; con la aceleración apagada (corrección de la 2b) ya cabría (~1 s de abrir + leer, ~1.2 s de marca).
+- **De dónde:** sesión en vivo de la fase 2b · Perfiles por cámara: identidad, ajustes y tamaño al abrir (meta 002), punto 3, 2026-10-22.
+- **Qué haría falta:** que la sonda lea la marca (sin escribir) antes de abrir, o que use `camera_backend` entero; medir que sigue dentro del vigilante de `recetas.py`.
+- **Prioridad:** media.
+
+### B30 · Leer la marca y aplicar los controles en una sola apertura DSHOW
+- **Qué:** `WebcamBackend.open()` abre la cámara por DSHOW dos veces antes del video: una para leer la marca (`capa.leer`, 1.11–1.48 s) y otra para aplicar los ajustes (`capa.aplicar`, 1.26–1.57 s).
+- **Por qué queda:** es solo tiempo (~1.2 s por arranque) y la fase 2b ya cumple su criterio.
+- **De dónde:** sugerencia del «implementa» de la fase 2b · Perfiles por cámara: identidad, ajustes y tamaño al abrir (meta 002), medida en su sesión en vivo, 2026-10-22.
+- **Qué haría falta:** un método de la capa que lea la marca, pare si no coincide y, sin cerrar, aplique los controles; con su prueba sin cámara del orden (leer marca → parar o escribir) y la misma garantía de que con marca distinta no se escribe nada.
 - **Prioridad:** baja.
 
 ## Cerrados

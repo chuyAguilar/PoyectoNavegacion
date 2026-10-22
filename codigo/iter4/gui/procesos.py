@@ -22,11 +22,30 @@ from __future__ import annotations
 import ctypes
 import os
 import subprocess
+import sys
 import threading
 
 WM_CHAR = 0x0102
 ESPERA_Q_S = 4.0        # tras enviar 'q', cuanto esperar el cierre limpio
 ESPERA_TERMINATE_S = 3.0
+
+# Meta 002, fase 2b (correccion, 2026-10-22): la aceleracion HW de MSMF hace
+# que abrir la camara tarde 43-51 s en vez de 3.6-4.0 s, sin ganar fps. cv2 la
+# lee del entorno al cargarse; tracker.py importa cv2 antes que camera_backend,
+# asi que el panel se la pasa apagada a sus procesos. El mismo nombre y la
+# misma regla (setdefault: un valor puesto a mano se respeta) que
+# camaras_uvc.VAR_ACELERACION_MSMF; aqui sin importarlo (gui\ no tiene iter4\
+# en sys.path).
+VAR_ACELERACION_MSMF = "OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS"
+
+
+def entorno_hijo(base, plataforma=sys.platform):
+    """El entorno de un proceso del panel: `base` + PYTHONIOENCODING y, en Windows, MSMF sin aceleracion HW."""
+    env = dict(base)
+    env["PYTHONIOENCODING"] = "utf-8"
+    if plataforma == "win32":
+        env.setdefault(VAR_ACELERACION_MSMF, "0")
+    return env
 
 
 def _post_q(titulo_ventana):
@@ -74,8 +93,7 @@ class Lanzador:
             if self._proc is not None and self._proc.poll() is None:
                 return (f"ya hay un proceso corriendo "
                         f"({self._receta.clave}); usar Detener primero")
-            env = dict(os.environ)
-            env["PYTHONIOENCODING"] = "utf-8"
+            env = entorno_hijo(os.environ)
             try:
                 proc = subprocess.Popen(
                     receta.argv,

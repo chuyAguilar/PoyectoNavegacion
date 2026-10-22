@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-19 (§6: suite y respaldo de la punta; §3 y §6: rutas viejas corregidas)._
+> _Última actualización: 2026-10-22 (§4: trampas 18 y 19, la aceleración HW de MSMF y la marca `focus` sin escribir; §6: meta 002, cámaras SVPRO). Antes, 2026-10-19 (§6: suite y respaldo de la punta; §3 y §6: rutas viejas corregidas)._
 
 ---
 
@@ -117,6 +117,21 @@
     sus IDs/tamaño default son del stylus viejo (170–180, 13.4 mm). Pasar
     `--output iter4/data/...` y el layout completo explícitos (la GUI ya lo
     hace, brief-02 M2).
+18. **La aceleración HW de MSMF alarga la apertura de las SVPRO de ~4 s a
+    43–51 s sin dar fps** (`OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS`, por
+    defecto activa; medido 2026-10-22: 90.0 fps con y sin ella). Tiene que estar
+    en `0` **antes del primer `import cv2` del proceso**: `cv2.pyd` copia el
+    entorno al cargarse y ponerla después no hace nada. El código lo hace con
+    `import camaras_uvc` antes de `import cv2` (los scripts que abren MSMF) y
+    el panel se la pasa a sus procesos (`procesos.entorno_hijo`). **`tracker.py`
+    a mano desde PowerShell no la apaga** (B28): `$env:OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS='0'`
+    antes de lanzarlo.
+19. **La marca `focus` de una cámara solo es fiable si se escribió.** La cámara 2
+    nunca la tenía escrita y por DSHOW leía 332, 268, 362, 254, 337…, así que el
+    backend paraba («no es la del perfil») sin motivo. Al dar de alta un perfil:
+    `sondear_camara.py --fijar "focus=N" --forzar --puerto <ruta>` (`--forzar`
+    escribe aunque la lectura ya diga N; sin él `aplicar` no escribe lo que ya
+    coincide). Después la marca persiste tras desenchufar.
 
 ## 5. Metodología de trabajo (cómo colaboramos humano + IA)
 
@@ -164,6 +179,11 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
   `tracker_config.yaml`, Marker0 80 mm (ADR-014/015). Contexto "doctor": **webcam
   global shutter**, `tracker_config_doctor.yaml` + `data/globalshutter.yml`,
   Marker0 60 mm (ADR-016). Ambos comparten la geometría del dodecaedro v2.
+
+### En curso: meta 002 · calibración de las cámaras global shutter SVPRO (2026-10-22)
+
+- **Hecho (fases 1, 2a y 2b):** sonda de modos y controles; identidad de cada cámara por la ruta de su puerto USB (`camaras_uvc.py`); ajustes por DSHOW que viven en la cámara (`ajustes_camara.py`); perfiles `tracker_config_gs1.yaml` y `tracker_config_gs2.yaml`, con los que `camera_backend.py` abre cada cámara por su puerto, comprueba su marca `focus` antes de escribir, aplica los ajustes y comprueba que el tamaño del frame es el pedido y el del `.yml`. Los perfiles no tienen intrínsecos todavía (el semáforo de `estado.py` sale rojo hasta las fases 4 y 5).
+- **Falta:** fase 3 (enfoque, exposición y resolución × formato), fases 4 y 5 (calibrar), fase 6 (comparar con P02 y archivar los perfiles viejos).
 
 ### En pausa (se conserva, se puede retomar)
 

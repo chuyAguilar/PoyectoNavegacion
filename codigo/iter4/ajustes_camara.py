@@ -32,9 +32,8 @@ import sys
 import time
 from typing import Callable, Protocol
 
+import camaras_uvc   # antes de cv2: apaga la aceleracion HW de MSMF (fase 2b, correccion)
 import cv2
-
-import camaras_uvc
 
 # Nombres del perfil, en el orden en que se escriben.
 NOMBRES: tuple[str, ...] = (
@@ -197,7 +196,7 @@ def comparar_controles(declarados: dict, leidos: dict, tolerancia: float = TOLER
 class CapaAjustes(Protocol):
     def leer(self, puerto: str, nombres: list[str]) -> dict[str, float]: ...
 
-    def aplicar(self, puerto: str, controls: dict) -> dict: ...
+    def aplicar(self, puerto: str, controls: dict, *, forzar: bool = False) -> dict: ...
 
 
 class AjustesNoAplicados(RuntimeError):
@@ -255,12 +254,17 @@ class CapaWindowsDShow:
             cap.release()
         return de_nativos_dshow(nativos)
 
-    def aplicar(self, puerto: str, controls: dict) -> dict:
+    def aplicar(self, puerto: str, controls: dict, *, forzar: bool = False) -> dict:
         """Escribe solo lo que difiere, relee y compara. AjustesNoAplicados si algo no coincide.
 
         Devuelve {"indice", "antes", "leidos", "escritos", "set_false", "segundos"}:
         `antes` y `leidos` en las unidades del perfil; `leidos_nativos` y
         `antes_nativos` tal como los da cv2.
+
+        `forzar` (solo sondear_camara.py --fijar --forzar; el backend no lo usa)
+        escribe cada control aunque la lectura coincida: la marca `focus` de
+        fabrica, nunca escrita, saltaba entre lecturas (2026-10-22) y escrita
+        quedo fija.
         """
         t0 = time.monotonic()
         nativos = a_nativos_dshow(controls)
@@ -271,7 +275,7 @@ class CapaWindowsDShow:
         try:
             antes = self._leer_nativos(cap, nombres)
             for nombre, valor in nativos.items():
-                if abs(antes[nombre] - valor) <= TOLERANCIA:
+                if not forzar and abs(antes[nombre] - valor) <= TOLERANCIA:
                     continue
                 escritos.append(nombre)
                 if not cap.set(CONTROLES_CV2[nombre], valor):
@@ -289,6 +293,7 @@ class CapaWindowsDShow:
             "escritos": escritos,
             "set_false": set_false,
             "diferencias": difs,
+            "forzado": forzar,
             "segundos": round(time.monotonic() - t0, 2),
         }
         if difs:

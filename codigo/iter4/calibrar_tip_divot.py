@@ -41,6 +41,7 @@ import sys
 import time
 from datetime import datetime, timezone
 
+import camaras_uvc  # noqa: F401  (antes de cv2: apaga la aceleracion HW de MSMF; meta 002, fase 2b)
 import cv2
 import numpy as np
 

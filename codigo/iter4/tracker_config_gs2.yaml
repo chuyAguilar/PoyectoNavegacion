@@ -1,0 +1,127 @@
+# =====================================================================
+# Perfil gs2 - camara global shutter SVPRO AR0234 del PUERTO 2 (meta 002)
+# =====================================================================
+# Un perfil por camara fisica (ADR-024). La camara se identifica por la
+# ruta fisica de su puerto USB (camera.usb_port_windows), medida en la
+# fase 2a (2026-10-21): las dos SVPRO tienen la misma serie 01.00.00 y la
+# instancia USB cambia con el orden de conexion; la ruta del puerto no.
+# Las dos cuelgan de un hub: si cambia el hub o el puerto raiz, cambia la
+# ruta y hay que medirla otra vez (iter4\sondear_camara.py --puertos).
+#
+# Provisional (fase 2b): modo 640x480 MJPG 90 fps y exposure_ms 3.906 hasta
+# que la fase 3 elija resolucion y exposicion; calibration_file vacio hasta
+# la fase 5. Caja de luz en nivel 2 (P7). La camara 2 esta mas desenfocada
+# que la 1 (nitidez 64.7 frente a 227, fase 2a): se enfoca en la fase 3.
+# =====================================================================
+
+camera:
+  camera_type: webcam           # webcam | femtobolt
+
+  # ===== Identidad: la ruta fisica del puerto USB (fase 2a, 6 de 6) =====
+  # Puerto 2 = Port_#0004.Hub_#0003. Sin `source`: el indice se resuelve
+  # enumerando el backend al abrir (camaras_uvc.resolver_indice).
+  usb_port_windows: PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)
+
+  # ===== Marca de la unidad (P13): un control que no cambia la imagen y
+  # persiste en la camara. El backend lo lee antes de escribir nada y para
+  # si no es este valor (las camaras se intercambiaron de puerto). No va en
+  # controls: el backend solo la lee.
+  # focus 332 era el valor de fabrica de la camara 2 y, sin escribir,
+  # saltaba entre lecturas (268, 362, 254, 337). Se ESCRIBIO el 2026-10-22
+  # y desde entonces se lee 332 en 5 de 5 aperturas y tras desenchufar.
+  # La marca solo es fiable si se escribe a proposito. Alta de la marca de
+  # una camara nueva (escribe aunque la lectura coincida, y relee):
+  #   python iter4\sondear_camara.py --fijar "focus=<valor>" --forzar ^
+  #     --puerto "<usb_port_windows>" ^
+  #     --salida "..\Claude outputs\camaras\marca_<perfil>.json" --timeout 60
+  marca:
+    focus: 332
+
+  # ===== Modo de video (MSMF + MJPG, o el FPS cae; CONTEXT.md §4.3) =====
+  # La apertura (crear + open + close: 3.6-4.0 s, 2026-10-22) cuenta con la
+  # aceleracion HW de MSMF apagada (OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0;
+  # la pone el codigo, camaras_uvc, y el panel a sus procesos); encendida,
+  # 43-51 s con los mismos ~90 fps. tracker.py lanzado a mano la necesita en
+  # el entorno: $env:OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS='0'.
+  width: 640
+  height: 480
+  fps: 90
+  backend: MSMF
+  fourcc: MJPG
+
+  # ===== Ajustes fijos (ajustes_camara.py; DSHOW antes de abrir por MSMF) =====
+  # Nombres y unidades propios (exposicion en ms, P10). Se escriben solo
+  # los que difieren de lo que la camara tiene y se releen siempre. Valores
+  # leidos de esta camara el 2026-10-21 (fase 2a), salvo auto_white_balance
+  # (fijo en false por el plan). exposure_ms provisional: la elige la fase 3.
+  controls:
+    exposure_manual: true
+    exposure_ms: 3.906          # -8 por DSHOW (log2 de segundos)
+    gain: 11
+    auto_white_balance: false
+    brightness: 0
+    contrast: 0
+    saturation: 56
+    sharpness: 0
+    gamma: 110
+    backlight: 54
+
+  # ===== Calibracion intrinseca (.yml de calibrar_camara.py) =====
+  # Vacio hasta la fase 5 (intrinsecos_gs2_<W>x<H>.yml). El backend para si
+  # el frame real no es del tamano del perfil o del .yml.
+  calibration_file:
+
+
+# =====================================================================
+# Diccionario ArUco y detector (los que valieron en P02 con la camara 1)
+# =====================================================================
+markers:
+  dictionary: DICT_ARUCO_MIP_36h12
+
+  detector:
+    adaptive_thresh_win_size_min: 5
+    adaptive_thresh_win_size_max: 35
+    adaptive_thresh_win_size_step: 10
+    min_marker_perimeter_rate: 0.02
+    polygonal_approx_accuracy_rate: 0.05
+    max_erroneous_bits_in_border_rate: 0.40
+    corner_refinement_win_size: 7
+
+  # Marker0 (referencia osea): 80 mm, el de P02, medido con calibrador (P3).
+  list:
+    - id: 0
+      name: Marker0
+      size_mm: 80.0
+
+
+# =====================================================================
+# Rigid body multi-marker (dodecaedro v2 compartido, IDs 3-13)
+# =====================================================================
+rigid_bodies:
+  - name: Dodecaedro
+    geometry_file: data/reference_dodecaedro_v2_calibrado.txt
+    marker_mm: 14.6
+
+
+rigid_bodies_quality:
+  min_markers: 3
+
+
+# =====================================================================
+# OpenIGTLink (principio 6: no cambia)
+# =====================================================================
+igtlink:
+  transforms_port: 18944
+  video_port: 18945
+  send_video: false
+
+
+filtering:
+  enabled: true
+  min_cutoff: 2.0
+  beta: 0.05
+
+
+debug:
+  show_window: true
+  verbose: false

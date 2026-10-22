@@ -193,6 +193,23 @@ def test_aplicar_sin_diferencias_no_escribe_pero_relee() -> None:
     r = capa.aplicar(PUERTO_1, PERFIL_GS1)
     assert cap.sets == [] and r["escritos"] == []
     assert cap.gets == 2 * len(r["leidos"]) and cap.liberado == 1
+    assert r["forzado"] is False
+
+
+def test_aplicar_forzado_escribe_aunque_coincida_y_relee() -> None:
+    """La marca de fabrica sin escribir saltaba (2026-10-22): --fijar --forzar la escribe igual."""
+    valores = {P["focus"]: 332.0}
+    cap = CapFalso(valores)
+    capa, abiertos = _capa(cap)
+    r = capa.aplicar(PUERTO_2, {"focus": 332}, forzar=True)
+    assert abiertos == [1] and cap.sets == [(P["focus"], 332.0)]
+    assert r["escritos"] == ["focus"] and r["forzado"] is True
+    assert r["antes"] == {"focus": 332.0} and r["leidos"] == {"focus": 332.0}
+    assert cap.gets == 2 and cap.liberado == 1          # lee antes, relee despues
+    # Sin forzar, lo mismo no escribe nada (el backend sigue asi).
+    cap2 = CapFalso(dict(valores))
+    capa2, _ = _capa(cap2)
+    assert capa2.aplicar(PUERTO_2, {"focus": 332})["escritos"] == [] and cap2.sets == []
 
 
 def test_aplicar_para_si_no_coincide_tras_escribir() -> None:

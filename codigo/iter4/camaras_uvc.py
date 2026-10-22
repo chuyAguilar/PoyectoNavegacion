@@ -23,16 +23,94 @@ backend DSHOW toma el elemento `index` de ICreateDevEnum sobre
 CLSID_VideoInputDeviceCategory (listar_camaras_dshow). Los dos se verifican en
 vivo tapando una lente (sondear_camara.py --verificar-orden --backend ...).
 
+Al importarse apaga la aceleracion por hardware de MSMF
+(OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0, con setdefault: un valor puesto a
+mano se respeta; solo en Windows). Fase 2b, correccion tras la sesion en vivo
+del 2026-10-21/22: con ella encendida la apertura MSMF + set() tarda 43-51 s;
+apagada, 3.6-4.0 s, con los mismos ~90 fps de captura a 640x480 y 1280x960.
+Context7 (2026-10-22, OpenCV 4.13, env_reference): la variable (bool, por
+defecto true) "may slow down camera probing process"; en Python va en
+os.environ ANTES de `import cv2` ("variables set after this may not have
+effect"). Comprobado con el cv2 4.11 del venv: cv2.pyd lleva el CRT estatico
+(no importa ningun api-ms-win-crt-*.dll) y copia el entorno al cargarse: una
+variable de OpenCV que se lee tarde (OPENCV_IO_ENABLE_OPENEXR) puesta antes de
+`import cv2` vale y puesta despues no. Por eso este modulo (que no importa
+cv2) se importa antes de cv2 en quien abre MSMF; si cv2 ya estaba cargado, la
+variable no llega y describir_aceleracion_msmf() lo dice.
+
 Uso (solo lista; no necesita argumentos):
     python iter4\\camaras_uvc.py
 """
 from __future__ import annotations
 
 import ctypes
+import os
 import re
 import sys
 import uuid
 from dataclasses import dataclass
+
+# ----------------------------------------------------------------------------
+# Aceleracion por hardware de MSMF (DXVA): apagada antes de que cv2 se cargue.
+# ----------------------------------------------------------------------------
+VAR_ACELERACION_MSMF = "OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS"
+# Como los lee OpenCV (utils::getConfigurationParameterBool).
+_BOOL_FALSO = ("0", "false", "off")
+_BOOL_CIERTO = ("1", "true", "on")
+
+
+def apagar_aceleracion_msmf(environ=None, plataforma: str = sys.platform,
+                            cv2_cargado: bool | None = None) -> dict:
+    """Pone VAR_ACELERACION_MSMF=0 con setdefault (solo en Windows) y dice lo que vera cv2.
+
+    Devuelve {"valor", "previo", "puesta_aqui", "cv2_cargado", "efectiva"}:
+    `efectiva` es "apagada", "encendida", "no aplica" (fuera de Windows) o
+    "desconocida" (valor que OpenCV no reconoce). Si cv2 ya estaba cargado y la
+    variable no venia del entorno, cv2 no la ve: queda "encendida".
+    """
+    environ = os.environ if environ is None else environ
+    cv2_cargado = ("cv2" in sys.modules) if cv2_cargado is None else bool(cv2_cargado)
+    previo = environ.get(VAR_ACELERACION_MSMF)
+    estado = {"valor": previo, "previo": previo, "puesta_aqui": False,
+              "cv2_cargado": cv2_cargado, "efectiva": "no aplica"}
+    if plataforma != "win32":
+        return estado
+    environ.setdefault(VAR_ACELERACION_MSMF, "0")
+    estado["valor"] = environ.get(VAR_ACELERACION_MSMF)
+    estado["puesta_aqui"] = previo is None
+    visto = None if (estado["puesta_aqui"] and cv2_cargado) else estado["valor"]
+    if visto is None:
+        estado["efectiva"] = "encendida"          # el valor por defecto de OpenCV
+    elif visto.strip().lower() in _BOOL_FALSO:
+        estado["efectiva"] = "apagada"
+    elif visto.strip().lower() in _BOOL_CIERTO:
+        estado["efectiva"] = "encendida"
+    else:
+        estado["efectiva"] = "desconocida"
+    return estado
+
+
+def describir_aceleracion_msmf(estado: dict | None = None) -> str:
+    """Una linea para el log: si la aceleracion HW de MSMF esta apagada o encendida, y por que."""
+    e = ACELERACION_MSMF if estado is None else estado
+    var = f"{VAR_ACELERACION_MSMF}={e['valor']}"
+    if e["efectiva"] == "no aplica":
+        return "Aceleracion HW de MSMF: no aplica (MSMF solo existe en Windows)"
+    if e["efectiva"] == "apagada":
+        origen = "puesta por el codigo" if e["puesta_aqui"] else "del entorno"
+        return f"Aceleracion HW de MSMF apagada ({var}, {origen})"
+    if e["efectiva"] == "desconocida":
+        return (f"Aceleracion HW de MSMF: valor no reconocido por OpenCV ({var}); "
+                f"usa 0 (apagada) o 1 (encendida)")
+    if e["puesta_aqui"] and e["cv2_cargado"]:
+        return (f"Aceleracion HW de MSMF ENCENDIDA: cv2 se cargo antes de poner "
+                f"{VAR_ACELERACION_MSMF}=0 y no la ve (abrir tarda ~45 s en vez de ~4 s); "
+                f"lanza con $env:{VAR_ACELERACION_MSMF}='0' o importa camaras_uvc antes que cv2")
+    return (f"Aceleracion HW de MSMF encendida ({var}, del entorno): abrir tarda ~45 s "
+            f"en vez de ~4 s")
+
+
+ACELERACION_MSMF: dict = apagar_aceleracion_msmf()
 
 # ----------------------------------------------------------------------------
 # GUIDs y constantes. Valores de los encabezados del Windows SDK:

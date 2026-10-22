@@ -442,14 +442,16 @@ class CapaFalsa:
         self.lecturas += 1
         return {n: self.estado.get(n, 0.0) for n in nombres}
 
-    def aplicar(self, puerto, controls):
+    def aplicar(self, puerto, controls, **kw):
         import ajustes_camara
         self.aplicados.append(dict(controls))
+        self.kw = kw
+        forzar = kw.get("forzar", False)
         v = ajustes_camara.validar_controles(controls)
-        escritos = [n for n in v if n != "exposure_manual" and self.estado.get(n) != v[n]]
+        escritos = [n for n in v if n != "exposure_manual" and (forzar or self.estado.get(n) != v[n])]
         self.estado.update({n: v[n] for n in escritos})
         return {"indice": 0, "antes": {}, "leidos": dict(self.estado), "escritos": escritos,
-                "set_false": [], "diferencias": [], "segundos": 0.5}
+                "set_false": [], "diferencias": [], "forzado": forzar, "segundos": 0.5}
 
 
 def test_main_fijar_guarda_lo_escrito(monkeypatch, tmp_path) -> None:
@@ -463,6 +465,33 @@ def test_main_fijar_guarda_lo_escrito(monkeypatch, tmp_path) -> None:
     assert d["fijar"]["controls"] == {"exposure_ms": 1.953, "gain": 12.0, "exposure_manual": True}
     assert d["fijar"]["escritos"] == ["exposure_ms"] and d["fijar"]["segundos"] == 0.5
     assert capa.aplicados == [d["fijar"]["controls"]]
+    assert capa.kw == {} and d["fijar"]["forzar"] is False    # sin --forzar, como en la 2a
+
+
+def test_main_fijar_forzar_escribe_aunque_coincida(monkeypatch, tmp_path) -> None:
+    """Alta de la marca: la lectura ya da 332 y aun asi se escribe (sesion del 2026-10-22)."""
+    import ajustes_camara
+    capa = CapaFalsa({"focus": 332.0})
+    monkeypatch.setattr(ajustes_camara, "CapaWindowsDShow", lambda: capa)
+    rc = sc.main(["--fijar", "focus=332", "--forzar", "--puerto", PUERTO_2,
+                  "--salida", str(tmp_path / "f.json"), "--timeout", "10"])
+    assert rc == 0
+    d = _json(tmp_path / "f.json")
+    assert capa.kw == {"forzar": True}
+    assert d["fijar"]["forzar"] is True and d["fijar"]["forzado"] is True
+    assert d["fijar"]["escritos"] == ["focus"] and d["fijar"]["leidos"]["focus"] == 332.0
+    assert "aceleracion_msmf" in d
+
+
+@pytest.mark.parametrize("argv", [
+    ["--leer", "--puerto", PUERTO_1],
+    ["--puertos"],
+    ["--source", "0", "--backend", "DSHOW", "--controles", "leer"],
+])
+def test_forzar_solo_con_fijar(tmp_path, argv) -> None:
+    with pytest.raises(SystemExit):
+        sc.main(argv + ["--forzar", "--salida", str(tmp_path / "s.json"), "--timeout", "10"])
+    assert not (tmp_path / "s.json").exists()
 
 
 def test_main_fijar_que_no_aplica_devuelve_1_y_guarda(monkeypatch, tmp_path) -> None:
@@ -517,6 +546,9 @@ def test_tras_msmf_sin_diferencias(monkeypatch, tmp_path) -> None:
     assert t["antes"] == t["despues"] and t["diferencias"] == [] and capa.lecturas == 2
     assert t["msmf"]["pedido"] == {"ancho": 640, "alto": 480, "fourcc": "MJPG", "fps": 90.0}
     assert t["msmf"]["testigo"]["real"] == {"ancho": 16, "alto": 8} and "total_s" in t["msmf"]
+    # Su FPS es de captura + brillo y nitidez por frame: se llama fps_testigo y lo dice la nota.
+    assert "fps_testigo" in t["msmf"]["testigo"] and "fps" not in t["msmf"]["testigo"]
+    assert "no la cadencia" in t["msmf"]["nota_fps"]
 
 
 def test_tras_msmf_con_diferencias_devuelve_1(monkeypatch, tmp_path) -> None:

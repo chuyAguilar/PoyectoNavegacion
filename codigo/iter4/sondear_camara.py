@@ -33,14 +33,25 @@ medicion se guarda en el JSON al tenerla, B25):
   --puertos                 enumera MSMF y DSHOW con indice, instancia, ruta
                             del puerto y ubicacion;
   --leer --puerto R         lee los controles por DSHOW (capa de ajustes);
-  --fijar "k=v,..." --puerto R
+  --fijar "k=v,..." --puerto R [--forzar]
                             aplica por la capa (escribe solo lo que difiere,
                             relee) y los deja puestos; p. ej.
-                            "exposure_ms=1.953,gain=11";
+                            "exposure_ms=1.953,gain=11". Con --forzar escribe
+                            cada control pedido aunque la lectura coincida y
+                            relee: asi se da de alta la marca (sesion del
+                            2026-10-22: el focus 332 de fabrica de la camara 2
+                            saltaba sin escribir; escrito, quedo fijo 5 de 5);
   --tras-msmf --puerto R --modo 640x480:MJPG --fps 90 --segundos 10
                             lee por DSHOW, abre y captura por MSMF (testigo:
                             brillo, nitidez, FPS, tamano real), cierra y relee:
-                            las diferencias dicen si MSMF piso lo escrito.
+                            las diferencias dicen si MSMF piso lo escrito. Su
+                            `fps_testigo` incluye calcular brillo y nitidez en
+                            cada frame (36-42 a 1280x960 frente a 90 de
+                            captura): no es la cadencia de la camara; para esa,
+                            --modos.
+
+Al importarse, camaras_uvc apaga la aceleracion HW de MSMF (ver alli); el JSON
+guarda en `aceleracion_msmf` lo que vio cv2.
 
 Todo lleva tope de tiempo (--timeout) y libera la camara (principio 9); si el
 tope no alcanza para los modos pedidos, la sonda no empieza. Los argumentos van
@@ -57,6 +68,9 @@ explicitos (principio 7). Ejemplos:
     python iter4\\sondear_camara.py --fijar "exposure_ms=1.953,gain=11" ^
         --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(2)" ^
         --salida "..\\Claude outputs\\camaras\\fijar_cam1.json" --timeout 60
+    python iter4\\sondear_camara.py --fijar "focus=332" --forzar ^
+        --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)" ^
+        --salida "..\\Claude outputs\\camaras\\marca_gs2.json" --timeout 60
 """
 from __future__ import annotations
 
@@ -69,10 +83,10 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 
+import camaras_uvc   # antes de cv2: apaga la aceleracion HW de MSMF (fase 2b, correccion)
 import cv2
 
 import ajustes_camara
-import camaras_uvc
 
 # Nombre crudo del control -> propiedad de cv2 (los 12 que mide la sonda).
 # Una sola fuente: ajustes_camara.CONTROLES_SONDA (fase 2a).
@@ -137,6 +151,10 @@ TOL_MARCA_BRILLO = 0.02
 TOL_MARCA_NITIDEZ = 0.02
 TOL_MARCA_FPS = 0.20
 CALENTAR_FRAMES = 6
+# --tras-msmf: el FPS de su testigo no es el de la camara (sesion del 2026-10-21/22).
+NOTA_FPS_TESTIGO = ("fps_testigo = frames leidos por segundo calculando brillo y nitidez "
+                    "(Laplaciano CV_64F) en cada frame: captura + proceso, no la cadencia de "
+                    "la camara (1280x960: 36-42 frente a 90 de captura); para esa, --modos")
 
 
 def _backend_cv2(nombre: str) -> int:
@@ -502,9 +520,15 @@ def leer_controles(puerto: str, capa=None) -> dict:
     return {"puerto": puerto, "leidos": leidos, "segundos": round(time.monotonic() - t0, 2)}
 
 
-def fijar(puerto: str, controls: dict, capa=None) -> dict:
-    """Aplica `controls` por la capa y los deja puestos; el resultado trae lo leido y lo escrito."""
+def fijar(puerto: str, controls: dict, capa=None, forzar: bool = False) -> dict:
+    """Aplica `controls` por la capa y los deja puestos; el resultado trae lo leido y lo escrito.
+
+    Con `forzar`, la capa escribe cada control aunque la lectura coincida (y
+    relee): para dar de alta la marca, que solo es fiable si se escribio.
+    """
     capa = capa if capa is not None else ajustes_camara.CapaWindowsDShow()
+    if forzar:
+        return capa.aplicar(puerto, controls, forzar=True)
     return capa.aplicar(puerto, controls)
 
 
@@ -541,7 +565,10 @@ def tras_msmf(puerto: str, modo: tuple[int, int, str], fps: float, segundos: flo
                 ok, _f = cap.read()
                 if not ok:
                     break
-            msmf["testigo"] = testigo(cap, segundos)
+            t = testigo(cap, segundos)
+            t["fps_testigo"] = t.pop("fps")
+            msmf["testigo"] = t
+            msmf["nota_fps"] = NOTA_FPS_TESTIGO
     finally:
         cap.release()
         msmf["total_s"] = round(time.monotonic() - t0, 2)
@@ -644,6 +671,8 @@ def _fase_2a(ap, args, estado: dict, salida: Path) -> int:
         ap.error("--verificar-orden exige --backend MSMF|DSHOW explicito")
     if modo in ("leer", "fijar", "tras_msmf") and not args.puerto:
         ap.error(f"--{modo.replace('_', '-')} exige --puerto (la ruta_puerto que da --puertos)")
+    if args.forzar and modo != "fijar":
+        ap.error("--forzar solo va con --fijar")
     controls = None
     if modo == "fijar":
         try:
@@ -661,6 +690,7 @@ def _fase_2a(ap, args, estado: dict, salida: Path) -> int:
 
     salida.parent.mkdir(parents=True, exist_ok=True)
     estado["opencv"] = cv2.__version__
+    estado["aceleracion_msmf"] = dict(camaras_uvc.ACELERACION_MSMF)
     estado["modo"] = modo
     vig = _vigilante(args.timeout, estado, salida)
     rc = 0
@@ -687,10 +717,11 @@ def _fase_2a(ap, args, estado: dict, salida: Path) -> int:
             estado["leer"] = leer_controles(args.puerto)
             print(f"[sonda] leidos ({estado['leer']['segundos']} s): {estado['leer']['leidos']}")
         elif modo == "fijar":
-            estado["fijar"] = {"puerto": args.puerto, "controls": controls}
+            estado["fijar"] = {"puerto": args.puerto, "controls": controls, "forzar": args.forzar}
             try:
-                estado["fijar"].update(fijar(args.puerto, controls))
-                print(f"[sonda] fijados en {estado['fijar']['segundos']} s; escritos "
+                estado["fijar"].update(fijar(args.puerto, controls, forzar=args.forzar))
+                print(f"[sonda] fijados{' (forzado)' if args.forzar else ''} en "
+                      f"{estado['fijar']['segundos']} s; escritos "
                       f"{estado['fijar']['escritos'] or 'ninguno'}; leidos {estado['fijar']['leidos']}")
             except ajustes_camara.AjustesNoAplicados as e:
                 estado["fijar"].update(e.resultado)
@@ -698,6 +729,7 @@ def _fase_2a(ap, args, estado: dict, salida: Path) -> int:
                 print(f"[sonda] ERROR: {e}")
                 rc = 1
         else:
+            print(f"[sonda] {camaras_uvc.describir_aceleracion_msmf()}", flush=True)
             estado["tras_msmf"] = {}
             tras_msmf(args.puerto, modo_msmf, args.fps, args.segundos, resultado=estado["tras_msmf"])
             if estado["tras_msmf"]["diferencias"] or "error" in estado["tras_msmf"]["msmf"]:
@@ -729,8 +761,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--puerto", help="ruta del puerto (ruta_puerto de --puertos) para --leer, --fijar y --tras-msmf")
     ap.add_argument("--leer", action="store_true", help="lee los controles por DSHOW (capa de ajustes)")
     ap.add_argument("--fijar", help="controles a aplicar y dejar: 'exposure_ms=1.953,gain=11'")
+    ap.add_argument("--forzar", action="store_true",
+                    help="con --fijar: escribe cada control pedido aunque la lectura coincida y "
+                         "relee (dar de alta la marca: 'focus=332')")
     ap.add_argument("--tras-msmf", action="store_true",
-                    help="lee por DSHOW, captura por MSMF (--modo, --fps, --segundos) y relee")
+                    help="lee por DSHOW, captura por MSMF (--modo, --fps, --segundos) y relee; "
+                         "su fps_testigo incluye calcular brillo y nitidez por frame: no es la "
+                         "cadencia de la camara (para esa, --modos)")
     ap.add_argument("--modo", help="un modo 'AnchoxAlto:FOURCC' para --tras-msmf")
     ap.add_argument("--salida", required=True, help="JSON de salida")
     ap.add_argument("--timeout", type=float, required=True, help="tope en segundos")
@@ -741,6 +778,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.puertos or args.verificar_orden or args.leer or args.fijar or args.tras_msmf:
         return _fase_2a(ap, args, estado, salida)
+    if args.forzar:
+        ap.error("--forzar solo va con --fijar")
 
     faltan = [n for n in ("source", "backend", "controles") if getattr(args, n) is None]
     if faltan:
@@ -768,6 +807,7 @@ def main(argv: list[str] | None = None) -> int:
     rc = 0
     try:
         estado["opencv"] = cv2.__version__
+        estado["aceleracion_msmf"] = dict(camaras_uvc.ACELERACION_MSMF)
         estado["backend"] = args.backend
         estado["controles_modo"] = args.controles
         estado["estimado_s"] = round(estimado, 1)
