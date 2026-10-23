@@ -193,8 +193,9 @@ def test_create_backend_gs(nombre: str, puerto: str, focus: float) -> None:
     assert isinstance(b, cb.WebcamBackend)
     assert b.source is None and b.usb_port_windows == puerto
     assert b.marca == {"focus": focus}
-    assert b.controls == ac.validar_controles(CONTROLS)
-    assert (b.width, b.height, b.fps, b.backend_name, b.fourcc) == (640, 480, 90, "MSMF", "MJPG")
+    # Fase 3: exposicion 0.977 ms (P15) y 1280x960 MJPG 90 fps (P16), las mismas en los dos.
+    assert b.controls == ac.validar_controles({**CONTROLS, "exposure_ms": 0.977})
+    assert (b.width, b.height, b.fps, b.backend_name, b.fourcc) == (1280, 960, 90, "MSMF", "MJPG")
     assert not b.calibration_file
 
 

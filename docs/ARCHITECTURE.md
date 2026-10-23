@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -259,7 +259,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   ├── camera_backend.py                   # webcam | femtobolt; la webcam abre por puerto, comprueba marca, aplica controles y comprueba el tamaño (§3.1, 2026-10-22)
 │   │   ├── tracker_config.yaml                 # config Femto (default)
 │   │   ├── tracker_config_doctor.yaml          # config webcam (paired-point)
-│   │   ├── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO: puerto USB, marca focus, controles, 640×480 MJPG 90 fps provisional; sin intrínsecos hasta las fases 4 y 5 (2026-10-22, meta 002 fase 2b)
+│   │   ├── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO: puerto USB, marca focus, controles, 1280×960 MJPG 90 fps y exposición 0.977 ms (−10 por DSHOW) elegidos en la fase 3 (P15, P16); sin intrínsecos hasta las fases 4 y 5 (2026-10-22, meta 002 fases 2b y 3)
 │   │   ├── captura_calibracion.py              # dataset para BA
 │   │   ├── calibrar_rigid_body.py              # bundle adjustment
 │   │   ├── calibrar_tip_divot.py               # calibración por dock/divot
@@ -268,6 +268,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   ├── camaras_uvc.py                      # enumera las cámaras de Media Foundation y de DirectShow (COM por ctypes) y da la ruta física de su puerto USB (CfgMgr32: LocationPaths del nodo padre); resolver_indice(puerto) por igualdad de ruta (2026-10-21, meta 002 fase 2a)
 │   │   ├── ajustes_camara.py                   # formato de camera.controls independiente del sistema (exposición en ms), validar/comparar, CapaWindowsDShow (escribe solo lo que difiere, relee, para si no coincide), capa_para_plataforma; Linux sin escribir (2026-10-21, meta 002 fase 2a); desde la fase 2b lo usa el backend, y `aplicar(..., forzar=True)` escribe aunque la lectura coincida
 │   │   ├── sondear_camara.py                   # sonda de una cámara: modos (antes de tocar controles), identidad; --controles no|leer|probar; fase 2a: --puertos, --leer, --fijar, --tras-msmf, --verificar-orden --backend MSMF|DSHOW (2026-10-21, meta 002); fase 2b: --fijar ... --forzar (alta de la marca); no la usa el tracker
+│   │   ├── medir_modos.py                      # medición de las SVPRO por su perfil (camera_backend): --enfocar (nitidez), exposiciones candidatas, modos (FPS de captura, de tracking sin y con ventana, markers, fracción con pose con K nominal) y --elegir (exposición y resolución comunes a las dos); importa funciones de tracker.py sin tocarlo y no abre pyigtl; guarda cada fila al medirla (2026-10-22, meta 002 fase 3)
 │   │   ├── calibrar_topologia.py, limpiar_captura_fantasmas.py, corregir_giro_esquinas.py, generar_reference_dodecaedro.py
 │   │   ├── gui\                                # panel de control PySide6 (brief-01)
 │   │   └── data\                               # reference_*, capturas, tips, calibraciones

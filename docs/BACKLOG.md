@@ -30,6 +30,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B28 | `tracker.py` lanzado a mano abre MSMF con la aceleración HW encendida | Media | — |
 | B29 | «Probar cámara» del panel no comprueba la marca ni aplica los ajustes | Media | — |
 | B30 | Leer la marca y aplicar los controles en una sola apertura DSHOW | Baja | — |
+| B31 | El criterio de exposición de `medir_modos.py` favorece imágenes casi saturadas | Media | — |
+| B32 | Optimizar el tracker: la ventana limita a 19–25 fps en cualquier resolución | Media | — |
+| B33 | Fracción con pose baja por encima de 640×480 con la K nominal | Media | — |
 
 ## Abiertos
 
@@ -170,6 +173,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** cierre de la fase 1 · Sonda de controles, modos e identidad (meta 002), 2026-10-21, al leer los JSON.
 - **Qué haría falta:** guardar cada fila al medirla (en el `estado` compartido con el vigilante) y subir el presupuesto por modo a lo medido (~50 s por MSMF). Lo mismo vale para `medir_modos.py` de la fase 3 · Enfoque y medición de resolución × formato, que aún no existe: conviene que su plan lo traiga desde el principio.
 - **Al día (2026-10-21, fase 2a):** lo nuevo de la 2a (`--puertos`, `--leer`, `--fijar`, `--tras-msmf`, `--verificar-orden`) guarda cada medición en el `estado` del vigilante al tenerla; `sondear_modos` (el barrido de modos de la fase 1) sigue como estaba, y por eso la entrada sigue abierta.
+- **Al día (2026-10-22, fase 3):** `medir_modos.py` (el de la fase 3) escribe cada fila al medirla y el vigilante guarda lo que haya si salta el tope; el tope se comprueba antes de empezar y antes de cada fila. No saltó en la sesión en vivo. Queda abierta solo para `sondear_modos` de `sondear_camara.py`, que ya no se usa para elegir modos.
 - **Prioridad:** media.
 
 ### B26 · Modos de las SVPRO que no sirven o no son estables
@@ -178,6 +182,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** sesión en vivo de la fase 1 · Sonda de controles, modos e identidad (meta 002), 2026-10-20/21 (`Claude outputs/camaras/modos_*.json`).
 - **Qué haría falta:** nada, salvo que la resolución elegida sea una de estas; si la comprobación del tamaño de la fase 2 quiere verificar también el formato, que no use `get(CAP_PROP_FOURCC)` por MSMF.
 - **Al día (2026-10-22, fase 2b):** la comprobación de tamaño del backend compara el frame, no el FOURCC, y detecta el caso de 1600×1200 que entrega 1280×960 (prueba sin cámara).
+- **Al día (2026-10-22, fase 3):** medido con la aceleración HW de MSMF apagada (`medir_modos.py`, las dos cámaras): 1920×1080 y 1920×1200 en MJPG y 640×480 y 1280×720 en YUY2 dan ~90 fps de captura (89.5–90), no los ~30 y ≤ 59 de la fase 1, que se midieron con la aceleración encendida. Esos modos sí sirven para captura; la resolución elegida (1280×960 MJPG, P16) no depende de ello. Los que no abren o no entregan (800×600, 1024×768 en la cámara 2, 960×720 YUY2) no se volvieron a medir.
 - **Prioridad:** baja.
 
 ### B27 · `tracker.abrir_camara`, función que nadie llama
@@ -207,6 +212,27 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** sugerencia del «implementa» de la fase 2b · Perfiles por cámara: identidad, ajustes y tamaño al abrir (meta 002), medida en su sesión en vivo, 2026-10-22.
 - **Qué haría falta:** un método de la capa que lea la marca, pare si no coincide y, sin cerrar, aplique los controles; con su prueba sin cámara del orden (leer marca → parar o escribir) y la misma garantía de que con marca distinta no se escribe nada.
 - **Prioridad:** baja.
+
+### B31 · El criterio de exposición de `medir_modos.py` favorece imágenes casi saturadas
+- **Qué:** `elegir_exposicion` descarta lo que satura más de 1 % de los píxeles a 255 sobre el dodecaedro y, entre empates de markers, elige la exposición más larga. Con MJPG la imagen se queda en 250–254 sin llegar a 255, y la fracción a 255 no lo ve. En la sesión en vivo (1280×960, caja en nivel 2) eligió 3.906 ms (brillo medio 244–245, casi quemada) y la cámara 2 sola 0.488; el autor eligió 0.977 ms (brillo ~170, los mismos markers, ~4 veces menos estela de movimiento; P15).
+- **Por qué queda:** el autor ya eligió a mano y la meta 002 no vuelve a elegir exposición; no da un resultado equivocado mientras la elija una persona con la tabla delante.
+- **De dónde:** sesión en vivo de la fase 3 · Enfoque, exposición y medición de resolución × formato (meta 002), 2026-10-22 (`Claude outputs/fases/002/fase-3-en-vivo.md`).
+- **Qué haría falta:** si el script se vuelve a usar para elegir, cambiar la regla: contar los píxeles por encima de un umbral más bajo (p. ej. ≥ 250) o fijar un techo de brillo medio (~200), y desempatar por la exposición más corta, no la más larga (menos estela). Con su prueba sin cámara.
+- **Prioridad:** media.
+
+### B32 · Optimizar el tracker: la ventana limita a 19–25 fps en cualquier resolución
+- **Qué:** en la fase 3 el tracking con ventana (`debug.show_window`) dio 19–25 fps en todos los modos, incluso 320×240 (18.9–19.2); sin ventana, 90 hasta 640×480 y 62–68 fps por encima (960×720 a 1280×960; 1280×960: 61.9 y 61.6). La captura da ~90 en todos los modos, incluidos 1920×1200. Explica los ~20–26 fps de P02. Ningún modo llegó a 88.2 fps con ventana en ninguna de las dos cámaras.
+- **Por qué queda:** el plan lo manda a la meta de optimizar el tracker (decisión del autor, 2026-10-20); la fase 3 no toca `tracker.py` (principio 6). El autor eligió 1280×960 MJPG (P16) sabiendo que el tracking con ventana no llega a 90.
+- **De dónde:** sesión en vivo de la fase 3 (meta 002), 2026-10-22; tablas en `Claude outputs/fases/002/fase-3-en-vivo.md`.
+- **Qué haría falta:** en la meta de optimizar el tracker: medir qué cuesta más (dibujo, `imshow`, `waitKey(1)`, detección a 1280×960, 1-Euro) y sacarlo del bucle (ventana en otro hilo o a menor frecuencia, detección en una región de interés tras la primera, hilo propio de captura); extraer el paso por frame de `tracker.main()` a una función que usen el tracker y `medir_modos.medir_tracking` (hoy este repite el bucle); la línea base es la tabla de la fase 3 y se repite con intrínsecos reales (fases 4–5).
+- **Prioridad:** media.
+
+### B33 · Fracción con pose baja por encima de 640×480 con la K nominal
+- **Qué:** en la fase 3, con 4–5 markers detectados por frame en 960×720, 1280×720 y 1280×960, la fracción de frames con pose fue 0–7 % (cám. 1: 6.7, 3.1, 6.9 %; cám. 2: 0.3, 0.0, 0.0 %), frente a 46.9 % y 68.0 % a 640×480 con 3 markers. La pose se calculó con una K nominal (FOV 84°, sin distorsión) y los umbrales en píxeles del tracker; no es una medida de la pose.
+- **Por qué queda:** probablemente es la K nominal; se confirma con los intrínsecos reales en la fase 4, sin tocar el tracker ahora. Es el riesgo de la resolución elegida (P16): si con la K real sigue baja a 1280×960, el criterio de la fase 4 (escala) no se cumplirá y habrá que volver a elegir.
+- **De dónde:** sesión en vivo de la fase 3 (meta 002), 2026-10-22; la sugerencia del «implementa» de repetir solo el modo elegido con la K real.
+- **Qué haría falta:** en la fase 4, tras `intrinsecos_gs1_1280x960.yml`, repetir `medir_modos.py` solo en 1280×960 con la K real y comparar la fracción con pose; si sigue baja, revisar los umbrales en píxeles de `estimar_pose_rigid_body` (`tracker.py`, la elección por menor error de reproyección) y de los filtros de calidad. Sube a alta si la fase 4 no la explica.
+- **Prioridad:** media.
 
 ## Cerrados
 

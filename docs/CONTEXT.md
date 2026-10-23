@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-22 (§4: trampas 18 y 19, la aceleración HW de MSMF y la marca `focus` sin escribir; §6: meta 002, cámaras SVPRO). Antes, 2026-10-19 (§6: suite y respaldo de la punta; §3 y §6: rutas viejas corregidas)._
+> _Última actualización: 2026-10-22 (§6: meta 002, fase 3, resolución y exposición elegidas). Antes, 2026-10-22 (§4: trampas 18 y 19, la aceleración HW de MSMF y la marca `focus` sin escribir; §6: meta 002, cámaras SVPRO). Antes, 2026-10-19 (§6: suite y respaldo de la punta; §3 y §6: rutas viejas corregidas)._
 
 ---
 
@@ -182,8 +182,8 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 
 ### En curso: meta 002 · calibración de las cámaras global shutter SVPRO (2026-10-22)
 
-- **Hecho (fases 1, 2a y 2b):** sonda de modos y controles; identidad de cada cámara por la ruta de su puerto USB (`camaras_uvc.py`); ajustes por DSHOW que viven en la cámara (`ajustes_camara.py`); perfiles `tracker_config_gs1.yaml` y `tracker_config_gs2.yaml`, con los que `camera_backend.py` abre cada cámara por su puerto, comprueba su marca `focus` antes de escribir, aplica los ajustes y comprueba que el tamaño del frame es el pedido y el del `.yml`. Los perfiles no tienen intrínsecos todavía (el semáforo de `estado.py` sale rojo hasta las fases 4 y 5).
-- **Falta:** fase 3 (enfoque, exposición y resolución × formato), fases 4 y 5 (calibrar), fase 6 (comparar con P02 y archivar los perfiles viejos).
+- **Hecho (fases 1, 2a, 2b y 3):** en la fase 3 (`medir_modos.py`, sesión en vivo del 2026-10-22) el autor eligió 1280×960 MJPG 90 fps y 0.977 ms de exposición para las dos cámaras; ningún modo llegó a 88.2 fps de tracking con ventana (19–25 fps: la ventana es el cuello, B32). Antes: sonda de modos y controles; identidad de cada cámara por la ruta de su puerto USB (`camaras_uvc.py`); ajustes por DSHOW que viven en la cámara (`ajustes_camara.py`); perfiles `tracker_config_gs1.yaml` y `tracker_config_gs2.yaml`, con los que `camera_backend.py` abre cada cámara por su puerto, comprueba su marca `focus` antes de escribir, aplica los ajustes y comprueba que el tamaño del frame es el pedido y el del `.yml`. Los perfiles no tienen intrínsecos todavía (el semáforo de `estado.py` sale rojo hasta las fases 4 y 5).
+- **Falta:** fases 4 y 5 (calibrar), fase 6 (comparar con P02 y archivar los perfiles viejos).
 
 ### En pausa (se conserva, se puede retomar)
 

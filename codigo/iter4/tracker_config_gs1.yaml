@@ -8,9 +8,12 @@
 # Las dos cuelgan de un hub: si cambia el hub o el puerto raiz, cambia la
 # ruta y hay que medirla otra vez (iter4\sondear_camara.py --puertos).
 #
-# Provisional (fase 2b): modo 640x480 MJPG 90 fps y exposure_ms 3.906 hasta
-# que la fase 3 elija resolucion y exposicion; calibration_file vacio hasta
-# la fase 4. Caja de luz en nivel 2 (P7).
+# Modo y exposicion elegidos en la fase 3 (2026-10-22, sesion en vivo):
+# 1280x960 MJPG 90 fps (P16, eleccion del autor: ningun modo llego a 88.2
+# fps de tracking con ventana; la ventana del tracker es el cuello, 19-25
+# fps en cualquier resolucion) y exposure_ms 0.977 (P15, -10 por DSHOW, la
+# misma en las dos camaras). calibration_file vacio hasta la fase 4.
+# Caja de luz en nivel 2 (P7).
 # =====================================================================
 
 camera:
@@ -43,8 +46,8 @@ camera:
   # la pone el codigo, camaras_uvc, y el panel a sus procesos); encendida,
   # 43-44 s con los mismos ~90 fps. tracker.py lanzado a mano la necesita en
   # el entorno: $env:OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS='0'.
-  width: 640
-  height: 480
+  width: 1280
+  height: 960
   fps: 90
   backend: MSMF
   fourcc: MJPG
@@ -53,10 +56,10 @@ camera:
   # Nombres y unidades propios (exposicion en ms, P10). Se escriben solo
   # los que difieren de lo que la camara tiene y se releen siempre. Valores
   # leidos de esta camara el 2026-10-21 (fase 2a), salvo auto_white_balance
-  # (fijo en false por el plan). exposure_ms provisional: la elige la fase 3.
+  # (fijo en false por el plan). exposure_ms elegida en la fase 3 (P15).
   controls:
     exposure_manual: true
-    exposure_ms: 3.906          # -8 por DSHOW (log2 de segundos)
+    exposure_ms: 0.977          # -10 por DSHOW (log2 de segundos)
     gain: 11
     auto_white_balance: false
     brightness: 0

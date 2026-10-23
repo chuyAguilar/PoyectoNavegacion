@@ -90,3 +90,17 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** (a) Recomendada: la 2b no empieza y planificación replantea la capa de Windows con `IAMCameraControl`/`IAMVideoProcAmp` directos por `ctypes` COM (sin dependencia nueva; el moniker ya lo da la enumeración DSHOW de la 2a): permite escribir con la bandera manual y leerla, y no abre el vídeo. Cuesta ~150 líneas de COM sin contraste en Context7 y su verificación en vivo. (b) Aceptarlo y documentarlo: el autor deja la exposición en manual con AMCap y el backend solo comprueba los valores. (c) Otra que diga el autor.
 - **Respuesta del autor:** Parar y decidir (b): si MSMF cambia los controles o la exposición no sale de Auto, la meta se para y el autor decide con los datos. No se replanea por adelantado la capa con `IAMCameraControl` directo.
 - **Fecha:** 2026-10-21
+
+## P15 · Qué exposición común se deja en las dos cámaras (Fase 3, Medición 1)
+
+- **Contexto:** Medición 1 a 1280×960 MJPG, caja en nivel 2, dodecaedro a ~60 cm (`Claude outputs/camaras/exposicion_gs1.json`, `exposicion_gs2.json`). La exposición por DSHOW gobierna (leída = pedida; brillo monótono: cám. 1 250 → 244 → 216 → 173 → 124; cám. 2 250 → 245 → 215 → 169 → 120) y la captura queda en 89.4–90 fps en todas. `--elegir` propone 3.906 ms (empate de markers → la más larga), con brillo medio 244–245: la fracción a 255 (0.0–0.3 %) no ve lo que la compresión MJPG deja en 250–254.
+- **Opciones:** (a) Recomendada: 0.977 ms (−10 por DSHOW): brillo ~170, mismos markers (5 y 4), 90 fps, ~4 veces menos estela de movimiento que 3.906. (b) 1.953 ms. (c) 3.906 ms, la del script. (d) 0.488 ms.
+- **Respuesta del autor:** 0.977 ms (a), la misma en las dos cámaras.
+- **Fecha:** 2026-10-22
+
+## P16 · A qué resolución quedan los perfiles y se calibran las cámaras (Fase 3, Medición 2)
+
+- **Contexto:** Medición 2 con 0.977 ms (`Claude outputs/camaras/modos_gs1.json`, `modos_gs2.json`). Captura ~90 fps en todos los modos de las dos cámaras, incluidos 1920×1080/1200 MJPG y YUY2 (con la aceleración HW de MSMF apagada; en la fase 1, encendida, daban ~30 y ≤ 59). Tracking sin ventana: 320×240 90, 640×480 90, 960×720 68/67, 1280×720 64, 1280×960 62 fps. Con ventana: 19–25 fps en todos los modos: la ventana es el cuello (explica los ~20 fps de P02). Ningún modo llega a 88.2 con ventana en ninguna cámara: por el plan, hallazgo para la meta de optimizar el tracker y el autor elige con la tabla. Fracción con pose con K nominal (84°): 640×480 47–68 %, mayores 0–7 % con 4 markers (por confirmar con los intrínsecos reales).
+- **Opciones:** (a) Recomendada: 1280×960 MJPG (más píxeles por marker; la velocidad la sube la optimización). (b) 640×480. (c) 960×720. (d) 1920×1200 (tracking sin medir).
+- **Respuesta del autor:** 1280×960 MJPG (a), en las dos cámaras.
+- **Fecha:** 2026-10-22
