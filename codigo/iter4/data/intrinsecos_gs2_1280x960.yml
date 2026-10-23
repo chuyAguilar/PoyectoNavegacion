@@ -1,0 +1,114 @@
+%YAML:1.0
+---
+camera_matrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 836.72346843573894, 0., 628.56128022364123, 0.,
+       836.49955152084101, 389.81166779991372, 0., 0., 1. ]
+distortion_coefficients: !!opencv-matrix
+   rows: 5
+   cols: 1
+   dt: d
+   data: [ 0.014293172935464562, -0.025701203334498227,
+       0.004131261981508122, -0.00092677459153409981,
+       -0.0059520078346065042 ]
+image_width: 1280
+image_height: 960
+rms_reprojection_px: 0.15398007628475471
+n_views: 23
+board: "8x5 inner corners @ 24.86 mm"
+square_mm: 24.859999999999999
+generated_by: "iter4/calibrar_camara.py"
+generated_at_utc: "2026-10-23T20:49:22.581940+00:00"
+detector: sb
+rms_control_px: 0.15000248038125336
+n_control: 3
+errores_control_px:
+   - 0.14448461263426063
+   - 0.17678735527969616
+   - 0.1239865318763415
+errores_vista_px:
+   - 0.18230713673275092
+   - 0.14834862126489912
+   - 0.24901691716501789
+   - 0.21024702782461152
+   - 0.17794816468931227
+   - 0.13731408294227732
+   - 0.14194306335451046
+   - 0.1132482168693691
+   - 0.1549938847577095
+   - 0.14496244299977837
+   - 0.12428196056637293
+   - 0.12598279379982491
+   - 0.18403745857745976
+   - 0.18290869361348916
+   - 0.13758200184527322
+   - 0.12325931041379348
+   - 0.11696549964022092
+   - 0.11556879467276655
+   - 0.11862970598163626
+   - 0.15202325212139717
+   - 0.15776717212953881
+   - 0.13621921671734888
+   - 0.12209625678424994
+cobertura: 1.
+cobertura_celdas: "4x3"
+std_intrinsecos:
+   fx: 1.0911504748184575
+   fy: 1.0657706414282628
+   cx: 0.49963426389092769
+   cy: 0.66453813044213128
+square_mm_medido: 24.859999999999999
+medidas_calibrador_mm:
+   - 149.09999999999999
+   - 149.09999999999999
+   - 149.09999999999999
+   - 149.09999999999999
+   - 149.40000000000001
+casillas_por_medida: 6
+perfil: "tracker_config_gs2.yaml"
+usb_port_windows: "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)"
+modo:
+   width: 1280
+   height: 960
+   fps: 90
+   fourcc: MJPG
+   backend: MSMF
+ajustes_leidos:
+   exposure_ms: 0.97660000000000002
+   gain: 11.
+   auto_white_balance: 0
+   brightness: 0.
+   contrast: 0.
+   saturation: 56.
+   sharpness: 0.
+   gamma: 110.
+   backlight: 54.
+ajustes_declarados:
+   exposure_manual: 1
+   exposure_ms: 0.97699999999999998
+   gain: 11
+   auto_white_balance: 0
+   brightness: 0
+   contrast: 0
+   saturation: 56
+   sharpness: 0
+   gamma: 110
+   backlight: 54
+luz: caja nivel 2
+vistas_dir: "..\\Claude outputs\\camaras\\vistas_gs2"
+fecha_captura: "2026-10-23 14:49:04"
+criterio:
+   rms_px: 0.5
+   rms_control_px: 0.75
+   cobertura: 0.80000000000000004
+   min_vistas: 15
+criterio_cumplido: 1
+criterio_fallos:
+   []
+opencv: "4.11.0"
+detector_captura: clasico
+detector_comparacion:
+   clasico: 0.20205475038293116
+   sb: 0.15000248038125336

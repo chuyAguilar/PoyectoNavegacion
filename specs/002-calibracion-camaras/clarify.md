@@ -118,3 +118,25 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones (selección múltiple):** (a) medidas del calibrador + casillas por medida + reporte y luz; (b) los dos detectores sobre las mismas vistas, se queda el de menor RMS de control; (c) botón «Comprobar escala»; (d) apuntar el perfil al .yml al terminar.
 - **Respuesta del autor:** las cuatro. Se hacen dentro de la Fase 4, antes de «verifica»; se prueban en vivo con la cámara 2 en la Fase 5 (calibrada desde el panel).
 - **Fecha:** 2026-10-22
+
+## P19 · Enfocar el lente desde el panel (Fase 5)
+
+- **Contexto:** en la Fase 3 el lente se enfocó con `medir_modos.py --enfocar` (ventana con el número de nitidez) desde la línea de comandos. El autor quiere hacerlo desde el panel.
+- **Opciones:** (a) Recomendada: un botón «Enfocar lente» con su receta, por encargo corto al cerrar la Fase 5, en su commit; (b) en la Fase 6; (c) al BACKLOG.
+- **Respuesta del autor:** (a), al cerrar la Fase 5.
+- **Fecha:** 2026-10-23
+
+## P20 · Con qué se juzga la escala (Fase 5)
+
+- **Contexto:** escala de la cámara 2 desde el panel (`escala_gs2.json`, 0,80,0,80,0,80): pasos −0.003, −1.224, −1.121, −0.378, +0.020 mm; fallan dos de cinco. El segundo «0» quedó 1.24 mm del primero (los otros «0» a 0.55 mm entre sí y los «80» a < 0.6 mm): los dos pasos que fallan son los que tocan esa posición. Con la media de las posiciones repetidas (los tres «0» contra los tres «80»): 79.63 mm, error −0.37 mm (−0.46 %); en la cámara 1 (`escala_gs1_topes.json`), +0.27 mm. El criterio por paso mide sobre todo la colocación a mano (±0.6 mm), no la escala de la cámara.
+- **Opciones:** (a) Recomendada: el criterio pasa a la distancia entre las medias de las posiciones repetidas (|error| ≤ 1.0 mm por 100 mm); los pasos sueltos quedan como información y para ver la repetibilidad; (b) repetir con el criterio por paso; (c) las dos.
+- **Respuesta del autor:** (a). Se recalcula sin cámara con los JSON de las dos cámaras.
+- **Fecha:** 2026-10-23
+
+## P21 · La ventana «Calibración de cámara» del panel, simplificada (Fase 5)
+
+- **Contexto:** los diálogos de calibración y escala de P18 tienen 11–12 campos y al autor le resultan confusos; casi todos son fijos (tablero, esquinas, rutas, detector, vistas, luz, autocierre).
+- **Opciones:** (a) Recomendada: tres pasos sin campos (1 Enfocar lente, 2 Calibrar con tablero, 3 Comprobar escala con regla), con el tablero y su lado guardados y «Cambiar medidas…», el último resultado de cada paso a la vista, y en la escala solo recorrido e idas y vueltas; (b) lo mismo con un «Avanzado…» que despliega los campos de hoy.
+- **Respuesta del autor:** (a), sin «Avanzado».
+- **Fecha:** 2026-10-23
+- **Texto de «Volver a medir el tablero» (elegido por el autor, 2026-10-23, tras probar la ventana en vivo):** «Solo hace falta si imprimes un tablero nuevo. El programa necesita saber cuánto mide cada cuadro de verdad (la impresora nunca es exacta). 1. Abre el calibrador sobre una columna del tablero. 2. Una punta en el borde de ARRIBA de un cuadro negro. 3. La otra punta en el borde de ARRIBA de otro cuadro negro, más abajo. Cuenta cuántos cuadros avanzaste. 4. Anota lo que marca. Repítelo 5 veces en otras columnas. Ejemplo: 6 cuadros → 149.1 mm»; campos «Cuadros que avanzaste:» y «Lo que marcó (5 veces):»; debajo, en negrita, «Cada cuadro mide: 24.86 mm»; botones Guardar y Cancelar.

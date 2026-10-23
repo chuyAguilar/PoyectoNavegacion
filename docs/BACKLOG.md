@@ -33,6 +33,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B31 | El criterio de exposición de `medir_modos.py` favorece imágenes casi saturadas | Media | — |
 | B32 | Optimizar el tracker: la ventana limita a 19–25 fps en cualquier resolución | Media | — |
 | B34 | Las pruebas no deben poder abrir una cámara real aunque cambie un perfil | Media | — |
+| B35 | El criterio de escala por medias no mira la repetibilidad | Media | — |
+| B36 | Cámara 2 con el punto principal 90 px sobre el centro | Baja | — |
 
 ## Abiertos
 
@@ -58,7 +60,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** media.
 
 ### B10 · Verificaciones en vivo pendientes del brief-02
-- **Qué:** la captura del asistente con IDs nuevos, la calibración de punta por dock desde el panel y la calibración de cámara lanzada desde el panel (`calibrar_camara.py` interactivo por línea de comandos quedó verificado en vivo en la fase 4 de la meta 002, 2026-10-22; el panel se prueba en la fase 5). (El snippet de `documentos/MANUAL_simplificado.md` §4.2 con la ruta nueva, que se sumó en la fase 4 de la meta 001, quedó verificado en vivo por el autor el 2026-10-19: traslación [0.904, 5.471, −201.808] mm, la esperada; `docs/PRUEBAS.md` P01.)
+- **Qué:** la captura del asistente con IDs nuevos y la calibración de punta por dock desde el panel. (La calibración de cámara quedó verificada en vivo: `calibrar_camara.py` por línea de comandos en la fase 4 · Calibración de la cámara 1 y comprobación de escala, 2026-10-22, y desde el panel, con la ventana de tres pasos, en la fase 5 · Calibración de la cámara 2, 2026-10-23: cámara 2 RMS 0.154 px, control 0.150 px; meta 002.) (El snippet de `documentos/MANUAL_simplificado.md` §4.2 con la ruta nueva, que se sumó en la fase 4 de la meta 001, quedó verificado en vivo por el autor el 2026-10-19: traslación [0.904, 5.471, −201.808] mm, la esperada; `docs/PRUEBAS.md` P01.)
 - **Por qué queda:** necesita hardware y la placa dock física.
 - **De dónde:** `docs/CONTEXT.md` §6.
 - **Qué haría falta:** una sesión con cámara; reportar números.
@@ -233,6 +235,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** sesión en vivo de la fase 4 · Calibración de la cámara 1 y comprobación de escala (meta 002), paso 3, 2026-10-22 (`Claude outputs/fases/002/fase-4-en-vivo.md`).
 - **Qué haría falta:** un fixture autouse en `codigo/tests/conftest.py` que niegue `camera_backend.create_backend` y `cv2.VideoCapture` a toda la suite, salvo las pruebas marcadas a propósito (y las que usan una cámara falsa); con su prueba de que un perfil real no abre nada.
 - **Prioridad:** media.
+
+### B35 · El criterio de escala por medias no mira la repetibilidad
+- **Qué:** desde P20, `comprobar_escala.py` juzga la escala por la distancia entre las medias de las posiciones repetidas; la repetibilidad de cada grupo se calcula, se guarda y se imprime, pero no juzga. Así, `escala_gs1_sin_topes.json` (primera sesión de la cámara 1, sin topes) cumple por medias con +0.645 mm aunque cada marca se repitió solo a 1.7–2.0 mm: una sesión con el montaje moviéndose puede pasar.
+- **Por qué queda:** P20 fijó el criterio por medias y la fase 5 · Calibración de la cámara 2 no lo cambia; las dos sesiones buenas (gs1 con topes 0.39 / 0.30 mm; gs2 0.70 / 0.33 mm) tienen buena repetibilidad.
+- **De dónde:** recálculo `--desde-json` de la fase 5 · Calibración de la cámara 2 (meta 002), 2026-10-23 (`Claude outputs/fases/002/fase-5-panel.md`, «Pendiente o dudoso»).
+- **Qué haría falta:** un tope a la repetibilidad (p. ej. ≤ 1 mm por grupo) que entre en `cumple`, o al menos mostrarla en «Última» de la ventana de calibración; con su prueba sobre el JSON sin topes.
+- **Prioridad:** media.
+
+### B36 · Cámara 2 con el punto principal 90 px sobre el centro
+- **Qué:** la calibración de la cámara 2 (`intrinsecos_gs2_1280x960.yml`) da cy 389.81 px en una imagen de 960 (centro 480): 90 px arriba. Los dos detectores coinciden a ±0.66 px, así que no es ruido del ajuste; lo probable es que el lente quedó descentrado al remontarlo para enfocar. La cámara 1 da cy 488.87.
+- **Por qué queda:** la calibración cumple (RMS 0.154 px, control 0.150 px, escala −0.37 mm) y vale mientras el lente no se mueva.
+- **De dónde:** sesión en vivo de la fase 5 · Calibración de la cámara 2 (meta 002), 2026-10-23.
+- **Qué haría falta:** vigilarlo: si el lente de la cámara 2 se gira o se saca, recalibrar; si la fase 6 · Comparación contra P02 da peor sd con la cámara 2 que con la 1, mirar aquí primero (remontar el lente centrado y recalibrar).
+- **Prioridad:** baja.
 
 ## Cerrados
 

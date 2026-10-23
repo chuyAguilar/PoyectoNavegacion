@@ -40,6 +40,12 @@ StylusTipToDodecaedro*.h5
 !codigo/iter4/data/respaldo_puntas/StylusTipToDodecaedro_femto_dock.npy
 !codigo/iter4/data/respaldo_puntas/StylusTipToDodecaedro_femto_dock.txt
 
+# Copias de seguridad del perfil que deja el panel al apuntarlo a un .yml
+# (perfil_editor.aplicar_cambio, ADR-018: <perfil>.bak-AAAAMMDD-HHMMSS junto
+# al perfil). Son locales: el historial de git ya guarda el antes (meta 002,
+# fase 5).
+codigo/iter4/*.bak-*
+
 # Archivos del sistema operativo
 .DS_Store
 Thumbs.db

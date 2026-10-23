@@ -7,7 +7,9 @@ lanzan los scripts EXISTENTES como subprocesos (la GUI solo orquesta, no
 reescribe logica) + panel de log con la salida en vivo.
 
 Grupos de acciones:
-  1 Verificar/Preparar: identificar IDs, probar camara (bajo demanda).
+  1 Verificar/Preparar: identificar IDs, probar camara (bajo demanda) y
+    calibrar camara: una ventana de tres pasos sin campos (enfocar, tablero,
+    escala; meta 002, fase 5, P21), con lo fijo en calibracion.py.
   2 Calibrar (orden brief-02 M4): asistente "dodecaedro nuevo" (captura ->
     cobertura -> BA, en asistente.py), calibrar punta (dock). Los botones
     sueltos de captura/BA se quitaron en brief-02 M4 (redundantes con el
@@ -32,11 +34,12 @@ from PySide6.QtCore import QObject, QSettings, Qt, QTimer, Signal
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
-    QFileDialog, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox,
     QVBoxLayout, QWidget,
 )
 
+import calibracion
 import estado
 import perfil_editor
 import procesos
@@ -151,173 +154,6 @@ class DialogoDivot(QDialog):
         return d.receta if d.exec() == QDialog.DialogCode.Accepted else None
 
 
-class DialogoCalibrarCamara(QDialog):
-    """Parametros de iter4/calibrar_camara.py (meta 002, fase 4; P18): tablero
-    impreso en 3D (9x6 casillas = esquinas interiores 8x5, 25 mm nominales).
-    El camino normal: las medidas del calibrador (>= 5) y las casillas que
-    abarca cada una; el dialogo calcula el lado (dos decimales, como
-    calibrar_camara.lado_desde_medidas) y pasa --square-mm, --medidas-mm y
-    --casillas-por-medida. Si solo se sabe el lado, se escribe a mano.
-    Detector: "ambos" (por defecto) calibra con los dos sobre las mismas
-    vistas y se queda el de menor RMS de control. Pasa --reporte y --luz."""
-
-    def __init__(self, parent, ruta_cfg):
-        super().__init__(parent)
-        self.setWindowTitle("Calibrar camara con tablero")
-        self.ruta_cfg = ruta_cfg
-        form = QFormLayout(self)
-        self.slug = recetas.slug_de_perfil(ruta_cfg)
-        # El padre es DialogoIntrinsecos (tiene .panel) o el propio panel.
-        panel = getattr(parent, "panel", parent)
-        cam = ((getattr(panel, "_cfg", None) or {}).get("camera", {})) or {}
-        modo = (f"{cam.get('width', 'W')}x{cam.get('height', 'H')}"
-                if cam.get("width") and cam.get("height") else "WxH")
-        self.edit_out = QLineEdit(f"iter4/data/intrinsecos_{self.slug}_{modo}.yml")
-        form.addRow("Salida (.yml):", self.edit_out)
-        self.edit_vistas = QLineEdit(f"../Claude outputs/camaras/vistas_{self.slug}")
-        form.addRow("Carpeta de vistas (PNG):", self.edit_vistas)
-        self.spin_cols = QSpinBox()
-        self.spin_cols.setRange(3, 20)
-        self.spin_cols.setValue(8)
-        form.addRow("Esquinas interiores (horiz):", self.spin_cols)
-        self.spin_rows = QSpinBox()
-        self.spin_rows.setRange(3, 20)
-        self.spin_rows.setValue(5)
-        form.addRow("Esquinas interiores (vert):", self.spin_rows)
-        self.edit_medidas = QLineEdit()
-        self.edit_medidas.setPlaceholderText("149.1, 149.1, 149.1, 149.1, 149.4")
-        form.addRow(f"Medidas del calibrador (mm, >= {recetas.MIN_MEDIDAS},\n"
-                    "misma orilla, mismo tramo):", self.edit_medidas)
-        self.spin_casillas = QSpinBox()
-        self.spin_casillas.setRange(1, 9)
-        self.spin_casillas.setValue(4)
-        form.addRow("Casillas que abarca cada medida:", self.spin_casillas)
-        self.spin_sq = QDoubleSpinBox()
-        self.spin_sq.setRange(0.0, 100.0)
-        self.spin_sq.setDecimals(2)
-        self.spin_sq.setSingleStep(0.01)
-        self.spin_sq.setValue(0.0)
-        self.spin_sq.setSpecialValueText("medir con calibrador")
-        self.spin_sq.setSuffix(" mm")
-        form.addRow("Lado de la casilla:", self.spin_sq)
-        self.lbl_lado = QLabel()
-        self.lbl_lado.setWordWrap(True)
-        form.addRow(self.lbl_lado)
-        self.combo_det = QComboBox()
-        self.combo_det.addItems(list(recetas.DETECTORES_CALIBRACION))
-        form.addRow("Detector de esquinas:", self.combo_det)
-        self.spin_min = QSpinBox()
-        self.spin_min.setRange(5, 60)
-        self.spin_min.setValue(15)
-        form.addRow("Vistas minimas en el ajuste:", self.spin_min)
-        self.spin_ctrl = QSpinBox()
-        self.spin_ctrl.setRange(0, 10)
-        self.spin_ctrl.setValue(3)
-        form.addRow("Vistas de control (fuera del ajuste):", self.spin_ctrl)
-        self.edit_luz = QLineEdit(recetas.LUZ_POR_DEFECTO)
-        form.addRow("Luz (caja y sala):", self.edit_luz)
-        self._reporte_auto = self._reporte_defecto()
-        self.edit_reporte = QLineEdit(self._reporte_auto)
-        form.addRow("Reporte (.json):", self.edit_reporte)
-        nota = QLabel("El lado es el MEDIDO con calibrador, nunca el nominal "
-                      "(el RMS no ve un error de escala). ESPACIO=capturar vista "
-                      "(20-30, bordes y esquinas de la imagen, inclinaciones "
-                      "hasta ~45 grados, 40-80 cm; la rejilla 4x3 se pone verde "
-                      "donde ya hay esquinas), u=quitar la ultima, q=calibrar y "
-                      "guardar. Con 'ambos' se calibra con los dos detectores "
-                      "y gana el de menor RMS de control. Criterio: RMS <= 0.5 "
-                      "px, control <= 0.75 px, cobertura >= 0.8. Si se cumple, "
-                      "el panel ofrece apuntar el perfil al .yml nuevo.")
-        nota.setWordWrap(True)
-        form.addRow(nota)
-        botones = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
-                                   | QDialogButtonBox.StandardButton.Cancel)
-        botones.accepted.connect(self.accept)
-        botones.rejected.connect(self.reject)
-        form.addRow(botones)
-        self.receta = None
-        self.edit_medidas.textChanged.connect(self._actualizar_lado)
-        self.spin_casillas.valueChanged.connect(self._actualizar_lado)
-        self.combo_det.currentIndexChanged.connect(self._actualizar_reporte)
-        self.edit_vistas.textChanged.connect(self._actualizar_reporte)
-        self._actualizar_lado()
-
-    def _reporte_defecto(self):
-        return recetas.reporte_por_defecto(self.edit_vistas.text().strip() or ".",
-                                           self.slug, self.combo_det.currentText())
-
-    def _actualizar_reporte(self, *_):
-        """El reporte sigue al detector y a la carpeta mientras no se edite a mano."""
-        if self.edit_reporte.text().strip() == self._reporte_auto:
-            self._reporte_auto = self._reporte_defecto()
-            self.edit_reporte.setText(self._reporte_auto)
-
-    def _actualizar_lado(self, *_):
-        texto = self.edit_medidas.text().strip()
-        if not texto:
-            self.spin_sq.setReadOnly(False)
-            self.lbl_lado.setText("Sin medidas: escribe el lado medido a mano. "
-                                  "El camino normal son las medidas del "
-                                  "calibrador.")
-            return
-        self.spin_sq.setReadOnly(True)
-        try:
-            medidas = recetas.parsear_medidas(texto)
-            lado = recetas.lado_de_medidas(medidas, self.spin_casillas.value())
-        except ValueError as e:
-            self.spin_sq.setValue(0.0)
-            self.lbl_lado.setText(f"Medidas: {e}")
-            return
-        self.spin_sq.setValue(lado)
-        media = sum(medidas) / len(medidas)
-        falta = ("" if len(medidas) >= recetas.MIN_MEDIDAS else
-                 f" — faltan medidas: hacen falta {recetas.MIN_MEDIDAS}")
-        self.lbl_lado.setText(f"Lado: media {media:.3f} mm / "
-                              f"{self.spin_casillas.value()} casillas = "
-                              f"{lado:.2f} mm ({len(medidas)} medidas){falta}")
-
-    def componer(self):
-        """La receta con lo escrito en el dialogo (ValueError si algo no vale)."""
-        texto = self.edit_medidas.text().strip()
-        medidas = None
-        if texto:
-            medidas = recetas.parsear_medidas(texto)
-            if len(medidas) < recetas.MIN_MEDIDAS:
-                raise ValueError(f"Hacen falta al menos {recetas.MIN_MEDIDAS} "
-                                 f"medidas del calibrador; hay {len(medidas)}.")
-            lado = recetas.lado_de_medidas(medidas, self.spin_casillas.value())
-        else:
-            lado = self.spin_sq.value()
-            if lado < 5.0:
-                raise ValueError("Escribe las medidas del calibrador (>= 5, "
-                                 "del mismo tramo) o, si solo sabes el lado "
-                                 "medido, escribelo con dos decimales; el "
-                                 "nominal no vale.")
-        return recetas.receta_calibrar_camara(
-            self.ruta_cfg,
-            output=self.edit_out.text().strip(),
-            square_mm=lado,
-            vistas_dir=self.edit_vistas.text().strip(),
-            cols=self.spin_cols.value(),
-            rows=self.spin_rows.value(),
-            detector=self.combo_det.currentText(),
-            min_vistas=self.spin_min.value(),
-            n_control=self.spin_ctrl.value(),
-            luz=self.edit_luz.text().strip() or None,
-            medidas_mm=medidas,
-            casillas_por_medida=self.spin_casillas.value(),
-            reporte=self.edit_reporte.text().strip() or None,
-        )
-
-    def accept(self):
-        try:
-            self.receta = self.componer()
-        except (ValueError, FileNotFoundError) as e:
-            QMessageBox.warning(self, "Calibrar camara", str(e))
-            return
-        super().accept()
-
-
 def yml_del_perfil(ruta_cfg, cfg=None):
     """(ruta del .yml al que apunta el perfil, None) o (None, motivo)."""
     try:
@@ -334,136 +170,37 @@ def yml_del_perfil(ruta_cfg, cfg=None):
     return ruta, None
 
 
-class DialogoComprobarEscala(QDialog):
-    """Parametros de iter4/comprobar_escala.py (meta 002, fase 4; P18): el
-    perfil activo ya apunta a un .yml; el lado y el detector salen de ese
-    .yml (el ganador de la calibracion) y se pueden cambiar."""
-
-    def __init__(self, parent, ruta_cfg, ruta_yml):
-        super().__init__(parent)
-        self.setWindowTitle("Comprobar escala con regla")
-        self.ruta_cfg = ruta_cfg
-        form = QFormLayout(self)
-        slug = recetas.slug_de_perfil(ruta_cfg)
-        try:
-            campos = perfil_editor.leer_campos_yml(ruta_yml)
-        except OSError:
-            campos = {}
-        info = QLabel(f"Perfil: {Path(ruta_cfg).name}  |  .yml: {Path(ruta_yml).name}\n"
-                      f"El .yml declara: detector {campos.get('detector', '-')}, "
-                      f"lado {campos.get('square_mm', '-')} mm, criterio cumplido "
-                      f"{'si' if campos.get('criterio_cumplido') == '1' else 'NO o sin dato'}")
-        info.setWordWrap(True)
-        form.addRow(info)
-        self.spin_sq = QDoubleSpinBox()
-        self.spin_sq.setRange(0.0, 100.0)
-        self.spin_sq.setDecimals(2)
-        self.spin_sq.setSingleStep(0.01)
-        self.spin_sq.setSpecialValueText("medir con calibrador")
-        self.spin_sq.setSuffix(" mm")
-        try:
-            self.spin_sq.setValue(round(float(campos.get("square_mm", 0.0)), 2))
-        except ValueError:
-            self.spin_sq.setValue(0.0)
-        form.addRow("Lado de la casilla (el de la calibracion):", self.spin_sq)
-        self.combo_det = QComboBox()
-        self.combo_det.addItems(list(recetas.DETECTORES_ESCALA))
-        if campos.get("detector") in recetas.DETECTORES_ESCALA:
-            self.combo_det.setCurrentText(campos["detector"])
-        form.addRow("Detector (el ganador):", self.combo_det)
-        self.spin_cols = QSpinBox()
-        self.spin_cols.setRange(3, 20)
-        self.spin_cols.setValue(8)
-        form.addRow("Esquinas interiores (horiz):", self.spin_cols)
-        self.spin_rows = QSpinBox()
-        self.spin_rows.setRange(3, 20)
-        self.spin_rows.setValue(5)
-        form.addRow("Esquinas interiores (vert):", self.spin_rows)
-        self.edit_pos = QLineEdit(recetas.POSICIONES_ESCALA)
-        form.addRow("Posiciones de la regla (mm):", self.edit_pos)
-        self.spin_frames = QSpinBox()
-        self.spin_frames.setRange(1, 300)
-        self.spin_frames.setValue(recetas.FRAMES_POR_POSICION)
-        form.addRow("Frames por posicion:", self.spin_frames)
-        self.edit_luz = QLineEdit(recetas.LUZ_POR_DEFECTO)
-        form.addRow("Luz (caja y sala):", self.edit_luz)
-        self.edit_salida = QLineEdit(f"../Claude outputs/camaras/escala_{slug}.json")
-        form.addRow("Salida (.json):", self.edit_salida)
-        self.spin_timeout = QSpinBox()
-        self.spin_timeout.setRange(60, 3600)
-        self.spin_timeout.setValue(900)
-        self.spin_timeout.setSuffix(" s")
-        form.addRow("Autocierre del script:", self.spin_timeout)
-        nota = QLabel("El tablero va sobre una base rigida con la regla pegada. "
-                      "Va y vuelve entre las dos marcas SIN GIRAR el tablero; "
-                      "en cada posicion, quieto, ESPACIO (la ventana dice que "
-                      "lectura de la regla toca). q sale antes. Criterio: "
-                      "|error| <= 1.0 mm por cada 100 mm de paso (0.8 mm con "
-                      "pasos de 80 mm).")
-        nota.setWordWrap(True)
-        form.addRow(nota)
-        botones = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
-                                   | QDialogButtonBox.StandardButton.Cancel)
-        botones.accepted.connect(self.accept)
-        botones.rejected.connect(self.reject)
-        form.addRow(botones)
-        self.receta = None
-
-    def componer(self):
-        if self.spin_sq.value() < 5.0:
-            raise ValueError("El lado de la casilla tiene que ser el medido "
-                             "con calibrador (el de la calibracion).")
-        return recetas.receta_comprobar_escala(
-            self.ruta_cfg,
-            square_mm=self.spin_sq.value(),
-            detector=self.combo_det.currentText(),
-            desplazamientos_mm=self.edit_pos.text().strip(),
-            salida=self.edit_salida.text().strip(),
-            cols=self.spin_cols.value(),
-            rows=self.spin_rows.value(),
-            frames_por_posicion=self.spin_frames.value(),
-            luz=self.edit_luz.text().strip() or None,
-            timeout=self.spin_timeout.value(),
-        )
-
-    def accept(self):
-        try:
-            self.receta = self.componer()
-        except (ValueError, FileNotFoundError) as e:
-            QMessageBox.warning(self, "Comprobar escala", str(e))
-            return
-        super().accept()
-
-
 def apuntar_perfil(padre, panel, ruta_yml, perfil, encabezado=""):
     """Apunta camera.calibration_file del perfil al .yml: valida, muestra el
     antes/despues, pide confirmacion y aplica con backup (perfil_editor,
-    ADR-018: la unica mutacion de config del panel). True si se aplico."""
+    ADR-018: la unica mutacion de config del panel). True si se aplico.
+    Desde la fase 5 (P21) no tiene boton propio: la usa la oferta que sigue a
+    una calibracion que cumple el criterio (Panel._ofrecer_apuntar)."""
     err = perfil_editor.validar_yml_intrinsecos(ruta_yml)
     if err:
-        QMessageBox.warning(padre, "Intrinsecos",
-                            f"El .yml NO valida como calibracion: {err}")
+        QMessageBox.warning(padre, "Calibración",
+                            f"El archivo de la calibración no vale: {err}")
         return False
     valor = perfil_editor.valor_para_perfil(ruta_yml, estado.DIR_DATA)
     try:
         actual, nueva = perfil_editor.previsualizar_cambio(perfil, valor)
     except (ValueError, OSError) as e:
-        QMessageBox.critical(padre, "Intrinsecos", str(e))
+        QMessageBox.critical(padre, "Calibración", str(e))
         return False
     r = QMessageBox.question(
-        padre, "Confirmar edicion del perfil (ADR-018)",
+        padre, "Usar la calibración nueva (ADR-018)",
         (f"{encabezado}\n\n" if encabezado else "")
-        + f"Se editara {Path(perfil).name} — UNICA linea, con backup "
-        f"timestampeado:\n\n"
+        + f"Se cambiará una sola línea de {Path(perfil).name} (antes se "
+        f"guarda una copia del archivo):\n\n"
         f"  ANTES:    {actual.strip()}\n"
-        f"  DESPUES:  {nueva.strip()}\n\n¿Aplicar?")
+        f"  DESPUÉS:  {nueva.strip()}\n\n¿Cambiarla?")
     if r != QMessageBox.StandardButton.Yes:
         panel.log_msg(f"perfil NO editado (cancelado): {Path(perfil).name}")
         return False
     try:
         backup, _a, _n = perfil_editor.aplicar_cambio(perfil, valor)
     except (ValueError, OSError) as e:
-        QMessageBox.critical(padre, "Intrinsecos", f"NO aplicado: {e}")
+        QMessageBox.critical(padre, "Calibración", f"No se cambió: {e}")
         return False
     panel.log_msg(f"perfil editado (ADR-018): {Path(perfil).name} -> "
                   f"calibration_file: {valor}")
@@ -472,102 +209,260 @@ def apuntar_perfil(padre, panel, ruta_yml, perfil, encabezado=""):
     return True
 
 
-class DialogoIntrinsecos(QDialog):
-    """M3: gestion de intrinsecos del perfil activo.
-    (a) Correr una calibracion con tablero (calibrar_camara.py).
-    (b) Comprobar la escala con regla (comprobar_escala.py; P18), con el .yml
-        al que ya apunta el perfil.
-    (c) Apuntar camera.calibration_file del perfil a un .yml validado —
-        UNICA mutacion de config permitida (ADR-018): edicion textual
-        quirurgica con backup, via perfil_editor.py."""
+class DialogoMedirTablero(QDialog):
+    """«Volver a medir el tablero…» (P21): las medidas del calibrador y los
+    cuadros que abarca cada una; muestra cuanto mide cada cuadro y, al
+    guardar, reescribe el archivo del tablero (calibracion.escribir_tablero)."""
 
-    def __init__(self, panel):
+    def __init__(self, parent, ruta_tablero):
+        super().__init__(parent)
+        self.setWindowTitle("Volver a medir el tablero")
+        self.ruta_tablero = ruta_tablero
+        self.tablero = None
+        try:
+            actual = calibracion.leer_tablero(ruta_tablero)
+        except (OSError, ValueError):
+            actual = None
+        caja = QVBoxLayout(self)
+        # Texto elegido por el autor (2026-10-23, P21).
+        guia = QLabel(
+            "Solo hace falta si imprimes un tablero nuevo.\n"
+            "El programa necesita saber cuánto mide cada cuadro de verdad "
+            "(la impresora nunca es exacta).\n\n"
+            "1. Abre el calibrador sobre una columna del tablero.\n"
+            "2. Una punta en el borde de ARRIBA de un cuadro negro.\n"
+            "3. La otra punta en el borde de ARRIBA de otro cuadro negro, más "
+            "abajo. Cuenta cuántos cuadros avanzaste.\n"
+            "4. Anota lo que marca. Repítelo "
+            f"{calibracion.MEDIDAS_TABLERO} veces en otras columnas.\n\n"
+            "Ejemplo: 6 cuadros → 149.1 mm")
+        guia.setTextFormat(Qt.TextFormat.PlainText)
+        guia.setWordWrap(True)
+        caja.addWidget(guia)
+        form = QFormLayout()
+        self.spin_cuadros = QSpinBox()
+        self.spin_cuadros.setRange(1, calibracion.MAX_CASILLAS_POR_MEDIDA)
+        self.spin_cuadros.setValue(actual.casillas_por_medida if actual else 6)
+        form.addRow("Cuadros que avanzaste:", self.spin_cuadros)
+        self.edit_medidas = QLineEdit(
+            ", ".join(recetas._num(m) for m in actual.medidas_mm) if actual else "")
+        self.edit_medidas.setPlaceholderText("149.1, 149.1, 149.1, 149.1, 149.4")
+        form.addRow(f"Lo que marcó ({calibracion.MEDIDAS_TABLERO} veces):", self.edit_medidas)
+        caja.addLayout(form)
+        self.lbl_lado = QLabel()
+        self.lbl_lado.setStyleSheet("font-weight: bold;")
+        caja.addWidget(self.lbl_lado)
+        botones = QDialogButtonBox(QDialogButtonBox.StandardButton.Save
+                                   | QDialogButtonBox.StandardButton.Cancel)
+        botones.button(QDialogButtonBox.StandardButton.Save).setText("Guardar")
+        botones.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
+        botones.accepted.connect(self.accept)
+        botones.rejected.connect(self.reject)
+        caja.addWidget(botones)
+        self.edit_medidas.textChanged.connect(self._actualizar)
+        self.spin_cuadros.valueChanged.connect(self._actualizar)
+        self._actualizar()
+
+    def _actualizar(self, *_):
+        n = calibracion.MEDIDAS_TABLERO
+        try:
+            medidas = recetas.parsear_medidas(self.edit_medidas.text())
+        except ValueError:
+            self.lbl_lado.setText("Escribe solo números, con punto decimal y "
+                                  "separados por comas.")
+            return
+        if len(medidas) < n:
+            self.lbl_lado.setText(f"Llevas {len(medidas)} de {n} medidas.")
+            return
+        lado = recetas.lado_de_medidas(medidas, self.spin_cuadros.value())
+        self.lbl_lado.setText(f"Cada cuadro mide: {lado:.2f} mm")
+
+    def accept(self):
+        try:
+            self.tablero = calibracion.escribir_tablero(
+                self.ruta_tablero, self.edit_medidas.text(), self.spin_cuadros.value())
+        except (ValueError, OSError) as e:
+            QMessageBox.warning(self, "Medidas del tablero", str(e))
+            return
+        super().accept()
+
+
+class VentanaCalibrarCamara(QDialog):
+    """Calibrar la camara del perfil activo en tres pasos sin campos (meta
+    002, fase 5; P19, P21): 1 enfocar el lente, 2 calibrar con el tablero
+    guardado, 3 comprobar la escala con la regla. Lo fijo no se ve (vive en
+    calibracion.py) y los textos son llanos. Cada paso lanza su receta y
+    cierra la ventana para ver el registro; al reabrirla, «Última» se
+    actualiza. Tras calibrar con el criterio cumplido, el panel ofrece
+    apuntar el perfil (Panel._ofrecer_apuntar, ADR-018)."""
+
+    def __init__(self, panel, ruta_cfg=None, ruta_tablero=None):
         super().__init__(panel)
         self.panel = panel
-        self.setWindowTitle("Calibracion de camara e intrinsecos (M3)")
-        self.resize(520, 300)
+        self.ruta_cfg = str(ruta_cfg or panel.perfil_activo())
+        self.ruta_tablero = ruta_tablero or calibracion.RUTA_TABLERO
+        try:
+            self.cfg = estado.cargar_perfil(self.ruta_cfg) or {}
+        except Exception:
+            self.cfg = {}
+        self.slug = recetas.slug_de_perfil(self.ruta_cfg)
+        try:
+            modo = calibracion.modo_del_perfil(self.cfg)
+        except ValueError:
+            modo = "sin modo"
+        self.setWindowTitle(f"Calibrar cámara — {self.slug}")
+        self.resize(560, 520)
         caja = QVBoxLayout(self)
+        titulo = QLabel(f"Calibrar cámara — {self.slug} ({modo}, perfil "
+                        f"{Path(self.ruta_cfg).name})")
+        titulo.setStyleSheet("font-weight: bold; font-size: 11pt;")
+        titulo.setWordWrap(True)
+        caja.addWidget(titulo)
 
-        cfg = panel._cfg or {}
-        cam = cfg.get("camera", {}) or {}
-        ctype = str(cam.get("camera_type", "?")).lower()
-        actual = cam.get("calibration_file") or "(vacio = fabrica del SDK)"
-        texto = (f"Perfil: {Path(panel.perfil_activo()).name}  |  "
-                 f"camera_type: {ctype}\n"
-                 f"calibration_file actual: {actual}")
-        if ctype == "femtobolt":
-            texto += ("\nNota: la Femto usa calibracion de FABRICA; apuntar "
-                      "un .yml aqui es solo para overrides especiales.")
-        info = QLabel(texto)
-        info.setWordWrap(True)
-        caja.addWidget(info)
-
-        btn_correr = QPushButton("Correr calibracion con tablero…")
-        btn_correr.clicked.connect(self._correr)
-        caja.addWidget(btn_correr)
-
-        self.yml_activo, motivo = yml_del_perfil(panel.perfil_activo(), cfg)
-        self.btn_escala = QPushButton("Comprobar escala con regla…")
-        self.btn_escala.clicked.connect(self._comprobar_escala)
-        self.btn_escala.setEnabled(self.yml_activo is not None)
-        self.btn_escala.setToolTip(
-            f"Con {self.yml_activo.name}" if self.yml_activo is not None else motivo)
-        caja.addWidget(self.btn_escala)
-
-        caja.addWidget(QLabel("O apuntar el perfil a un .yml existente:"))
         fila = QHBoxLayout()
-        self.combo_yml = QComboBox()
-        for p in sorted(estado.DIR_DATA.glob("*.yml")):
-            self.combo_yml.addItem(p.name, str(p))
-        fila.addWidget(self.combo_yml, stretch=1)
-        btn_examinar = QPushButton("Examinar…")
-        btn_examinar.clicked.connect(self._examinar)
-        fila.addWidget(btn_examinar)
+        self.lbl_tablero = QLabel()
+        self.lbl_tablero.setWordWrap(True)
+        fila.addWidget(self.lbl_tablero, stretch=1)
+        self.btn_medir = QPushButton("Volver a medir el tablero…")
+        self.btn_medir.clicked.connect(self._medir_tablero)
+        fila.addWidget(self.btn_medir)
         caja.addLayout(fila)
-        btn_apuntar = QPushButton("Validar y apuntar el perfil al .yml elegido")
-        btn_apuntar.clicked.connect(self._apuntar)
-        caja.addWidget(btn_apuntar)
 
+        self.btn_enfocar, self.lbl_ult_enfocar = self._paso(
+            caja, "1 · Enfocar lente",
+            "Gira el lente hasta que el número de nitidez sea el más alto. "
+            "q para terminar.", self.componer_enfocar)
+        self.btn_calibrar, self.lbl_ult_calibrar = self._paso(
+            caja, "2 · Calibrar con tablero",
+            "Mueve el tablero por toda la imagen, inclinándolo; pulsa ESPACIO "
+            "para tomar cada foto (unas 25). u borra la última. q termina y "
+            "calcula.", self.componer_calibrar)
+        form = QFormLayout()
+        self.spin_recorrido = QSpinBox()
+        self.spin_recorrido.setRange(10, 500)
+        self.spin_recorrido.setValue(calibracion.RECORRIDO_MM)
+        self.spin_recorrido.setSuffix(" mm")
+        self.spin_idas = QSpinBox()
+        self.spin_idas.setRange(1, 10)
+        self.spin_idas.setValue(calibracion.IDAS_Y_VUELTAS)
+        self.btn_escala, self.lbl_ult_escala = self._paso(
+            caja, "3 · Comprobar escala con regla",
+            "Pon una esquina del tablero en la primera marca, pulsa ESPACIO; "
+            "llévalo a la segunda sin girarlo, ESPACIO; y así.",
+            self.componer_escala, extra=form)
+        form.addRow("Distancia entre tus dos marcas en la regla:", self.spin_recorrido)
+        form.addRow("Veces que vas y vuelves:", self.spin_idas)
+
+        caja.addStretch(1)
         cierre = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        cierre.button(QDialogButtonBox.StandardButton.Close).setText("Cerrar")
         cierre.rejected.connect(self.reject)
         caja.addWidget(cierre)
+        self.refrescar()
 
-    def _correr(self):
-        d = DialogoCalibrarCamara(self, self.panel.perfil_activo())
-        if d.exec() == QDialog.DialogCode.Accepted and d.receta:
-            self.accept()   # cerrar para ver el log en el panel
-            self.panel.lanzar_receta(d.receta)
+    def _paso(self, caja, texto_boton, ayuda, componer, extra=None):
+        grupo = QGroupBox()
+        c = QVBoxLayout(grupo)
+        boton = QPushButton(texto_boton)
+        boton.setStyleSheet("font-weight: bold; text-align: left; padding: 4px 8px;")
+        boton.clicked.connect(lambda _=False, f=componer: self._lanzar(f))
+        c.addWidget(boton)
+        lbl_ayuda = QLabel(ayuda)
+        lbl_ayuda.setWordWrap(True)
+        c.addWidget(lbl_ayuda)
+        if extra is not None:
+            c.addLayout(extra)
+        ultima = QLabel()
+        ultima.setWordWrap(True)
+        ultima.setStyleSheet("color: #444;")
+        c.addWidget(ultima)
+        caja.addWidget(grupo)
+        return boton, ultima
 
-    def _comprobar_escala(self):
+    # --------------------------------------------------------------
+    def _salidas(self):
+        try:
+            return calibracion.salidas_del_perfil(self.ruta_cfg, self.cfg)
+        except ValueError:
+            return None
+
+    def refrescar(self):
+        """El tablero, la ultima medida de cada paso y que pasos se pueden dar."""
+        try:
+            self.tablero = calibracion.leer_tablero(self.ruta_tablero)
+            self.lbl_tablero.setText(f"Tablero medido: cada cuadro mide "
+                                     f"{self.tablero.lado_mm:.2f} mm")
+            motivo_tablero = None
+        except (OSError, ValueError) as e:
+            self.tablero = None
+            motivo_tablero = "Primero mide el tablero (botón de arriba)."
+            self.lbl_tablero.setText(f"Tablero sin medir ({e}).")
+        s = self._salidas()
+        cam = (self.cfg.get("camera") or {})
+        motivo_enfocar = (None if cam.get("usb_port_windows") and s else
+                          "Este perfil no dice en qué puerto está la cámara: "
+                          "enfocar no está disponible.")
+        self.yml_activo, _motivo = yml_del_perfil(self.ruta_cfg, self.cfg)
+        motivo_escala = motivo_tablero or (None if self.yml_activo is not None else
+                                           "Primero calibra la cámara (paso 2).")
+        motivo_calibrar = motivo_tablero or (None if s else
+                                             "El perfil no dice el tamaño de la imagen.")
+        if s:
+            ult_enfocar = calibracion.ultima_nitidez(s["enfoque"])
+            texto_cal, ok_cal = calibracion.ultima_calibracion(s["reporte"], s["yml"])
+            texto_esc, ok_esc = calibracion.ultima_escala(s["escala"])
+        else:
+            ult_enfocar, texto_cal, ok_cal, texto_esc, ok_esc = "—", "—", None, "—", None
+        self.lbl_ult_enfocar.setText(f"Última: {ult_enfocar}")
+        self.lbl_ult_calibrar.setText(f"Última: {texto_cal}{calibracion.marca(ok_cal)}")
+        self.lbl_ult_escala.setText(f"Última: {texto_esc}{calibracion.marca(ok_esc)}")
+        for boton, motivo in ((self.btn_enfocar, motivo_enfocar),
+                              (self.btn_calibrar, motivo_calibrar),
+                              (self.btn_escala, motivo_escala)):
+            boton.setEnabled(motivo is None)
+            boton.setToolTip(motivo or "")
+        self.spin_recorrido.setEnabled(motivo_escala is None)
+        self.spin_idas.setEnabled(motivo_escala is None)
+
+    def textos_visibles(self):
+        """Lo que la persona lee en la ventana (para el selftest, P21)."""
+        return [w.text() for w in self.findChildren(QLabel) + self.findChildren(QPushButton)
+                if w.text()]
+
+    # --------------------------------------------------------------
+    def componer_enfocar(self):
+        return calibracion.receta_enfocar_perfil(self.ruta_cfg, self.cfg)
+
+    def componer_calibrar(self):
+        if self.tablero is None:
+            raise ValueError("Primero mide el tablero.")
+        return calibracion.receta_calibrar_perfil(self.ruta_cfg, self.cfg, self.tablero)
+
+    def componer_escala(self):
+        if self.tablero is None:
+            raise ValueError("Primero mide el tablero.")
         if self.yml_activo is None:
-            return
-        d = DialogoComprobarEscala(self, self.panel.perfil_activo(), self.yml_activo)
-        if d.exec() == QDialog.DialogCode.Accepted and d.receta:
-            self.accept()   # cerrar para ver el log en el panel
-            self.panel.lanzar_receta(d.receta)
+            raise ValueError("Primero calibra la cámara (paso 2).")
+        return calibracion.receta_escala_perfil(
+            self.ruta_cfg, self.yml_activo, self.tablero,
+            self.spin_recorrido.value(), self.spin_idas.value())
 
-    def _examinar(self):
-        ruta, _f = QFileDialog.getOpenFileName(
-            self, "Elegir .yml de calibracion", str(estado.DIR_DATA),
-            "Calibracion (*.yml *.yaml)")
-        if not ruta:
+    def _lanzar(self, componer):
+        try:
+            receta = componer()
+        except (ValueError, FileNotFoundError, OSError) as e:
+            QMessageBox.warning(self, "Calibrar cámara", str(e))
             return
-        i = self.combo_yml.findData(ruta)
-        if i < 0:
-            etiqueta = Path(ruta).name
-            if Path(ruta).resolve().parent != estado.DIR_DATA.resolve():
-                etiqueta += " (fuera de data\\)"
-            self.combo_yml.addItem(etiqueta, ruta)
-            i = self.combo_yml.count() - 1
-        self.combo_yml.setCurrentIndex(i)
+        self.accept()   # cerrar para ver el registro en el panel
+        self.panel.lanzar_receta(receta)
 
-    def _apuntar(self):
-        ruta_yml = self.combo_yml.currentData()
-        if not ruta_yml:
-            QMessageBox.warning(self, "Intrinsecos", "No hay .yml elegido.")
-            return
-        if apuntar_perfil(self, self.panel, ruta_yml, self.panel.perfil_activo()):
-            self.accept()
+    def _medir_tablero(self):
+        d = DialogoMedirTablero(self, self.ruta_tablero)
+        if d.exec() == QDialog.DialogCode.Accepted and d.tablero:
+            self.panel.log_msg(f"tablero medido de nuevo: {d.tablero.medidas_mm} sobre "
+                               f"{d.tablero.casillas_por_medida} cuadros -> "
+                               f"{d.tablero.lado_mm:.2f} mm ({Path(self.ruta_tablero).name})")
+            self.refrescar()
 
 
 # ============================================================================
@@ -621,7 +516,7 @@ class Panel(QMainWindow):
         c1 = QVBoxLayout(g1)
         self.btn_ids = QPushButton("Verificar IDs")
         self.btn_camara = QPushButton("Probar camara")
-        self.btn_calcam = QPushButton("Calibracion de camara…")
+        self.btn_calcam = QPushButton("Calibrar cámara (enfocar, tablero, escala)…")
         c1.addWidget(self.btn_ids)
         c1.addWidget(self.btn_camara)
         c1.addWidget(self.btn_calcam)
@@ -844,10 +739,17 @@ class Panel(QMainWindow):
             self.log_msg(f"calibracion: no se ofrece apuntar el perfil: {valor}")
             return
         campos = perfil_editor.leer_campos_yml(ruta_yml)
-        encabezado = (f"La calibracion cumple el criterio (detector "
-                      f"{campos.get('detector', '?')}, RMS de control "
-                      f"{campos.get('rms_control_px', '?')[:6]} px). Se ofrece "
-                      f"apuntar el perfil al .yml nuevo: {valor}")
+        self.log_msg(f"calibracion: cumple el criterio (detector {campos.get('detector', '?')}, "
+                     f"RMS de control {campos.get('rms_control_px', '?')[:6]} px); se ofrece "
+                     f"apuntar el perfil a {valor}")
+        try:
+            error_px = f"{float(campos.get('rms_control_px')):.2f}"
+        except (TypeError, ValueError):
+            error_px = "?"
+        encabezado = (f"La calibración salió bien: error {error_px} píxeles "
+                      f"(aceptable hasta {calibracion.LIMITE_ERROR_PX:.2f}).\n"
+                      f"¿Quieres que esta cámara use la calibración nueva "
+                      f"({Path(ruta_yml).name})?")
         apuntar_perfil(self, self, ruta_yml, perfil, encabezado)
 
     # ------------------------------------------------------------------
@@ -858,7 +760,7 @@ class Panel(QMainWindow):
         self.lanzar_receta(recetas.receta_sonda_camara(self.perfil_activo()))
 
     def _accion_calcam(self):
-        DialogoIntrinsecos(self).exec()
+        VentanaCalibrarCamara(self).exec()
 
     def _accion_asistente(self):
         if self.asistente is None:
@@ -939,23 +841,32 @@ def main():
                   f"frames={a.spin_frames.value()},nfev={a.spin_nfev.value()},"
                   f"autocorte={a.chk_autocorte.isChecked()}")
             a.deleteLater()
-            # P18: los dialogos de calibracion y escala componen su receta sin
-            # lanzarla (ninguna camara se abre aqui).
-            d = DialogoCalibrarCamara(panel, panel.perfil_activo())
-            d.edit_medidas.setText("149.1, 149.1, 149.1, 149.1, 149.4")
-            d.spin_casillas.setValue(6)
-            r = d.componer()
-            print(f"[panel-selftest] calcam_lado={d.spin_sq.value():.2f}")
-            print(f"[panel-selftest] calcam_argv={' '.join(r.argv[2:])}")
-            d.deleteLater()
+            # P19/P21 (fase 5): la ventana de tres pasos compone sus recetas con
+            # el tablero guardado, sin lanzarlas (ninguna camara se abre aqui).
             gs1 = estado.DIR_ITER4 / "tracker_config_gs1.yaml"
-            yml, motivo = yml_del_perfil(gs1)
-            if yml is None:
-                print(f"[panel-selftest] escala_no_disponible={motivo}")
-            else:
-                e = DialogoComprobarEscala(panel, str(gs1), yml)
-                print(f"[panel-selftest] escala_argv={' '.join(e.componer().argv[2:])}")
-                e.deleteLater()
+            v = VentanaCalibrarCamara(panel, str(gs1))
+            print(f"[panel-selftest] calcam_lado={v.tablero.lado_mm:.2f}"
+                  if v.tablero else "[panel-selftest] calcam_lado=SIN TABLERO")
+            for nombre, componer in (("enfocar", v.componer_enfocar),
+                                     ("calcam", v.componer_calibrar),
+                                     ("escala", v.componer_escala)):
+                try:
+                    print(f"[panel-selftest] {nombre}_argv={' '.join(componer().argv[2:])}")
+                except (ValueError, OSError) as e:
+                    print(f"[panel-selftest] {nombre}_no_disponible={e}")
+            for clave, lbl in (("enfocar", v.lbl_ult_enfocar), ("calcam", v.lbl_ult_calibrar),
+                               ("escala", v.lbl_ult_escala)):
+                print(f"[panel-selftest] {clave}_ultima={lbl.text()}")
+            textos = v.textos_visibles() + [panel.btn_calcam.text()]
+            d = DialogoMedirTablero(v, v.ruta_tablero)   # no se guarda: solo se mira
+            d.edit_medidas.setText("149.1, 149.1, 149.1, 149.1, 149.4")
+            d.spin_cuadros.setValue(6)
+            print(f"[panel-selftest] medir_lado={d.lbl_lado.text()}")
+            textos += [w.text() for w in d.findChildren(QLabel) + d.findChildren(QPushButton)
+                       if w.text()]
+            print("[panel-selftest] calcam_textos=" + " | ".join(t.replace("\n", " ") for t in textos))
+            d.deleteLater()
+            v.deleteLater()
             print("[panel-selftest] cerrando OK")
             panel.close()
             app.quit()

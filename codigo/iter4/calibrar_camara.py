@@ -438,6 +438,14 @@ def _dibujar_rejilla(disp, shape, cubiertas, celdas=CELDAS_COBERTURA) -> None:
             cv2.rectangle(disp, (x0, y0), (x1, y1), color, 1)
 
 
+def textos_ventana(fotos: int, minimo: int, zonas: int, total_zonas: int, visto: bool) -> tuple[str, str]:
+    """Las dos lineas que se pintan sobre la imagen, en lenguaje llano (P21) y sin acentos:
+    la fuente de cv2.putText (Hershey) pinta '??' en lugar de una letra con acento."""
+    tablero = "Tablero: lo veo" if visto else "Tablero: NO lo veo"
+    return (f"Fotos: {fotos} (minimo {minimo})  |  zonas cubiertas {zonas} de {total_zonas}  |  {tablero}",
+            "ESPACIO = tomar foto   u = borrar la ultima   q = terminar y calcular")
+
+
 def capturar_vistas(cam, cols: int, rows: int, metodo: str, limite: float, vistas_dir,
                     min_total: int, celdas=CELDAS_COBERTURA, leer_tecla=None) -> list[Path]:
     """Bucle con ventana hasta q o `limite` (time.monotonic). ESPACIO detecta con `metodo` y
@@ -464,13 +472,11 @@ def capturar_vistas(cam, cols: int, rows: int, metodo: str, limite: float, vista
                 cv2.drawChessboardCorners(disp, (cols, rows), previa, True)
             cubiertas = celdas_cubiertas(esquinas, shape, celdas)
             _dibujar_rejilla(disp, shape, cubiertas, celdas)
-            cob = len(cubiertas) / float(celdas[0] * celdas[1])
             color = (0, 255, 0) if previa is not None else (0, 0, 255)
-            cv2.putText(disp, f"vistas: {len(rutas)}/{min_total} | cobertura {cob:.2f} | tablero: "
-                        f"{'DETECTADO' if previa is not None else 'no visto'}",
-                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-            cv2.putText(disp, f"ESPACIO=capturar ({metodo})  u=quitar ultima  q=calibrar y guardar",
-                        (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+            linea1, linea2 = textos_ventana(len(rutas), min_total, len(cubiertas), celdas[0] * celdas[1],
+                                            previa is not None)
+            cv2.putText(disp, linea1, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+            cv2.putText(disp, linea2, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
             cv2.imshow(TITULO_VENTANA, disp)
             tecla = leer_tecla()
             if tecla == ord(" "):

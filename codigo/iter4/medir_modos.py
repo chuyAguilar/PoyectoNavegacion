@@ -505,6 +505,13 @@ def medir_fila(cfg: dict, ctx: dict | None, modo: tuple[int, int, str], fps: flo
     return fila
 
 
+def textos_enfoque(nitidez_ahora: float, nitidez_max: float) -> tuple[str, str]:
+    """Las dos lineas que se pintan sobre la imagen al enfocar, en lenguaje llano (P21) y sin
+    acentos: la fuente de cv2.putText (Hershey) pinta '??' en lugar de una letra con acento."""
+    return (f"Nitidez: {nitidez_ahora:.0f}   (la mas alta hasta ahora: {nitidez_max:.0f})",
+            "Gira el lente hasta que el numero sea el mas alto.   q = terminar")
+
+
 def enfocar(cfg: dict, modo: tuple[int, int, str], fps: float, limite: float,
             abrir=None) -> dict:
     """Ventana con la nitidez del frame (varianza del laplaciano) y su maximo, hasta q."""
@@ -523,8 +530,9 @@ def enfocar(cfg: dict, modo: tuple[int, int, str], fps: float, limite: float,
             r["nitidez"] = round(v, 1)
             r["nitidez_max"] = round(max(v, r["nitidez_max"] or 0.0), 1)
             display = frame.copy()
-            cv2.putText(display, f"nitidez {v:.0f}  (max {r['nitidez_max']:.0f})  q = terminar",
-                        (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+            linea1, linea2 = textos_enfoque(v, r["nitidez_max"])
+            cv2.putText(display, linea1, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+            cv2.putText(display, linea2, (10, 62), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
             cv2.imshow(VENTANA, display)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 r["interrumpida"] = True

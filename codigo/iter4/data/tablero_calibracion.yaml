@@ -1,0 +1,15 @@
+# Tablero de calibracion de camara (meta 002). Lo lee la ventana
+# "Calibrar camara" del panel y lo reescribe "Volver a medir el tablero...".
+# Medidas con calibrador digital, de la orilla de arriba de un cuadro negro a
+# la orilla de arriba de otro (la misma orilla: el engrosamiento se cancela).
+# lado_mm = media de las medidas / casillas_por_medida, con dos decimales.
+# Las esquinas interiores son las casillas menos una en cada eje.
+casillas_horizontales: 9
+casillas_verticales: 6
+esquinas_horizontales: 8
+esquinas_verticales: 5
+medidas_mm: [149.1, 149.1, 149.1, 149.1, 149.4]
+casillas_por_medida: 6
+lado_mm: 24.86
+fecha: "2026-10-22"
+fuente: "clarify.md P17"

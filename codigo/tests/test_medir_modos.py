@@ -489,3 +489,10 @@ def test_main_intrinsecos_solo_en_la_medicion_2(tmp_path, monkeypatch) -> None:
     assert rc == 0
     e = json.loads((tmp_path / "m.json").read_text(encoding="utf-8"))
     assert e["intrinsecos"] == str(yml) and e["fov_grados"] is None and e["filas"][0]["K"] == K_real.round(3).tolist()
+
+
+def test_textos_de_enfoque_llanos_y_sin_acentos() -> None:
+    """P19/P21 (fase 5): lo que se pinta sobre la imagen al enfocar; sin acentos (cv2.putText)."""
+    l1, l2 = mm.textos_enfoque(156.4, 170.7)
+    assert l1.isascii() and l2.isascii()
+    assert l1.startswith("Nitidez: 156") and "171" in l1 and "q = terminar" in l2 and "Gira el lente" in l2

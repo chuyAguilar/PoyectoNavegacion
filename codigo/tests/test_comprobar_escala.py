@@ -198,6 +198,7 @@ def test_main_con_camara_falsa(tmp_path, monkeypatch) -> None:
     assert [p["paso_regla_mm"] for p in e["pasos"]] == [100.0, 100.0] and all(abs(p["error_mm"]) < 1.0 for p in e["pasos"])
     assert len(e["errores_acumulados_mm"]) == 2 and e["luz"] == "caja nivel 2" and e["tolerancia_mm_por_100"] == 1.0
     assert np.allclose(e["K"], K)
+    assert e["criterio"] == "pasos" and "medias" not in e      # sin posiciones repetidas: por paso (P20)
 
 
 def _perfil_gs1_sin_yml(tmp_path) -> str:
@@ -226,3 +227,125 @@ def test_main_exige_argumentos_explicitos(tmp_path, argv: list[str]) -> None:
         argv = [_perfil_gs1_sin_yml(tmp_path) if a == SIN_YML else a for a in argv]
     with pytest.raises(SystemExit):
         ce.main([*argv, "--salida", str(tmp_path / "e.json"), "--timeout", "60"])
+
+
+def test_main_sin_timeout_o_sin_config_para(tmp_path) -> None:
+    base = ["--square-mm", "24.97", "--detector", "clasico", "--desplazamientos-mm", "0,100",
+            "--salida", str(tmp_path / "e.json")]
+    with pytest.raises(SystemExit):
+        ce.main(["--config", _perfil_temporal(tmp_path), *base])                 # sin --timeout
+    with pytest.raises(SystemExit):
+        ce.main([*base, "--timeout", "60"])                                       # sin --config
+
+
+# ----------------------------------------------------------------------------
+# P20 (fase 5): el criterio por medias con posiciones repetidas, y --desde-json
+# ----------------------------------------------------------------------------
+
+# Las medianas de las dos sesiones reales (Claude outputs/camaras/escala_gs2.json, 2026-10-23, y
+# escala_gs1_topes.json, 2026-10-22), copiadas aqui para que la prueba no dependa de esos archivos.
+REGLA_IDA_VUELTA = [0.0, 80.0, 0.0, 80.0, 0.0, 80.0]
+MEDIANAS_GS2 = [[-114.536, 27.278, 409.65], [-41.359, 30.935, 441.763], [-113.331, 27.398, 409.933],
+                [-41.353, 30.61, 442.039], [-114.202, 27.185, 410.087], [-40.967, 30.639, 442.149]]
+MEDIANAS_GS1_TOPES = [[0.013, 30.606, 429.506], [75.264, 30.96, 401.836], [0.063, 30.716, 429.748],
+                      [75.553, 31.052, 401.895], [0.609, 30.628, 429.517], [75.785, 31.155, 401.668]]
+
+
+def test_hay_repeticiones() -> None:
+    assert ce.hay_repeticiones(REGLA_IDA_VUELTA) and ce.hay_repeticiones([0, 80, 0.0])
+    assert not ce.hay_repeticiones([0, 100, 200]) and not ce.hay_repeticiones([0, 80])
+
+
+def test_agrupar_por_lectura_media_y_repetibilidad() -> None:
+    t = [[0.0, 0.0, 500.0], [80.0, 0.0, 500.0], [0.0, 2.0, 500.0], [80.0, 0.0, 500.0]]
+    g = ce.agrupar_por_lectura(t, [0, 80, 0, 80])
+    assert [x["lectura_mm"] for x in g] == [0.0, 80.0] and [x["posiciones"] for x in g] == [[0, 2], [1, 3]]
+    assert g[0]["media_mm"] == [0.0, 1.0, 500.0] and g[0]["repetibilidad_mm"] == pytest.approx(1.0)
+    assert g[1]["repetibilidad_mm"] == 0.0 and g[0]["distancias_a_la_media_mm"] == [1.0, 1.0]
+    with pytest.raises(ValueError):
+        ce.agrupar_por_lectura(t[:1], [0])
+    with pytest.raises(ValueError):
+        ce.errores_medias(t[:2], [0, 0])                     # una sola lectura distinta
+
+
+def test_criterio_por_medias_las_dos_sesiones_reales() -> None:
+    """P20: gs2 falla 2 de 5 pasos (el segundo 0 quedo 1.24 mm corrido) y cumple por medias (-0.37 mm);
+    gs1 (topes) cumple por las dos cuentas (+0.27 mm por medias)."""
+    r2 = ce.juzgar_escala(MEDIANAS_GS2, REGLA_IDA_VUELTA)
+    assert r2["criterio"] == "medias" and r2["cumple"] is True and r2["cumple_por_pasos"] is False
+    assert [p["cumple"] for p in r2["pasos"]] == [True, False, False, True, True]
+    assert len(r2["medias"]) == 1 and r2["error_criterio_mm"] == pytest.approx(-0.368, abs=1e-3)
+    assert r2["peor"]["paso_medido_mm"] == pytest.approx(79.632, abs=1e-3) and r2["peor"]["tolerancia_mm"] == 0.8
+    assert [g["n"] for g in r2["grupos"]] == [3, 3] and r2["grupos"][0]["repetibilidad_mm"] == pytest.approx(0.702, abs=1e-3)
+    r1 = ce.juzgar_escala(MEDIANAS_GS1_TOPES, REGLA_IDA_VUELTA)
+    assert r1["criterio"] == "medias" and r1["cumple"] and r1["cumple_por_pasos"]
+    assert r1["error_criterio_mm"] == pytest.approx(0.271, abs=1e-3)
+
+
+def test_criterio_por_medias_que_no_cumple() -> None:
+    t = [[0.0, 0.0, 500.0], [81.0, 0.0, 500.0], [0.0, 0.0, 500.0], [81.0, 0.0, 500.0]]
+    r = ce.juzgar_escala(t, [0, 80, 0, 80])
+    assert r["criterio"] == "medias" and r["cumple"] is False and r["error_criterio_mm"] == pytest.approx(1.0)
+
+
+def test_sin_repeticiones_el_criterio_sigue_por_paso() -> None:
+    t = [np.array([0.0, 0.0, 500.0]), np.array([100.0, 0.0, 500.0]), np.array([201.2, 0.0, 500.0])]
+    r = ce.juzgar_escala(t, [0, 100, 200])
+    assert r["criterio"] == "pasos" and "medias" not in r and r["cumple"] is False
+    assert r["error_criterio_mm"] == pytest.approx(1.2) and r["peor"]["a_mm"] == 200.0
+    # Con medias por lectura seguidas y tres lecturas distintas: dos comparaciones
+    g, m = ce.errores_medias(t + [np.array([100.0, 0.0, 500.0])], [0, 100, 200, 100])
+    assert [(c["de_mm"], c["a_mm"]) for c in m] == [(0.0, 100.0), (100.0, 200.0)]
+
+
+def test_parsear_lista_exige_dos_lecturas_distintas() -> None:
+    with pytest.raises(ValueError):
+        ce._parsear_lista("80,80,80")
+    assert ce._parsear_lista("0,80,0") == [0.0, 80.0, 0.0]
+
+
+def _json_sesion(tmp_path, medianas, nombre="escala_sesion.json") -> Path:
+    """Un JSON como el que deja la sesion en vivo, con el criterio viejo (por paso)."""
+    posiciones = [{"desplazamiento_mm": d, "n": 30, "mediana_mm": m, "sd_mm": [0.02, 0.01, 0.02],
+                   "frames_sin_pose": 0} for d, m in zip(REGLA_IDA_VUELTA, medianas)]
+    viejo = {"fecha": "2026-10-23 14:21:17", "perfil": "iter4\\tracker_config_gs2.yaml", "detector": "sb",
+             "square_mm": 24.86, "K": K.tolist(), "posiciones": posiciones,
+             "pasos": ce.errores_pasos(medianas, REGLA_IDA_VUELTA), "cumple": False}
+    ruta = tmp_path / nombre
+    ruta.write_text(json.dumps(viejo), encoding="utf-8")
+    return ruta
+
+
+def test_desde_json_recalcula_sin_camara(tmp_path) -> None:
+    entrada = _json_sesion(tmp_path, MEDIANAS_GS2)
+    salida = tmp_path / "recalculado.json"
+    rc = ce.main(["--desde-json", str(entrada), "--salida", str(salida)])
+    e = json.loads(salida.read_text(encoding="utf-8"))
+    assert rc == 0 and e["cumple"] is True and e["criterio"] == "medias"
+    assert e["error_criterio_mm"] == pytest.approx(-0.368, abs=1e-3)
+    assert e["recalculado"]["cumple_antes"] is False and e["recalculado"]["criterio_antes"] == "pasos"
+    assert len(e["posiciones"]) == 6 and np.allclose(e["K"], K) and e["detector"] == "sb"   # se conserva
+    assert json.loads(entrada.read_text(encoding="utf-8"))["cumple"] is False                # la entrada no se toca
+    # Recalcular sobre el mismo archivo es estable
+    assert ce.main(["--desde-json", str(salida), "--salida", str(salida)]) == 0
+    assert json.loads(salida.read_text(encoding="utf-8"))["error_criterio_mm"] == e["error_criterio_mm"]
+
+
+def test_desde_json_no_cumple_da_exit_1_y_errores(tmp_path) -> None:
+    malas = [[0.0, 0.0, 500.0], [81.0, 0.0, 500.0]] * 3
+    assert ce.main(["--desde-json", str(_json_sesion(tmp_path, malas)), "--salida", str(tmp_path / "s.json")]) == 1
+    vacio = tmp_path / "vacio.json"
+    vacio.write_text(json.dumps({"posiciones": [], "error": "q antes de medir"}), encoding="utf-8")
+    assert ce.main(["--desde-json", str(vacio), "--salida", str(tmp_path / "v.json")]) == 1
+    assert ce.main(["--desde-json", str(tmp_path / "no_existe.json"), "--salida", str(tmp_path / "n.json")]) == 1
+    with pytest.raises(SystemExit):        # con --desde-json no se abre la camara: sobran los de la camara
+        ce.main(["--desde-json", str(vacio), "--config", PERFIL_GS1, "--salida", str(tmp_path / "x.json")])
+
+
+def test_textos_de_la_ventana_llanos_y_sin_acentos() -> None:
+    """P21: lo que se pinta sobre la imagen; cv2.putText (Hershey) pinta '??' por cada letra con acento."""
+    for visto in (True, False):
+        l1, l2 = ce.textos_ventana(1, 6, 80.0, visto)
+        assert l1.isascii() and l2.isascii()
+        assert l1.startswith("Posicion 2 de 6: lleva el tablero a la marca de 80 mm y pulsa ESPACIO")
+        assert ("NO lo veo" in l2) is (not visto) and "q = salir" in l2

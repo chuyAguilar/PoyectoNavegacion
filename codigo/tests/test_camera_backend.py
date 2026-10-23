@@ -188,7 +188,7 @@ def test_create_backend_doctor_como_antes() -> None:
 
 @pytest.mark.parametrize("nombre,puerto,focus,yml", [
     ("tracker_config_gs1.yaml", PUERTO_1, 500.0, "data/intrinsecos_gs1_1280x960.yml"),   # fase 4 (P17)
-    ("tracker_config_gs2.yaml", PUERTO_2, 332.0, None)])                                  # hasta la fase 5
+    ("tracker_config_gs2.yaml", PUERTO_2, 332.0, "data/intrinsecos_gs2_1280x960.yml")])   # fase 5 (panel, 2026-10-23)
 def test_create_backend_gs(nombre: str, puerto: str, focus: float, yml: str | None) -> None:
     b = cb.create_backend(_camera(nombre))
     assert isinstance(b, cb.WebcamBackend)

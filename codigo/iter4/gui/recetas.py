@@ -39,6 +39,7 @@ VENTANAS = {
     "generar": None,        # sin ventana (generacion instantanea, brief-02 M2)
     "calibrar_camara": "Calibracion camara iter4 - ESPACIO captura, q calibra",
     "comprobar_escala": "Comprobar escala - ESPACIO posicion, q salir",
+    "enfocar": "medir_modos - q para interrumpir",     # medir_modos.VENTANA (P19)
 }
 
 # Slug corto por perfil para nombrar outputs (captura_ba_<slug>.npz, etc.).
@@ -461,6 +462,47 @@ def receta_comprobar_escala(ruta_cfg, square_mm, detector, desplazamientos_mm,
                      f"ESPACIO en cada posicion, q=salir; autocierre {timeout}s)"),
         argv=argv,
         ventana_titulo=VENTANAS["comprobar_escala"],
+        usa_camara=True,
+        outputs=[_rel(salida)],
+    )
+
+
+def receta_enfocar(ruta_cfg, ancho, alto, fourcc, fps, salida, luz=None,
+                   timeout=600):
+    """Enfocar el lente (iter4/medir_modos.py --enfocar; meta 002, fase 5,
+    P19): la ventana con el numero de nitidez de la fase 3, en el modo del
+    perfil. q termina; el JSON guarda la nitidez final y la maxima. Todo
+    explicito (principio 7)."""
+    quien = "receta_enfocar"
+    if not salida:
+        raise ValueError(f"{quien}: salida es obligatoria")
+    try:
+        ancho, alto, fps = int(ancho), int(alto), float(fps)
+    except (TypeError, ValueError):
+        raise ValueError(f"{quien}: el perfil tiene que declarar width, height "
+                         f"y fps numericos (hay {ancho!r}, {alto!r}, {fps!r})")
+    if ancho <= 0 or alto <= 0 or fps <= 0:
+        raise ValueError(f"{quien}: width, height y fps tienen que ser > 0")
+    fourcc = str(fourcc or "")
+    if len(fourcc) != 4:
+        raise ValueError(f"{quien}: fourcc de 4 letras (MJPG), no {fourcc!r}")
+    argv = [
+        _python(), "-u", "iter4/medir_modos.py",
+        "--config", _rel(ruta_cfg),
+        "--enfocar",
+        "--modo", f"{ancho}x{alto}:{fourcc}",
+        "--fps", _num(fps),
+    ]
+    if luz:
+        argv += ["--luz", str(luz)]
+    argv += ["--salida", _rel(salida), "--timeout", str(int(timeout))]
+    return Receta(
+        clave="enfocar",
+        descripcion=(f"Enfocar el lente en {ancho}x{alto} {fourcc} {_num(fps)} fps "
+                     f"(gira el lente hasta la nitidez mas alta; q=terminar; "
+                     f"autocierre {timeout}s)"),
+        argv=argv,
+        ventana_titulo=VENTANAS["enfocar"],
         usa_camara=True,
         outputs=[_rel(salida)],
     )

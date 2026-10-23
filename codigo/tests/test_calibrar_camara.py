@@ -598,3 +598,15 @@ def test_receta_calibrar_camara_sin_square_mm_no_compila() -> None:
 def test_importa_camaras_uvc_antes_que_cv2(modulo: str) -> None:
     fuente = (ITER4_DIR / f"{modulo}.py").read_text(encoding="utf-8")
     assert fuente.index("import camaras_uvc") < fuente.index("import cv2")
+
+
+def test_textos_de_la_ventana_llanos_y_sin_acentos() -> None:
+    """P21 (fase 5): lo que se pinta sobre la imagen al tomar las fotos; cv2.putText (Hershey) pinta
+    '??' por cada letra con acento, y nada de 'vistas', 'cobertura' ni el nombre del detector."""
+    for visto in (True, False):
+        l1, l2 = cc.textos_ventana(12, 18, 9, 12, visto)
+        assert l1.isascii() and l2.isascii()
+        assert "Fotos: 12" in l1 and "zonas cubiertas 9 de 12" in l1 and ("NO lo veo" in l1) is (not visto)
+        assert "ESPACIO = tomar foto" in l2 and "u = borrar la ultima" in l2 and "q = terminar" in l2
+        for jerga in ("vistas", "cobertura", "clasico", "sb", "RMS"):
+            assert jerga not in (l1 + l2).split(), jerga

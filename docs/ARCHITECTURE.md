@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-23 (§3.4, §3.7 y §6: meta 002, fase 5 · Calibración de la cámara 2: `intrinsecos_gs2_1280x960.yml`; la ventana de calibración del panel en tres pasos, `gui/calibracion.py` y `data/tablero_calibracion.yaml`; `comprobar_escala.py` juzga por medias y recalcula con `--desde-json`). Antes, 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -140,7 +140,7 @@ distintos**, más una legacy:
 >
 > **Respaldo de la punta vigente (2026-10-19, ADR-021):** copia byte a byte, versionada, en `data/respaldo_puntas/StylusTipToDodecaedro_femto_dock.npy` (sha256 `a3c832038d1ec408406bfe66ac5bb5a318b02ef1cc1f325b0f54dd62289a5ebf`, igual al original) y su `.txt` (cabecera con el sha16 `11b0846fc5b5d43f` de la geometría v2; git lo guarda con EOL LF, así que su sha256 en un checkout limpio es el del texto normalizado, no el del original con CRLF). La subcarpeta queda fuera del glob no recursivo `StylusTipToDodecaedro*.npy` del snippet de Slicer (`MANUAL_simplificado.md` §4.2) y de `estado.listar_puntas()`: no cambia qué punta se carga. El original en `data/` sigue fuera de git (por equipo). Para restaurarla, se copia el `.npy` de vuelta a `data/` y se comprueba su sha256.
 >
-> **Intrínsecos de las SVPRO (2026-10-22, meta 002 fase 4):** `calibrar_camara.py` abre la cámara por su perfil y escribe el `.yml` con K, distorsión de 5 coeficientes (`k1 k2 p1 p2 k3`), tamaño, RMS de reproyección, RMS de control sobre vistas apartadas, cobertura de la imagen (rejilla 4×3), el lado de la casilla con sus medidas de calibrador, el detector y su propio veredicto (`criterio_cumplido`: RMS ≤ 0.5 px con ≥ 15 vistas, control ≤ 0.75 px, cobertura ≥ 0.8). `camera_backend` comprueba que el tamaño real del frame coincide con el del `.yml`. Vigente para la cámara 1: `data/intrinsecos_gs1_1280x960.yml` (detector `sb`, RMS 0.167 px, control 0.146 px). `comprobar_escala.py` mide la escala con la K del backend: desliza el tablero contra una regla y compara cada paso con su desplazamiento (1.0 mm por 100 mm).
+> **Intrínsecos de las SVPRO (2026-10-22, meta 002 fase 4):** `calibrar_camara.py` abre la cámara por su perfil y escribe el `.yml` con K, distorsión de 5 coeficientes (`k1 k2 p1 p2 k3`), tamaño, RMS de reproyección, RMS de control sobre vistas apartadas, cobertura de la imagen (rejilla 4×3), el lado de la casilla con sus medidas de calibrador, el detector y su propio veredicto (`criterio_cumplido`: RMS ≤ 0.5 px con ≥ 15 vistas, control ≤ 0.75 px, cobertura ≥ 0.8). `camera_backend` comprueba que el tamaño real del frame coincide con el del `.yml`. Vigentes: cámara 1, `data/intrinsecos_gs1_1280x960.yml` (detector `sb`, RMS 0.167 px, control 0.146 px); cámara 2, `data/intrinsecos_gs2_1280x960.yml` (2026-10-23, fase 5; detector `sb`, RMS 0.154 px, control 0.150 px; cy 389.8, 90 px sobre el centro: vale mientras el lente no se mueva, B36). El lado de la casilla vive en `data/tablero_calibracion.yaml` (versionado: casillas, medidas del calibrador, cuadros por medida y lado, 24.86 mm); la ventana de calibración del panel lo lee y lo reescribe. `comprobar_escala.py` mide la escala con la K del backend: desliza el tablero contra una regla entre posiciones que se repiten (ida y vuelta) y, desde P20 (2026-10-23), juzga la distancia entre las medias de las posiciones repetidas (1.0 mm por 100 mm); los pasos sueltos y la repetibilidad de cada grupo se guardan como información. `--desde-json` recalcula un JSON ya medido sin abrir la cámara.
 >
 > **Acople crítico:** geometría del rigid body y calibración de la punta son del
 > **mismo ensamble físico**. No se mezclan geometrías (ver `DECISIONS.md` y
@@ -183,8 +183,17 @@ los scripts existentes — no reimplementa tracking ni calibración (ADR-017;
   con datos reales; los pares de caras antípodas nunca son co-visibles).
 - `perfil_editor.py` — la única mutación de config permitida (ADR-018):
   edición quirúrgica de `camera.calibration_file` con backup.
+- `calibracion.py` — lo fijo de la ventana de calibración, sin Qt (2026-10-23,
+  meta 002 fase 5): el tablero guardado (`leer_tablero`, `validar_tablero`,
+  `escribir_tablero`, escritura atómica), las salidas por perfil, las tres
+  recetas (enfocar, calibrar, escala) y los textos de «Última».
 - `panel.py` — ventana única: perfil, semáforos, acciones (Verificar /
-  Calibrar / Operar), diálogos de intrínsecos y dock, log en vivo.
+  Calibrar / Operar), diálogo del dock, log en vivo. «Calibrar cámara
+  (enfocar, tablero, escala)…» abre `VentanaCalibrarCamara`: tres pasos sin
+  campos (1 Enfocar lente con `medir_modos.py --enfocar`, 2 Calibrar con
+  tablero, 3 Comprobar escala con regla), el último resultado de cada uno y
+  «Volver a medir el tablero…» (`DialogoMedirTablero`); textos llanos, sin
+  jerga (P19, P21).
 
 Script nuevo fuera de `gui\`: **`iter4/calibrar_camara.py`** — calibración
 intrínseca con tablero de ajedrez 8×5 (esquinas interiores; el lado de la casilla,
@@ -192,7 +201,9 @@ medido con calibrador y obligatorio) y detector `clasico`, `sb` o `ambos` (alter
 OpenCV a MRPT, readme §8; exporta el YAML que leen los backends). Desde la fase 4 de la
 meta 002 el panel lo lanza con las medidas del calibrador, compara los dos detectores y,
 si la calibración cumple el criterio, ofrece apuntar el perfil (ADR-018); y lanza
-`comprobar_escala.py` («Comprobar escala con regla…»).
+`comprobar_escala.py`. Desde la fase 5 (2026-10-23) todo eso sale de la ventana de
+tres pasos, con el tablero de `data/tablero_calibracion.yaml` y el detector `ambos`
+fijos; el criterio de calibración no cambió.
 
 Lanzamiento: `python iter4\gui\panel.py` (desde `codigo\`, con el venv).
 
@@ -265,20 +276,20 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   ├── camera_backend.py                   # webcam | femtobolt; la webcam abre por puerto, comprueba marca, aplica controles y comprueba el tamaño (§3.1, 2026-10-22)
 │   │   ├── tracker_config.yaml                 # config Femto (default)
 │   │   ├── tracker_config_doctor.yaml          # config webcam (paired-point)
-│   │   ├── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO: puerto USB, marca focus, controles, 1280×960 MJPG 90 fps y exposición 0.977 ms (−10 por DSHOW) elegidos en la fase 3 (P15, P16); gs1 con intrínsecos desde la fase 4 (`data/intrinsecos_gs1_1280x960.yml`); gs2 sin ellos hasta la fase 5 (2026-10-22, meta 002 fases 2b, 3 y 4)
+│   │   ├── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO: puerto USB, marca focus, controles, 1280×960 MJPG 90 fps y exposición 0.977 ms (−10 por DSHOW) elegidos en la fase 3 (P15, P16); gs1 con intrínsecos desde la fase 4 (`data/intrinsecos_gs1_1280x960.yml`) y gs2 desde la fase 5 (`data/intrinsecos_gs2_1280x960.yml`) (2026-10-22/23, meta 002 fases 2b a 5)
 │   │   ├── captura_calibracion.py              # dataset para BA
 │   │   ├── calibrar_rigid_body.py              # bundle adjustment
 │   │   ├── calibrar_tip_divot.py               # calibración por dock/divot
 │   │   ├── calibrar_camara.py                  # intrínsecos por el perfil de la cámara: tablero con lado medido, detectores clasico|sb|ambos, vistas guardadas y --desde-vistas, RMS de control, cobertura 4×3 y veredicto dentro del .yml (2026-10-22, meta 002 fase 4)
-│   │   ├── comprobar_escala.py                 # escala contra regla: tablero en posiciones conocidas, pasos medidos con la K del perfil frente a los desplazamientos, 1.0 mm por 100 mm (2026-10-22, meta 002 fase 4)
+│   │   ├── comprobar_escala.py                 # escala contra regla: tablero en posiciones conocidas, pasos medidos con la K del perfil frente a los desplazamientos, 1.0 mm por 100 mm (2026-10-22, meta 002 fase 4); desde la fase 5 juzga por las medias de las posiciones repetidas (P20) y `--desde-json` recalcula sin cámara (2026-10-23)
 │   │   ├── identificar_ids.py                  # verificar IDs/orientación
 │   │   ├── camaras_uvc.py                      # enumera las cámaras de Media Foundation y de DirectShow (COM por ctypes) y da la ruta física de su puerto USB (CfgMgr32: LocationPaths del nodo padre); resolver_indice(puerto) por igualdad de ruta (2026-10-21, meta 002 fase 2a)
 │   │   ├── ajustes_camara.py                   # formato de camera.controls independiente del sistema (exposición en ms), validar/comparar, CapaWindowsDShow (escribe solo lo que difiere, relee, para si no coincide), capa_para_plataforma; Linux sin escribir (2026-10-21, meta 002 fase 2a); desde la fase 2b lo usa el backend, y `aplicar(..., forzar=True)` escribe aunque la lectura coincida
 │   │   ├── sondear_camara.py                   # sonda de una cámara: modos (antes de tocar controles), identidad; --controles no|leer|probar; fase 2a: --puertos, --leer, --fijar, --tras-msmf, --verificar-orden --backend MSMF|DSHOW (2026-10-21, meta 002); fase 2b: --fijar ... --forzar (alta de la marca); no la usa el tracker
 │   │   ├── medir_modos.py                      # medición de las SVPRO por su perfil (camera_backend): --enfocar (nitidez), exposiciones candidatas, modos (FPS de captura, de tracking sin y con ventana, markers, fracción con pose con K nominal) y --elegir (exposición y resolución comunes a las dos); importa funciones de tracker.py sin tocarlo y no abre pyigtl; guarda cada fila al medirla; con `--intrinsecos` la pose usa la K real del perfil (2026-10-22, meta 002 fases 3 y 4)
 │   │   ├── calibrar_topologia.py, limpiar_captura_fantasmas.py, corregir_giro_esquinas.py, generar_reference_dodecaedro.py
-│   │   ├── gui\                                # panel de control PySide6 (brief-01)
-│   │   └── data\                               # reference_*, capturas, tips, calibraciones
+│   │   ├── gui\                                # panel de control PySide6 (brief-01); calibracion.py, la ventana de calibración en tres pasos (2026-10-23, meta 002 fase 5)
+│   │   └── data\                               # reference_*, capturas, tips, calibraciones; intrinsecos_gs1/gs2_1280x960.yml y tablero_calibracion.yaml (meta 002 fases 4 y 5)
 │   │       ├── respaldo_puntas\                # copia versionada de la punta vigente (§3.4, ADR-021)
 │   │       └── historico\                      # configs webcam y stylus impreso, retirados del panel (2026-10-19)
 │   └── historico\                  # snapshots de iteraciones previas
