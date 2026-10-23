@@ -38,6 +38,7 @@ VENTANAS = {
     "ba": None,             # sin ventana (batch de consola)
     "generar": None,        # sin ventana (generacion instantanea, brief-02 M2)
     "calibrar_camara": "Calibracion camara iter4 - ESPACIO captura, q calibra",
+    "comprobar_escala": "Comprobar escala - ESPACIO posicion, q salir",
 }
 
 # Slug corto por perfil para nombrar outputs (captura_ba_<slug>.npz, etc.).
@@ -269,32 +270,199 @@ def receta_generar_teorica(output, id_top, ids_superior, ids_inferior,
     )
 
 
-def receta_calibrar_camara(ruta_cfg, output, cols=8, rows=5, square_mm=25.0,
-                           min_vistas=12, timeout=900):
-    """Calibracion intrinseca con tablero (M3b, iter4/calibrar_camara.py).
-    Tablero del proyecto: 9x6 casillas -> esquinas interiores 8x5 @ 25 mm
-    (codigo/readme.md §8). output SIEMPRE explicito (sin default-trampa)."""
+# Calibracion de camara (meta 002, fase 4; P18): "ambos" calibra con los dos
+# detectores sobre las mismas vistas y se queda el de menor RMS de control
+# (calibrar_camara.py --detector ambos). La escala se comprueba con el detector
+# ganador, que el .yml declara (clasico o sb).
+DETECTORES_CALIBRACION = ("ambos", "clasico", "sb")
+DETECTORES_ESCALA = ("clasico", "sb")
+MIN_MEDIDAS = 5                   # medidas del calibrador (calibrar_camara.comprobar_lado)
+TOLERANCIA_LADO_MM = 0.01         # la misma que calibrar_camara.comprobar_lado
+LUZ_POR_DEFECTO = "caja nivel 2"  # P7
+POSICIONES_ESCALA = "0,80,0,80,0,80"   # sesion en vivo de la fase 4: la caja deja 80 mm
+FRAMES_POR_POSICION = 30
+
+
+def _parsear_numeros(texto, nombre):
+    """'149.1, 149.1; 149.4' -> [149.1, 149.1, 149.4]. Separadores: coma,
+    punto y coma o espacio; el decimal es el punto. ValueError si un trozo no
+    es un numero."""
+    if isinstance(texto, (list, tuple)):
+        trozos = [str(t) for t in texto]
+    else:
+        trozos = str(texto or "").replace(";", ",").replace(",", " ").split()
+    try:
+        return [float(t) for t in trozos]
+    except ValueError:
+        raise ValueError(f"{nombre} mal escrito: {texto!r} (numeros con punto "
+                         f"decimal, separados por comas)")
+
+
+def _num(x):
+    """Un numero como texto, sin perder decimales: 80.0 -> '80', 149.1 -> '149.1'."""
+    x = float(x)
+    return str(int(x)) if x.is_integer() else repr(x)
+
+
+def parsear_medidas(texto):
+    """Las medidas del calibrador (mm, positivas)."""
+    medidas = _parsear_numeros(texto, "medidas del calibrador")
+    if any(m <= 0 for m in medidas):
+        raise ValueError(f"una medida del calibrador no es positiva: {medidas}")
+    return medidas
+
+
+def lado_de_medidas(medidas, casillas_por_medida):
+    """El lado de la casilla con dos decimales: media de las medidas entre las
+    casillas que abarca cada una (la misma cuenta que
+    calibrar_camara.lado_desde_medidas; gui\\ no importa iter4\\)."""
+    if not medidas:
+        raise ValueError("sin medidas del calibrador")
+    casillas = int(casillas_por_medida)
+    if casillas < 1:
+        raise ValueError(f"casillas por medida tiene que ser >= 1, no {casillas}")
+    return round(sum(medidas) / len(medidas) / casillas, 2)
+
+
+def reporte_por_defecto(vistas_dir, slug, detector):
+    """El JSON de la calibracion, junto a la carpeta de vistas."""
+    return (Path(vistas_dir).parent / f"calibracion_{slug}_{detector}.json").as_posix()
+
+
+def valor_arg(argv, bandera):
+    """El valor que sigue a `bandera` en argv (None si no esta)."""
+    argv = [str(a) for a in argv]
+    if bandera in argv and argv.index(bandera) + 1 < len(argv):
+        return argv[argv.index(bandera) + 1]
+    return None
+
+
+def _validar_lado(square_mm, quien):
+    try:
+        square_mm = float(square_mm)
+    except (TypeError, ValueError):
+        raise ValueError(f"{quien}: square_mm tiene que ser un "
+                         f"numero (medido con calibrador), no {square_mm!r}")
+    if not (5.0 <= square_mm <= 100.0):
+        raise ValueError(f"{quien}: square_mm {square_mm} fuera "
+                         f"de rango (5-100 mm): mide el lado con calibrador")
+    return square_mm
+
+
+def receta_calibrar_camara(ruta_cfg, output, square_mm, vistas_dir, cols=8, rows=5,
+                           detector="clasico", min_vistas=15, n_control=3, timeout=900,
+                           luz=None, medidas_mm=None, casillas_por_medida=4,
+                           reporte=None):
+    """Calibracion intrinseca con tablero (iter4/calibrar_camara.py; meta 002,
+    fase 4). Tablero impreso en 3D: 9x6 casillas -> esquinas interiores 8x5,
+    25 mm NOMINALES: square_mm es el lado MEDIDO con calibrador (obligatorio,
+    sin default: el nominal daria una escala equivocada que el RMS no ve).
+    Con medidas_mm (>= 5) se pasan --medidas-mm y --casillas-por-medida y el
+    lado tiene que salir de ellas (el script lo vuelve a comprobar).
+    vistas_dir guarda las vistas para recalibrar con --desde-vistas. output
+    SIEMPRE explicito (sin default-trampa). detector "ambos": gana el de
+    menor RMS de control (exige n_control >= 1)."""
     if not output:
         raise ValueError("receta_calibrar_camara: output es obligatorio")
+    if not vistas_dir:
+        raise ValueError("receta_calibrar_camara: vistas_dir es obligatorio "
+                         "(las vistas se guardan para recalibrar sin camara)")
+    square_mm = _validar_lado(square_mm, "receta_calibrar_camara")
+    if detector not in DETECTORES_CALIBRACION:
+        raise ValueError(f"receta_calibrar_camara: detector {detector!r} no es "
+                         f"uno de {DETECTORES_CALIBRACION}")
+    if detector == "ambos" and int(n_control) < 1:
+        raise ValueError("receta_calibrar_camara: con los dos detectores gana el "
+                         "de menor RMS de control: hacen falta vistas de control (>= 1)")
+    medidas = None
+    if medidas_mm is not None and medidas_mm != "" and medidas_mm != []:
+        medidas = parsear_medidas(medidas_mm)
+        if len(medidas) < MIN_MEDIDAS:
+            raise ValueError(f"receta_calibrar_camara: hacen falta al menos "
+                             f"{MIN_MEDIDAS} medidas del calibrador, hay {len(medidas)}")
+        lado = lado_de_medidas(medidas, casillas_por_medida)
+        if abs(lado - square_mm) > TOLERANCIA_LADO_MM + 1e-9:
+            raise ValueError(f"receta_calibrar_camara: square_mm {square_mm:.2f} no "
+                             f"coincide con las medidas ({lado:.2f} mm)")
     argv = [
         _python(), "-u", "iter4/calibrar_camara.py",
         "--config", _rel(ruta_cfg),
         "--output", _rel(output),
+        "--square-mm", f"{square_mm:.2f}",
         "--cols", str(int(cols)),
         "--rows", str(int(rows)),
-        "--square-mm", str(float(square_mm)),
+        "--detector", str(detector),
+        "--vistas-dir", _rel(vistas_dir),
         "--min-vistas", str(int(min_vistas)),
+        "--n-control", str(int(n_control)),
         "--timeout", str(int(timeout)),
     ]
+    if medidas is not None:
+        argv += ["--medidas-mm", ",".join(_num(m) for m in medidas),
+                 "--casillas-por-medida", str(int(casillas_por_medida))]
+    if luz:
+        argv += ["--luz", str(luz)]
+    outputs = [_rel(output)]
+    if reporte:
+        argv += ["--reporte", _rel(reporte)]
+        outputs.append(_rel(reporte))
     return Receta(
         clave="calibrar_camara",
         descripcion=(f"Calibrar camara con tablero {cols}x{rows} @ "
-                     f"{square_mm} mm (ESPACIO=vista, q=calibrar; "
+                     f"{square_mm:.2f} mm medidos, detector {detector} "
+                     f"(ESPACIO=vista, u=quitar, q=calibrar; "
                      f"autocierre {timeout}s)"),
         argv=argv,
         ventana_titulo=VENTANAS["calibrar_camara"],
         usa_camara=True,
-        outputs=[_rel(output)],
+        outputs=outputs,
+    )
+
+
+def receta_comprobar_escala(ruta_cfg, square_mm, detector, desplazamientos_mm,
+                            salida, cols=8, rows=5,
+                            frames_por_posicion=FRAMES_POR_POSICION, luz=None,
+                            timeout=900):
+    """Comprobacion de escala con regla (iter4/comprobar_escala.py; meta 002,
+    fase 4, P18). El perfil tiene que apuntar ya al .yml (el script para si
+    no). square_mm y detector: los de la calibracion (el .yml los declara).
+    desplazamientos_mm: lecturas de la regla, texto '0,80,0,80' o lista, >= 2.
+    Todo explicito (principio 7)."""
+    quien = "receta_comprobar_escala"
+    if not salida:
+        raise ValueError(f"{quien}: salida es obligatoria")
+    square_mm = _validar_lado(square_mm, quien)
+    if detector not in DETECTORES_ESCALA:
+        raise ValueError(f"{quien}: detector {detector!r} no es uno de "
+                         f"{DETECTORES_ESCALA} (el ganador de la calibracion)")
+    posiciones = _parsear_numeros(desplazamientos_mm, "posiciones de la regla")
+    if len(posiciones) < 2:
+        raise ValueError(f"{quien}: hacen falta al menos 2 posiciones de la "
+                         f"regla, hay {len(posiciones)}")
+    if int(frames_por_posicion) < 1:
+        raise ValueError(f"{quien}: frames_por_posicion >= 1")
+    argv = [
+        _python(), "-u", "iter4/comprobar_escala.py",
+        "--config", _rel(ruta_cfg),
+        "--cols", str(int(cols)),
+        "--rows", str(int(rows)),
+        "--square-mm", f"{square_mm:.2f}",
+        "--detector", str(detector),
+        "--desplazamientos-mm", ",".join(_num(p) for p in posiciones),
+        "--frames-por-posicion", str(int(frames_por_posicion)),
+    ]
+    if luz:
+        argv += ["--luz", str(luz)]
+    argv += ["--salida", _rel(salida), "--timeout", str(int(timeout))]
+    return Receta(
+        clave="comprobar_escala",
+        descripcion=(f"Comprobar escala con regla en {','.join(_num(p) for p in posiciones)} mm "
+                     f"(tablero {cols}x{rows} @ {square_mm:.2f} mm, detector {detector}; "
+                     f"ESPACIO en cada posicion, q=salir; autocierre {timeout}s)"),
+        argv=argv,
+        ventana_titulo=VENTANAS["comprobar_escala"],
+        usa_camara=True,
+        outputs=[_rel(salida)],
     )
 
 

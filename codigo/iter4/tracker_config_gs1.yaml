@@ -12,8 +12,9 @@
 # 1280x960 MJPG 90 fps (P16, eleccion del autor: ningun modo llego a 88.2
 # fps de tracking con ventana; la ventana del tracker es el cuello, 19-25
 # fps en cualquier resolucion) y exposure_ms 0.977 (P15, -10 por DSHOW, la
-# misma en las dos camaras). calibration_file vacio hasta la fase 4.
-# Caja de luz en nivel 2 (P7).
+# misma en las dos camaras). Caja de luz en nivel 2 (P7).
+# Intrinsecos de la fase 4 (2026-10-22, detector sb): calibration_file
+# apunta a data/intrinsecos_gs1_1280x960.yml (detalle abajo).
 # =====================================================================
 
 camera:
@@ -70,9 +71,12 @@ camera:
     backlight: 54
 
   # ===== Calibracion intrinseca (.yml de calibrar_camara.py) =====
-  # Vacio hasta la fase 4 (intrinsecos_gs1_<W>x<H>.yml). El backend para si
-  # el frame real no es del tamano del perfil o del .yml.
-  calibration_file:
+  # Calibrada en la fase 4 (2026-10-22) con el detector sb (gano al clasico:
+  # RMS de control 0.146 frente a 0.181 px): 23 vistas (20 + 3 de control),
+  # RMS 0.167 px, control 0.146 px, cobertura 1.00, lado del cuadro medido
+  # 24.86 mm (P17). Ruta relativa a iter4\. El backend para si el frame real
+  # no es del tamano del perfil o del .yml.
+  calibration_file: data/intrinsecos_gs1_1280x960.yml
 
 
 # =====================================================================

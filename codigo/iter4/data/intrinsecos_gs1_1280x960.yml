@@ -1,0 +1,107 @@
+%YAML:1.0
+---
+camera_matrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 849.93875341450655, 0., 603.55518261764985, 0.,
+       848.8756816702446, 488.86679118379107, 0., 0., 1. ]
+distortion_coefficients: !!opencv-matrix
+   rows: 5
+   cols: 1
+   dt: d
+   data: [ 0.017026122019416546, 0.011043215338292684,
+       0.002818142843012965, -0.00092460699198036007,
+       -0.10653654623859195 ]
+image_width: 1280
+image_height: 960
+rms_reprojection_px: 0.16734396503492374
+n_views: 20
+board: "8x5 inner corners @ 24.86 mm"
+square_mm: 24.859999999999999
+generated_by: "iter4/calibrar_camara.py"
+generated_at_utc: "2026-10-23T04:25:06.977054+00:00"
+detector: sb
+rms_control_px: 0.1457762514906227
+n_control: 3
+errores_control_px:
+   - 0.14233399279939551
+   - 0.16968643649859752
+   - 0.12124229566517161
+errores_vista_px:
+   - 0.10210330530984631
+   - 0.22727105438440626
+   - 0.23649416328519363
+   - 0.19119719061321752
+   - 0.16381950767670228
+   - 0.13857079956399163
+   - 0.2688144695965109
+   - 0.25015824702884942
+   - 0.16652678841775315
+   - 0.13897618980539977
+   - 0.12877690719509596
+   - 0.15057668540695299
+   - 0.12747054396464794
+   - 0.14104950433105604
+   - 0.16017262591780218
+   - 0.12506890415584745
+   - 0.11887090027928798
+   - 0.12721613584172967
+   - 0.12597947808698365
+   - 0.12128175704269883
+cobertura: 1.
+cobertura_celdas: "4x3"
+std_intrinsecos:
+   fx: 0.67472757747083056
+   fy: 0.64634075620910714
+   cx: 0.66126548260634344
+   cy: 0.55140303147280501
+square_mm_medido: 24.859999999999999
+medidas_calibrador_mm:
+   - 149.09999999999999
+   - 149.09999999999999
+   - 149.09999999999999
+   - 149.09999999999999
+   - 149.40000000000001
+casillas_por_medida: 6
+perfil: "tracker_config_gs1.yaml"
+usb_port_windows: "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)"
+modo:
+   width: 1280
+   height: 960
+   fps: 90
+   fourcc: MJPG
+   backend: MSMF
+ajustes_leidos:
+   exposure_ms: 0.97660000000000002
+   gain: 11.
+   auto_white_balance: 0
+   brightness: 0.
+   contrast: 0.
+   saturation: 56.
+   sharpness: 0.
+   gamma: 110.
+   backlight: 54.
+ajustes_declarados:
+   exposure_manual: 1
+   exposure_ms: 0.97699999999999998
+   gain: 11
+   auto_white_balance: 0
+   brightness: 0
+   contrast: 0
+   saturation: 56
+   sharpness: 0
+   gamma: 110
+   backlight: 54
+luz: caja nivel 2
+vistas_dir: "..\\Claude outputs\\camaras\\vistas_gs1"
+fecha_captura: "2026-10-22 21:56:28"
+criterio:
+   rms_px: 0.5
+   rms_control_px: 0.75
+   cobertura: 0.80000000000000004
+   min_vistas: 15
+criterio_cumplido: 1
+criterio_fallos:
+   []
+opencv: "4.11.0"

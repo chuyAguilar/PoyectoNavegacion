@@ -104,3 +104,17 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** (a) Recomendada: 1280×960 MJPG (más píxeles por marker; la velocidad la sube la optimización). (b) 640×480. (c) 960×720. (d) 1920×1200 (tracking sin medir).
 - **Respuesta del autor:** 1280×960 MJPG (a), en las dos cámaras.
 - **Fecha:** 2026-10-22
+
+## P17 · El lado medido de la casilla del tablero (Fase 4, paso 0)
+
+- **Contexto:** tablero impreso en 3D (9×6 casillas, 25 mm nominal, negras engrosadas 0.4 mm por lado; fotos en `Claude outputs/tablero/`). Calibrador digital de 0.1 mm, puesto en cero. Se mide siempre de orilla de arriba de un negro a orilla de arriba de otro negro (misma orilla: el engrosamiento se cancela). Un primer juego con tramos mezclados (2, 4 y 6 casillas; 24.75–25.18 mm por casilla) se descartó; las medidas de orilla de arriba a orilla de abajo (149.8 mm en 6 casillas del eje corto) incluyen el engrosamiento y no se usan.
+- **Medidas:** eje largo, 6 casillas: 149.1, 149.1, 149.1, 149.1, 149.4 mm → media 149.16 / 6 = **24.86 mm**. Eje corto, 4 casillas: tres medidas «cerca de 99.6» (valor aproximado, dicho por el autor) → ~24.90 mm. Diferencia entre ejes ~0.04 mm por casilla (~0.16 %), muy por debajo del criterio de escala (≤ 1.0 mm por 100 mm); la comprobación de escala del paso 4 lo mide en la imagen.
+- **Respuesta del autor:** se calibra con `--square-mm 24.86 --medidas-mm 149.1,149.1,149.1,149.1,149.4 --casillas-por-medida 6` (decisión de la dirección con las medidas del autor).
+- **Fecha:** 2026-10-22
+
+## P18 · La calibración desde el panel, como la de la sesión en vivo (Fase 4, paso 6)
+
+- **Contexto:** la calibración de la cámara 1 por línea de comandos (`Claude outputs/fases/002/fase-4-en-vivo.md`) le gustó al autor: la rejilla que se rellena, el número de vistas, el flujo. El diálogo del panel ya lanza el mismo `calibrar_camara.py`, pero solo pide el lado (no las medidas ni el tramo), usa un solo detector, no pasa reporte ni luz y no tiene la comprobación de escala.
+- **Opciones (selección múltiple):** (a) medidas del calibrador + casillas por medida + reporte y luz; (b) los dos detectores sobre las mismas vistas, se queda el de menor RMS de control; (c) botón «Comprobar escala»; (d) apuntar el perfil al .yml al terminar.
+- **Respuesta del autor:** las cuatro. Se hacen dentro de la Fase 4, antes de «verifica»; se prueban en vivo con la cámara 2 en la Fase 5 (calibrada desde el panel).
+- **Fecha:** 2026-10-22

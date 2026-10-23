@@ -79,7 +79,8 @@ def test_en_esta_sesion_queda_puesta() -> None:
 # ----------------------------------------------------------------------------
 
 MODULOS_MSMF = ["camera_backend", "camaras_uvc", "ajustes_camara", "sondear_camara", "medir_modos",
-                "identificar_ids", "calibrar_camara", "calibrar_tip_divot", "captura_calibracion"]
+                "identificar_ids", "calibrar_camara", "comprobar_escala", "calibrar_tip_divot",
+                "captura_calibracion"]
 # (modulo, valor de la variable al lanzar o None si no esta)
 CASOS = [(m, None) for m in MODULOS_MSMF] + [("tracker", None), ("tracker", "0"),
                                              ("camera_backend", "1")]

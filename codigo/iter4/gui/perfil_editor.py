@@ -97,6 +97,51 @@ def aplicar_cambio(ruta_cfg, nuevo_valor):
     return backup, linea_actual, linea_nueva
 
 
+# Clave de primer nivel con un escalar: "detector: sb", "square_mm: 24.86",
+# 'luz: "caja nivel 2"'. Las lineas sangradas (mapas anidados) y las
+# matrices (!!opencv-matrix) no entran.
+RE_ESCALAR = re.compile(r"^([A-Za-z_][\w]*):[ \t]+([^\r\n]*?)[ \t]*\r?$", re.MULTILINE)
+
+
+def leer_campos_yml(ruta_yml):
+    """Los escalares de primer nivel del .yml de calibrar_camara.py como
+    texto (sin comillas): detector, square_mm, criterio_cumplido,
+    rms_control_px, image_width... Sin cv2 (el panel no lo importa).
+    OSError si no se puede leer."""
+    texto = Path(ruta_yml).read_text(encoding="utf-8", errors="replace")
+    campos = {}
+    for clave, valor in RE_ESCALAR.findall(texto):
+        if valor.startswith("!!") or clave in campos:
+            continue
+        if len(valor) >= 2 and valor[0] == valor[-1] == '"':
+            valor = valor[1:-1]
+        campos[clave] = valor
+    return campos
+
+
+def ofrecer_apuntar(rc, ruta_yml, valor_actual, dir_data):
+    """Si al terminar calibrar_camara.py se ofrece apuntar el perfil al .yml
+    (P18): solo con exit 0, el .yml valido y criterio_cumplido 1 dentro, y si
+    el perfil no apunta ya a el. Devuelve (True, valor_para_el_perfil) o
+    (False, motivo)."""
+    if rc != 0:
+        return False, f"la calibracion termino con exit {rc} (criterio no cumplido o error)"
+    err = validar_yml_intrinsecos(ruta_yml)
+    if err:
+        return False, err
+    try:
+        campos = leer_campos_yml(ruta_yml)
+    except OSError as e:
+        return False, f"ilegible: {e}"
+    if campos.get("criterio_cumplido") != "1":
+        return False, (f"{Path(ruta_yml).name} no declara el criterio cumplido "
+                       f"(criterio_cumplido: {campos.get('criterio_cumplido', '-')})")
+    valor = valor_para_perfil(ruta_yml, dir_data)
+    if str(valor_actual or "").strip() == valor:
+        return False, f"el perfil ya apunta a {valor}"
+    return True, valor
+
+
 def valor_para_perfil(ruta_yml, dir_data):
     """Valor a escribir en el YAML: 'data/<nombre>' si el .yml vive en
     iter4\\data (convencion del repo), si no la ruta absoluta."""

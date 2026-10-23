@@ -33,7 +33,9 @@ Cuatro modos, uno por corrida (todos con --config, --salida y --timeout):
       de tracking sin y con ventana (deteccion + lista blanca + pose del
       dodecaedro + 1-Euro, con las funciones de tracker.py; sin pyigtl),
       mediana de markers y fraccion de frames con pose. Los de
-      --modos-solo-captura solo captura (y la muestra).
+      --modos-solo-captura solo captura (y la muestra). Con --intrinsecos
+      RUTA.yml (fase 4, B33) la pose usa la K real del backend (el modo tiene
+      que ser el del .yml) y --fov-grados sobra.
 
   --elegir A.json B.json
       Sin camara: con los JSON de las dos camaras de la misma medicion, la
@@ -424,12 +426,14 @@ def medir_tracking(cam, ctx: dict, segundos: float, ventana: bool,
 # ----------------------------------------------------------------------------
 
 def cfg_camara_para(cfg_camera: dict, modo: tuple[int, int, str], fps: float,
-                    exposicion_ms: float | None) -> dict:
-    """Copia de `camera` del perfil con el modo pedido, sin .yml (un .yml vale para un
-    tamano) y, si se da, la exposicion candidata en `controls` (la escribe la capa)."""
+                    exposicion_ms: float | None, calibration_file: str | None = None) -> dict:
+    """Copia de `camera` del perfil con el modo pedido, con el .yml que se pase (por defecto
+    ninguno: un .yml vale para un tamano) y, si se da, la exposicion candidata en `controls`
+    (la escribe la capa). Fase 4: con `calibration_file`, el backend comprueba que el modo es
+    el del .yml y entrega la K real (B33)."""
     c = dict(cfg_camera)
     w, h, fcc = modo
-    c.update({"width": w, "height": h, "fourcc": fcc, "fps": fps, "calibration_file": None})
+    c.update({"width": w, "height": h, "fourcc": fcc, "fps": fps, "calibration_file": calibration_file})
     if exposicion_ms is not None:
         controls = dict(c.get("controls") or {})
         controls["exposure_manual"] = True
@@ -447,18 +451,20 @@ def abrir_por_perfil(cfg_camera: dict):
 
 def medir_fila(cfg: dict, ctx: dict | None, modo: tuple[int, int, str], fps: float,
                exposicion_ms: float | None, segundos_captura: float, segundos_tracking: float,
-               fov_grados: float, abrir=None) -> dict:
+               fov_grados: float | None, abrir=None, intrinsecos: str | None = None) -> dict:
     """Una fila: abre por el perfil, captura, muestra y (si segundos_tracking > 0) los
     dos pases de tracking. Libera la camara siempre. Un fallo queda en `error`.
-    `abrir(cfg_camera)` se inyecta en las pruebas; por defecto, abrir_por_perfil."""
+    `abrir(cfg_camera)` se inyecta en las pruebas; por defecto, abrir_por_perfil.
+    Con `intrinsecos` (ruta de un .yml) la pose usa la K real del backend en vez de la
+    nominal por `fov_grados` (fase 4, B33)."""
     abrir = abrir if abrir is not None else abrir_por_perfil
     w, h, fcc = modo
     fila: dict = {"pedido": {"ancho": w, "alto": h, "fourcc": fcc, "fps": fps},
-                  "exposicion_ms": exposicion_ms}
+                  "exposicion_ms": exposicion_ms, "intrinsecos": intrinsecos}
     t0 = time.monotonic()
     cam = None
     try:
-        cam = abrir(cfg_camara_para(cfg["camera"], modo, fps, exposicion_ms))
+        cam = abrir(cfg_camara_para(cfg["camera"], modo, fps, exposicion_ms, intrinsecos))
         fila["abrir_s"] = round(time.monotonic() - t0, 2)
         leidos = getattr(cam, "ajustes_leidos", None) or {}
         fila["exposicion_leida_ms"] = leidos.get("exposure_ms")
@@ -472,7 +478,11 @@ def medir_fila(cfg: dict, ctx: dict | None, modo: tuple[int, int, str], fps: flo
             print(f"[medir]   muestra {len(muestra)}: brillo {fila['brillo']}, saturada "
                   f"{fila['saturada']}, markers {fila['markers_mediana']}", flush=True)
             if segundos_tracking > 0 and fila["real"]:
-                K, dist = k_nominal(fila["real"]["ancho"], fila["real"]["alto"], fov_grados)
+                if intrinsecos:
+                    K, dist = cam.get_intrinsics()
+                    fila["K"] = np.asarray(K).round(3).tolist()
+                else:
+                    K, dist = k_nominal(fila["real"]["ancho"], fila["real"]["alto"], fov_grados)
                 sin = medir_tracking(cam, ctx, segundos_tracking, False, K, dist)
                 fila["fps_tracking"] = sin["fps"]
                 fila["tracking_sin_ventana"] = sin
@@ -585,6 +595,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--segundos-captura", type=float, help="segundos de captura sola por fila")
     ap.add_argument("--segundos-tracking", type=float, help="segundos de cada pase de tracking por modo")
     ap.add_argument("--fov-grados", type=float, help="FOV horizontal del lente para la K nominal (SVPRO ~84)")
+    ap.add_argument("--intrinsecos", help="Medicion 2: .yml de intrinsecos reales (fase 4, B33); el modo tiene que ser el "
+                                          "del .yml y entonces --fov-grados no hace falta")
     ap.add_argument("--luz", help="nivel de la caja de luz y luz de la sala (P7)")
     ap.add_argument("--salida", required=True, help="JSON de salida")
     ap.add_argument("--timeout", type=float, required=True, help="tope en segundos")
@@ -640,9 +652,13 @@ def main(argv: list[str] | None = None) -> int:
         return rc
 
     # Mediciones 1 y 2: argumentos explicitos.
-    faltan = [n for n in ("fps", "segundos_captura", "fov_grados", "luz") if getattr(args, n) is None]
+    faltan = [n for n in ("fps", "segundos_captura", "luz") if getattr(args, n) is None]
+    if args.fov_grados is None and not (que == "modos" and args.intrinsecos):
+        faltan.append("fov_grados")
     if que == "modos" and args.segundos_tracking is None:
         faltan.append("segundos_tracking")
+    if args.intrinsecos and (que != "modos" or not Path(args.intrinsecos).is_file()):
+        ap.error(f"--intrinsecos solo vale en la Medicion 2 (--modos) y tiene que existir: {args.intrinsecos}")
     if que == "exposiciones_ms" and args.modo is None:
         faltan.append("modo")
     if faltan:
@@ -671,7 +687,7 @@ def main(argv: list[str] | None = None) -> int:
                  f"{args.timeout:.0f}; sube --timeout o quita modos")
 
     estado.update({"modo": "exposicion" if que == "exposiciones_ms" else "modos",
-                   "fov_grados": args.fov_grados, "fps_pedidos": args.fps,
+                   "fov_grados": args.fov_grados, "intrinsecos": args.intrinsecos, "fps_pedidos": args.fps,
                    "segundos_captura": args.segundos_captura, "segundos_tracking": segundos_tracking,
                    "umbrales": {"fps_min": round(FPS_MIN * (1 - TOLERANCIA_FPS), 2),
                                 "max_saturada": MAX_SATURADA, "margen_px": MARGEN_SATURADA_PX},
@@ -690,7 +706,8 @@ def main(argv: list[str] | None = None) -> int:
                                         "error": "no medido: tope de tiempo"})
                 continue
             fila = medir_fila(cfg, ctx, modo, args.fps, exposicion, args.segundos_captura,
-                              segundos_tracking if con_tracking else 0.0, args.fov_grados)
+                              segundos_tracking if con_tracking else 0.0, args.fov_grados,
+                              intrinsecos=args.intrinsecos)
             estado["filas"].append(fila)
             _guardar(estado, salida)      # B25: cada fila al tenerla
         if que == "exposiciones_ms":

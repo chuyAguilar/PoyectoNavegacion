@@ -43,3 +43,13 @@ def test_panel_selftest() -> None:
     assert proc.returncode == 0, f"rc={proc.returncode}\n{salida}"
     assert "[panel-selftest] cerrando OK" in salida, salida
     assert dt < TOPE_SELFTEST_S
+    # P18 (meta 002, fase 4): los dialogos de calibracion y escala componen la receta de la sesion en vivo.
+    assert "[panel-selftest] calcam_lado=24.86" in salida, salida
+    calcam = next(ln for ln in salida.splitlines() if ln.startswith("[panel-selftest] calcam_argv="))
+    for trozo in ("--square-mm 24.86", "--detector ambos", "--medidas-mm 149.1,149.1,149.1,149.1,149.4",
+                  "--casillas-por-medida 6", "--luz caja nivel 2", "--reporte "):
+        assert trozo in calcam, calcam
+    escala = next(ln for ln in salida.splitlines() if ln.startswith("[panel-selftest] escala_argv="))
+    for trozo in ("iter4/comprobar_escala.py", "tracker_config_gs1.yaml", "--desplazamientos-mm 0,80,0,80,0,80",
+                  "--frames-por-posicion 30", "--luz caja nivel 2", "escala_gs1.json"):
+        assert trozo in escala, escala

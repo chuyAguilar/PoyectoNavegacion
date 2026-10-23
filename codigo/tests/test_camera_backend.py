@@ -186,9 +186,10 @@ def test_create_backend_doctor_como_antes() -> None:
     assert b.controls is None and b.usb_port_windows is None and b.marca is None
 
 
-@pytest.mark.parametrize("nombre,puerto,focus", [("tracker_config_gs1.yaml", PUERTO_1, 500.0),
-                                                 ("tracker_config_gs2.yaml", PUERTO_2, 332.0)])
-def test_create_backend_gs(nombre: str, puerto: str, focus: float) -> None:
+@pytest.mark.parametrize("nombre,puerto,focus,yml", [
+    ("tracker_config_gs1.yaml", PUERTO_1, 500.0, "data/intrinsecos_gs1_1280x960.yml"),   # fase 4 (P17)
+    ("tracker_config_gs2.yaml", PUERTO_2, 332.0, None)])                                  # hasta la fase 5
+def test_create_backend_gs(nombre: str, puerto: str, focus: float, yml: str | None) -> None:
     b = cb.create_backend(_camera(nombre))
     assert isinstance(b, cb.WebcamBackend)
     assert b.source is None and b.usb_port_windows == puerto
@@ -196,7 +197,9 @@ def test_create_backend_gs(nombre: str, puerto: str, focus: float) -> None:
     # Fase 3: exposicion 0.977 ms (P15) y 1280x960 MJPG 90 fps (P16), las mismas en los dos.
     assert b.controls == ac.validar_controles({**CONTROLS, "exposure_ms": 0.977})
     assert (b.width, b.height, b.fps, b.backend_name, b.fourcc) == (1280, 960, 90, "MSMF", "MJPG")
-    assert not b.calibration_file
+    assert (b.calibration_file or None) == yml
+    if yml:
+        assert cb.leer_tamano_yml(ITER4_DIR / yml) == (b.width, b.height)
 
 
 def test_perfiles_gs1_gs2_contrato() -> None:

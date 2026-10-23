@@ -423,3 +423,69 @@ def test_importa_camaras_uvc_antes_que_cv2() -> None:
     tambien test_aceleracion_msmf.MODULOS_MSMF en un proceso nuevo."""
     fuente = (ITER4_DIR / "medir_modos.py").read_text(encoding="utf-8")
     assert fuente.index("import camaras_uvc") < fuente.index("import cv2")
+
+
+# ----------------------------------------------------------------------------
+# Fase 4 (B33): la Medicion 2 con los intrinsecos reales en vez de la K nominal
+# ----------------------------------------------------------------------------
+
+class CamConK(CamFalsa):
+    def __init__(self, frames, K, dist):
+        super().__init__(frames)
+        self._K, self._dist = K, dist
+
+    def get_intrinsics(self):
+        return self._K, self._dist
+
+
+def test_cfg_camara_para_con_intrinsecos_conserva_el_yml() -> None:
+    cam = cfg_gs1()["camera"]
+    c = mm.cfg_camara_para(cam, (1280, 960, "MJPG"), 90, None, "data/intrinsecos_gs1_1280x960.yml")
+    assert c["calibration_file"] == "data/intrinsecos_gs1_1280x960.yml" and c["width"] == 1280
+    assert mm.cfg_camara_para(cam, (1280, 960, "MJPG"), 90, None)["calibration_file"] is None
+
+
+def test_medir_fila_con_intrinsecos_usa_la_K_del_backend(monkeypatch, tmp_path) -> None:
+    cfg = cfg_gs1()
+    ctx = mm.preparar_tracking(cfg)
+    monkeypatch.setattr(mm.cv2, "imshow", lambda *a, **k: None)
+    monkeypatch.setattr(mm.cv2, "waitKey", lambda *a, **k: -1)
+    monkeypatch.setattr(mm.cv2, "destroyAllWindows", lambda: None)
+    K_real = np.array([[333.0, 0.0, 150.0], [0.0, 333.0, 150.0], [0.0, 0.0, 1.0]])
+    vistas = []
+
+    def pose_espia(det, geom, K, dist):
+        vistas.append(K.copy())
+        return None
+    monkeypatch.setattr(mm.tracker, "estimar_pose_rigid_body", pose_espia)
+    ctx["min_markers"] = 1
+    pedidos = []
+
+    def abrir(cfg_camera):
+        pedidos.append(cfg_camera)
+        return CamConK([imagen_marker(4)], K_real, np.zeros(5))
+    yml = str(tmp_path / "k.yml")
+    fila = mm.medir_fila(cfg, ctx, (300, 300, "MJPG"), 90, None, 0.2, 0.2, None, abrir=abrir, intrinsecos=yml)
+    assert pedidos[0]["calibration_file"] == yml and fila["intrinsecos"] == yml
+    assert fila["K"] == K_real.tolist() and vistas and np.allclose(vistas[0], K_real)
+
+
+def test_main_intrinsecos_solo_en_la_medicion_2(tmp_path, monkeypatch) -> None:
+    yml = tmp_path / "k.yml"
+    yml.write_text("%YAML:1.0\n", encoding="utf-8")
+    with pytest.raises(SystemExit):           # con --exposiciones-ms no vale
+        mm.main(_base(tmp_path, "--exposiciones-ms", "3.906", "--modo", "300x300:MJPG", "--fps", "90",
+                      "--segundos-captura", "0.2", "--fov-grados", "84", "--luz", "2", "--intrinsecos", str(yml)))
+    with pytest.raises(SystemExit):           # el .yml tiene que existir
+        mm.main(_base(tmp_path, "--modos", "300x300:MJPG", "--fps", "90", "--segundos-captura", "0.2",
+                      "--segundos-tracking", "0.2", "--luz", "2", "--intrinsecos", str(tmp_path / "no.yml")))
+    monkeypatch.setattr(mm.cv2, "imshow", lambda *a, **k: None)
+    monkeypatch.setattr(mm.cv2, "waitKey", lambda *a, **k: -1)
+    monkeypatch.setattr(mm.cv2, "destroyAllWindows", lambda: None)
+    K_real, _ = mm.k_nominal(300, 300, 84.0)
+    monkeypatch.setattr(mm, "abrir_por_perfil", lambda c: CamConK([imagen_marker(3)], K_real, np.zeros(5)))
+    rc = mm.main(_base(tmp_path, "--modos", "300x300:MJPG", "--fps", "90", "--segundos-captura", "0.2",
+                       "--segundos-tracking", "0.2", "--luz", "2", "--intrinsecos", str(yml)))   # sin --fov-grados
+    assert rc == 0
+    e = json.loads((tmp_path / "m.json").read_text(encoding="utf-8"))
+    assert e["intrinsecos"] == str(yml) and e["fov_grados"] is None and e["filas"][0]["K"] == K_real.round(3).tolist()

@@ -32,7 +32,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B30 | Leer la marca y aplicar los controles en una sola apertura DSHOW | Baja | — |
 | B31 | El criterio de exposición de `medir_modos.py` favorece imágenes casi saturadas | Media | — |
 | B32 | Optimizar el tracker: la ventana limita a 19–25 fps en cualquier resolución | Media | — |
-| B33 | Fracción con pose baja por encima de 640×480 con la K nominal | Media | — |
+| B34 | Las pruebas no deben poder abrir una cámara real aunque cambie un perfil | Media | — |
 
 ## Abiertos
 
@@ -58,7 +58,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** media.
 
 ### B10 · Verificaciones en vivo pendientes del brief-02
-- **Qué:** la captura del asistente con IDs nuevos, `calibrar_camara.py` interactivo y la calibración de punta por dock desde el panel. (El snippet de `documentos/MANUAL_simplificado.md` §4.2 con la ruta nueva, que se sumó en la fase 4 de la meta 001, quedó verificado en vivo por el autor el 2026-10-19: traslación [0.904, 5.471, −201.808] mm, la esperada; `docs/PRUEBAS.md` P01.)
+- **Qué:** la captura del asistente con IDs nuevos, la calibración de punta por dock desde el panel y la calibración de cámara lanzada desde el panel (`calibrar_camara.py` interactivo por línea de comandos quedó verificado en vivo en la fase 4 de la meta 002, 2026-10-22; el panel se prueba en la fase 5). (El snippet de `documentos/MANUAL_simplificado.md` §4.2 con la ruta nueva, que se sumó en la fase 4 de la meta 001, quedó verificado en vivo por el autor el 2026-10-19: traslación [0.904, 5.471, −201.808] mm, la esperada; `docs/PRUEBAS.md` P01.)
 - **Por qué queda:** necesita hardware y la placa dock física.
 - **De dónde:** `docs/CONTEXT.md` §6.
 - **Qué haría falta:** una sesión con cámara; reportar números.
@@ -224,14 +224,14 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** en la fase 3 el tracking con ventana (`debug.show_window`) dio 19–25 fps en todos los modos, incluso 320×240 (18.9–19.2); sin ventana, 90 hasta 640×480 y 62–68 fps por encima (960×720 a 1280×960; 1280×960: 61.9 y 61.6). La captura da ~90 en todos los modos, incluidos 1920×1200. Explica los ~20–26 fps de P02. Ningún modo llegó a 88.2 fps con ventana en ninguna de las dos cámaras.
 - **Por qué queda:** el plan lo manda a la meta de optimizar el tracker (decisión del autor, 2026-10-20); la fase 3 no toca `tracker.py` (principio 6). El autor eligió 1280×960 MJPG (P16) sabiendo que el tracking con ventana no llega a 90.
 - **De dónde:** sesión en vivo de la fase 3 (meta 002), 2026-10-22; tablas en `Claude outputs/fases/002/fase-3-en-vivo.md`.
-- **Qué haría falta:** en la meta de optimizar el tracker: medir qué cuesta más (dibujo, `imshow`, `waitKey(1)`, detección a 1280×960, 1-Euro) y sacarlo del bucle (ventana en otro hilo o a menor frecuencia, detección en una región de interés tras la primera, hilo propio de captura); extraer el paso por frame de `tracker.main()` a una función que usen el tracker y `medir_modos.medir_tracking` (hoy este repite el bucle); la línea base es la tabla de la fase 3 y se repite con intrínsecos reales (fases 4–5).
+- **Qué haría falta:** en la meta de optimizar el tracker: medir qué cuesta más (dibujo, `imshow`, `waitKey(1)`, detección a 1280×960, 1-Euro) y sacarlo del bucle (ventana en otro hilo o a menor frecuencia, detección en una región de interés tras la primera, hilo propio de captura); extraer el paso por frame de `tracker.main()` a una función que usen el tracker y `medir_modos.medir_tracking` (hoy este repite el bucle); la línea base es la tabla de la fase 3 y se repite con intrínsecos reales (fases 4–5). Con la K real de la cámara 1 (fase 4, 1280×960, dodecaedro quieto): sin ventana 56 fps con pose casi siempre (99.8 %); la fase 3 daba 62 sin pose (la K nominal no resolvía la pose): más trabajo por frame. Con ventana, 21.4 fps.
 - **Prioridad:** media.
 
-### B33 · Fracción con pose baja por encima de 640×480 con la K nominal
-- **Qué:** en la fase 3, con 4–5 markers detectados por frame en 960×720, 1280×720 y 1280×960, la fracción de frames con pose fue 0–7 % (cám. 1: 6.7, 3.1, 6.9 %; cám. 2: 0.3, 0.0, 0.0 %), frente a 46.9 % y 68.0 % a 640×480 con 3 markers. La pose se calculó con una K nominal (FOV 84°, sin distorsión) y los umbrales en píxeles del tracker; no es una medida de la pose.
-- **Por qué queda:** probablemente es la K nominal; se confirma con los intrínsecos reales en la fase 4, sin tocar el tracker ahora. Es el riesgo de la resolución elegida (P16): si con la K real sigue baja a 1280×960, el criterio de la fase 4 (escala) no se cumplirá y habrá que volver a elegir.
-- **De dónde:** sesión en vivo de la fase 3 (meta 002), 2026-10-22; la sugerencia del «implementa» de repetir solo el modo elegido con la K real.
-- **Qué haría falta:** en la fase 4, tras `intrinsecos_gs1_1280x960.yml`, repetir `medir_modos.py` solo en 1280×960 con la K real y comparar la fracción con pose; si sigue baja, revisar los umbrales en píxeles de `estimar_pose_rigid_body` (`tracker.py`, la elección por menor error de reproyección) y de los filtros de calidad. Sube a alta si la fase 4 no la explica.
+### B34 · Las pruebas no deben poder abrir una cámara real aunque cambie un perfil
+- **Qué:** nada impide hoy que una prueba llegue a `camera_backend.create_backend` o a `cv2.VideoCapture` con un perfil real y abra la cámara física. En la fase 4, al apuntar `tracker_config_gs1.yaml` a su `.yml`, `test_comprobar_escala.py::test_main_exige_argumentos_explicitos` (que suponía gs1 sin calibrar) pasó a abrir la cámara 1 real; el vigilante la cortó a los 60 s, sin procesos vivos después.
+- **Por qué queda:** la fase 4 lo cerró solo en sus dos módulos (`test_calibrar_camara.py` y `test_comprobar_escala.py`: un fixture autouse cambia `create_backend` por uno que falla) y arregló las dos pruebas que suponían gs1 sin calibrar; el resto de la suite sigue expuesta a un cambio de perfil.
+- **De dónde:** sesión en vivo de la fase 4 · Calibración de la cámara 1 y comprobación de escala (meta 002), paso 3, 2026-10-22 (`Claude outputs/fases/002/fase-4-en-vivo.md`).
+- **Qué haría falta:** un fixture autouse en `codigo/tests/conftest.py` que niegue `camera_backend.create_backend` y `cv2.VideoCapture` a toda la suite, salvo las pruebas marcadas a propósito (y las que usan una cámara falsa); con su prueba de que un perfil real no abre nada.
 - **Prioridad:** media.
 
 ## Cerrados
@@ -259,3 +259,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 ### B03 · La calibración de punta vigente no tiene respaldo
 - **Qué era:** `StylusTipToDodecaedro_femto_dock.npy/.txt` solo existía en este disco (`.gitignore`: las puntas son por equipo).
 - **Cerrado:** 2026-10-19, por la fase 2 · respaldo de la punta de la meta 001 · limpieza y orden del repo (P3 = A', ADR-021): copia byte a byte en `codigo\iter4\data\respaldo_puntas\` con dos excepciones en `.gitignore`, fuera del glob del snippet de Slicer y de `estado.py`; sha256 del `.npy` igual al original (`a3c83203…5ebf`). Queda versionada con el commit del autor.
+
+### B33 · Fracción con pose baja por encima de 640×480 con la K nominal
+- **Qué era:** en la fase 3, a 960×720, 1280×720 y 1280×960 la fracción de frames con pose fue 0–7 % (cám. 1 a 1280×960: 6.9 %) con 4–5 markers, frente a 46.9 % y 68.0 % a 640×480. La pose se calculó con una K nominal (FOV 84°).
+- **Cerrado:** 2026-10-22, por la fase 4 · Calibración de la cámara 1 y comprobación de escala (meta 002): lo explicaba la K nominal. Con `intrinsecos_gs1_1280x960.yml` (K real, campo horizontal ~74°), `medir_modos.py --intrinsecos` a 1280×960 da **99.8 %** con pose (99.84 % con ventana), con 4 markers y sin tocar el tracker. Los umbrales en píxeles de `estimar_pose_rigid_body` no hacen falta cambiarlos.
+
