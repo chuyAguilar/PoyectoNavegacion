@@ -8,6 +8,7 @@ Lo escribe solo el agente de pruebas (principio 1; ADR-020), sobre HEAD commitea
 |---|---|---|---|---|
 | P01 | Meta 001, fases 1–4 · limpieza y orden | e52f58c | 2026-10-19 | pasa |
 | P02 | Cámara global shutter 1 · flujo actual con el perfil doctor | 6431bc6 | 2026-10-19/20 | cadena pasa; calibración intrínseca no concluyente |
+| P03 | Meta 002 · calibración de las cámaras global shutter (sin cámara) | 2322553 | 2026-10-23 | pasa; 3 hallazgos menores |
 
 ## Formato de una entrada
 
@@ -79,3 +80,28 @@ Las validaciones de las iteraciones 1–4 (RMS de registro 3.46 → 2.80 mm, BA 
 - Lo dudoso: no se sabe si `globalshutter.yml` es de esta unidad. Sin reproyección ni escala no se puede decir si K es buena. No se aisló la causa del FPS ni del jitter. El FPS medido es el del tracker, no el de la cámara sola.
 - En vivo: números del autor en `Claude outputs/pruebas/camara-1/numeros_autor.md` y datos crudos en `en_vivo_datos/` (2026-10-19/20).
 - Veredicto: cadena hasta Slicer con la cámara 1: pasa. Calibración intrínseca: no concluyente, se recalibra en la meta 002.
+
+## P03 · Meta 002 · calibración de las cámaras global shutter (sin cámara)
+- Commit probado: 2322553 · Fecha: 2026-10-23
+- Comprobaciones:
+
+| qué | cómo | resultado | número o evidencia |
+|---|---|---|---|
+| Suite | pytest | pasa | 444 recogidas, 422 pasan, 22 xfail, 0 fallos, 19.4 s (25.8 s de pared) |
+| Selftest del panel | panel --selftest | pasa | rc 0; textos de la ventana de calibración y «Última:» leen los JSON |
+| Cámara real en pruebas (B34) | búsqueda | pasa con reserva | create_backend/VideoCapture solo con doble o prohibido (comprobar_escala, calibrar_camara, sondear_camara); test_camera_backend construye backends con los perfiles reales pero sin abrir |
+| Intrínsecos .yml | cv2.FileStorage | pasa | 1280x960; gs1 fx 849.94 fy 848.88 cx 603.56 cy 488.87; gs2 fx 836.72 fy 836.50 cx 628.56 cy 389.81; dist de 5 |
+| Perfiles gs1/gs2 | lectura | pasa | puerto USB(3)/USB(4), focus 500/332, 1280x960 MSMF MJPG 90, 0.977 ms, calibration_file a su .yml |
+| Escala --desde-json | script | pasa | gs1 +0.271 mm, gs2 -0.368 mm (cumple); --config junto a --desde-json se rechaza |
+| Recalibrar gs2 --desde-vistas | script a temporal | pasa | sb 0.1540 / control 0.1500, clásico 0.2037 / 0.2021, gana sb; el .yml de data/ no cambió (hash) |
+| Bordes | script | pasa | carpeta de vistas vacía o ausente, JSON de 0 bytes o ausente: rc 1 con mensaje, sin salida escrita |
+| listar_perfiles | llamada | pasa | tracker_config, _gs1, _gs2 |
+| Cadena | git diff 709a535..HEAD | pasa | tracker.py sin cambios; pyigtl con las mismas 8 menciones en tracker/estado/procesos (+1 en medir_modos); camera_backend: FemtoBolt, read() y get_intrinsics() sin tocar |
+| Documentos | lectura | pasa con reserva | arranque 45 859 B (< 49 152); ninguna línea > 2 000; BACKLOG B34–B38 en el índice; B33 en Cerrados; memory.md 8 717 B |
+
+- Fallos:
+  1. Baja. Quedan nombres del perfil archivado sin ruta histórica: `estado.py:13`, `panel.py:23` e `identificar_ids.py:17` (docstrings/uso) y los diccionarios `estado.py:42`, `recetas.py:48` por nombre de archivo. Quien siga el ejemplo con `iter4/tracker_config_doctor.yaml` no lo encuentra. Los diccionarios son inertes (el panel ya no lista el perfil).
+  2. Baja. `tracker_config_gs2.yaml` aún dice en un comentario «calibration_file vacio hasta la fase 5» y «Vacio hasta la fase 5…» mientras el campo ya apunta al .yml.
+  3. Baja. En `tasks.md` la casilla de la fase 6 trae «Commit: —» aunque HEAD ya es su commit; el encargo esperaba seis casillas con commit (cinco lo tienen). Es el flujo normal (lo añade el cierre o la fase siguiente).
+- Lo dudoso: B34 sigue abierto (nada impide que una prueba nueva abra una cámara real si se cambia un perfil); no se probó ninguna cifra en vivo (sd z, fps, enfoque), solo que lo commiteado coincide con lo registrado. B37 (alta) y el criterio de la cámara 1 no cumplido quedan como los dejó la fase 6.
+- Veredicto: lo commiteado dice y hace lo que registran las fases 1–6; sin fallos de gravedad media o alta. Detalle: `Claude outputs/pruebas/002-meta/ronda.md`.
