@@ -14,7 +14,7 @@ Funciona en Femto o webcam (usa el camera_type del config).
 
 Uso (desde codigo\):
     python iter4\identificar_ids.py                                     # Femto (default)
-    python iter4\identificar_ids.py --config iter4\tracker_config_doctor.yaml  # webcam
+    python iter4\identificar_ids.py --config iter4\tracker_config_gs1.yaml  # global shutter
 Teclas:  q = salir
 """
 import argparse

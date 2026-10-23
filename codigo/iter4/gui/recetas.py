@@ -45,7 +45,6 @@ VENTANAS = {
 # Slug corto por perfil para nombrar outputs (captura_ba_<slug>.npz, etc.).
 SLUGS = {
     "tracker_config.yaml": "femto",
-    "tracker_config_doctor.yaml": "doctor",
     "tracker_config_webcam.yaml": "webcam",
     "tracker_config_stylus_impreso.yaml": "stylus_impreso",
 }

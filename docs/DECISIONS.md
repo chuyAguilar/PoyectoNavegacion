@@ -7,7 +7,7 @@
 > conserva, para no repetir errores ya pagados.
 >
 > Estados: `Aceptada` · `Reemplazada` · `En pausa` · `Propuesta`.
-> _Última actualización: 2026-10-21._
+> _Última actualización: 2026-10-23._
 
 Índice rápido:
 
@@ -27,14 +27,17 @@
 | 012 | Registro por superficie (nube de puntos con la Femto) | En pausa |
 | 013 | El desfase live es físico (brazo de palanca), no de software | Aceptada |
 | 014 | Femto/nube de puntos en stand by; continuar con paired-point | Aceptada |
-| 015 | Config canónica = `tracker_config.yaml` (Femto RGB, Marker0 80 mm, tip existente) | Aceptada |
-| 016 | Cámara global shutter para el contexto "doctor" (webcam) | Aceptada |
+| 015 | Config canónica = `tracker_config.yaml` (Femto RGB, Marker0 80 mm, tip existente) | Reemplazada por ADR-025 |
+| 016 | Cámara global shutter para el contexto "doctor" (webcam) | Reemplazada por ADR-023 y ADR-024 |
 | 017 | Panel de control PySide6 que solo orquesta (brief-01) | Aceptada |
 | 018 | La GUI puede mutar solo `camera.calibration_file` (quirúrgico) | Aceptada |
 | 019 | Los datos de paciente siguen versionados; los agentes no los leen | Aceptada |
 | 020 | Método de trabajo por specs, con constitución y el autor como único que commitea | Aceptada |
 | 021 | La punta vigente se respalda como copia versionada fuera del glob de Slicer | Aceptada |
 | 022 | Fable solo para implementar: las fases pesadas en dos tiempos | Aceptada |
+| 023 | La SVPRO AR0234 es de obturador global (corrige ADR-016) | Aceptada |
+| 024 | Un perfil por cámara física, identificada por su puerto USB | Aceptada |
+| 025 | Se rescata solo el tracking; lo demás se rehace sobre las cámaras nuevas | Aceptada |
 
 ---
 
@@ -293,7 +296,7 @@ metodología de trabajo con MVD + orquestación (ver `CONTEXT.md`).
 ---
 
 ## ADR-015 — Config canónica = `tracker_config.yaml` (Femto RGB, Marker0 80 mm, tip existente)
-**Fecha:** 2026-08-13 · **Estado:** Aceptada
+**Fecha:** 2026-08-13 · **Estado:** Reemplazada por ADR-025
 
 **Contexto.** Con la nube de puntos en pausa (ADR-014) había que fijar la
 configuración de operación para el paired-point.
@@ -314,7 +317,7 @@ decisión.
 ---
 
 ## ADR-016 — Cámara global shutter para el contexto "doctor" (webcam)
-**Fecha:** commit reciente en `origin/main` (fecha exacta en git log) · **Estado:** Aceptada
+**Fecha:** commit reciente en `origin/main` (fecha exacta en git log) · **Estado:** Reemplazada por ADR-023 y ADR-024
 
 **Contexto.** El path webcam del contexto "doctor" usaba la SVPRO (AR0234), de
 **rolling shutter**: cada fila se expone en un instante distinto, así que el
@@ -501,3 +504,46 @@ mientras tanto, como con cualquier fase). La skill `planear` pide el peso; la
 skill `fase` acepta «n», «n implementa» y «n verifica»; `desarrollo.md` y
 `direccion.md` lo recogen. El `model:` del frontmatter de `desarrollo` queda
 como valor por defecto: la dirección lo fija en cada lanzamiento.
+
+---
+
+## ADR-023 — La SVPRO AR0234 es de obturador global (corrige ADR-016)
+**Fecha:** 2026-10-23 · **Estado:** Aceptada
+
+**Contexto.** El ADR-016 dice que la SVPRO (sensor AR0234) era de *rolling shutter* y que por eso se adoptó otra cámara «global shutter» para el contexto doctor. Es al revés: el AR0234 de onsemi es un sensor CMOS de 2.3 MP con **obturador global** (hoja de datos del fabricante). La meta 002 (`specs/002-calibracion-camaras/`) trabajó con dos SVPRO AR0234 como cámaras del tracker; la sonda de la fase 1 no puede medir el tipo de obturador, así que el dato viene del fabricante, no de una medición.
+
+**Decisión.** Las dos SVPRO AR0234 son las cámaras global shutter del proyecto. El ADR-016 no se reescribe: queda marcado «Reemplazado por ADR-023 y ADR-024» y su perfil (`tracker_config_doctor.yaml`, `data/globalshutter.yml`) está archivado en `iter4/data/historico/` desde la fase 6 (`2322553`).
+
+**Consecuencias.** Lo que el ADR-016 atribuía al obturador no se apoya en él. Con el objeto quieto, la cámara 2 dio sd z 1.08–1.15 mm a ~45 cm (fase 6); el salto de pose de la cámara 1 vino del juego de markers (B37), no del obturador. Si algún día se quiere medir el obturador (barrido rápido de una línea recta), va al BACKLOG.
+
+---
+
+## ADR-024 — Un perfil por cámara física, identificada por su puerto USB
+**Fecha:** 2026-10-23 · **Estado:** Aceptada
+
+**Contexto.** Las dos SVPRO declaran la misma serie (`01.00.00`) y Windows da la instancia de esa serie a la primera que se conecta, en cualquier puerto; el índice de OpenCV cambia con el orden de conexión. Por MSMF, OpenCV no lee ni escribe los controles de la cámara; por DSHOW sí. Con la aceleración por hardware de MSMF encendida (el valor por defecto de OpenCV), abrir la cámara tardaba 43–51 s (meta 002, fases 1, 2a y 2b).
+
+**Decisión.**
+1. **Un perfil por cámara física** (`tracker_config_gs1.yaml`, `tracker_config_gs2.yaml`), no por contexto. La cámara se identifica por la **ruta física de su puerto USB** (`usb_port_windows`, `DEVPKEY_Device_LocationPaths` por CfgMgr32, `camaras_uvc.py`): la identidad es la del puerto, y las cámaras y los puertos van etiquetados.
+2. **La marca.** Cada perfil declara una marca (`focus`, cámara 1 = 500, cámara 2 = 332) que se **escribe a propósito** al dar de alta la cámara (`sondear_camara.py --fijar … --forzar`): sin escribir, la cámara la mueve sola. El backend la lee antes de escribir nada y para si no coincide (cámaras intercambiadas).
+3. **Los ajustes** se declaran en el perfil con nombres y unidades propios (exposición en ms) y una capa por sistema los aplica: en Windows, DSHOW en una apertura corta antes del vídeo, escribiendo solo lo que difiere; Linux (V4L2) tiene sitio.
+4. **El vídeo, por MSMF** con la aceleración HW apagada por el código (`OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0` con `setdefault`, antes de importar `cv2`; el panel la pone a sus hijos): apertura de 43–51 s a 0.4–0.6 s, sin perder fps (90 en todos los modos).
+5. **El tamaño.** El backend para si el frame no tiene el tamaño del perfil o el del `.yml` de intrínsecos.
+6. **El modo común:** 1280×960 MJPG 90 fps, exposición 0.977 ms (P15, P16); cada perfil apunta a su `.yml` (`intrinsecos_gs1/gs2_1280x960.yml`, tablero medido 24.86 mm, detector `sb`).
+
+**Consecuencias.** Cambiar de hub o de puerto cambia la ruta: hay que reapuntar el perfil. Una cámara nueva se da de alta escribiendo su marca. `tracker.py` lanzado a mano no apaga la aceleración (B28); desde el panel sí. No reescribe el ADR-018: el panel sigue mutando solo `camera.calibration_file`, con backup.
+
+---
+
+## ADR-025 — Se rescata solo el tracking; lo demás se rehace sobre las cámaras nuevas
+**Fecha:** 2026-10-23 (decisión del autor del 2026-10-20) · **Estado:** Aceptada
+
+**Contexto.** El sistema se construyó sobre la Femto Bolt (ADR-006, ADR-015) y la webcam del contexto doctor (ADR-016). La punta, el registro paired-point, la navegación en Slicer y los runbooks se validaron con esas cámaras y esos perfiles. Con las dos SVPRO calibradas (meta 002), el autor decidió el 2026-10-20 no arrastrar lo viejo.
+
+**Decisión.**
+1. **Se rescata el tracking:** `tracker.py`, el detector, la geometría del dodecaedro v2 (ADR-009, cámara-independiente), el filtro 1-Euro y el envío por OpenIGTLink.
+2. **Se rehacen, mejorados y sobre los perfiles gs1/gs2:** la calibración de la punta, el registro, la navegación en Slicer y los runbooks. Lo viejo queda como referencia, no como camino.
+3. **Perfiles:** solo valen `tracker_config_gs1.yaml` y `tracker_config_gs2.yaml`. `tracker_config.yaml` (Femto) se conserva porque de él dependen el replay y el selftest; el doctor está archivado (ADR-023).
+4. **El principio 6 no cambia:** los nombres (`Marker0ToTracker`, `DodecaedroToTracker`), el puerto 18944 y la jerarquía de Slicer siguen siendo los mismos. Lo que se rehaga en Slicer los respeta; cambiarlos exige su ADR y una verificación en vivo, como dice la constitución.
+
+**Consecuencias.** El ADR-015 (config canónica = Femto) queda «Reemplazado por ADR-025»; el ADR-014 y el ADR-012 no cambian (la Femto *depth* sigue en pausa). La meta siguiente es optimizar el tracker (B32), empezando por el salto de pose al cambiar el juego de markers (B37, alta); después, la punta y el registro con las cámaras nuevas.

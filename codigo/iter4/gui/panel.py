@@ -20,7 +20,7 @@ Grupos de acciones:
 Uso (desde codigo\, con el venv):
     python iter4\gui\panel.py
     python iter4\gui\panel.py --selftest      # abre, refresca, imprime y cierra solo
-    python iter4\gui\panel.py --perfil iter4/tracker_config_doctor.yaml
+    python iter4\gui\panel.py --perfil iter4/tracker_config_gs1.yaml
 Teclas: F5 = refrescar semaforos.
 """
 from __future__ import annotations

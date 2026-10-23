@@ -10,7 +10,7 @@ rutas del YAML del perfil activo — no hardcodean nombres de artefactos.
 
 Uso por consola (desde codigo\):
     python iter4\gui\estado.py                                    # perfil canonico
-    python iter4\gui\estado.py --perfil iter4/tracker_config_doctor.yaml
+    python iter4\gui\estado.py --perfil iter4/tracker_config_gs1.yaml
     python iter4\gui\estado.py --puntas    # coherencia de TODAS las puntas vs el perfil
 """
 from __future__ import annotations
@@ -39,7 +39,7 @@ VERDE, AMARILLO, ROJO, GRIS = "VERDE", "AMARILLO", "ROJO", "GRIS"
 # el snippet de Slicer del MANUAL_simplificado §4.2).
 PUNTAS_PREFERIDAS = {
     "tracker_config.yaml": "StylusTipToDodecaedro_femto_dock.npy",
-    "tracker_config_doctor.yaml": "StylusTipToDodecaedro_doctor_dock.npy",
+    # tracker_config_doctor.yaml: archivado en data/historico/ (meta 002, fase 6).
 }
 
 MODULOS_BASE = ["cv2", "numpy", "scipy", "yaml", "pyigtl"]
