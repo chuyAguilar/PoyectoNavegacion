@@ -175,69 +175,23 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 
 ### Vía activa
 
-- **Registro paired-point.** Contexto principal: **Femto Bolt (RGB)**,
-  `tracker_config.yaml`, Marker0 80 mm (ADR-014/015). Contexto "doctor": **webcam
-  global shutter**, `tracker_config_doctor.yaml` + `data/globalshutter.yml`,
-  Marker0 60 mm (ADR-016). Ambos comparten la geometría del dodecaedro v2.
+- **Rumbo (2026-10-20):** se rescata solo el tracking; punta, registro, navegación en Slicer y runbooks se rehacen. Solo valen los perfiles nuevos `tracker_config_gs1.yaml` y `tracker_config_gs2.yaml` (dos SVPRO AR0234 global shutter). Los contextos viejos (Femto `tracker_config.yaml`, «doctor» `tracker_config_doctor.yaml` + `data/globalshutter.yml`; ADR-014/015/016) quedan como referencia.
 
-### En curso: meta 002 · calibración de las cámaras global shutter SVPRO (2026-10-23)
+### En curso: meta 002 · calibración de las cámaras global shutter SVPRO
 
-- **Hecho (fase 5, 2026-10-23):** la cámara 2 quedó calibrada desde el panel a 1280×960: detector `sb` (gana otra vez al clásico, 0.204 / 0.202), RMS 0.154 px con 23 vistas, control 0.150 px, cobertura 1.00; `tracker_config_gs2.yaml` apunta a `data/intrinsecos_gs2_1280x960.yml`. Su punto principal queda 90 px sobre el centro (cy 389.8): **no girar ni sacar el lente de la cámara 2 sin recalibrar** (B36). La escala se juzga ahora por las medias de las posiciones repetidas (P20): cámara 2 −0.37 mm en 80 mm, cámara 1 (con topes) +0.27 mm. La calibración del panel es una ventana de tres pasos sin campos (enfocar lente, calibrar con tablero, comprobar escala con regla), con el tablero guardado en `data/tablero_calibracion.yaml` (P19, P21); el autor la probó en vivo.
-- **Hecho (fases 1, 2a, 2b, 3 y 4):** en la fase 4 (sesión en vivo del 2026-10-22) la cámara 1 quedó calibrada a 1280×960 con el tablero impreso (casilla medida: 24.86 mm): RMS 0.167 px, control 0.146 px, cobertura 1.00, detector `sb` (el clásico dio 0.211 / 0.181); `tracker_config_gs1.yaml` apunta a `data/intrinsecos_gs1_1280x960.yml`. La escala contra regla (80 mm, 5 pasos) da una media de +0.18 mm y un peor paso de 0.47 mm (tolerancia 0.8 mm). Con la K real el dodecaedro quieto tiene pose en 99.8 % de los frames (6.9 % con la K nominal; B33 cerrado). El panel calibra y comprueba la escala con las medidas del calibrador (se prueba en vivo en la fase 5). En la fase 3 (`medir_modos.py`) el autor eligió 1280×960 MJPG 90 fps y 0.977 ms de exposición para las dos cámaras; ningún modo llegó a 88.2 fps de tracking con ventana (19–25 fps: la ventana es el cuello, B32). Antes: sonda de modos y controles; identidad de cada cámara por la ruta de su puerto USB (`camaras_uvc.py`); ajustes por DSHOW que viven en la cámara (`ajustes_camara.py`); perfiles `tracker_config_gs1.yaml` y `tracker_config_gs2.yaml`, con los que `camera_backend.py` abre cada cámara por su puerto, comprueba su marca `focus` antes de escribir, aplica los ajustes y comprueba que el tamaño del frame es el pedido y el del `.yml`.
+- **Hecho (fases 1–5, 2026-10-21/23; números en `specs/002-calibracion-camaras/resultados.md`):** identidad de cada cámara por la ruta de su puerto USB y marca `focus` (`camaras_uvc.py`); ajustes por DSHOW (`ajustes_camara.py`); el código apaga la aceleración HW de MSMF; 1280×960 MJPG 90 fps y 0.977 ms en las dos; las dos calibradas con el tablero impreso (24.86 mm, detector `sb`): cámara 1 RMS 0.167 / control 0.146 px, cámara 2 0.154 / 0.150 px, cobertura 1.00; escala por medias +0.27 y −0.37 mm en 80 mm. Pose del dodecaedro quieto 99.8 % con la K real. Calibración del panel: ventana de tres pasos (enfocar, tablero, escala). **No girar ni sacar el lente de la cámara 2 sin recalibrar** (cy 389.8, B36). Con ventana el tracking da 19–25 fps (B32).
 - **Falta:** fase 6 · Comparación contra P02 y archivo de los perfiles viejos.
 
 ### En pausa (se conserva, se puede retomar)
 
-- **Femto *depth* / nube de puntos / registro por superficie** (`femto_pruebas/`).
-  Validado a 1.76 mm pero con dos problemas abiertos: brazo de palanca del Marker0
-  (ADR-013) y ambigüedad de deslizamiento en la columna repetitiva. Plan guardado:
-  banco rígido con cubo de puntos distintivo (`stl/BaseMarcador/`).
+- **Femto *depth* / nube de puntos / registro por superficie** (`femto_pruebas/`): 1.76 mm, con brazo de palanca del Marker0 (ADR-013) y ambigüedad en la columna repetitiva; plan: banco rígido con cubo distintivo (`stl/BaseMarcador/`).
 
 ### WIP / deuda técnica pendiente
 
-- **`MANUAL_simplificado.md`** es el runbook del **contexto doctor** (webcam
-  global shutter) — correcto para ese contexto. Pendiente menor: falta un
-  runbook equivalente para el contexto Femto (`tracker_config.yaml`) si se
-  quiere. (Su ruta vieja se corrigió el 2026-10-19; el snippet de §4.2 con la
-  ruta nueva espera la prueba en Slicer, B10.)
-- **`CLAUDE.md`** reescrito 2026-10-19 como instrucción de herramienta del método
-  (constitución, `memory.md`, specs); el anterior está en
-  `docs/history/CLAUDE_2026-08-13.md`.
-- **Smoke test del entorno:** Parte 1 (sanidad del `.venv` + imports, incl.
-  `pyorbbecsdk`) **verificada OK 2026-08-13**. Parte 2 (tracker en vivo +
-  detección de IDs 3–13) pendiente, se hará al conectar la cámara para operar.
-- **GUI / panel de control** (brief-01, iter 1): **VERIFICADO EN VIVO
-  2026-08-13** con la Femto real (`codigo/iter4/gui/`): panel y 7 semáforos,
-  probar cámara, verificar IDs (3–13), tracker → OpenIGTLink → Slicer con
-  cierre limpio, **Detener del panel** (con ventana → 'q'; sin ventana →
-  terminate), y el **asistente "dodecaedro nuevo"** encadenando captura → BA
-  con fail-loud. **Único residual:** calibración de punta por dock en vivo
-  (falta la placa física). Nota: el BA no convergió sobre una captura corta de
-  60 s (cobertura floja) — tema de DATOS, no del panel.
-- **GUI / panel de control (brief-02, iter 2): 5 mejoras implementadas y
-  verificadas headless 2026-08-13.** M1 semilla default v2 + IDs visibles; M2
-  alta de dodecaedro con IDs NUEVOS (generar teórica desde inputs → captura →
-  BA, `corregir_giro_esquinas.py` documentado como escape); M3 intrínsecos
-  desde el panel (`iter4/calibrar_camara.py` nuevo + apuntar el perfil con
-  edición quirúrgica y backup, ADR-018); M4 grupo Calibrar limpio (los botones
-  sueltos de captura/BA fuera — un BA sobre un dataset viejo queda SOLO por
-  CLI); M5 cobertura pre-BA + monitor de estancamiento con auto-corte
-  (umbrales calibrados con datos reales: antípodas in-co-visibles, pares
-  débiles). **Pendiente de verificación con cámara en vivo:** captura del
-  asistente con IDs nuevos y `calibrar_camara.py` interactivo (+ el residual
-  del dock de brief-01).
-- **FPS ~16–17 con Femto RGB en el tracker** (observado en vivo 2026-08-13):
-  esperado — el backend habilita depth+align del SDK aunque solo se use el RGB.
-  Optimización pendiente (p.ej. no habilitar el stream de depth en este modo).
-- **Detección ~3–4 markers/vista en la sesión 2026-08-13** (referencia
-  histórica: 5–6): revisar distancia (50–70 cm), ángulo y luz antes de tocar
-  parámetros del detector.
-- **Marker0 rígido y corto**: montaje pendiente para eliminar el brazo de palanca
-  (ADR-013), relevante también para el paired-point.
-- **Stylus impreso nuevo** (IDs 181–191): geometría CAD buena, pero falta pose
-  robusta con rechazo de outliers y `marker_mm 15.7`; su BA se atora. No urgente.
-- **Reintegrar el *depth* al BA** cuando se resuelva el bias residual fuera de la
-  caja (ADR-008).
+- **Runbooks:** `MANUAL_simplificado.md` es del contexto doctor; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
+- **Panel** (brief-01/02, verificado 2026-08-13 con la Femto; detalle en el historial de git de este archivo, antes de `cd77185`): queda en vivo la captura del asistente con IDs nuevos y el dock (B10).
+- **Detección ~3–4 markers/vista** (histórico 5–6): revisar distancia, ángulo y luz antes que el detector.
+- **Marker0 rígido y corto** (ADR-013); **stylus impreso nuevo** (IDs 181–191, sin pose robusta, no urgente); **depth en el BA** cuando se resuelva el bias (ADR-008).
 
 ## 7. Preferencias de comunicación
 
