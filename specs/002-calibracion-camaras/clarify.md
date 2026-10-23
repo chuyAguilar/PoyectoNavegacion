@@ -139,4 +139,11 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** (a) Recomendada: tres pasos sin campos (1 Enfocar lente, 2 Calibrar con tablero, 3 Comprobar escala con regla), con el tablero y su lado guardados y «Cambiar medidas…», el último resultado de cada paso a la vista, y en la escala solo recorrido e idas y vueltas; (b) lo mismo con un «Avanzado…» que despliega los campos de hoy.
 - **Respuesta del autor:** (a), sin «Avanzado».
 - **Fecha:** 2026-10-23
+
+## P22 · El temblor de la Fase 6 no cumple: qué se hace (Fase 6)
+
+- **Contexto:** cámara 1 con Slicer (cadena bien: los dos transforms aparecen y se mueven, salida limpia, 18944 libre). Dodecaedro quieto a ~40 cm: sd z 4.88 mm (todo el tramo quieto) y 3.75 (últimas 60) frente a 1.38 de P02; girado para ver 4–6 markers, 9.7–10.2 mm. La pose salta según el juego de markers: con 3,4,7,8 z 411.7 mm; +12, 422.6; +11+12, 435.5 (quieto). Con juego fijo de 4 markers sd z 1.5–4 mm. Causa probable en el tracker o la geometría (cómo combina markers de lado, caras 11 y 12), no en la calibración de la cámara. FPS 13.8–15.2 con `verbose` y `Tee-Object`.
+- **Opciones:** (a) Recomendada: correr la cámara 2 y la prueba del panel, cerrar la Fase 6 con el criterio NO cumplido y el hallazgo como entrada de prioridad alta, la primera de la meta siguiente (optimizar el tracker); (b) investigar ahora; (c) cámara 2 primero y decidir.
+- **Respuesta del autor:** (a).
+- **Fecha:** 2026-10-23
 - **Texto de «Volver a medir el tablero» (elegido por el autor, 2026-10-23, tras probar la ventana en vivo):** «Solo hace falta si imprimes un tablero nuevo. El programa necesita saber cuánto mide cada cuadro de verdad (la impresora nunca es exacta). 1. Abre el calibrador sobre una columna del tablero. 2. Una punta en el borde de ARRIBA de un cuadro negro. 3. La otra punta en el borde de ARRIBA de otro cuadro negro, más abajo. Cuenta cuántos cuadros avanzaste. 4. Anota lo que marca. Repítelo 5 veces en otras columnas. Ejemplo: 6 cuadros → 149.1 mm»; campos «Cuadros que avanzaste:» y «Lo que marcó (5 veces):»; debajo, en negrita, «Cada cuadro mide: 24.86 mm»; botones Guardar y Cancelar.

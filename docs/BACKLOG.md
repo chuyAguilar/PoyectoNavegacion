@@ -35,6 +35,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B34 | Las pruebas no deben poder abrir una cámara real aunque cambie un perfil | Media | — |
 | B35 | El criterio de escala por medias no mira la repetibilidad | Media | — |
 | B36 | Cámara 2 con el punto principal 90 px sobre el centro | Baja | — |
+| B37 | La pose del dodecaedro salta 11–25 mm cuando entra o sale un marker visto de lado (11, 12) | Alta | — |
+| B38 | `iter4/data/historico/` sin índice de qué es cada archivo | Baja | — |
 
 ## Abiertos
 
@@ -60,7 +62,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** media.
 
 ### B10 · Verificaciones en vivo pendientes del brief-02
-- **Qué:** la captura del asistente con IDs nuevos y la calibración de punta por dock desde el panel. (La calibración de cámara quedó verificada en vivo: `calibrar_camara.py` por línea de comandos en la fase 4 · Calibración de la cámara 1 y comprobación de escala, 2026-10-22, y desde el panel, con la ventana de tres pasos, en la fase 5 · Calibración de la cámara 2, 2026-10-23: cámara 2 RMS 0.154 px, control 0.150 px; meta 002.) (El snippet de `documentos/MANUAL_simplificado.md` §4.2 con la ruta nueva, que se sumó en la fase 4 de la meta 001, quedó verificado en vivo por el autor el 2026-10-19: traslación [0.904, 5.471, −201.808] mm, la esperada; `docs/PRUEBAS.md` P01.)
+- **Qué:** la captura del asistente con IDs nuevos y la calibración de punta por dock desde el panel. (La calibración de cámara quedó verificada en vivo: `calibrar_camara.py` por línea de comandos en la fase 4 · Calibración de la cámara 1 y comprobación de escala, 2026-10-22, y desde el panel, con la ventana de tres pasos, en la fase 5 · Calibración de la cámara 2, 2026-10-23: cámara 2 RMS 0.154 px, control 0.150 px; meta 002.) (La fase 6 · Comparación contra P02 y archivo de los perfiles viejos, 2026-10-23, verificó el tracker desde el panel con el perfil gs1 —arranque, ventana, «Detener» por 'q', salida limpia— pero no cierra lo de arriba.) (El snippet de `documentos/MANUAL_simplificado.md` §4.2 con la ruta nueva, que se sumó en la fase 4 de la meta 001, quedó verificado en vivo por el autor el 2026-10-19: traslación [0.904, 5.471, −201.808] mm, la esperada; `docs/PRUEBAS.md` P01.)
 - **Por qué queda:** necesita hardware y la placa dock física.
 - **De dónde:** `docs/CONTEXT.md` §6.
 - **Qué haría falta:** una sesión con cámara; reportar números.
@@ -195,7 +197,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** baja.
 
 ### B28 · `tracker.py` lanzado a mano abre MSMF con la aceleración HW encendida
-- **Qué:** `OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0` baja la apertura de una SVPRO de 43–51 s a 3.6–4.0 s sin cambiar los fps (sesión en vivo de la fase 2b, 2026-10-21/22). El código la pone en `camaras_uvc` al importarse, pero cv2 solo la ve si se puso antes de cargarse: `cv2.pyd` del venv (4.11) lleva el CRT estático y copia el entorno al cargarse (comprobado sin cámara con `OPENCV_IO_ENABLE_OPENEXR`). `tracker.py` importa `cv2` (línea 23) antes que `camera_backend` (línea 30), así que lanzado a mano desde PowerShell sigue con la aceleración encendida; el backend lo dice en su log («Aceleracion HW de MSMF ENCENDIDA: cv2 se cargo antes…») y `tests/test_aceleracion_msmf.py` lo fija. Desde el panel no pasa: `procesos.entorno_hijo` se la pasa apagada a sus procesos.
+- **Qué:** `OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0` baja la apertura de una SVPRO de 43–51 s a 3.6–4.0 s sin cambiar los fps (sesión en vivo de la fase 2b, 2026-10-21/22). El código la pone en `camaras_uvc` al importarse, pero cv2 solo la ve si se puso antes de cargarse: `cv2.pyd` del venv (4.11) lleva el CRT estático y copia el entorno al cargarse (comprobado sin cámara con `OPENCV_IO_ENABLE_OPENEXR`). `tracker.py` importa `cv2` (línea 23) antes que `camera_backend` (línea 30), así que lanzado a mano desde PowerShell sigue con la aceleración encendida; el backend lo dice en su log («Aceleracion HW de MSMF ENCENDIDA: cv2 se cargo antes…») y `tests/test_aceleracion_msmf.py` lo fija. Desde el panel no pasa: `procesos.entorno_hijo` se la pasa apagada a sus procesos (verificado en vivo en la fase 6, 2026-10-23: «Arrancar tracker» con el perfil gs1 imprime `Aceleracion HW de MSMF apagada (…, del entorno)`, abre en 0.5 s). Queda solo `tracker.py` a mano.
 - **Por qué queda:** el encargo de la corrección de la fase 2b dice que `tracker.py` no cambia (principio 6).
 - **De dónde:** corrección de la fase 2b · Perfiles por cámara: identidad, ajustes y tamaño al abrir (meta 002), 2026-10-22.
 - **Qué haría falta:** una línea en `tracker.py`, `import camaras_uvc` antes de `import cv2`, en una fase que ya toque el tracker (con la suite, el replay y la comprobación de la cadena); mientras tanto, lanzar a mano con `$env:OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS='0'`. Cambiar entonces la prueba `test_tracker_importa_cv2_antes_y_no_la_ve`.
@@ -226,7 +228,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** en la fase 3 el tracking con ventana (`debug.show_window`) dio 19–25 fps en todos los modos, incluso 320×240 (18.9–19.2); sin ventana, 90 hasta 640×480 y 62–68 fps por encima (960×720 a 1280×960; 1280×960: 61.9 y 61.6). La captura da ~90 en todos los modos, incluidos 1920×1200. Explica los ~20–26 fps de P02. Ningún modo llegó a 88.2 fps con ventana en ninguna de las dos cámaras.
 - **Por qué queda:** el plan lo manda a la meta de optimizar el tracker (decisión del autor, 2026-10-20); la fase 3 no toca `tracker.py` (principio 6). El autor eligió 1280×960 MJPG (P16) sabiendo que el tracking con ventana no llega a 90.
 - **De dónde:** sesión en vivo de la fase 3 (meta 002), 2026-10-22; tablas en `Claude outputs/fases/002/fase-3-en-vivo.md`.
-- **Qué haría falta:** en la meta de optimizar el tracker: medir qué cuesta más (dibujo, `imshow`, `waitKey(1)`, detección a 1280×960, 1-Euro) y sacarlo del bucle (ventana en otro hilo o a menor frecuencia, detección en una región de interés tras la primera, hilo propio de captura); extraer el paso por frame de `tracker.main()` a una función que usen el tracker y `medir_modos.medir_tracking` (hoy este repite el bucle); la línea base es la tabla de la fase 3 y se repite con intrínsecos reales (fases 4–5). Con la K real de la cámara 1 (fase 4, 1280×960, dodecaedro quieto): sin ventana 56 fps con pose casi siempre (99.8 %); la fase 3 daba 62 sin pose (la K nominal no resolvía la pose): más trabajo por frame. Con ventana, 21.4 fps.
+- **Qué haría falta:** en la meta de optimizar el tracker: medir qué cuesta más (dibujo, `imshow`, `waitKey(1)`, detección a 1280×960, 1-Euro) y sacarlo del bucle (ventana en otro hilo o a menor frecuencia, detección en una región de interés tras la primera, hilo propio de captura); extraer el paso por frame de `tracker.main()` a una función que usen el tracker y `medir_modos.medir_tracking` (hoy este repite el bucle); la línea base es la tabla de la fase 3 y se repite con intrínsecos reales (fases 4–5). Con la K real de la cámara 1 (fase 4, 1280×960, dodecaedro quieto): sin ventana 56 fps con pose casi siempre (99.8 %); la fase 3 daba 62 sin pose (la K nominal no resolvía la pose): más trabajo por frame. Con ventana, 21.4 fps. Fase 6 (2026-10-23, 1280×960): ~20–22 fps desde el panel sin `verbose` (21.6 / 19.9); con `verbose` y `Tee-Object` 14–19 (el log también cuesta).
 - **Prioridad:** media.
 
 ### B34 · Las pruebas no deben poder abrir una cámara real aunque cambie un perfil
@@ -247,7 +249,21 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** la calibración de la cámara 2 (`intrinsecos_gs2_1280x960.yml`) da cy 389.81 px en una imagen de 960 (centro 480): 90 px arriba. Los dos detectores coinciden a ±0.66 px, así que no es ruido del ajuste; lo probable es que el lente quedó descentrado al remontarlo para enfocar. La cámara 1 da cy 488.87.
 - **Por qué queda:** la calibración cumple (RMS 0.154 px, control 0.150 px, escala −0.37 mm) y vale mientras el lente no se mueva.
 - **De dónde:** sesión en vivo de la fase 5 · Calibración de la cámara 2 (meta 002), 2026-10-23.
-- **Qué haría falta:** vigilarlo: si el lente de la cámara 2 se gira o se saca, recalibrar; si la fase 6 · Comparación contra P02 da peor sd con la cámara 2 que con la 1, mirar aquí primero (remontar el lente centrado y recalibrar).
+- **Qué haría falta:** vigilarlo: si el lente de la cámara 2 se gira o se saca, recalibrar; si la fase 6 · Comparación contra P02 da peor sd con la cámara 2 que con la 1, mirar aquí primero (remontar el lente centrado y recalibrar). **Fase 6 (2026-10-23):** no se nota en el temblor; la cámara 2 dio la mejor sd z (1.08–1.15 mm) y la peor fue la 1 (B37). Sigue solo como vigilancia.
+- **Prioridad:** baja.
+
+### B37 · La pose del dodecaedro salta 11–25 mm cuando entra o sale un marker visto de lado (11, 12)
+- **Qué:** con el dodecaedro quieto, la pose cambia 11–25 mm en z cuando el juego de markers cambia porque entra o sale un marker visto de lado (11 o 12). Cámara 1 a ~40 cm, 486 poses: sd z 4.88 mm, rango 78 mm (últimas 60: 3.75). Por juego: 3,4,7,8 → z 393.4 (sd 1.47); 3,7,8 → 394.6 (sd 4.39); +11 → 379.7; +12 → 377.8; 3,4,7,8,12 → 405.2. Girado para ver más caras (94 poses): 4.6 markers por pose, sd z 9.68 mm, rango 46 mm: más markers de lado, más salto. Cámara 2, siempre el mismo juego 3,7,8,11: sd z 1.08–1.15 mm. Con juego fijo el temblor es bajo; no es la calibración de la cámara.
+- **Por qué queda:** la fase 6 · Comparación contra P02 y archivo de los perfiles viejos (meta 002) no toca el tracker (principio 6); el autor cerró la fase con el criterio de la cámara 1 NO cumplido (P22).
+- **De dónde:** sesión en vivo de la fase 6 (meta 002), 2026-10-23 (`Claude outputs/fases/002/fase-6-en-vivo.md`, logs en `fase-6/`).
+- **Qué haría falta:** es lo primero de la meta de optimizar el tracker. Ver cómo combina `tracker.py` los markers en una sola pose (`estimar_pose_rigid_body`); revisar la geometría de las caras 11 y 12 en `reference_dodecaedro_v2_calibrado.txt`; probar rechazo por ángulo de la cara respecto a la cámara o por residuo de reproyección por marker, o pesar los markers; medir con el recorte de captura (replay) y de nuevo en vivo con el criterio sd z < 1.38 mm. De paso, escribir la pose de `Marker0` en el log `verbose` (hoy solo la del dodecaedro, y su temblor no se puede medir del log).
+- **Prioridad:** alta (puede dar un resultado equivocado: salto de decenas de mm con el objeto quieto).
+
+### B38 · `iter4/data/historico/` sin índice de qué es cada archivo
+- **Qué:** la carpeta tiene ya 5 archivos (configs webcam, stylus impreso, doctor, `globalshutter.yml`, geometría del stylus impreso) sin un `README` que diga qué es cada uno y de qué contexto viene.
+- **Por qué queda:** no estorba; sugerencia del «implementa» de la fase 6 (meta 002).
+- **De dónde:** fase 6 · Comparación contra P02 y archivo de los perfiles viejos (meta 002), 2026-10-23.
+- **Qué haría falta:** un `README.md` corto en la carpeta (como el de `historico/iter4_diagnosticos/`).
 - **Prioridad:** baja.
 
 ## Cerrados

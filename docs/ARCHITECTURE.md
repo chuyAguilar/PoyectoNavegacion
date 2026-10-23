@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-23 (§3.4, §3.7 y §6: meta 002, fase 5 · Calibración de la cámara 2: `intrinsecos_gs2_1280x960.yml`; la ventana de calibración del panel en tres pasos, `gui/calibracion.py` y `data/tablero_calibracion.yaml`; `comprobar_escala.py` juzga por medias y recalcula con `--desde-json`). Antes, 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-23 (§3.1, §3.3, §6 y §8: meta 002, fase 6 · Comparación contra P02 y archivo de los perfiles viejos: `tracker_config_doctor.yaml` y `globalshutter.yml` pasan a `iter4/data/historico/`; el tracker no cambió). Antes, 2026-10-23 (§3.4, §3.7 y §6: meta 002, fase 5 · Calibración de la cámara 2: `intrinsecos_gs2_1280x960.yml`; la ventana de calibración del panel en tres pasos, `gui/calibracion.py` y `data/tablero_calibracion.yaml`; `comprobar_escala.py` juzga por medias y recalcula con `--desde-json`). Antes, 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -70,8 +70,9 @@ distintos**, más una legacy:
   **Cámara principal / config canónica `tracker_config.yaml`** (contexto BigDaddy,
   Marker0 80 mm). Se usa **solo su RGB**: la rama de *depth* / nube de puntos está
   **en stand by**.
-- **`webcam` global shutter — contexto "doctor"** (`tracker_config_doctor.yaml`,
-  `source: 1`, intrínsecos `data/globalshutter.yml` @ 640×480, Marker0 60 mm).
+- **`webcam` global shutter — contexto "doctor"** (archivado el 2026-10-23, meta 002
+  fase 6: `data/historico/tracker_config_doctor.yaml`, `source: 1`, intrínsecos
+  `data/historico/globalshutter.yml` @ 640×480, Marker0 60 mm).
   Sensor **global shutter** (sin skew de rolling shutter cuando el objeto se
   mueve). Es la cámara que maneja hoy el runbook
   `documentos/MANUAL_simplificado.md`. Reemplazó a la SVPRO en ese path (ADR-016).
@@ -124,7 +125,7 @@ distintos**, más una legacy:
 - **Marker0 (referencia del paciente)** — un solo ArUco **ID 0**, pegado a la base
   del hueso. Tamaño **según contexto**: **80 mm** en la config Femto
   (`tracker_config.yaml`), **60 mm** en la config doctor/global-shutter
-  (`tracker_config_doctor.yaml`). El tracker publica `Marker0ToTracker`.
+  (`data/historico/tracker_config_doctor.yaml`). El tracker publica `Marker0ToTracker`.
 
 ### 3.4 Artefactos de calibración (entradas al sistema)
 
@@ -275,7 +276,6 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   ├── tracker.py                          # tracker principal
 │   │   ├── camera_backend.py                   # webcam | femtobolt; la webcam abre por puerto, comprueba marca, aplica controles y comprueba el tamaño (§3.1, 2026-10-22)
 │   │   ├── tracker_config.yaml                 # config Femto (default)
-│   │   ├── tracker_config_doctor.yaml          # config webcam (paired-point)
 │   │   ├── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO: puerto USB, marca focus, controles, 1280×960 MJPG 90 fps y exposición 0.977 ms (−10 por DSHOW) elegidos en la fase 3 (P15, P16); gs1 con intrínsecos desde la fase 4 (`data/intrinsecos_gs1_1280x960.yml`) y gs2 desde la fase 5 (`data/intrinsecos_gs2_1280x960.yml`) (2026-10-22/23, meta 002 fases 2b a 5)
 │   │   ├── captura_calibracion.py              # dataset para BA
 │   │   ├── calibrar_rigid_body.py              # bundle adjustment
@@ -291,7 +291,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   ├── gui\                                # panel de control PySide6 (brief-01); calibracion.py, la ventana de calibración en tres pasos (2026-10-23, meta 002 fase 5)
 │   │   └── data\                               # reference_*, capturas, tips, calibraciones; intrinsecos_gs1/gs2_1280x960.yml y tablero_calibracion.yaml (meta 002 fases 4 y 5)
 │   │       ├── respaldo_puntas\                # copia versionada de la punta vigente (§3.4, ADR-021)
-│   │       └── historico\                      # configs webcam y stylus impreso, retirados del panel (2026-10-19)
+│   │       └── historico\                      # configs webcam y stylus impreso, retirados del panel (2026-10-19); desde 2026-10-23 (meta 002 fase 6), también tracker_config_doctor.yaml y globalshutter.yml
 │   └── historico\                  # snapshots de iteraciones previas
 │       └── iter4_diagnosticos\     # diagnósticos y legacy de iter4 (test_pivote, test_jitter…), sin mantener (2026-10-19)
 ├── femto_pruebas\                  # rama nube de puntos (EN STAND BY)
@@ -332,7 +332,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 
 1. **Cámara principal = Femto Bolt** (solo RGB), config canónica
    `tracker_config.yaml`. En **paralelo**, el contexto "doctor" usa una webcam
-   **global shutter** (`tracker_config_doctor.yaml`, ADR-016). Ambas conviven.
+   **global shutter** (`data/historico/tracker_config_doctor.yaml`, ADR-016; archivado el 2026-10-23). Ambas conviven.
 2. **Marker0 del paciente = 80 mm** en el contexto Femto (60 mm en el contexto
    doctor).
 3. **Calibración de la punta = usar la existente**

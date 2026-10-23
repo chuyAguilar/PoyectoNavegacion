@@ -62,7 +62,7 @@
     `requirements.txt` como `pyside6>=6.7,<7`).
 - **Dos cámaras, dos contextos (ambas activas):** Femto Bolt (RGB) = contexto
   principal (`tracker_config.yaml`, Marker0 80 mm); webcam **global shutter** =
-  contexto "doctor" (`tracker_config_doctor.yaml` + `data/globalshutter.yml`,
+  contexto "doctor" (`data/historico/tracker_config_doctor.yaml` + `data/historico/globalshutter.yml`,
   `source: 1`, Marker0 60 mm). La geometría del dodecaedro v2 es
   cámara-independiente → se comparte entre ambos contextos.
 - **Segunda máquina (a confirmar):** memoria registra un "equipo del doctor"
@@ -175,12 +175,13 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 
 ### Vía activa
 
-- **Rumbo (2026-10-20):** se rescata solo el tracking; punta, registro, navegación en Slicer y runbooks se rehacen. Solo valen los perfiles nuevos `tracker_config_gs1.yaml` y `tracker_config_gs2.yaml` (dos SVPRO AR0234 global shutter). Los contextos viejos (Femto `tracker_config.yaml`, «doctor» `tracker_config_doctor.yaml` + `data/globalshutter.yml`; ADR-014/015/016) quedan como referencia.
+- **Rumbo (2026-10-20):** se rescata solo el tracking; punta, registro, navegación en Slicer y runbooks se rehacen. Solo valen los perfiles nuevos `tracker_config_gs1.yaml` y `tracker_config_gs2.yaml` (dos SVPRO AR0234 global shutter). Los contextos viejos (Femto `tracker_config.yaml`, «doctor» `tracker_config_doctor.yaml` + `globalshutter.yml`, archivados en `iter4/data/historico/` el 2026-10-23; ADR-014/015/016) quedan como referencia.
 
 ### En curso: meta 002 · calibración de las cámaras global shutter SVPRO
 
-- **Hecho (fases 1–5, 2026-10-21/23; números en `specs/002-calibracion-camaras/resultados.md`):** identidad de cada cámara por la ruta de su puerto USB y marca `focus` (`camaras_uvc.py`); ajustes por DSHOW (`ajustes_camara.py`); el código apaga la aceleración HW de MSMF; 1280×960 MJPG 90 fps y 0.977 ms en las dos; las dos calibradas con el tablero impreso (24.86 mm, detector `sb`): cámara 1 RMS 0.167 / control 0.146 px, cámara 2 0.154 / 0.150 px, cobertura 1.00; escala por medias +0.27 y −0.37 mm en 80 mm. Pose del dodecaedro quieto 99.8 % con la K real. Calibración del panel: ventana de tres pasos (enfocar, tablero, escala). **No girar ni sacar el lente de la cámara 2 sin recalibrar** (cy 389.8, B36). Con ventana el tracking da 19–25 fps (B32).
-- **Falta:** fase 6 · Comparación contra P02 y archivo de los perfiles viejos.
+- **Hecho (fases 1–6, 2026-10-21/23; números en `specs/002-calibracion-camaras/resultados.md`):** identidad de cada cámara por la ruta de su puerto USB y marca `focus` (`camaras_uvc.py`); ajustes por DSHOW (`ajustes_camara.py`); el código apaga la aceleración HW de MSMF; 1280×960 MJPG 90 fps y 0.977 ms en las dos; las dos calibradas con el tablero impreso (24.86 mm, detector `sb`): cámara 1 RMS 0.167 / control 0.146 px, cámara 2 0.154 / 0.150 px, cobertura 1.00; escala por medias +0.27 y −0.37 mm en 80 mm. Pose del dodecaedro quieto 99.8 % con la K real. Calibración del panel: ventana de tres pasos (enfocar, tablero, escala). **No girar ni sacar el lente de la cámara 2 sin recalibrar** (cy 389.8, B36). Con ventana el tracking da 19–25 fps (B32).
+- **Fase 6 (2026-10-23):** cadena bien con las dos cámaras; sd z cámara 2 1.08–1.15 mm (cumple, < 1.38), cámara 1 3.75–4.88 mm (no): la pose salta 11–25 mm al entrar o salir un marker de lado (B37, alta). Perfiles viejos archivados.
+- **Falta:** cerrar la meta (pruebas, ADR-023, ADR-024, el del rumbo); luego optimizar el tracker (B37 primero).
 
 ### En pausa (se conserva, se puede retomar)
 

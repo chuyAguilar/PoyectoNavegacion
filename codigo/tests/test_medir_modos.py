@@ -342,7 +342,8 @@ def test_main_para_si_el_tope_no_alcanza(tmp_path, capsys) -> None:
 
 def test_main_exige_perfil_con_puerto(tmp_path) -> None:
     with pytest.raises(SystemExit):
-        mm.main(["--config", str(ITER4_DIR / "tracker_config_doctor.yaml"), "--enfocar", "--modo", "640x480:MJPG",
+        mm.main(["--config", str(ITER4_DIR / "data" / "historico" / "tracker_config_doctor.yaml"),   # sin puerto (archivado, fase 6)
+                 "--enfocar", "--modo", "640x480:MJPG",
                  "--fps", "90", "--salida", str(tmp_path / "m.json"), "--timeout", "60"])
 
 

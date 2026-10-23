@@ -178,7 +178,8 @@ def test_create_backend_femto_como_antes() -> None:
 
 
 def test_create_backend_doctor_como_antes() -> None:
-    b = cb.create_backend(_camera("tracker_config_doctor.yaml"))
+    # Archivado en data/historico/ en la fase 6 de la meta 002 (2026-10-23); su contenido no cambia.
+    b = cb.create_backend(_camera("data/historico/tracker_config_doctor.yaml"))
     assert isinstance(b, cb.WebcamBackend)
     assert (b.source, b.width, b.height, b.fps, b.backend_name, b.fourcc) == \
         (1, 640, 480, 30, "MSMF", "MJPG")
@@ -351,7 +352,7 @@ def _escribir_yml(ruta, tamano=None) -> str:
 def test_leer_tamano_yml(tmp_path) -> None:
     assert cb.leer_tamano_yml(_escribir_yml(tmp_path / "a.yml", (1280, 960))) == (1280, 960)
     assert cb.leer_tamano_yml(_escribir_yml(tmp_path / "b.yml")) is None
-    assert cb.leer_tamano_yml(ITER4_DIR / "data" / "globalshutter.yml") == (640, 480)
+    assert cb.leer_tamano_yml(ITER4_DIR / "data" / "historico" / "globalshutter.yml") == (640, 480)
     with pytest.raises(FileNotFoundError):
         cb.leer_tamano_yml(tmp_path / "no_existe.yml")
 
