@@ -2,7 +2,7 @@
 
 _Actualizado: 2026-10-23 (meta 002 · Calibración de las cámaras global shutter: cerrada; ADR-023, ADR-024 y ADR-025)._
 
-Spec activo: ningún spec activo
+Spec activo: `specs/003-arquitectura-tracker/`
 
 ## Dónde estamos
 
