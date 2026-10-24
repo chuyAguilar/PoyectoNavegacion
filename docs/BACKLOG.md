@@ -17,7 +17,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B15 | Reintegrar el depth al BA | Baja | — |
 | B16 | Rama de registro por superficie (en pausa) | Baja | — |
 | B17 | 22 pruebas desfasadas en `xfail(strict=True)` | Media | — |
-| B18 | El filtro 1-Euro no tiene replay | Media | — |
 | B19 | `validar_prerrequisitos` deja un calibrado vacío | Alta | — |
 | B20 | Slicer carga la punta por fecha | Alta | — |
 | B21 | `opencv-python` frente a `opencv-contrib-python` | Baja | — |
@@ -37,6 +36,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B36 | Cámara 2 con el punto principal 90 px sobre el centro | Baja | — |
 | B37 | La pose del dodecaedro salta 11–25 mm cuando entra o sale un marker visto de lado (11, 12) | Alta | — |
 | B38 | `iter4/data/historico/` sin índice de qué es cada archivo | Baja | — |
+| B39 | Con el detector de los perfiles gs1/gs2, un Marker0 sintético inclinado se lee como ID 87 o 115 | Baja | — |
 
 ## Abiertos
 
@@ -116,13 +116,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** plan de la meta 001 · limpieza y orden del repo, P1; fase 1 · suite y replay, 2026-10-19.
 - **Qué haría falta:** por cada una, caracterizarla (que espere lo que el código hace hoy) o borrarla. La de los intrínsecos exige antes decidir si es a propósito (la Femto usa los de fábrica) o hay que restaurar el fallo fuerte (principio 7).
 - **Prioridad:** media (por la de los intrínsecos y las 8 del BA no es baja).
-
-### B18 · El filtro 1-Euro no tiene replay
-- **Qué:** el filtrado de posición y de cuaternión está dentro del lazo de `tracker.main()`; el replay de la suite cubre solo `estimar_pose_rigid_body` y la regla de `min_markers`.
-- **Por qué queda:** cubrirlo exige sacar el filtrado a una función de `tracker.py`, que es la cadena (principio 6).
-- **De dónde:** plan de la meta 001 · limpieza y orden del repo.
-- **Qué haría falta:** extraer el filtrado a una función sin cambiar su resultado, con replay antes y después, y sumarlo al replay.
-- **Prioridad:** media.
 
 ### B19 · `validar_prerrequisitos` deja un calibrado vacío
 - **Qué:** en `calibrar_rigid_body.py` y `captura_calibracion.py` abre la salida en modo `"ab"` antes de correr para comprobar que se puede escribir; si el proceso falla después, queda un archivo de 0 bytes con nombre válido (el origen del `reference_dodecaedro_nuevo_calibrado.txt` de B05).
@@ -228,7 +221,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** en la fase 3 el tracking con ventana (`debug.show_window`) dio 19–25 fps en todos los modos, incluso 320×240 (18.9–19.2); sin ventana, 90 hasta 640×480 y 62–68 fps por encima (960×720 a 1280×960; 1280×960: 61.9 y 61.6). La captura da ~90 en todos los modos, incluidos 1920×1200. Explica los ~20–26 fps de P02. Ningún modo llegó a 88.2 fps con ventana en ninguna de las dos cámaras.
 - **Por qué queda:** el plan lo manda a la meta de optimizar el tracker (decisión del autor, 2026-10-20); la fase 3 no toca `tracker.py` (principio 6). El autor eligió 1280×960 MJPG (P16) sabiendo que el tracking con ventana no llega a 90.
 - **De dónde:** sesión en vivo de la fase 3 (meta 002), 2026-10-22; tablas en `Claude outputs/fases/002/fase-3-en-vivo.md`.
-- **Qué haría falta:** en la meta de optimizar el tracker: medir qué cuesta más (dibujo, `imshow`, `waitKey(1)`, detección a 1280×960, 1-Euro) y sacarlo del bucle (ventana en otro hilo o a menor frecuencia, detección en una región de interés tras la primera, hilo propio de captura); extraer el paso por frame de `tracker.main()` a una función que usen el tracker y `medir_modos.medir_tracking` (hoy este repite el bucle); la línea base es la tabla de la fase 3 y se repite con intrínsecos reales (fases 4–5). Con la K real de la cámara 1 (fase 4, 1280×960, dodecaedro quieto): sin ventana 56 fps con pose casi siempre (99.8 %); la fase 3 daba 62 sin pose (la K nominal no resolvía la pose): más trabajo por frame. Con ventana, 21.4 fps. Fase 6 (2026-10-23, 1280×960): ~20–22 fps desde el panel sin `verbose` (21.6 / 19.9); con `verbose` y `Tee-Object` 14–19 (el log también cuesta).
+- **Qué haría falta:** en la meta de optimizar el tracker: medir qué cuesta más (dibujo, `imshow`, `waitKey(1)`, detección a 1280×960, 1-Euro) y sacarlo del bucle (ventana en otro hilo o a menor frecuencia, detección en una región de interés tras la primera, hilo propio de captura); extraer el paso por frame de `tracker.main()` a una función que usen el tracker y `medir_modos.medir_tracking` (hoy este repite el bucle); la línea base es la tabla de la fase 3 y se repite con intrínsecos reales (fases 4–5). Con la K real de la cámara 1 (fase 4, 1280×960, dodecaedro quieto): sin ventana 56 fps con pose casi siempre (99.8 %); la fase 3 daba 62 sin pose (la K nominal no resolvía la pose): más trabajo por frame. Con ventana, 21.4 fps. Fase 6 (2026-10-23, 1280×960): ~20–22 fps desde el panel sin `verbose` (21.6 / 19.9); con `verbose` y `Tee-Object` 14–19 (el log también cuesta). **Meta 003, fase 1 (2026-10-23), solo Marker0:** los fps son bimodales, ~20–21 o ~32–35, y no siguen a la ventana (gs1: con ventana 32.5, sin 20.9, hoy 33.0; gs2: 32.4, 35.2, 20.7); causa sin aislar (CPU de otros procesos, temporizador de Windows, cadencia de la cámara); se mide en la fase 6 de la meta 003.
 - **Prioridad:** media.
 
 ### B34 · Las pruebas no deben poder abrir una cámara real aunque cambie un perfil
@@ -266,7 +259,19 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** un `README.md` corto en la carpeta (como el de `historico/iter4_diagnosticos/`).
 - **Prioridad:** baja.
 
+### B39 · Con el detector de los perfiles gs1/gs2, un Marker0 sintético inclinado se lee como ID 87 o 115
+- **Qué:** en la prueba sin cámara de la fase 1 de la meta 003, un Marker0 (ID 0, `DICT_ARUCO_MIP_36h12`) renderizado limpio a 450 mm con K sintética (fx 800, 640×480) e inclinado 15–20° se decodifica como 87 o 115 en 5–6 de 12 frames con los parámetros del detector de `tracker_config_gs1.yaml`; con `DetectorParameters()` por defecto, 12 de 12 como 0. Inclinado 5°, 12 de 12 como 0 también con los del perfil. La lista blanca descarta 87 y 115, así que el efecto sería perder el frame, no una pose falsa; no se ha visto lo contrario (otro marker leído como 0).
+- **Por qué queda:** es sobre imágenes sintéticas, no reales; la fase 1 no cambia el detector (principio 6, P6 = a).
+- **De dónde:** `tests/test_pose_log.py`, fase 1 · Línea base de Marker0 en vivo, antes de mover nada (meta 003), 2026-10-23.
+- **Acotado (2026-10-23, línea base en vivo):** con Marker0 real de frente (≤ 10°) a ~37–38 cm, 100 % de los frames con pose y ID 0 en las dos cámaras (gs1 977 y 628 frames; gs2 973 y 1057); no apareció ni un 87 o 115. No se ha probado inclinado 15–20° con imágenes reales, así que no se cierra: solo se sabe que de frente no pasa.
+- **Qué haría falta:** una corrida en vivo con Marker0 inclinado 15–20° (se graba con `--record`; el resumen de `pose_log.py` da la fracción con pose) y, si queda por debajo de 95 %, buscar qué parámetro lo causa (`polygonal_approx_accuracy_rate` 0.05, `max_erroneous_bits_in_border_rate` 0.40, ventanas del umbral), una variable a la vez, con el replay de detección de la fase 1. Se puede hacer en la sesión en vivo de otra fase de la meta 003 sin costo extra.
+- **Prioridad:** baja (sube si la corrida inclinada da menos del 95 % con pose o si aparece otro ID leído como 0).
+
 ## Cerrados
+
+### B18 · El filtro 1-Euro no tiene replay
+- **Qué era:** el filtrado de posición dentro del lazo de `tracker.main()` no tenía replay; el de la suite cubría solo la pose del dodecaedro y `min_markers`.
+- **Cerrado:** 2026-10-23, por la fase 1 · Línea base de Marker0 en vivo, antes de mover nada (meta 003): `tests/test_replay_marker0.py` pasa las esquinas grabadas en vivo por `estimar_pose_individual`, el `OneEuroFilter` de la posición y `rvec_tvec_a_matriz`, y compara con las matrices que `tracker.main()` envió: 0.0 mm / 0.0° en gs1 (977 envíos) y gs2 (973). No cubre el filtro del cuaternión del dodecaedro, que se archiva en la fase 3.
 
 ### B04 · Docs viejas o duplicadas en la raíz
 - **Qué era:** `PROJECT_BRIEF.md` (2026-06-15, iter 4 temprana y el stylus 170–180) y `briefs/` (los reemplazan los `specs/`, ADR-020) en la raíz.

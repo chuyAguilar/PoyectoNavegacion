@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-23 (§3.1, §3.3, §6 y §8: meta 002, fase 6 · Comparación contra P02 y archivo de los perfiles viejos: `tracker_config_doctor.yaml` y `globalshutter.yml` pasan a `iter4/data/historico/`; el tracker no cambió). Antes, 2026-10-23 (§3.4, §3.7 y §6: meta 002, fase 5 · Calibración de la cámara 2: `intrinsecos_gs2_1280x960.yml`; la ventana de calibración del panel en tres pasos, `gui/calibracion.py` y `data/tablero_calibracion.yaml`; `comprobar_escala.py` juzga por medias y recalcula con `--desde-json`). Antes, 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-23 (§6: meta 003, fase 1 · Línea base de Marker0: `pose_log.py`, opciones de grabación del tracker y replay de Marker0). Antes, 2026-10-23 (§3.1, §3.3, §6 y §8: meta 002, fase 6 · Comparación contra P02 y archivo de los perfiles viejos: `tracker_config_doctor.yaml` y `globalshutter.yml` pasan a `iter4/data/historico/`; el tracker no cambió). Antes, 2026-10-23 (§3.4, §3.7 y §6: meta 002, fase 5 · Calibración de la cámara 2: `intrinsecos_gs2_1280x960.yml`; la ventana de calibración del panel en tres pasos, `gui/calibracion.py` y `data/tablero_calibracion.yaml`; `comprobar_escala.py` juzga por medias y recalcula con `--desde-json`). Antes, 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -269,11 +269,12 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   ├── .venv\                      # Python 3.11.9
 │   ├── requirements.txt, readme.md, pytest.ini
 │   ├── tests\                      # suite pytest (2026-10-19): conftest.py pone iter4\ y gui\ en sys.path
-│   │   ├── test_*.py                           # 3 de mayo repuntados + compilan, gui_headless, replay; camaras_uvc, ajustes_camara, sondear_camara, camera_backend y aceleracion_msmf (sin cámara, 2026-10-21/22)
-│   │   ├── replay_util.py                      # replay sin cámara de estimar_pose_rigid_body (CLI recortar/referencia)
-│   │   └── data\                               # recorte de captura_ba.npz y su referencia de poses (versionados)
+│   │   ├── test_*.py                           # 3 de mayo repuntados + compilan, gui_headless, replay, replay_marker0 y pose_log; camaras_uvc, ajustes_camara, sondear_camara, camera_backend y aceleracion_msmf (sin cámara, 2026-10-21/22)
+│   │   ├── replay_util.py                      # replay sin cámara de estimar_pose_rigid_body (CLI recortar/referencia) y de Marker0 (reference-marker0, copy-frames; 2026-10-23)
+│   │   └── data\                               # recorte de captura_ba.npz y su referencia de poses; marker0_gs1/gs2 (grabación en vivo, referencia, 3 frames; 2.17 MB) (versionados)
 │   ├── iter4\                      # ← CÓDIGO ACTIVO
-│   │   ├── tracker.py                          # tracker principal
+│   │   ├── tracker.py                          # tracker principal; opciones apagadas --record, --no-window, --save-frames, --frames-every y --duration (2026-10-23)
+│   │   ├── pose_log.py                         # PoseLog: graba esquinas, poses enviadas y frames de una corrida en un .npz (tablas del replay); summarize() da sd, rango, saltos y fps; CLI --input --name --output (2026-10-23, meta 003 fase 1)
 │   │   ├── camera_backend.py                   # webcam | femtobolt; la webcam abre por puerto, comprueba marca, aplica controles y comprueba el tamaño (§3.1, 2026-10-22)
 │   │   ├── tracker_config.yaml                 # config Femto (default)
 │   │   ├── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO: puerto USB, marca focus, controles, 1280×960 MJPG 90 fps y exposición 0.977 ms (−10 por DSHOW) elegidos en la fase 3 (P15, P16); gs1 con intrínsecos desde la fase 4 (`data/intrinsecos_gs1_1280x960.yml`) y gs2 desde la fase 5 (`data/intrinsecos_gs2_1280x960.yml`) (2026-10-22/23, meta 002 fases 2b a 5)
@@ -315,7 +316,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 > con `iter4\tracker_config.yaml` da, frame a frame, las poses de
 > `replay_v2_femto_referencia.npz` (tolerancia 1e-6 mm y 1e-6°). La referencia no se
 > regenera sola: `replay_util.py referencia ... --sobrescribir`, a propósito y visible
-> en `git diff`. El filtro 1-Euro no entra (B18).
+> en `git diff`. El replay de Marker0 (`tests	est_replay_marker0.py`, desde 2026-10-23) repite sobre las esquinas grabadas en vivo la pose individual, el 1-Euro de la posición y la matriz, y da las que se enviaron, 0.0 mm y 0.0° (B18 cerrado).
 
 ## 7. Frames de coordenadas y convenciones
 

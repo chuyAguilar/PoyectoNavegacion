@@ -1,0 +1,51 @@
+{
+  "dataset": "tests/data/marker0_gs1.npz",
+  "dataset_sha256": "c941b2d9617683148fa8e5fcbb27459fdcc8738e792560f39283d883c35cd586",
+  "fecha_utc": "2026-10-24T01:29:14Z",
+  "frames": 977,
+  "numpy": "1.26.4",
+  "opencv": "4.11.0",
+  "params": {
+    "detector": {
+      "adaptive_thresh_win_size_max": 35,
+      "adaptive_thresh_win_size_min": 5,
+      "adaptive_thresh_win_size_step": 10,
+      "corner_refinement_win_size": 7,
+      "max_erroneous_bits_in_border_rate": 0.4,
+      "min_marker_perimeter_rate": 0.02,
+      "polygonal_approx_accuracy_rate": 0.05
+    },
+    "dictionary": "DICT_ARUCO_MIP_36h12",
+    "filtering": {
+      "beta": 0.05,
+      "enabled": true,
+      "min_cutoff": 2.0
+    },
+    "markers": [
+      {
+        "id": 0,
+        "name": "Marker0",
+        "size_mm": 80.0
+      }
+    ]
+  },
+  "profile": "iter4/tracker_config_gs1.yaml",
+  "python": "3.11.9",
+  "recorded_with": {
+    "calibration_file": "C:\\Dev\\OrtoMeta\\PoyectoNavegacion\\codigo\\iter4\\data\\intrinsecos_gs1_1280x960.yml",
+    "calibration_sha256": "0b4250e573ba6a7d6f8d4ebf6adb75d507abfe5878d7d327aa4464ef9df00623",
+    "config_sha256": "8fc7dd01214fc97d2e177bbf5cc5fc46c31b407e9286d4a63f0dbe379756bd68",
+    "fps_average": 32.24714831817661,
+    "frames": 977,
+    "opencv": "4.11.0",
+    "show_window": true
+  },
+  "replay_vs_live": {
+    "frames_differ": 0.0,
+    "max_diff_rotation_deg": 0.0,
+    "max_diff_translation_mm": 0.0,
+    "sends": 977.0,
+    "sends_reference": 977.0
+  },
+  "sends": 977
+}

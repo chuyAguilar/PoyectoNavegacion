@@ -189,6 +189,7 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 
 ### WIP / deuda técnica pendiente
 
+- **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`): fase 1 hecha (2026-10-23), línea base de Marker0 quieto con gs1 y gs2: 100 % con pose, sd z 0.04 mm, fps bimodales 20–35 (`resultados.md`); el tracker acepta `--record`, `--no-window`, `--save-frames`, `--frames-every` y `--duration` (apagadas).
 - **Runbooks:** `MANUAL_simplificado.md` es del contexto doctor; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
 - **Panel** (brief-01/02, verificado 2026-08-13 con la Femto; detalle en el historial de git de este archivo, antes de `cd77185`): queda en vivo la captura del asistente con IDs nuevos y el dock (B10).
 - **Detección ~3–4 markers/vista** (histórico 5–6): revisar distancia, ángulo y luz antes que el detector.

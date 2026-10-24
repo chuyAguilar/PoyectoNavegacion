@@ -422,12 +422,51 @@ class OneEuroFilter:
 # LOOP PRINCIPAL
 # ============================================================================
 
-def main():
+def _sha256(ruta):
+    import hashlib
+    h = hashlib.sha256()
+    with open(ruta, "rb") as f:
+        for bloque in iter(lambda: f.read(1 << 20), b""):
+            h.update(bloque)
+    return h.hexdigest()
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="tracker_config.yaml")
-    args = parser.parse_args()
+    # Linea base de Marker0 (meta 003, fase 1). Todas apagadas por defecto:
+    # sin ellas el bucle hace las mismas llamadas que antes.
+    parser.add_argument("--record", default=None,
+                        help="Graba ids, esquinas, tiempos y poses enviadas en este .npz (pose_log).")
+    parser.add_argument("--no-window", action="store_true",
+                        help="Sin ventana de video (pisa debug.show_window del perfil).")
+    parser.add_argument("--save-frames", default=None,
+                        help="Carpeta donde --record guarda 1 frame en gris de cada --frames-every (PNG).")
+    parser.add_argument("--frames-every", type=int, default=30,
+                        help="Con --save-frames, guarda 1 de cada N frames (defecto 30).")
+    parser.add_argument("--duration", type=float, default=None,
+                        help="Sale solo, limpio, a los N segundos de bucle (tope de la corrida).")
+    args = parser.parse_args(argv)
+    if args.save_frames and not args.record:
+        parser.error("--save-frames necesita --record")
+    if args.frames_every < 1:
+        parser.error("--frames-every tiene que ser >= 1")
+    if args.duration is not None and args.duration <= 0:
+        parser.error("--duration tiene que ser > 0")
 
     cfg = cargar_config(args.config)
+
+    # Grabacion: se crea antes de abrir la camara para fallar pronto si la
+    # salida ya existe.
+    log = None
+    if args.record:
+        from pose_log import PoseLog
+        log = PoseLog(Path(args.record),
+                      Path(args.save_frames) if args.save_frames else None,
+                      args.frames_every)
+        print(f"[Grabacion] {args.record}"
+              + (f" (frames cada {args.frames_every} en {args.save_frames})"
+                 if args.save_frames else ""))
 
     # === Backend de camara (iter 4: webcam o femtobolt) ===
     # Se crea aca pero se abre mas adelante (despues del setup de OpenIGTLink).
@@ -516,6 +555,8 @@ def main():
 
     # === Loop principal ===
     show_window = cfg.get("debug", {}).get("show_window", True)
+    if args.no_window:
+        show_window = False
     verbose = cfg.get("debug", {}).get("verbose", False)
     n_frames = 0
     t_inicio = time.time()
@@ -540,6 +581,7 @@ def main():
                 n_fail_consec = 0
             n_frames += 1
             t_now = time.time()
+            enviados = [] if log is not None else None
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -613,6 +655,8 @@ def main():
                     M = rvec_tvec_a_matriz(rvec, tvec)
                     msg = pyigtl.TransformMessage(M, device_name=f"{nombre}ToTracker")
                     server_tx.send_message(msg)
+                    if enviados is not None:
+                        enviados.append((nombre, M))
 
                     # Visualizacion
                     if show_window:
@@ -659,6 +703,8 @@ def main():
                     M = rvec_tvec_a_matriz(rvec, tvec)
                     msg = pyigtl.TransformMessage(M, device_name=f"{name}ToTracker")
                     server_tx.send_message(msg)
+                    if enviados is not None:
+                        enviados.append((name, M))
 
                     if show_window:
                         cv2.aruco.drawDetectedMarkers(display, [corners[i]],
@@ -671,6 +717,9 @@ def main():
                 msg_img = pyigtl.ImageMessage(rgb, device_name="Image")
                 server_video.send_message(msg_img)
 
+            if log is not None:
+                log.add(t_now, ids, corners, enviados, gray)
+
             if show_window:
                 cv2.imshow("Tracker Multi-Marker - q para salir", display)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -680,6 +729,10 @@ def main():
                 fps = n_frames / (t_now - t_inicio)
                 print(f"[FPS] Promedio: {fps:.1f}")
                 last_fps_print = t_now
+
+            if args.duration is not None and t_now - t_inicio >= args.duration:
+                print(f"[Duracion] {args.duration:.0f} s cumplidos, saliendo.")
+                break
 
     except KeyboardInterrupt:
         print("\n[Interrupcion del usuario]")
@@ -696,6 +749,28 @@ def main():
                 server_video.close()
             except Exception:
                 pass
+        if log is not None:
+            t_fin = time.time()
+            cal = (cfg.get("camera", {}) or {}).get("calibration_file")
+            meta = {
+                "config": str(Path(args.config).resolve()),
+                "config_sha256": _sha256(args.config),
+                "calibration_file": str(Path(cal).resolve()) if cal else None,
+                "calibration_sha256": _sha256(cal) if cal and Path(cal).is_file() else None,
+                "argv": sys.argv if argv is None else list(argv),
+                "show_window": bool(show_window), "verbose": bool(verbose),
+                "markers": cfg["markers"].get("list", []),
+                "dictionary": cfg["markers"]["dictionary"],
+                "detector": cfg_det, "filtering": cfg["filtering"],
+                "whitelist": sorted(int(x) for x in ids_conocidos),
+                "t_start": t_inicio, "t_end": t_fin, "frames": n_frames,
+                "fps_average": n_frames / (t_fin - t_inicio) if t_fin > t_inicio else None,
+                "opencv": cv2.__version__, "numpy": np.__version__,
+            }
+            ruta = log.save(K, dist, meta)
+            fps_txt = (f"{meta['fps_average']:.1f}" if meta["fps_average"] is not None
+                       else "-")
+            print(f"[Grabacion] Guardada {ruta}: {log.n_frames} frames, fps medio {fps_txt}")
         print("[Salida limpia]")
 
 

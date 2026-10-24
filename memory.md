@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-23 (meta 002 · Calibración de las cámaras global shutter: cerrada; ADR-023, ADR-024 y ADR-025)._
+_Actualizado: 2026-10-23 (meta 003 · Arquitectura y optimización del tracker: fase 1 · Línea base de Marker0 en vivo hecha, pendiente del commit del autor)._
 
 Spec activo: `specs/003-arquitectura-tracker/`
 
@@ -9,7 +9,7 @@ Spec activo: `specs/003-arquitectura-tracker/`
 - Método de trabajo (ADR-020): etapas 1 (`8f398da`) y 2 (`edb9aa0`: agentes `direccion`, `planificacion`, `desarrollo`, `pruebas`; skills `planear`, `fase`, `cerrar-fase`; `docs/PRUEBAS.md`) commiteadas. La etapa 3 (hooks) queda para cuando haga falta; hasta entonces cada papel lo limitan sus `tools` y su texto, y `settings.json` niega commit, push y los datos de paciente.
 - **Meta 001 · limpieza y orden del repo** (B01–B06): cerrada el 2026-10-19 (`2ce4b5d`, `8f33b3a`, `30437e4`, `e52f58c`; ADR-021); P01 «pasa». Detalle en `specs/001-*/` y `docs/PRUEBAS.md`.
 - **Meta 002 · Calibración de las cámaras global shutter:** cerrada el 2026-10-23 (fases 1–6; P03 «pasa», 3 hallazgos menores arreglados en el cierre; ADR-023, ADR-024, ADR-025). Detalle abajo, en `specs/002-*/` y `docs/PRUEBAS.md`.
-- **Siguiente meta (sin spec todavía): optimizar el tracker** (B32), empezando por B37 (alta).
+- **Meta 003 · Arquitectura y optimización del tracker** (plan autorizado el 2026-10-23; spec activo): fase 1 hecha, pendiente de su commit. Siguiente: fase 2 · La cadena solo con Marker0 (pesada; antes la dirección escribe el ADR-026 del cambio del principio 6).
 
 ## Estado técnico (el detalle está en `docs/CONTEXT.md` §6)
 
@@ -19,8 +19,8 @@ Spec activo: `specs/003-arquitectura-tracker/`
 
 ## La suite
 
-- `codigo/tests/`: en verde. Desde la fase 5 de la meta 002 (igual en la 6): **444 pruebas, 422 pasan, 22 `xfail(strict=True)`** (B17), 7 avisos (B22); 18.6–22 s de pytest, 21–27 s de pared (igual tras el cierre de la meta 002). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`. `pytest.ini` ya pone `-q` y con el doble `-q` no sale la línea de totales: para verla, `-o addopts="-p no:cacheprovider" -q`.
-- «No cambió»: la suite + el replay (`tests/test_replay.py`, 0.0 mm/0.0°) + `panel.py --selftest` (`tests/test_gui_headless.py`). Detalle en `docs/ARCHITECTURE.md` §6. La referencia del replay depende del sha256 de la geometría y de `min_markers` de `tracker_config.yaml`; se regenera solo a propósito.
+- `codigo/tests/`: en verde. Desde la fase 1 de la meta 003: **461 pruebas, 439 pasan, 22 `xfail(strict=True)`** (B17), 7 avisos (B22); 19.4–20.3 s de pytest, 22–23 s de pared (dos corridas). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`. `pytest.ini` ya pone `-q` y con el doble `-q` no sale la línea de totales: para verla, `-o addopts="-p no:cacheprovider" -q`.
+- «No cambió»: la suite + el replay (`tests/test_replay.py`, 0.0 mm/0.0°) + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm/0.0°; datos en `tests/data/marker0_*`, 2.17 MB) + `panel.py --selftest` (`tests/test_gui_headless.py`). Detalle en `docs/ARCHITECTURE.md` §6. La referencia del replay depende del sha256 de la geometría y de `min_markers` de `tracker_config.yaml`; se regenera solo a propósito.
 
 ## Decisiones del autor
 
@@ -28,9 +28,15 @@ Spec activo: `specs/003-arquitectura-tracker/`
 - Lo único que no se rompe nunca: la cadena tracker → OpenIGTLink → Slicer y su jerarquía (principio 6).
 - Modelos por papel: dirección y planificación con opus; desarrollo con opus, y Fable solo para «implementa» de las fases pesadas (ADR-022); pruebas con sonnet.
 - **Rumbo (2026-10-20; ADR-025):** se rescata solo el tracking; punta, registro, navegación en Slicer y runbooks se rehacen mejorados sobre gs1/gs2. El principio 6 no cambia (mismos nombres, puerto 18944 y jerarquía). `tracker_config.yaml` (Femto) se conserva por el replay y el selftest.
-- **Optimizar el tracker** se hará en la meta siguiente (B32: la ventana es el cuello).
+- **Optimizar el tracker** es la meta 003 (B32: la ventana es el cuello).
 - **Context7 obligatorio** para dirección, planificación y desarrollo sobre cualquier librería o tecnología.
 - Cada meta, fase y entrada del BACKLOG va siempre con su nombre descriptivo junto al número; cada fase se presenta al autor antes de lanzarla.
+
+## Meta 003 · Arquitectura y optimización del tracker
+
+- Plan autorizado el 2026-10-23 (P1–P8 en `clarify.md`); ocho fases en `tasks.md`; números en `resultados.md`.
+- **Fase 1 · Línea base de Marker0 en vivo, antes de mover nada:** hecha (2026-10-23), pendiente del commit. Marker0 de 80 mm quieto de frente a ~37–38 cm, las dos cámaras: 100 % de frames con pose, sd z 0.043 mm (gs1) y 0.039 mm (gs2), orientación 0.10–0.13°, 0 saltos > 5°. Replay de Marker0 contra lo enviado en vivo: 0.0 mm / 0.0° (977 y 973 envíos); detección sobre 3 frames: 0.0 px. Código: `iter4/pose_log.py` (nuevo) y `tracker.py` con `--record`, `--no-window`, `--save-frames`, `--frames-every`, `--duration` (todas apagadas; sin ellas, las mismas llamadas). B18 cerrado (el replay cubre el 1-Euro de la posición).
+- **fps bimodales, ~20–21 o ~32–35, sin relación con la ventana** (causa sin aislar): dato de la fase 6 · Dónde se va el tiempo por frame; anotado en B32. B39 acotado: de frente no apareció; falta probar Marker0 inclinado 15–20° en vivo (baja).
 
 ## Meta 002 · Calibración de las cámaras global shutter
 
@@ -44,8 +50,8 @@ Spec activo: `specs/003-arquitectura-tracker/`
 
 ## Pendientes del autor
 
-- Meta siguiente: optimizar el tracker; la dirección escribe el spec cuando el autor lo pida. Decidir si B35 (tope a la repetibilidad de la escala) entra en ella. B28: queda solo `tracker.py` lanzado a mano (el panel ya lo cubre).
-- B37 (la pose salta 11–25 mm con los markers de lado; alta) es lo primero de la meta de optimizar el tracker.
+- Hacer el commit de la fase 1 de la meta 003. Decidir si B35 (tope a la repetibilidad de la escala) entra en la meta. B28: queda solo `tracker.py` lanzado a mano (el panel ya lo cubre; la fase 4 de la meta 003 lo cierra).
+- B37 (la pose salta 11–25 mm con los markers de lado; alta) se cierra en la meta 003 al archivar el dodecaedro (fase 3).
 - Decidir si B17 (22 pruebas en `xfail`) sube de prioridad; y B19/B20 (alta). B20 (Slicer carga la punta por fecha) sigue igual. B34 (las pruebas no deben poder abrir una cámara real aunque cambie un perfil; media) quedó abierto tras el incidente de la fase 4.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/` (el autor usa también Git Bash).
 
