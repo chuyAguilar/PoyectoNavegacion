@@ -38,6 +38,7 @@
 | 023 | La SVPRO AR0234 es de obturador global (corrige ADR-016) | Aceptada |
 | 024 | Un perfil por cámara física, identificada por su puerto USB | Aceptada |
 | 025 | Se rescata solo el tracking; lo demás se rehace sobre las cámaras nuevas | Aceptada |
+| 026 | La cadena publica solo `Marker0ToTracker` | Aceptada |
 
 ---
 
@@ -547,3 +548,18 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 4. **El principio 6 no cambia:** los nombres (`Marker0ToTracker`, `DodecaedroToTracker`), el puerto 18944 y la jerarquía de Slicer siguen siendo los mismos. Lo que se rehaga en Slicer los respeta; cambiarlos exige su ADR y una verificación en vivo, como dice la constitución.
 
 **Consecuencias.** El ADR-015 (config canónica = Femto) queda «Reemplazado por ADR-025»; el ADR-014 y el ADR-012 no cambian (la Femto *depth* sigue en pausa). La meta siguiente es optimizar el tracker (B32), empezando por el salto de pose al cambiar el juego de markers (B37, alta); después, la punta y el registro con las cámaras nuevas.
+
+---
+
+## ADR-026 — La cadena publica solo `Marker0ToTracker`
+**Fecha:** 2026-10-23 · **Estado:** Aceptada
+
+**Contexto.** El autor descartó el dodecaedro al abrir la meta 003 (2026-10-23): por ahora el tracker sigue solo Marker0, y el instrumento y la punta vuelven en otra meta con un transform de nombre nuevo (`specs/003-arquitectura-tracker/`, ADR-025). En la meta 002 la pose del dodecaedro saltaba 11–25 mm al cambiar el juego de markers (B37); Marker0 quieto da sd z 0.04 mm y 100 % de frames con pose (meta 003, fase 1). El principio 6 nombraba `DodecaedroToTracker` y la jerarquía de Slicer que cuelga de él.
+
+**Decisión.**
+1. El tracker publica solo `Marker0ToTracker`, con el mismo nombre, el mismo puerto (18944) y la misma matriz que hoy. `DodecaedroToTracker` deja de enviarse: los perfiles gs1 y gs2 pierden el bloque del dodecaedro (fase 2 de la meta 003).
+2. Lo que Slicer necesita para recibir Marker0 se versiona en `codigo/slicer/` (`receive_marker0.py` y su `README.md`), en vez de pegarse desde un manual.
+3. `MANUAL_simplificado.md` (el runbook con el dodecaedro) pasa con `git mv` a `documentos/historico/`, sin tocar su texto.
+4. El principio 6 de `docs/constitution.md` cambia en el mismo commit que este ADR.
+
+**Consecuencias.** La verificación en vivo de la fase 2 lo comprueba con cada cámara: `Marker0ToTracker` llega y se mueve, `DodecaedroToTracker` no aparece en una escena nueva, salida limpia y puerto libre. El replay de Marker0 (fase 1) sigue en 0.0 mm / 0.0°. Hasta que vuelvan el instrumento y el registro, en Slicer no hay punta ni hueso. ADR-004 (`DodecaedroToMarker0` por Observer) y ADR-005 (`BoneSTL_Points` bajo `BoneToMarker0`) quedan como historia del diseño anterior; sus metas nuevas dirán si se reemplazan.

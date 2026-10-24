@@ -35,11 +35,11 @@ Aprobada por el autor el 2026-10-19 (ADR-020).
    *Fuente: `docs/CONTEXT.md` §2; ADR-019.*
 
 6. **La cadena tracker → OpenIGTLink → Slicer y su jerarquía no se rompen nunca.**
-   - El tracker publica `Marker0ToTracker` y `DodecaedroToTracker` por OpenIGTLink (TCP 18944, solo transforms, `send_video: false`).
-   - En Slicer: `DodecaedroToMarker0 = Marker0ToTracker⁻¹ · DodecaedroToTracker` por Observer Python → `StylusTipToDodecaedro` → `StylusTip`; `BoneToMarker0` en la raíz con `Bone` y `BoneSTL_Points` como hijos; `Physical_Points` en la raíz.
+   - El tracker publica solo `Marker0ToTracker` por OpenIGTLink (TCP 18944, solo transforms). Desde la meta 003 ya no publica `DodecaedroToTracker` (ADR-026).
+   - En Slicer, `Marker0ToTracker` llega a la raíz de la escena; lo reciben los scripts versionados en `codigo/slicer/`. El instrumento y su punta, y el registro con el hueso, se rehacen en sus metas (ADR-025), con nombres nuevos y su ADR. Hasta entonces, la jerarquía anterior (`DodecaedroToMarker0`, `StylusTipToDodecaedro`, `BoneToMarker0`) queda como referencia en `documentos/historico/MANUAL_simplificado.md`.
    - Cambiar nombres, puerto o jerarquía exige un ADR y una verificación en vivo con Slicer. Todo lo demás (cámaras, geometrías, calibraciones, GUI, scripts) puede cambiar con su plan.
 
-   *Fuente: `docs/ARCHITECTURE.md` §3.5 y §4; ADR-004; ADR-005; decisión del autor del 2026-10-19.*
+   *Fuente: `docs/ARCHITECTURE.md` §3.5 y §4; ADR-004; ADR-005; ADR-025; ADR-026; decisiones del autor del 2026-10-19 y del 2026-10-23.*
 
 7. **Fallar fuerte, no en silencio.**
    - Un script valida sus entradas (config, geometría, calibración presente y coherente) y aborta con un mensaje claro antes que dar un resultado plausible pero falso.
