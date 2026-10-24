@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 
 import cv2
 import numpy as np
 import pytest
+import yaml
 
 import medir_modos as mm
 import tracker
@@ -64,7 +66,15 @@ class CamFalsa:
 
 
 def cfg_gs1() -> dict:
-    return tracker.cargar_config(PERFIL_GS1)
+    """El perfil gs1 mas el bloque del dodecaedro que tenia hasta la fase 2 de
+    la meta 003 (ADR-026 lo quito del perfil). medir_modos sigue midiendo el
+    tracking con el dodecaedro hasta la fase 4 (pasa a Marker0); estas pruebas
+    fijan ese comportamiento de hoy, asi que le devuelven el bloque."""
+    cfg = tracker.cargar_config(PERFIL_GS1)
+    cfg["rigid_bodies"] = [{"name": "Dodecaedro", "marker_mm": 14.6,
+                            "geometry_file": str(ITER4_DIR / "data" / "reference_dodecaedro_v2_calibrado.txt")}]
+    cfg["rigid_bodies_quality"] = {"min_markers": 3}
+    return cfg
 
 
 def fila_exp(ms: float, fps: float = 90.0, sat: float | None = 0.0, markers: float | None = 4,
@@ -314,8 +324,21 @@ def test_medir_fila_si_no_abre_queda_el_error() -> None:
 # main
 # ----------------------------------------------------------------------------
 
+def perfil_gs1_con_dodecaedro(tmp_path) -> str:
+    """Copia temporal del perfil gs1 (mismo nombre) con el bloque del dodecaedro que
+    `main` -> `preparar_tracking` exige hasta la fase 4 de la meta 003 (ver `cfg_gs1`)."""
+    cfg = yaml.safe_load(Path(PERFIL_GS1).read_text(encoding="utf-8"))
+    cfg["rigid_bodies"] = [{"name": "Dodecaedro", "marker_mm": 14.6,
+                            "geometry_file": str(ITER4_DIR / "data" / "reference_dodecaedro_v2_calibrado.txt")}]
+    cfg["rigid_bodies_quality"] = {"min_markers": 3}
+    ruta = tmp_path / "tracker_config_gs1.yaml"
+    ruta.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+    return str(ruta)
+
+
 def _base(tmp_path, *extra: str) -> list[str]:
-    return ["--config", PERFIL_GS1, "--salida", str(tmp_path / "m.json"), "--timeout", "60", *extra]
+    return ["--config", perfil_gs1_con_dodecaedro(tmp_path), "--salida", str(tmp_path / "m.json"),
+            "--timeout", "60", *extra]
 
 
 @pytest.mark.parametrize("argv", [

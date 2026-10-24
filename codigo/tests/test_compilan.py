@@ -1,4 +1,5 @@
-"""Cada .py de codigo/iter4/ y codigo/iter4/gui/ compila (meta 001, fase 1).
+"""Cada .py de codigo/iter4/, codigo/iter4/gui/ y codigo/slicer/ compila (meta 001, fase 1;
+los scripts de Slicer desde la meta 003, fase 2: solo compilan, importan `slicer` y `qt`).
 
 El .pyc va a tmp_path: no ensucia los __pycache__ del arbol.
 """
@@ -9,13 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from .conftest import GUI_DIR, ITER4_DIR
+from .conftest import CODIGO_DIR, GUI_DIR, ITER4_DIR
 
-SCRIPTS = sorted(ITER4_DIR.glob("*.py")) + sorted(GUI_DIR.glob("*.py"))
+SCRIPTS = (sorted(ITER4_DIR.glob("*.py")) + sorted(GUI_DIR.glob("*.py"))
+           + sorted((CODIGO_DIR / "slicer").glob("*.py")))
 
 
 @pytest.mark.parametrize(
-    "ruta", SCRIPTS, ids=[str(p.relative_to(ITER4_DIR)) for p in SCRIPTS]
+    "ruta", SCRIPTS, ids=[str(p.relative_to(CODIGO_DIR)) for p in SCRIPTS]
 )
 def test_compila(ruta: Path, tmp_path: Path) -> None:
     py_compile.compile(str(ruta), cfile=str(tmp_path / (ruta.stem + ".pyc")),

@@ -6,7 +6,8 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-23 (§6: meta 003, fase 1 · Línea base de Marker0: `pose_log.py`, opciones de grabación del tracker y replay de Marker0). Antes, 2026-10-23 (§3.1, §3.3, §6 y §8: meta 002, fase 6 · Comparación contra P02 y archivo de los perfiles viejos: `tracker_config_doctor.yaml` y `globalshutter.yml` pasan a `iter4/data/historico/`; el tracker no cambió). Antes, 2026-10-23 (§3.4, §3.7 y §6: meta 002, fase 5 · Calibración de la cámara 2: `intrinsecos_gs2_1280x960.yml`; la ventana de calibración del panel en tres pasos, `gui/calibracion.py` y `data/tablero_calibracion.yaml`; `comprobar_escala.py` juzga por medias y recalcula con `--desde-json`). Antes, 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
+> _Última actualización: 2026-10-23 (§3.3, §4 y §6: meta 003, fase 2 · La cadena solo con Marker0: los perfiles gs1 y gs2 ya no definen `rigid_bodies`, el tracker publica solo `Marker0ToTracker` (ADR-026), `gui/estado.py` no exige la geometría si el perfil no la define, `codigo/slicer/receive_marker0.py` nuevo y el manual del dodecaedro en `documentos/historico/`). Antes, 2026-10-23 (§6: meta 003, fase 1 · Línea base de Marker0: `pose_log.py`, opciones de grabación del tracker y replay de Marker0). Antes, 2026-10-23 (§3.1, §3.3, §6 y §8: meta 002, fase 6 · Comparación contra P02 y archivo de los perfiles viejos: `tracker_config_doctor.yaml` y `globalshutter.yml` pasan a `iter4/data/historico/`; el tracker no cambió). 
+> Antes, 2026-10-23 (§3.4, §3.7 y §6: meta 002, fase 5 · Calibración de la cámara 2: `intrinsecos_gs2_1280x960.yml`; la ventana de calibración del panel en tres pasos, `gui/calibracion.py` y `data/tablero_calibracion.yaml`; `comprobar_escala.py` juzga por medias y recalcula con `--desde-json`). Antes, 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
 
@@ -121,11 +122,16 @@ distintos**, más una legacy:
   impreso. Versión vigente = **"v2 compartido", IDs 3–13**, lado de marcador
   **14.6 mm**, geometría en `data/reference_dodecaedro_v2_calibrado.txt`
   (calibrada por *bundle adjustment*, validada a 1.26 px de reproyección). El
-  tracker publica `DodecaedroToTracker`.
+  tracker publica `DodecaedroToTracker` **solo con el perfil Femto** (`tracker_config.yaml`).
+  **Desde 2026-10-23 (meta 003, fase 2; ADR-026) los perfiles `tracker_config_gs1.yaml`
+  y `_gs2.yaml` no definen `rigid_bodies`**: el tracker ya no construye ningún cuerpo
+  rígido con ellos (la lista blanca queda en `[0]`) y no publica `DodecaedroToTracker`;
+  la geometría y la punta del dodecaedro se archivan en la fase 3.
 - **Marker0 (referencia del paciente)** — un solo ArUco **ID 0**, pegado a la base
   del hueso. Tamaño **según contexto**: **80 mm** en la config Femto
   (`tracker_config.yaml`), **60 mm** en la config doctor/global-shutter
-  (`data/historico/tracker_config_doctor.yaml`). El tracker publica `Marker0ToTracker`.
+  (`data/historico/tracker_config_doctor.yaml`). El tracker publica `Marker0ToTracker`. Con los perfiles gs1/gs2 es el
+  **único** transform de la cadena (80 mm, IDs aceptados `[0]`).
 
 ### 3.4 Artefactos de calibración (entradas al sistema)
 
@@ -211,7 +217,9 @@ Lanzamiento: `python iter4\gui\panel.py` (desde `codigo\`, con el venv).
 ## 4. Flujo de datos y cadena de transforms en Slicer
 
 El tracker emite dos transforms crudos (frame del tracker/cámara):
-`Marker0ToTracker` y `DodecaedroToTracker`. Slicer construye el resto:
+`Marker0ToTracker` y `DodecaedroToTracker`. **Desde 2026-10-23 (meta 003, fase 2;
+ADR-026), con los perfiles gs1/gs2, solo `Marker0ToTracker`**; el diagrama es el de la
+cadena con dodecaedro (Femto) y se rehace con el rumbo nuevo. Slicer construye el resto:
 
 ```mermaid
 flowchart TD
@@ -268,8 +276,9 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 ├── codigo\
 │   ├── .venv\                      # Python 3.11.9
 │   ├── requirements.txt, readme.md, pytest.ini
+│   ├── slicer\                     # scripts para la consola Python de Slicer; no los importa nada de iter4\: receive_marker0.py (cuenta los Hz de Marker0ToTracker y avisa si existe DodecaedroToTracker) y README.md (2026-10-23, meta 003 fase 2)
 │   ├── tests\                      # suite pytest (2026-10-19): conftest.py pone iter4\ y gui\ en sys.path
-│   │   ├── test_*.py                           # 3 de mayo repuntados + compilan, gui_headless, replay, replay_marker0 y pose_log; camaras_uvc, ajustes_camara, sondear_camara, camera_backend y aceleracion_msmf (sin cámara, 2026-10-21/22)
+│   │   ├── test_*.py                           # 3 de mayo repuntados + compilan, gui_headless, replay, replay_marker0, pose_log y status (los semáforos con gs1/gs2 reales); camaras_uvc, ajustes_camara, sondear_camara, camera_backend y aceleracion_msmf (sin cámara, 2026-10-21/22)
 │   │   ├── replay_util.py                      # replay sin cámara de estimar_pose_rigid_body (CLI recortar/referencia) y de Marker0 (reference-marker0, copy-frames; 2026-10-23)
 │   │   └── data\                               # recorte de captura_ba.npz y su referencia de poses; marker0_gs1/gs2 (grabación en vivo, referencia, 3 frames; 2.17 MB) (versionados)
 │   ├── iter4\                      # ← CÓDIGO ACTIVO
@@ -277,7 +286,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   ├── pose_log.py                         # PoseLog: graba esquinas, poses enviadas y frames de una corrida en un .npz (tablas del replay); summarize() da sd, rango, saltos y fps; CLI --input --name --output (2026-10-23, meta 003 fase 1)
 │   │   ├── camera_backend.py                   # webcam | femtobolt; la webcam abre por puerto, comprueba marca, aplica controles y comprueba el tamaño (§3.1, 2026-10-22)
 │   │   ├── tracker_config.yaml                 # config Femto (default)
-│   │   ├── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO: puerto USB, marca focus, controles, 1280×960 MJPG 90 fps y exposición 0.977 ms (−10 por DSHOW) elegidos en la fase 3 (P15, P16); gs1 con intrínsecos desde la fase 4 (`data/intrinsecos_gs1_1280x960.yml`) y gs2 desde la fase 5 (`data/intrinsecos_gs2_1280x960.yml`) (2026-10-22/23, meta 002 fases 2b a 5)
+│   │   ├── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO (desde la fase 2 de la meta 003, sin `rigid_bodies`: solo Marker0): puerto USB, marca focus, controles, 1280×960 MJPG 90 fps y exposición 0.977 ms (−10 por DSHOW) elegidos en la fase 3 (P15, P16); gs1 con intrínsecos desde la fase 4 (`data/intrinsecos_gs1_1280x960.yml`) y gs2 desde la fase 5 (`data/intrinsecos_gs2_1280x960.yml`) (2026-10-22/23, meta 002 fases 2b a 5)
 │   │   ├── captura_calibracion.py              # dataset para BA
 │   │   ├── calibrar_rigid_body.py              # bundle adjustment
 │   │   ├── calibrar_tip_divot.py               # calibración por dock/divot
@@ -299,7 +308,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 ├── stl\                            # dodecaedro, placas dock/divot, BaseMarcador, STL del hueso
 ├── herramientas\                   # pivotes/offsets legacy (.h5)
 └── documentos\
-    ├── MANUAL_simplificado.md      # runbook operativo del doctor (autoritativo)
+    ├── historico\MANUAL_simplificado.md  # runbook del contexto doctor con el dodecaedro; archivado el 2026-10-23 (meta 003 fase 2); se rehace
     ├── MANUAL_webcam.md, MANUAL_femtobolt.md
     └── ...
 ```

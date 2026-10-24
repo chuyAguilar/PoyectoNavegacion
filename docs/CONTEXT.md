@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-23 (§6: meta 002, fase 5, cámara 2 calibrada desde el panel). Antes, 2026-10-22 (§6: meta 002, fase 4, cámara 1 calibrada y escala comprobada). Antes, 2026-10-22 (§6: meta 002, fase 3, resolución y exposición elegidas). Antes, 2026-10-22 (§4: trampas 18 y 19, la aceleración HW de MSMF y la marca `focus` sin escribir; §6: meta 002, cámaras SVPRO). Antes, 2026-10-19 (§6: suite y respaldo de la punta; §3 y §6: rutas viejas corregidas)._
+> _Última actualización: 2026-10-23 (§6: meta 003, fase 2 · la cadena solo con Marker0; manual del dodecaedro archivado). Antes, 2026-10-23 (§6: meta 002, fase 5, cámara 2 calibrada desde el panel). Antes, 2026-10-22 (§6: meta 002, fase 4, cámara 1 calibrada y escala comprobada). Antes, 2026-10-22 (§6: meta 002, fase 3, resolución y exposición elegidas). Antes, 2026-10-22 (§4: trampas 18 y 19, la aceleración HW de MSMF y la marca `focus` sin escribir; §6: meta 002, cámaras SVPRO). Antes, 2026-10-19 (§6: suite y respaldo de la punta; §3 y §6: rutas viejas corregidas)._
 
 ---
 
@@ -189,8 +189,8 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 
 ### WIP / deuda técnica pendiente
 
-- **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`): fase 1 hecha (2026-10-23), línea base de Marker0 quieto con gs1 y gs2: 100 % con pose, sd z 0.04 mm, fps bimodales 20–35 (`resultados.md`); el tracker acepta `--record`, `--no-window`, `--save-frames`, `--frames-every` y `--duration` (apagadas).
-- **Runbooks:** `MANUAL_simplificado.md` es del contexto doctor; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
+- **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`): fase 1 hecha (2026-10-23), línea base de Marker0 quieto con gs1 y gs2: 100 % con pose, sd z 0.04 mm, fps bimodales 20–35 (`resultados.md`); el tracker acepta `--record`, `--no-window`, `--save-frames`, `--frames-every` y `--duration` (apagadas). **Fase 2 hecha (2026-10-23):** los perfiles gs1 y gs2 ya no definen `rigid_bodies`, así que la cadena publica solo `Marker0ToTracker` (ADR-026, principio 6); en vivo, 19.1 Hz (gs1) y 31.4 Hz (gs2) en Slicer, `DodecaedroToTracker` ausente, salida limpia. `codigo/slicer/receive_marker0.py` mide la cadena desde Slicer. Faltan: archivar el dodecaedro (fase 3) y pasar `medir_modos.py --modos` a Marker0 (fase 4).
+- **Runbooks:** `documentos/historico/MANUAL_simplificado.md` (archivado el 2026-10-23) es del contexto doctor y del dodecaedro; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
 - **Panel** (brief-01/02, verificado 2026-08-13 con la Femto; detalle en el historial de git de este archivo, antes de `cd77185`): queda en vivo la captura del asistente con IDs nuevos y el dock (B10).
 - **Detección ~3–4 markers/vista** (histórico 5–6): revisar distancia, ángulo y luz antes que el detector.
 - **Marker0 rígido y corto** (ADR-013); **stylus impreso nuevo** (IDs 181–191, sin pose robusta, no urgente); **depth en el BA** cuando se resuelva el bias (ADR-008).

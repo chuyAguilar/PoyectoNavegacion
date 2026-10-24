@@ -5,6 +5,9 @@
   CWD codigo/ y tope de 60 s: abre el panel, refresca los semaforos, imprime
   y se cierra solo. No sondea la camara (solo bajo demanda) y el chequeo del
   puerto 18944 solo hace bind/close.
+- Desde la meta 003 (fase 2, ADR-026) el selftest se abre con el perfil gs1,
+  que ya no trae rigid_bodies: «Arrancar tracker» tiene que quedar habilitado
+  con la geometria y la punta en GRIS (no aplican).
 """
 from __future__ import annotations
 
@@ -34,7 +37,7 @@ def test_panel_selftest() -> None:
     entorno["PYTHONIOENCODING"] = "utf-8"
     t0 = time.monotonic()
     proc = subprocess.run(
-        [sys.executable, str(GUI_DIR / "panel.py"), "--selftest"],
+        [sys.executable, str(GUI_DIR / "panel.py"), "--selftest", "--perfil", "tracker_config_gs1.yaml"],
         cwd=str(CODIGO_DIR), env=entorno, capture_output=True,
         text=True, encoding="utf-8", errors="replace",
         timeout=TOPE_SELFTEST_S,
@@ -51,6 +54,12 @@ def test_panel_selftest() -> None:
     def linea(clave: str) -> str:
         return next(ln for ln in lineas if ln.startswith(f"[panel-selftest] {clave}="))
 
+    # Meta 003, fase 2 (ADR-026): con gs1, sin rigid_bodies, el tracker se puede arrancar.
+    assert linea("perfil") == "[panel-selftest] perfil=tracker_config_gs1.yaml"
+    assert linea("geometria").startswith("[panel-selftest] geometria=GRIS"), linea("geometria")
+    assert linea("punta").startswith("[panel-selftest] punta=GRIS"), linea("punta")
+    assert linea("apto_tracker") == "[panel-selftest] apto_tracker=SI", linea("apto_tracker")
+    assert linea("boton_tracker_habilitado") == "[panel-selftest] boton_tracker_habilitado=True"
     assert "[panel-selftest] calcam_lado=24.86" in salida, salida
     enfocar = linea("enfocar_argv")
     for trozo in ("iter4/medir_modos.py", "tracker_config_gs1.yaml", "--enfocar", "--modo 1280x960:MJPG",

@@ -94,7 +94,9 @@ def chequear_config(ruta_cfg):
     except Exception as e:
         return Chequeo("config", "Config del perfil", ROJO,
                        f"YAML invalido: {e}"), None
-    faltan = [s for s in ("camera", "markers", "rigid_bodies", "igtlink")
+    # rigid_bodies es opcional desde la meta 003 (ADR-026): los perfiles gs1 y
+    # gs2 siguen solo Marker0, un marker suelto de markers.list.
+    faltan = [s for s in ("camera", "markers", "igtlink")
               if s not in (cfg or {})]
     if faltan:
         return Chequeo("config", "Config del perfil", ROJO,
@@ -157,8 +159,10 @@ def chequear_geometria(cfg, ruta_cfg):
     la teorica no se usa para operar una vez hecho el BA)."""
     rbs = (cfg or {}).get("rigid_bodies") or []
     if not rbs:
-        return Chequeo("geometria", "Geometria del rigid body", ROJO,
-                       "el perfil no define rigid_bodies")
+        # Sin rigid body no hay geometria que comprobar: el perfil sigue solo
+        # markers sueltos (Marker0; ADR-026). GRIS = no aplica, no bloquea.
+        return Chequeo("geometria", "Geometria del rigid body", GRIS,
+                       "no aplica: el perfil no define rigid_bodies (solo Marker0, ADR-026)")
     declarada = rbs[0].get("geometry_file", "")
     ruta = geometria_del_perfil(cfg, ruta_cfg)
     if ruta is None:
@@ -279,7 +283,12 @@ def chequear_punta(cfg, ruta_cfg):
     """Punta activa del perfil + coherencia con la geometria del perfil.
     Evalua la punta PREFERIDA del perfil si existe; si no, la mas reciente
     (comportamiento del snippet de Slicer del manual). Avisa si la mas
-    reciente por mtime NO es la evaluada (Slicer cargaria esa otra)."""
+    reciente por mtime NO es la evaluada (Slicer cargaria esa otra).
+    Sin rigid body en el perfil no hay instrumento ni punta: GRIS (ADR-026)."""
+    if not ((cfg or {}).get("rigid_bodies") or []):
+        return Chequeo("punta", "Calibracion de punta", GRIS,
+                       "no aplica: el perfil no define rigid_bodies (la punta vuelve "
+                       "con el instrumento nuevo, ADR-025/026)")
     puntas = listar_puntas()
     if not puntas:
         return Chequeo("punta", "Calibracion de punta", ROJO,
@@ -357,12 +366,16 @@ def evaluar_todo(ruta_cfg):
 
 
 def apto_para_tracker(chequeos):
-    """Gating duro del tracker (brief §6): entorno + config + geometria
-    CALIBRADA + intrinsecos + puerto en VERDE. Los intrinsecos bloquean por
-    ajuste aprobado 2026-08-13: en el contexto webcam, un .yml faltante
-    arrancaria el tracker con intrinsecos malos -> poses erroneas en silencio.
-    Devuelve (bool, [claves malas])."""
-    requeridos = ("entorno", "config", "geometria", "intrinsecos", "puerto")
+    """Gating duro del tracker (brief §6): entorno + config + intrinsecos +
+    puerto en VERDE, y la geometria CALIBRADA solo cuando el perfil define
+    rigid_bodies (si no, su chequeo es GRIS y no cuenta; ADR-026). Los
+    intrinsecos bloquean por ajuste aprobado 2026-08-13: en el contexto webcam,
+    un .yml faltante arrancaria el tracker con intrinsecos malos -> poses
+    erroneas en silencio. Devuelve (bool, [claves malas])."""
+    requeridos = ["entorno", "config", "intrinsecos", "puerto"]
+    geometria = next((c for c in chequeos if c.clave == "geometria"), None)
+    if geometria is not None and geometria.estado != GRIS:
+        requeridos.append("geometria")
     malos = [c.clave for c in chequeos
              if c.clave in requeridos and c.estado != VERDE]
     return (not malos), malos

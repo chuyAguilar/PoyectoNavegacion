@@ -218,13 +218,12 @@ def test_perfiles_gs1_gs2_contrato() -> None:
         assert "focus" not in cam["controls"]           # la marca no se escribe
         assert cam["controls"]["exposure_manual"] is True
         assert cam["controls"]["auto_white_balance"] is False
-        assert cfg["markers"]["list"][0]["size_mm"] == 80.0
-        assert cfg["rigid_bodies"][0]["geometry_file"] == "data/reference_dodecaedro_v2_calibrado.txt"
-        assert cfg["rigid_bodies"][0]["marker_mm"] == 14.6
-        assert cfg["rigid_bodies_quality"]["min_markers"] == 3
+        assert cfg["markers"]["list"] == [{"id": 0, "name": "Marker0", "size_mm": 80.0}]
+        # Meta 003, fase 2 (ADR-026): la cadena publica solo Marker0ToTracker; el
+        # bloque del dodecaedro (rigid_bodies, rigid_bodies_quality) ya no esta.
+        assert "rigid_bodies" not in cfg and "rigid_bodies_quality" not in cfg
         assert cfg["igtlink"] == {"transforms_port": 18944, "video_port": 18945, "send_video": False}
         assert cfg["markers"]["detector"]["min_marker_perimeter_rate"] == 0.02
-    assert (ITER4_DIR / "data" / "reference_dodecaedro_v2_calibrado.txt").exists()
 
 
 # ----------------------------------------------------------------------------
