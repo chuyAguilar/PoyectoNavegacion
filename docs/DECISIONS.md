@@ -39,6 +39,7 @@
 | 024 | Un perfil por cámara física, identificada por su puerto USB | Aceptada |
 | 025 | Se rescata solo el tracking; lo demás se rehace sobre las cámaras nuevas | Aceptada |
 | 026 | La cadena publica solo `Marker0ToTracker` | Aceptada |
+| 027 | El código se ordena por responsabilidad en `codigo/` y se lanza con `python -m` | Aceptada |
 
 ---
 
@@ -563,3 +564,23 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 4. El principio 6 de `docs/constitution.md` cambia en el mismo commit que este ADR.
 
 **Consecuencias.** La verificación en vivo de la fase 2 lo comprueba con cada cámara: `Marker0ToTracker` llega y se mueve, `DodecaedroToTracker` no aparece en una escena nueva, salida limpia y puerto libre. El replay de Marker0 (fase 1) sigue en 0.0 mm / 0.0°. Hasta que vuelvan el instrumento y el registro, en Slicer no hay punta ni hueso. ADR-004 (`DodecaedroToMarker0` por Observer) y ADR-005 (`BoneSTL_Points` bajo `BoneToMarker0`) quedan como historia del diseño anterior; sus metas nuevas dirán si se reemplazan.
+
+---
+
+## ADR-027 — El código se ordena por responsabilidad en `codigo/` y se lanza con `python -m`
+**Fecha:** 2026-10-24 · **Estado:** Aceptada
+
+**Contexto.** Todo el código activo vivía en `codigo/iter4/`, sin separar cámara, visión, transporte, calibración, diagnóstico y GUI. Con el dodecaedro descartado (ADR-025, ADR-026), el autor pidió al abrir la meta 003 que no quedara nada bajo `iter4/`, con carpetas en inglés (P8), lanzado con `python -m` (P1) y con el dodecaedro, la Femto y los perfiles viejos archivados (P2). Respuestas en `specs/003-arquitectura-tracker/clarify.md`, 2026-10-23.
+
+**Decisión.**
+1. Los paquetes de `codigo/`, con nombres en inglés:
+   - `camera`: backend, uvc y controls. Su `__init__` importa `camera.uvc` para apagar la aceleración de MSMF.
+   - `calibration`, `diagnostics`, `gui` y `profiles`. El `__init__` de `profiles` carga los perfiles con `CODE_ROOT`, `load` y `list_profiles`.
+   - `vision` y `transport`, desde la fase 4.
+   - `tracker.py` va suelto en la raíz de `codigo/`. Quedan además `slicer/` y `data/`, este solo con lo vigente.
+2. Todo se lanza desde `codigo\` como `python -m <paquete>.<modulo>`. Ningún script toca `sys.path`, y la suite usa `pythonpath = .`.
+3. Las rutas de un perfil son relativas a `codigo/` (`profiles.CODE_ROOT`), nunca al CWD ni a la carpeta del perfil. Si una ruta no existe, se aborta nombrando el perfil y la ruta (principio 7).
+4. `codigo/iter4/` desaparece. El dodecaedro, la Femto y los perfiles viejos pasan a `codigo/historico/iter4/`, en `dodecahedron/`, `femto/` y `old_profiles/`, con un `README.md`. La carpeta `historico` conserva su nombre porque renombrarla movería un archivo de datos de paciente (principio 5).
+5. Los perfiles y los `.yml` conservan su nombre (`tracker_config_gs1.yaml`, `calibration_file: data/...`), y los módulos que solo se mueven no renombran sus funciones (B43). Se descarta llamar `profile.py` al cargador, porque choca con la biblioteca estándar.
+
+**Consecuencias.** La fase 3 de la meta 003 lo implementó (commit 78ce1af): suite 392/392, replay de Marker0 en 0.0 mm / 0.0° y verificación en vivo con gs1 por el panel. Los comandos de `CLAUDE.md` §1/§5 y de `.claude/` que nombran `iter4\` se ponen al día en la fase 5. `docs/history/` y los documentos archivados conservan las rutas viejas como historia.
