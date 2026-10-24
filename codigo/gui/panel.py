@@ -9,18 +9,16 @@ reescribe logica) + panel de log con la salida en vivo.
 Grupos de acciones:
   1 Verificar/Preparar: identificar IDs, probar camara (bajo demanda) y
     calibrar camara: una ventana de tres pasos sin campos (enfocar, tablero,
-    escala; meta 002, fase 5, P21), con lo fijo en calibracion.py.
-  2 Calibrar (orden brief-02 M4): asistente "dodecaedro nuevo" (captura ->
-    cobertura -> BA, en asistente.py), calibrar punta (dock). Los botones
-    sueltos de captura/BA se quitaron en brief-02 M4 (redundantes con el
-    asistente y peligrosos con defaults del stylus viejo); un BA sobre un
-    dataset viejo sin recapturar queda disponible SOLO por CLI.
-  3 Operar: tracker (gating duro + recordatorio de Slicer), detener.
+    escala; meta 002, fase 5, P21), con lo fijo en calibration_window.py.
+  2 Operar: tracker (gating duro + recordatorio de Slicer), detener.
+Meta 003, fase 3 (ADR-027): se van el asistente "dodecaedro nuevo" y
+"Calibrar punta (dock)" (archivados en codigo/historico/iter4/dodecahedron/);
+los perfiles se listan de codigo/profiles/.
 
-Uso (desde codigo\, con el venv):
-    python iter4\gui\panel.py
-    python iter4\gui\panel.py --selftest      # abre, refresca, imprime y cierra solo
-    python iter4\gui\panel.py --perfil iter4/tracker_config_gs1.yaml
+Uso (desde codigo\\, con el venv):
+    python -m gui.panel
+    python -m gui.panel --selftest      # abre, refresca, imprime y cierra solo
+    python -m gui.panel --perfil profiles/tracker_config_gs1.yaml
 Teclas: F5 = refrescar semaforos.
 """
 from __future__ import annotations
@@ -33,18 +31,17 @@ from pathlib import Path
 from PySide6.QtCore import QObject, QSettings, Qt, QTimer, Signal
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
+    QApplication, QComboBox, QDialog, QDialogButtonBox,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QSpinBox,
     QVBoxLayout, QWidget,
 )
 
-import calibracion
-import estado
-import perfil_editor
-import procesos
-import recetas
-from asistente import AsistenteDodecaedro
+from gui import calibration_window as calibracion
+from gui import status as estado
+from gui import profile_editor as perfil_editor
+from gui import processes as procesos
+from gui import recipes as recetas
 
 COLORES = {
     estado.VERDE: "#1e8e3e",
@@ -92,68 +89,6 @@ class _Puente(QObject):
     fin = Signal(object, int)
 
 
-class DialogoDivot(QDialog):
-    """Parametros de calibrar_tip_divot.py (dock del manual paso 2)."""
-
-    def __init__(self, parent, ruta_cfg):
-        super().__init__(parent)
-        self.setWindowTitle("Calibrar punta (dock/divot)")
-        self.ruta_cfg = ruta_cfg
-        form = QFormLayout(self)
-        self.combo_divot = QComboBox()
-        self.combo_divot.addItems(["DOCK", "A", "B", "C"])
-        form.addRow("Divot:", self.combo_divot)
-        self.spin_id = QSpinBox()
-        self.spin_id.setRange(0, 999)
-        self.spin_id.setValue(recetas.DOCK_DEFAULTS["plate_id"])
-        form.addRow("Marker de la placa (ID):", self.spin_id)
-        self.spin_mm = QDoubleSpinBox()
-        self.spin_mm.setRange(10.0, 200.0)
-        self.spin_mm.setDecimals(2)
-        self.spin_mm.setValue(recetas.DOCK_DEFAULTS["plate_mm"])
-        self.spin_mm.setSuffix(" mm")
-        form.addRow("Lado del marker (medir con calibrador):", self.spin_mm)
-        self.spin_timeout = QSpinBox()
-        self.spin_timeout.setRange(60, 3600)
-        self.spin_timeout.setValue(recetas.DOCK_DEFAULTS["timeout"])
-        self.spin_timeout.setSuffix(" s")
-        form.addRow("Autocierre del script:", self.spin_timeout)
-        slug = recetas.slug_de_perfil(ruta_cfg)
-        self.edit_out = QLineEdit(f"iter4/data/StylusTipToDodecaedro_{slug}_dock")
-        form.addRow("Salida (sin extension):", self.edit_out)
-        nota = QLabel("En la ventana del script: ESPACIO=capturar postura "
-                      "(6 orientaciones distintas), q=terminar y calcular. "
-                      "OJO: el script se autocierra al cumplirse el tiempo.")
-        nota.setWordWrap(True)
-        form.addRow(nota)
-        botones = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
-                                   | QDialogButtonBox.StandardButton.Cancel)
-        botones.accepted.connect(self.accept)
-        botones.rejected.connect(self.reject)
-        form.addRow(botones)
-        self.receta = None
-
-    def accept(self):
-        try:
-            self.receta = recetas.receta_divot(
-                self.ruta_cfg,
-                output_matriz=self.edit_out.text().strip(),
-                divot=self.combo_divot.currentText(),
-                plate_id=self.spin_id.value(),
-                plate_mm=self.spin_mm.value(),
-                timeout=self.spin_timeout.value(),
-            )
-        except (ValueError, FileNotFoundError) as e:
-            QMessageBox.warning(self, "Divot", str(e))
-            return
-        super().accept()
-
-    @staticmethod
-    def pedir(parent, ruta_cfg):
-        d = DialogoDivot(parent, ruta_cfg)
-        return d.receta if d.exec() == QDialog.DialogCode.Accepted else None
-
-
 def yml_del_perfil(ruta_cfg, cfg=None):
     """(ruta del .yml al que apunta el perfil, None) o (None, motivo)."""
     try:
@@ -164,7 +99,7 @@ def yml_del_perfil(ruta_cfg, cfg=None):
     if not declarada:
         return None, (f"{Path(ruta_cfg).name} no tiene calibration_file: "
                       f"calibra y apunta el perfil primero")
-    ruta = estado.resolver_ruta(declarada, Path(ruta_cfg).parent)
+    ruta = estado.resolver_ruta(declarada)
     if ruta is None:
         return None, f"calibration_file no existe: {declarada}"
     return ruta, None
@@ -481,7 +416,6 @@ class Panel(QMainWindow):
         self._cfg = None
         self.origen_actual = None
         self.resultado_camara = None   # (ruta_perfil, Chequeo)
-        self.asistente = None
 
         self.puente = _Puente()
         self.puente.linea.connect(self._linea_hijo)
@@ -521,16 +455,7 @@ class Panel(QMainWindow):
         c1.addWidget(self.btn_camara)
         c1.addWidget(self.btn_calcam)
         c1.addStretch(1)
-        # brief-02 M4: asistente primero, dock despues; sin botones sueltos
-        # de captura/BA (viven dentro del asistente).
-        g2 = QGroupBox("2 · Calibrar")
-        c2 = QVBoxLayout(g2)
-        self.btn_asistente = QPushButton("Asistente: dodecaedro nuevo…")
-        self.btn_divot = QPushButton("Calibrar punta (dock)…")
-        c2.addWidget(self.btn_asistente)
-        c2.addWidget(self.btn_divot)
-        c2.addStretch(1)
-        g3 = QGroupBox("3 · Operar")
+        g3 = QGroupBox("2 · Operar")
         c3 = QVBoxLayout(g3)
         self.btn_tracker = QPushButton("Arrancar tracker")
         self.btn_detener = QPushButton("Detener proceso")
@@ -539,14 +464,12 @@ class Panel(QMainWindow):
         c3.addWidget(self.btn_detener)
         c3.addStretch(1)
         fila_acc.addWidget(g1)
-        fila_acc.addWidget(g2)
         fila_acc.addWidget(g3)
         raiz.addLayout(fila_acc)
 
         self.botones = {
             "ids": self.btn_ids, "camara": self.btn_camara,
             "calcam": self.btn_calcam,
-            "asistente": self.btn_asistente, "divot": self.btn_divot,
             "tracker": self.btn_tracker, "detener": self.btn_detener,
         }
 
@@ -567,14 +490,12 @@ class Panel(QMainWindow):
         self.btn_ids.clicked.connect(self._accion_ids)
         self.btn_camara.clicked.connect(self._accion_camara)
         self.btn_calcam.clicked.connect(self._accion_calcam)
-        self.btn_asistente.clicked.connect(self._accion_asistente)
-        self.btn_divot.clicked.connect(self._accion_divot)
         self.btn_tracker.clicked.connect(self._accion_tracker)
         self.btn_detener.clicked.connect(self._accion_detener)
 
-        # Perfil inicial: CLI > ultima seleccion > canonico (ADR-015)
+        # Perfil inicial: CLI > ultima seleccion > gs1 (ADR-024)
         if not perfiles:
-            self.log_msg("[ROJO] No hay iter4/tracker_config*.yaml — nada que evaluar.")
+            self.log_msg("[ROJO] No hay profiles/tracker_config*.yaml — nada que evaluar.")
             return
         objetivo = None
         if perfil_inicial:
@@ -583,7 +504,7 @@ class Panel(QMainWindow):
             objetivo = Path(str(self.settings.value("perfil_activo"))).name
         idx = self.combo.findText(objetivo) if objetivo else -1
         if idx < 0:
-            idx = self.combo.findText("tracker_config.yaml")
+            idx = self.combo.findText("tracker_config_gs1.yaml")
         self.combo.setCurrentIndex(max(idx, 0))
         self.refrescar()
 
@@ -594,11 +515,6 @@ class Panel(QMainWindow):
     def _perfil_cambiado(self, _idx):
         self.settings.setValue("perfil_activo", self.perfil_activo())
         self.resultado_camara = None
-        # El asistente depende del perfil (semilla default, recetas): se
-        # descarta y se recrea al reabrir.
-        if self.asistente is not None:
-            self.asistente.close()
-            self.asistente = None
         self.refrescar()
 
     def log_msg(self, texto):
@@ -606,7 +522,7 @@ class Panel(QMainWindow):
 
     def _linea_hijo(self, texto):
         self.log.appendPlainText(texto)
-        # brief-02 M5: feed en vivo al origen (monitor del BA en el asistente)
+        # brief-02 M5: feed en vivo al origen de la receta, si lo pide (linea_hijo)
         if self.origen_actual is not None and hasattr(self.origen_actual,
                                                       "linea_hijo"):
             self.origen_actual.linea_hijo(texto)
@@ -648,41 +564,33 @@ class Panel(QMainWindow):
         self.btn_camara.setEnabled(libre and verde("config"))
         self.btn_calcam.setEnabled(libre and verde("entorno")
                                    and verde("config"))
-        self.btn_asistente.setEnabled(libre and verde("entorno")
-                                      and verde("config"))
-        self.btn_divot.setEnabled(libre and verde("entorno")
-                                  and verde("config") and verde("geometria"))
         ok, malos = estado.apto_para_tracker(self.chequeos)
         self.btn_tracker.setEnabled(libre and ok)
         self.btn_tracker.setToolTip(
             "" if ok else f"Bloqueado por: {', '.join(malos)} (fail-loud)")
-        self.btn_divot.setToolTip(
-            "" if verde("geometria") else
-            "Requiere geometria CALIBRADA (la punta es del mismo ensamble)")
         self.btn_detener.setEnabled(corriendo)
         self.combo.setEnabled(libre)
 
     # ------------------------------------------------------------------
     def lanzar_receta(self, receta, origen=None):
         """Lanza una receta con eco del comando y confirmacion de overwrite
-        (fail-loud). API publica: tambien la usa el asistente."""
+        (fail-loud). API publica: la usa la ventana de calibracion."""
         if self.lanzador.hay_activo():
             QMessageBox.warning(self, "Panel", "Ya hay un proceso corriendo. "
                                 "Usar 'Detener proceso' primero.")
             return False
-        if receta.clave != "ba":  # el BA ya valida overwrite en el asistente
-            existentes = [o for o in receta.outputs
-                          if (estado.RAIZ_CODIGO / o).exists()]
-            if existentes:
-                r = QMessageBox.question(
-                    self, "Sobrescribir",
-                    "Esta accion pisaria archivos existentes:\n  "
-                    + "\n  ".join(str(e) for e in existentes)
-                    + "\n\n¿Continuar?")
-                if r != QMessageBox.StandardButton.Yes:
-                    self.log_msg(f"{receta.clave}: cancelado por el usuario "
-                                 f"(no sobrescribir)")
-                    return False
+        existentes = [o for o in receta.outputs
+                      if (estado.RAIZ_CODIGO / o).exists()]
+        if existentes:
+            r = QMessageBox.question(
+                self, "Sobrescribir",
+                "Esta accion pisaria archivos existentes:\n  "
+                + "\n  ".join(str(e) for e in existentes)
+                + "\n\n¿Continuar?")
+            if r != QMessageBox.StandardButton.Yes:
+                self.log_msg(f"{receta.clave}: cancelado por el usuario "
+                             f"(no sobrescribir)")
+                return False
         self.log_msg(f">> {receta.descripcion}")
         self.log_msg(f">> cwd: {receta.cwd}")
         self.log_msg(f">> comando: {receta.comando_legible()}")
@@ -762,17 +670,6 @@ class Panel(QMainWindow):
     def _accion_calcam(self):
         VentanaCalibrarCamara(self).exec()
 
-    def _accion_asistente(self):
-        if self.asistente is None:
-            self.asistente = AsistenteDodecaedro(self)
-        self.asistente.show()
-        self.asistente.raise_()
-
-    def _accion_divot(self):
-        receta = DialogoDivot.pedir(self, self.perfil_activo())
-        if receta:
-            self.lanzar_receta(receta)
-
     def _accion_tracker(self):
         cfg = self._cfg or {}
         puerto = ((cfg.get("igtlink") or {}).get("transforms_port", 18944))
@@ -783,7 +680,7 @@ class Panel(QMainWindow):
             f"(localhost:{puerto}, conector Active)?")
         if r != QMessageBox.StandardButton.Yes:
             self.log_msg("tracker: cancelado — conectar Slicer primero "
-                         "(MANUAL_simplificado §4.1)")
+                         "(codigo/slicer/README.md: receive_marker0.py)")
             return
         self.lanzar_receta(recetas.receta_tracker(self.perfil_activo()))
 
@@ -812,7 +709,7 @@ def main():
     ap.add_argument("--perfil", default=None,
                     help="Perfil inicial (ruta o nombre del yaml).")
     ap.add_argument("--selftest", action="store_true",
-                    help="Abre, refresca, imprime estados/botones/asistente, "
+                    help="Abre, refresca, imprime estados y botones, "
                          "cierra solo.")
     args = ap.parse_args()
 
@@ -831,19 +728,9 @@ def main():
             for clave, boton in panel.botones.items():
                 print(f"[panel-selftest] boton_{clave}_habilitado="
                       f"{boton.isEnabled()}")
-            # brief-02 M1: evidencia de la semilla default del asistente
-            a = AsistenteDodecaedro(panel)
-            print(f"[panel-selftest] asistente_semilla_default="
-                  f"{a.combo_teo.currentText()}")
-            print(f"[panel-selftest] asistente_semilla_info="
-                  f"{a.lbl_ids_semilla.text()}")
-            print(f"[panel-selftest] asistente_ba_defaults="
-                  f"frames={a.spin_frames.value()},nfev={a.spin_nfev.value()},"
-                  f"autocorte={a.chk_autocorte.isChecked()}")
-            a.deleteLater()
             # P19/P21 (fase 5): la ventana de tres pasos compone sus recetas con
             # el tablero guardado, sin lanzarlas (ninguna camara se abre aqui).
-            gs1 = estado.DIR_ITER4 / "tracker_config_gs1.yaml"
+            gs1 = estado.DIR_PERFILES / "tracker_config_gs1.yaml"
             v = VentanaCalibrarCamara(panel, str(gs1))
             print(f"[panel-selftest] calcam_lado={v.tablero.lado_mm:.2f}"
                   if v.tablero else "[panel-selftest] calcam_lado=SIN TABLERO")

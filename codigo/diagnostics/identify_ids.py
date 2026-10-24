@@ -10,32 +10,32 @@ calibrar el rigid body entero.
 Nota: el detector ArUco decodifica la orientacion del patron, asi que el ID NO se
 confunde 6<->9 ni por giro. El numero que ves es el ID real.
 
-Funciona en Femto o webcam (usa el camera_type del config).
+Funciona con el perfil que se le pase (desde la meta 003 solo webcam: gs1 y gs2).
 
-Uso (desde codigo\):
-    python iter4\identificar_ids.py                                     # Femto (default)
-    python iter4\identificar_ids.py --config iter4\tracker_config_gs1.yaml  # global shutter
+Uso (desde codigo\\, con el venv; --config obligatorio, principio 7):
+    python -m diagnostics.identify_ids --config profiles\\tracker_config_gs1.yaml
 Teclas:  q = salir
 """
 import argparse
 import time
 
-import camaras_uvc  # noqa: F401  (antes de cv2: apaga la aceleracion HW de MSMF; meta 002, fase 2b)
+from camera import uvc as camaras_uvc  # noqa: F401  (antes de cv2: apaga la aceleracion HW de MSMF; meta 002, fase 2b)
 import cv2
 import numpy as np
 
-from camera_backend import create_backend
-from captura_calibracion import cargar_config
+from camera.backend import create_backend
+import profiles
+import tracker   # aplicar_detector_params: el mismo mapeo del YAML que usa el tracker
 
 
 def main():
     ap = argparse.ArgumentParser(description="Identificar IDs de marcadores en vivo.")
-    ap.add_argument("--config", default="iter4/tracker_config.yaml")
+    ap.add_argument("--config", required=True, help="Perfil, p. ej. profiles/tracker_config_gs1.yaml.")
     ap.add_argument("--permisivo", action="store_true",
                     help="Usar el tuning permisivo del config (mas detecciones, mas falsos).")
     args = ap.parse_args()
 
-    cfg = cargar_config(args.config)
+    cfg = profiles.load(args.config)
     dict_name = cfg["markers"]["dictionary"].upper()
     aruco_dict = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, dict_name))
     params = cv2.aruco.DetectorParameters()
@@ -50,8 +50,7 @@ def main():
         print("[IDs] Deteccion ESTRICTA (sin falsos positivos). --permisivo para aflojar.")
     else:
         # mismo tuning permisivo del tracker
-        from captura_calibracion import aplicar_detector_params
-        aplicar_detector_params(params, cfg["markers"].get("detector", {}))
+        tracker.aplicar_detector_params(params, cfg["markers"].get("detector", {}))
     detector = cv2.aruco.ArucoDetector(aruco_dict, params)
     usar_api = True
 

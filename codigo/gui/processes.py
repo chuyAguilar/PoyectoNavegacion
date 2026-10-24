@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-procesos.py — Orquestador de subprocesos del panel (brief-01). SIN Qt.
+processes.py — Orquestador de subprocesos del panel (brief-01; era
+gui/procesos.py). SIN Qt.
 
 Lanza los scripts EXISTENTES como subprocesos (candado: UN proceso a la vez,
 iter 1), lee su stdout en vivo linea a linea y los detiene por su camino
@@ -31,11 +32,10 @@ ESPERA_TERMINATE_S = 3.0
 
 # Meta 002, fase 2b (correccion, 2026-10-22): la aceleracion HW de MSMF hace
 # que abrir la camara tarde 43-51 s en vez de 3.6-4.0 s, sin ganar fps. cv2 la
-# lee del entorno al cargarse; tracker.py importa cv2 antes que camera_backend,
+# lee del entorno al cargarse; tracker.py importa cv2 antes que camera.backend,
 # asi que el panel se la pasa apagada a sus procesos. El mismo nombre y la
 # misma regla (setdefault: un valor puesto a mano se respeta) que
-# camaras_uvc.VAR_ACELERACION_MSMF; aqui sin importarlo (gui\ no tiene iter4\
-# en sys.path).
+# camera.uvc.VAR_ACELERACION_MSMF; aqui sin importarlo (gui/ no carga camera/).
 VAR_ACELERACION_MSMF = "OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS"
 
 

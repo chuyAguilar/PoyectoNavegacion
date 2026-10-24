@@ -16,7 +16,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B14 | Stylus impreso nuevo (IDs 181–191) | Baja | — |
 | B15 | Reintegrar el depth al BA | Baja | — |
 | B16 | Rama de registro por superficie (en pausa) | Baja | — |
-| B17 | 22 pruebas desfasadas en `xfail(strict=True)` | Media | — |
 | B19 | `validar_prerrequisitos` deja un calibrado vacío | Alta | — |
 | B20 | Slicer carga la punta por fecha | Alta | — |
 | B21 | `opencv-python` frente a `opencv-contrib-python` | Baja | — |
@@ -34,9 +33,15 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B34 | Las pruebas no deben poder abrir una cámara real aunque cambie un perfil | Media | — |
 | B35 | El criterio de escala por medias no mira la repetibilidad | Media | — |
 | B36 | Cámara 2 con el punto principal 90 px sobre el centro | Baja | — |
-| B37 | La pose del dodecaedro salta 11–25 mm cuando entra o sale un marker visto de lado (11, 12) | Alta | — |
-| B38 | `iter4/data/historico/` sin índice de qué es cada archivo | Baja | — |
 | B39 | Con el detector de los perfiles gs1/gs2, un Marker0 sintético inclinado se lee como ID 87 o 115 | Baja | — |
+| B40 | Instrumento y punta con un transform de nombre nuevo | Media | — |
+| B41 | Runbook de Slicer con Marker0 y el registro nuevo | Media | — |
+| B42 | Documentos del dodecaedro y la Femto que siguen en `documentos/` | Baja | — |
+| B43 | Identificadores y mensajes en español en los módulos que solo se movieron | Baja | — |
+| B44 | Las pruebas archivadas en `historico/iter4/dodecahedron/tests/` no corren | Baja | — |
+| B45 | `femto_pruebas/`, `open3d` y `pyorbbecsdk2` siguen aunque la Femto esté archivada | Baja | — |
+| B46 | `calibration/` importa `_vigilante` de `diagnostics/probe_camera.py` | Baja | — |
+| B47 | `python -m camera.uvc` avisa de que el módulo ya estaba importado | Baja | — |
 
 ## Abiertos
 
@@ -110,18 +115,12 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** el banco rígido con cubo distintivo (`stl/BaseMarcador/`).
 - **Prioridad:** baja.
 
-### B17 · 22 pruebas desfasadas en `xfail(strict=True)`
-- **Qué:** al repuntar la suite a `iter4\`, 22 de las 70 pruebas de los 3 archivos de mayo fallan porque el código cambió después (el plan estimó 11). Por familia: 7 esperan los IDs 151–161 y hoy son 170–180 (`reference_dodecaedro.txt` y los defaults de `generar_reference_dodecaedro.py`: `test_cargar_referencia_archivo_real`, `test_cargar_rb_ids_archivo_real`, `test_ids_default_son_iter1`, `test_distancia_top_cinturones_uniforme`, `test_adyacencia_antiprismatica`, `test_frame_right_handed_top`, `test_iter2_ids_1_11`); 1 compara con el histórico de iter 1 (`test_matches_historico_iter1`); 8 del BA de `calibrar_rigid_body.py`, que pasó a parametrización rígida y a pedir `use_depth`, `sigma_2d` y `sigma_3d` (`test_parametrizar_reconstruir_round_trip`, las 3 de `construir_jac_sparsity`, las 2 de `calcular_residuos`, `test_rmse_por_marker_agrupa_correctamente`, `test_ba_recupera_geometria_perturbada`); y 6 de `captura_calibracion.py`: `cargar_calibracion` (2, vive en `tracker.py`), `fourcc_int_a_str` (1, ya no existe), la firma nueva de `construir_metadata` (1), `resolver_geometry_path` relativo al CWD (1, `CONTEXT.md` §4.14) y `validar_prerrequisitos`, que ya no comprueba el archivo de intrínsecos (1).
-- **Por qué queda:** por decisión del autor (`clarify.md` P1 = b), la fase 1 las marca sin reescribirlas. Lo que vigilaban hoy no se vigila; en particular, el núcleo del BA queda casi sin pruebas.
-- **De dónde:** plan de la meta 001 · limpieza y orden del repo, P1; fase 1 · suite y replay, 2026-10-19.
-- **Qué haría falta:** por cada una, caracterizarla (que espere lo que el código hace hoy) o borrarla. La de los intrínsecos exige antes decidir si es a propósito (la Femto usa los de fábrica) o hay que restaurar el fallo fuerte (principio 7).
-- **Prioridad:** media (por la de los intrínsecos y las 8 del BA no es baja).
-
 ### B19 · `validar_prerrequisitos` deja un calibrado vacío
 - **Qué:** en `calibrar_rigid_body.py` y `captura_calibracion.py` abre la salida en modo `"ab"` antes de correr para comprobar que se puede escribir; si el proceso falla después, queda un archivo de 0 bytes con nombre válido (el origen del `reference_dodecaedro_nuevo_calibrado.txt` de B05).
 - **Por qué queda:** la meta 001 no toca la lógica de los scripts activos.
 - **De dónde:** plan de la meta 001 · limpieza y orden del repo.
 - **Qué haría falta:** comprobar la carpeta sin crear el archivo y escribir solo al final.
+- **Meta 003, fase 3 (2026-10-23):** `calibrar_rigid_body.py` y `captura_calibracion.py` se archivaron con el dodecaedro en `codigo/historico/iter4/dodecahedron/`: ya no los lanza nada vivo. Queda para cuando el instrumento nuevo (B40) vuelva a tener un BA; el autor decide si se cierra.
 - **Prioridad:** alta (un calibrado vacío con nombre válido puede tomarse por bueno).
 
 ### B20 · Slicer carga la punta por fecha
@@ -129,6 +128,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** toca lo que se carga en Slicer: necesita verificación en vivo.
 - **De dónde:** plan de la meta 001 · limpieza y orden del repo.
 - **Qué haría falta:** nombrar la punta explícita en el snippet y mover las puntas viejas (`StylusTipToDodecaedro.npy`, `_2`, `_divot`, `_viejo_dock`, del dodecaedro viejo) a `data\historico\`.
+- **Meta 003, fase 3 (2026-10-23):** el manual está en `documentos/historico/` (fase 2) y todas las puntas en `codigo/historico/iter4/dodecahedron/data/`; la cadena ya no publica el dodecaedro. Vale para la punta del instrumento nuevo (B40); el autor decide si se cierra.
 - **Prioridad:** alta.
 
 ### B21 · `opencv-python` frente a `opencv-contrib-python`
@@ -143,6 +143,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** con Python 3.11.9 no cambia nada; corregirlo toca scripts activos.
 - **De dónde:** fase 1 · suite y replay de la meta 001, 2026-10-19.
 - **Qué haría falta:** docstrings crudos (`r"""`) o barras dobles, al tocar cada script por otra razón o antes de subir de Python.
+- **Meta 003, fase 3 (2026-10-23):** la suite da 0 avisos: los scripts que los daban se archivaron o se reescribió su docstring al moverlos. Se cierra con su criterio en la fase 4.
 - **Prioridad:** baja.
 
 ### B23 · Explorar el tracker en una Jetson Orin Nano, con Slicer en BigDaddy
@@ -245,20 +246,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** vigilarlo: si el lente de la cámara 2 se gira o se saca, recalibrar; si la fase 6 · Comparación contra P02 da peor sd con la cámara 2 que con la 1, mirar aquí primero (remontar el lente centrado y recalibrar). **Fase 6 (2026-10-23):** no se nota en el temblor; la cámara 2 dio la mejor sd z (1.08–1.15 mm) y la peor fue la 1 (B37). Sigue solo como vigilancia.
 - **Prioridad:** baja.
 
-### B37 · La pose del dodecaedro salta 11–25 mm cuando entra o sale un marker visto de lado (11, 12)
-- **Qué:** con el dodecaedro quieto, la pose cambia 11–25 mm en z cuando el juego de markers cambia porque entra o sale un marker visto de lado (11 o 12). Cámara 1 a ~40 cm, 486 poses: sd z 4.88 mm, rango 78 mm (últimas 60: 3.75). Por juego: 3,4,7,8 → z 393.4 (sd 1.47); 3,7,8 → 394.6 (sd 4.39); +11 → 379.7; +12 → 377.8; 3,4,7,8,12 → 405.2. Girado para ver más caras (94 poses): 4.6 markers por pose, sd z 9.68 mm, rango 46 mm: más markers de lado, más salto. Cámara 2, siempre el mismo juego 3,7,8,11: sd z 1.08–1.15 mm. Con juego fijo el temblor es bajo; no es la calibración de la cámara.
-- **Por qué queda:** la fase 6 · Comparación contra P02 y archivo de los perfiles viejos (meta 002) no toca el tracker (principio 6); el autor cerró la fase con el criterio de la cámara 1 NO cumplido (P22).
-- **De dónde:** sesión en vivo de la fase 6 (meta 002), 2026-10-23 (`Claude outputs/fases/002/fase-6-en-vivo.md`, logs en `fase-6/`).
-- **Qué haría falta:** es lo primero de la meta de optimizar el tracker. Ver cómo combina `tracker.py` los markers en una sola pose (`estimar_pose_rigid_body`); revisar la geometría de las caras 11 y 12 en `reference_dodecaedro_v2_calibrado.txt`; probar rechazo por ángulo de la cara respecto a la cámara o por residuo de reproyección por marker, o pesar los markers; medir con el recorte de captura (replay) y de nuevo en vivo con el criterio sd z < 1.38 mm. De paso, escribir la pose de `Marker0` en el log `verbose` (hoy solo la del dodecaedro, y su temblor no se puede medir del log). **Meta 003, fase 2 (2026-10-23):** con los perfiles gs1/gs2 el salto ya no llega a Slicer (el tracker no publica el dodecaedro); la entrada se cierra con el archivo del dodecaedro (fase 3).
-- **Prioridad:** alta (puede dar un resultado equivocado: salto de decenas de mm con el objeto quieto).
-
-### B38 · `iter4/data/historico/` sin índice de qué es cada archivo
-- **Qué:** la carpeta tiene ya 5 archivos (configs webcam, stylus impreso, doctor, `globalshutter.yml`, geometría del stylus impreso) sin un `README` que diga qué es cada uno y de qué contexto viene.
-- **Por qué queda:** no estorba; sugerencia del «implementa» de la fase 6 (meta 002).
-- **De dónde:** fase 6 · Comparación contra P02 y archivo de los perfiles viejos (meta 002), 2026-10-23.
-- **Qué haría falta:** un `README.md` corto en la carpeta (como el de `historico/iter4_diagnosticos/`).
-- **Prioridad:** baja.
-
 ### B39 · Con el detector de los perfiles gs1/gs2, un Marker0 sintético inclinado se lee como ID 87 o 115
 - **Qué:** en la prueba sin cámara de la fase 1 de la meta 003, un Marker0 (ID 0, `DICT_ARUCO_MIP_36h12`) renderizado limpio a 450 mm con K sintética (fx 800, 640×480) e inclinado 15–20° se decodifica como 87 o 115 en 5–6 de 12 frames con los parámetros del detector de `tracker_config_gs1.yaml`; con `DetectorParameters()` por defecto, 12 de 12 como 0. Inclinado 5°, 12 de 12 como 0 también con los del perfil. La lista blanca descarta 87 y 115, así que el efecto sería perder el frame, no una pose falsa; no se ha visto lo contrario (otro marker leído como 0).
 - **Por qué queda:** es sobre imágenes sintéticas, no reales; la fase 1 no cambia el detector (principio 6, P6 = a).
@@ -267,7 +254,75 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** una corrida en vivo con Marker0 inclinado 15–20° (se graba con `--record`; el resumen de `pose_log.py` da la fracción con pose) y, si queda por debajo de 95 %, buscar qué parámetro lo causa (`polygonal_approx_accuracy_rate` 0.05, `max_erroneous_bits_in_border_rate` 0.40, ventanas del umbral), una variable a la vez, con el replay de detección de la fase 1. Se puede hacer en la sesión en vivo de otra fase de la meta 003 sin costo extra.
 - **Prioridad:** baja (sube si la corrida inclinada da menos del 95 % con pose o si aparece otro ID leído como 0).
 
+### B40 · Instrumento y punta con un transform de nombre nuevo
+- **Qué:** volver a seguir un instrumento con punta, publicado con un transform de nombre nuevo y su ADR (principio 6).
+- **Por qué queda:** el spec de la meta 003 descarta el dodecaedro y deja el tracker solo con Marker0; el instrumento es otra meta (ADR-025).
+- **De dónde:** spec y plan de la meta 003; archivado en la fase 3 · La estructura nueva y el archivo (meta 003 · Arquitectura y optimización del tracker), 2026-10-23.
+- **Qué haría falta:** su spec; el punto de partida es `codigo/historico/iter4/dodecahedron/` (geometrías, BA, punta por dock) y, desde la fase 4, `pose_rigid_body.py`. Al hacerlo, mirar B19, B20 y B37.
+- **Prioridad:** media.
+
+### B41 · Runbook de Slicer con Marker0 y el registro nuevo
+- **Qué:** un runbook vigente para Slicer: hoy `codigo/slicer/README.md` solo cubre recibir Marker0, y `MANUAL_simplificado.md` está archivado en `documentos/historico/` (meta 003, fase 2).
+- **Por qué queda:** la punta, el registro y la navegación se rehacen en sus metas (ADR-025).
+- **De dónde:** plan de la meta 003 (P5 = b).
+- **Qué haría falta:** escribirlo con el instrumento nuevo (B40) y el registro, en `codigo/slicer/`.
+- **Prioridad:** media.
+
+### B42 · Documentos del dodecaedro y la Femto que siguen en `documentos/`
+- **Qué:** `GUIA_calibrar_dodecaedro_propio.md`, `convencion_dodecaedro_compartido.md` y `MANUAL_femtobolt.md` siguen en `documentos/` aunque su código esté archivado.
+- **Por qué queda:** no estorban; el plan de la meta 003 solo movía el manual del doctor.
+- **De dónde:** plan de la meta 003.
+- **Qué haría falta:** `git mv` a `documentos/historico/` si estorban.
+- **Prioridad:** baja.
+
+### B43 · Identificadores y mensajes en español en los módulos que solo se movieron
+- **Qué:** las funciones, variables y mensajes de `camera/`, `calibration/`, `diagnostics/` y `gui/` siguen en español (y algunos mensajes nombran el script viejo, p. ej. «calibra primero (calibrar_camara.py)»); también los nombres de las pruebas que ya existían. `CLAUDE.md` pide identificadores en inglés.
+- **Por qué queda:** la fase 3 cambia el sitio, no el cuerpo (plan de la meta 003, P8).
+- **De dónde:** fase 3 · La estructura nueva y el archivo (meta 003 · Arquitectura y optimización del tracker), 2026-10-23.
+- **Qué haría falta:** renombrar en un cambio aparte, con la suite como red.
+- **Prioridad:** baja.
+
+### B44 · Las pruebas archivadas en `historico/iter4/dodecahedron/tests/` no corren
+- **Qué:** las cuatro pruebas archivadas (y `test_replay.py`, que usa `tests/replay_util.py`) conservan los imports de `iter4/`: son registro.
+- **Por qué queda:** el plan las archiva sin reescribirlas.
+- **De dónde:** fase 3 · La estructura nueva y el archivo (meta 003 · Arquitectura y optimización del tracker), 2026-10-23.
+- **Qué haría falta:** si el instrumento nuevo (B40) reusa el BA, reescribirlas contra su código.
+- **Prioridad:** baja.
+
+### B45 · `femto_pruebas/`, `open3d` y `pyorbbecsdk2` siguen aunque la Femto esté archivada
+- **Qué:** el backend y el perfil de la Femto están en `codigo/historico/iter4/femto/`, pero `femto_pruebas/` y sus dependencias siguen en el repo y en `requirements.txt`.
+- **Por qué queda:** P4 de la meta 003 = a: no se tocan en esta meta (ADR-014, en pausa).
+- **De dónde:** plan de la meta 003.
+- **Qué haría falta:** decidir si la rama de depth se retoma; si no, archivarla y quitar las dependencias.
+- **Prioridad:** baja.
+
+### B46 · `calibration/` importa `_vigilante` de `diagnostics/probe_camera.py`
+- **Qué:** `calibrate_camera.py` y `check_scale.py` importan el vigilante de tiempo de la sonda: una dependencia cruzada heredada de `iter4/`.
+- **Por qué queda:** la fase 3 solo mueve.
+- **De dónde:** plan de la meta 003.
+- **Qué haría falta:** moverlo a un módulo común si estorba.
+- **Prioridad:** baja.
+
+### B47 · `python -m camera.uvc` avisa de que el módulo ya estaba importado
+- **Qué:** `camera/__init__.py` importa `camera.uvc` (para apagar la aceleración de MSMF antes que cv2), así que `python -m camera.uvc` (listar las cámaras) da `RuntimeWarning: 'camera.uvc' found in sys.modules ...` y ejecuta el módulo dos veces. Lista bien; el aviso es ruido.
+- **Por qué queda:** no cambia lo que hace; lo vio la fase 3 · La estructura nueva y el archivo (meta 003 · Arquitectura y optimización del tracker), 2026-10-23.
+- **De dónde:** fase 3 · La estructura nueva y el archivo (meta 003 · Arquitectura y optimización del tracker).
+- **Qué haría falta:** lanzar la lista desde `diagnostics.probe_camera --puertos`, o un `__main__` aparte.
+- **Prioridad:** baja.
+
 ## Cerrados
+
+### B17 · 22 pruebas desfasadas en `xfail(strict=True)`
+- **Qué era:** 22 pruebas de los 3 archivos de mayo (`test_calibrar_rigid_body.py`, `test_captura_calibracion.py`, `test_generar_reference_dodecaedro.py`) marcadas `xfail(strict=True)` en la meta 001 porque el código del dodecaedro y del BA había cambiado después.
+- **Cerrado:** 2026-10-23, por la fase 3 · La estructura nueva y el archivo (meta 003 · Arquitectura y optimización del tracker): las tres pruebas se archivaron con su código en `codigo/historico/iter4/dodecahedron/tests/` (registro, pytest no las recoge; B44). La suite queda con 0 `xfail`.
+
+### B37 · La pose del dodecaedro salta 11–25 mm cuando entra o sale un marker visto de lado (11, 12)
+- **Qué era:** con el dodecaedro quieto, la pose cambiaba 11–25 mm en z al entrar o salir un marker visto de lado (cámara 1, sd z 3.75–4.88 mm; meta 002, fase 6).
+- **Cerrado:** 2026-10-23, por decisión del spec de la meta 003 (el dodecaedro se descarta): la fase 2 dejó de publicarlo (ADR-026) y la fase 3 · La estructura nueva y el archivo (meta 003 · Arquitectura y optimización del tracker) lo archivó en `codigo/historico/iter4/dodecahedron/`. Los números quedan en `Claude outputs/fases/002/fase-6-en-vivo.md`; sirven si el instrumento nuevo (B40) vuelve a ser multi-marker.
+
+### B38 · `iter4/data/historico/` sin índice de qué es cada archivo
+- **Qué era:** la carpeta de los perfiles viejos no tenía un `README` que dijera qué es cada archivo.
+- **Cerrado:** 2026-10-23, por la fase 3 · La estructura nueva y el archivo (meta 003 · Arquitectura y optimización del tracker): la carpeta pasó a `codigo/historico/iter4/old_profiles/` y `codigo/historico/iter4/README.md` dice qué es cada cosa de `dodecahedron/`, `femto/` y `old_profiles/`.
 
 ### B18 · El filtro 1-Euro no tiene replay
 - **Qué era:** el filtrado de posición dentro del lazo de `tracker.main()` no tenía replay; el de la suite cubría solo la pose del dodecaedro y `min_markers`.

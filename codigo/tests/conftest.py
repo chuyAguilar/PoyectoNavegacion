@@ -1,21 +1,22 @@
-"""Configuracion comun de la suite (meta 001, fase 1).
+"""Configuracion comun de la suite (meta 001, fase 1; meta 003, fase 3).
 
-Pone codigo/iter4/ y codigo/iter4/gui/ en sys.path para que los tests importen
-los scripts activos por su nombre (p.ej. `import tracker`), y expone las rutas
-que usan los tests.
+Desde la meta 003, fase 3 (ADR-027) el codigo vive en paquetes bajo codigo/
+(camera, calibration, diagnostics, gui, profiles; tracker.py suelto) y los
+tests lo importan por paquete (`from camera import backend`). `pytest.ini`
+pone codigo/ en sys.path (`pythonpath = .`): aqui no se toca sys.path. Este
+modulo solo expone las rutas que usan los tests.
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 CODIGO_DIR = Path(__file__).resolve().parents[1]
-ITER4_DIR = CODIGO_DIR / "iter4"
-GUI_DIR = ITER4_DIR / "gui"
-DATA_DIR = ITER4_DIR / "data"
+PROFILES_DIR = CODIGO_DIR / "profiles"
+DATA_DIR = CODIGO_DIR / "data"
+GUI_DIR = CODIGO_DIR / "gui"
 TESTS_DATA_DIR = Path(__file__).resolve().parent / "data"
-HISTORICO_ITER1_DIR = CODIGO_DIR / "historico" / "iter1" / "iter1_2026-05-16"
-
-for _p in (GUI_DIR, ITER4_DIR):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
+HISTORICO_DIR = CODIGO_DIR / "historico"
+HISTORICO_ITER1_DIR = HISTORICO_DIR / "iter1" / "iter1_2026-05-16"
+DODECAHEDRON_DIR = HISTORICO_DIR / "iter4" / "dodecahedron"
+# Los paquetes del codigo vivo (los recorren test_compilan y test_aceleracion_msmf).
+PACKAGES = ("camera", "calibration", "diagnostics", "gui", "profiles")

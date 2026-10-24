@@ -11,14 +11,14 @@ import numpy as np
 import pytest
 import yaml
 
-import calibrar_camara as cc
-import comprobar_escala as ce
-import perfil_editor
-import recetas
+from calibration import calibrate_camera as cc
+from calibration import check_scale as ce
+from gui import profile_editor as perfil_editor
+from gui import recipes as recetas
 
-from .conftest import ITER4_DIR
+from .conftest import PROFILES_DIR
 
-PERFIL_GS1 = str(ITER4_DIR / "tracker_config_gs1.yaml")
+PERFIL_GS1 = str(PROFILES_DIR / "tracker_config_gs1.yaml")
 MEDIDAS_P17 = [149.1, 149.1, 149.1, 149.1, 149.4]     # clarify.md P17: 6 casillas -> 24.86 mm
 
 
@@ -69,11 +69,11 @@ def test_reporte_por_defecto_y_valor_arg() -> None:
 
 def test_receta_calibrar_camara_como_la_sesion_en_vivo() -> None:
     r = recetas.receta_calibrar_camara(
-        PERFIL_GS1, "iter4/data/intrinsecos_gs1_1280x960.yml", 24.86, "../Claude outputs/camaras/vistas_gs1",
+        PERFIL_GS1, "data/intrinsecos_gs1_1280x960.yml", 24.86, "../Claude outputs/camaras/vistas_gs1",
         detector="ambos", luz="caja nivel 2", medidas_mm=MEDIDAS_P17, casillas_por_medida=6,
         reporte="../Claude outputs/camaras/calibracion_gs1_ambos.json")
     a = r.argv
-    assert a[2] == "iter4/calibrar_camara.py" and _a(a, "--square-mm") == "24.86" and _a(a, "--detector") == "ambos"
+    assert a[2:4] == ["-m", "calibration.calibrate_camera"] and _a(a, "--square-mm") == "24.86" and _a(a, "--detector") == "ambos"
     assert _a(a, "--medidas-mm") == "149.1,149.1,149.1,149.1,149.4" and _a(a, "--casillas-por-medida") == "6"
     assert _a(a, "--luz") == "caja nivel 2" and _a(a, "--reporte").replace("\\", "/").endswith("calibracion_gs1_ambos.json")
     assert _a(a, "--n-control") == "3" and _a(a, "--min-vistas") == "15" and _a(a, "--timeout") == "900"
@@ -114,7 +114,7 @@ def test_receta_comprobar_escala_como_la_sesion_en_vivo() -> None:
     r = recetas.receta_comprobar_escala(PERFIL_GS1, 24.859999999999999, "sb", recetas.POSICIONES_ESCALA,
                                         "../Claude outputs/camaras/escala_gs1.json", luz="caja nivel 2")
     a = r.argv
-    assert a[2] == "iter4/comprobar_escala.py" and _a(a, "--config").endswith("tracker_config_gs1.yaml")
+    assert a[2:4] == ["-m", "calibration.check_scale"] and _a(a, "--config").endswith("tracker_config_gs1.yaml")
     assert _a(a, "--square-mm") == "24.86" and _a(a, "--detector") == "sb"
     assert _a(a, "--desplazamientos-mm") == "0,80,0,80,0,80" and _a(a, "--frames-por-posicion") == "30"
     assert _a(a, "--luz") == "caja nivel 2" and _a(a, "--salida").replace("\\", "/").endswith("escala_gs1.json")

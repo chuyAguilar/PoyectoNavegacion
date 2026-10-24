@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-import camaras_uvc as cu
+from camera import uvc as cu
 
 # El de la camara 1 en P02 (instancia USB\VID_32E4&PID_0234&MI_00\6&325DB0BA&1&0000),
 # en la forma en que Media Foundation da el enlace simbolico.

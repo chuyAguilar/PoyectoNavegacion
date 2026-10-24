@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-sonda_camara.py — Chequeo corto de "camara disponible" (brief §5.4, Paso 8).
+camera_probe.py — Chequeo corto de "camara disponible" (brief §5.4, Paso 8).
 
 Corre como SUBPROCESO del panel (nunca en el proceso de la GUI: un driver
 colgado no debe congelar la ventana; el panel lo mata via watchdog a los 20 s).
@@ -14,8 +14,8 @@ colgado no debe congelar la ventana; el panel lo mata via watchdog a los 20 s).
              abrir; aqui cabe en los 20 s del vigilante). Meta 002, fase 2b.
              Importa camaras_uvc antes que cv2: apaga la aceleracion HW de
              MSMF (abrir+leer ~1 s en vez de >40 s; correccion de la 2b).
-  femtobolt: enumera dispositivos via pyorbbecsdk Context().query_devices()
-             SIN abrir pipeline (no le roba la camara a nadie).
+  femtobolt: archivada (meta 003, fase 3; ADR-025): dice que lo esta y sale
+             con 1, como create_backend.
 
 Exit 0 = camara disponible y tamano coincide; exit 1 = no disponible, o el
 tamano real no es el del perfil o el del .yml (detalle en stdout).
@@ -29,24 +29,22 @@ from pathlib import Path
 
 import yaml
 
-# iter4\ en sys.path: camera_backend y camaras_uvc viven ahi, no en gui\.
-_ITER4 = Path(__file__).resolve().parents[1]
-if str(_ITER4) not in sys.path:
-    sys.path.insert(0, str(_ITER4))
+import profiles
 
 
-def _resolver_ruta(p, cfg_dir):
-    """Como cargar_config() de los scripts: relativa al CWD y al directorio del config."""
+def _resolver_ruta(p, cfg_dir=None):
+    """Como profiles.resolve_path (relativa a codigo/), pero sin abortar: si no
+    existe devuelve la ruta tal cual y el que la lee dice que falta."""
     if not p:
         return None
-    for cand in (Path(p), Path(cfg_dir) / p):
-        if cand.exists():
-            return cand
-    return Path(p)
+    try:
+        return profiles.resolve_path(p)
+    except FileNotFoundError:
+        return Path(p)
 
 
 def probar_webcam(cam, cfg_dir="."):
-    import camaras_uvc   # antes de cv2: apaga la aceleracion HW de MSMF (fase 2b, correccion)
+    from camera import uvc as camaras_uvc   # antes de cv2: apaga la aceleracion HW de MSMF (fase 2b, correccion)
     import cv2
     backends = {"DSHOW": cv2.CAP_DSHOW, "MSMF": cv2.CAP_MSMF, "ANY": cv2.CAP_ANY}
     backend_nombre = str(cam.get("backend", "MSMF")).upper()
@@ -94,7 +92,7 @@ def probar_webcam(cam, cfg_dir="."):
             return 1
         yml = cam.get("calibration_file")
         if yml:
-            from camera_backend import leer_tamano_yml
+            from camera.backend import leer_tamano_yml
             ruta = _resolver_ruta(yml, cfg_dir)
             try:
                 esperado = leer_tamano_yml(ruta)
@@ -120,22 +118,6 @@ def probar_webcam(cam, cfg_dir="."):
         print("[CAMARA] dispositivo liberado", flush=True)
 
 
-def probar_femtobolt():
-    print("[CAMARA] enumerando dispositivos Orbbec (sin abrir pipeline)...",
-          flush=True)
-    from pyorbbecsdk import Context
-    dispositivos = Context().query_devices()
-    try:
-        n = dispositivos.get_count()
-    except AttributeError:
-        n = len(dispositivos)
-    if n < 1:
-        print("[CAMARA] NO DISPONIBLE: 0 dispositivos Orbbec conectados")
-        return 1
-    print(f"[CAMARA] OK: {n} dispositivo(s) Orbbec conectado(s)")
-    return 0
-
-
 def main():
     ap = argparse.ArgumentParser(description="Sonda corta de camara del panel.")
     ap.add_argument("--config", required=True)
@@ -152,7 +134,9 @@ def main():
         if ctype == "webcam":
             sys.exit(probar_webcam(cam, ruta.resolve().parent))
         elif ctype == "femtobolt":
-            sys.exit(probar_femtobolt())
+            print("[CAMARA] NO DISPONIBLE: la Femto Bolt esta archivada "
+                  "(codigo/historico/iter4/femto/, ADR-025)")
+            sys.exit(1)
         else:
             print(f"[CAMARA] camera_type desconocido: '{ctype}'")
             sys.exit(1)

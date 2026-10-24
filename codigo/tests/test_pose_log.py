@@ -18,7 +18,7 @@ import pytest
 import yaml
 from scipy.spatial.transform import Rotation
 
-import pose_log
+from diagnostics import pose_log
 import tracker
 
 from . import replay_util
@@ -164,7 +164,7 @@ def frames_syn() -> list[np.ndarray]:
 
 @pytest.fixture
 def profile_syn(tmp_path: Path) -> Path:
-    gs1 = yaml.safe_load((Path(tracker.__file__).parent / "tracker_config_gs1.yaml")
+    gs1 = yaml.safe_load((Path(tracker.__file__).parent / "profiles" / "tracker_config_gs1.yaml")
                          .read_text(encoding="utf-8"))
     cfg = {
         "camera": {"camera_type": "webcam"},

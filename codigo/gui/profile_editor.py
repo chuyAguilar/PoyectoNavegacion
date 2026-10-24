@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-perfil_editor.py — Edicion QUIRURGICA del YAML del perfil (brief-02 M3a,
-ADR-018). SIN Qt.
+profile_editor.py — Edicion QUIRURGICA del YAML del perfil (brief-02 M3a,
+ADR-018; era gui/perfil_editor.py). SIN Qt.
 
 La UNICA mutacion permitida sobre un tracker_config*.yaml es la linea
 `calibration_file:` (seccion camera). Reglas no negociables:
@@ -144,7 +144,7 @@ def ofrecer_apuntar(rc, ruta_yml, valor_actual, dir_data):
 
 def valor_para_perfil(ruta_yml, dir_data):
     """Valor a escribir en el YAML: 'data/<nombre>' si el .yml vive en
-    iter4\\data (convencion del repo), si no la ruta absoluta."""
+    codigo\\data (convencion del repo; profiles.DATA_DIR), si no la ruta absoluta."""
     ruta = Path(ruta_yml).resolve()
     dir_data = Path(dir_data).resolve()
     if ruta.parent == dir_data:

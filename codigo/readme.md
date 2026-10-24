@@ -182,23 +182,44 @@ pip install -r requirements.txt
 
 ## 6. Comandos habituales del proyecto
 
+Desde la meta 003 (fase 3, ADR-027) el código vive en paquetes bajo `codigo\` y se lanza como
+módulo, **siempre desde `codigo\`** y con los argumentos explícitos (principio 7):
+
+| Carpeta | Qué hay |
+|---|---|
+| `tracker.py` | El bucle del tracker: cámara → detección y pose → envío por OpenIGTLink → ventana. |
+| `camera\` | Backend de captura, identidad por el puerto USB y ajustes por DSHOW. |
+| `calibration\` | Calibración de la lente con tablero y comprobación de la escala con regla. |
+| `diagnostics\` | Sondear la cámara, medir modos y enfocar, verificar IDs, grabar y resumir poses. |
+| `gui\` | El panel de control (PySide6). |
+| `profiles\` | Los perfiles de las cámaras (`tracker_config_gs1.yaml`, `tracker_config_gs2.yaml`). |
+| `data\` | Los intrínsecos de cada cámara y el tablero de calibración. |
+| `slicer\` | Los scripts para la consola Python de 3D Slicer. |
+| `historico\` | Lo archivado (no se mantiene); `historico\iter4\README.md` dice qué es cada cosa. |
+
+Las rutas que trae un perfil (`calibration_file: data/...`) son relativas a `codigo\`.
+
 ```powershell
 # Activar el entorno (cada vez que abras una terminal nueva)
 cd C:\Dev\OrtoMeta\PoyectoNavegacion\codigo
 .\.venv\Scripts\activate
 
-# Tracker principal (multi-marcador)
-python tracker.py --config tracker_config.yaml
+# Panel de control (lista los perfiles y lanza todo lo de abajo)
+python -m gui.panel
 
-# Capturar dataset para bundle adjustment
-python captura_calibracion.py --duracion 60
+# Tracker (Slicer conectado como cliente a localhost:18944 ANTES)
+python -m tracker --config profiles\tracker_config_gs1.yaml
 
-# Bundle adjustment
-python calibrar_rigid_body.py --max_frames 300
+# Verificar los IDs que ve la cámara
+python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml
 
-# Calibración por pivote (legacy, ADR-010): test_pivote.py se movió a
-# codigo\historico\iter4_diagnosticos\ el 2026-10-19 (meta 001) y ya no se mantiene
+# La suite de pruebas (sin cámara)
+python -m pytest tests -q
 ```
+
+La calibración de la lente, la escala y el enfoque se lanzan desde el panel («Calibrar cámara»),
+que compone los comandos completos (`python -m calibration.calibrate_camera ...`,
+`python -m calibration.check_scale ...`, `python -m diagnostics.measure_modes --enfocar ...`).
 
 ---
 
@@ -217,6 +238,10 @@ python calibrar_rigid_body.py --max_frames 300
 ---
 
 ## 8. Recalibración de la cámara (MRPT `camera-calib`)
+
+> **Histórico.** Desde la meta 002 la calibración se hace con el tablero desde el panel
+> («Calibrar cámara») o con `python -m calibration.calibrate_camera`; esta sección queda como
+> referencia de cómo se hizo con MRPT.
 
 La calibración intrínseca de la cámara se hizo con **MRPT** (Mobile Robot Programming Toolkit),
 con su aplicación gráfica **`camera-calib`**, usando un **tablero de ajedrez** normal (NO ChArUco).

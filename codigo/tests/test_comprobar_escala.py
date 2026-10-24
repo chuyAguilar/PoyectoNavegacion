@@ -13,13 +13,13 @@ import numpy as np
 import pytest
 import yaml
 
-import calibrar_camara as cc
-import comprobar_escala as ce
+from calibration import calibrate_camera as cc
+from calibration import check_scale as ce
 
-from .conftest import ITER4_DIR
+from .conftest import PROFILES_DIR
 from . import tablero_sintetico as ts
 
-PERFIL_GS1 = str(ITER4_DIR / "tracker_config_gs1.yaml")
+PERFIL_GS1 = str(PROFILES_DIR / "tracker_config_gs1.yaml")
 COLS, ROWS, SQ = 8, 5, 24.97
 K = ts.K_de(600.0, 600.0, 320.0, 240.0)
 SHAPE = (640, 480)
@@ -172,9 +172,12 @@ def test_medir_posiciones_sin_tablero_no_avanza(monkeypatch) -> None:
 def _perfil_temporal(tmp_path) -> str:
     yml = tmp_path / "intrinsecos_prueba_640x480.yml"
     cc.guardar_yml(yml, K, np.zeros(5), 640, 480, 0.1, 10, COLS, ROWS, SQ)
-    cfg = yaml.safe_load((ITER4_DIR / "tracker_config_gs1.yaml").read_text(encoding="utf-8"))
+    cfg = yaml.safe_load((PROFILES_DIR / "tracker_config_gs1.yaml").read_text(encoding="utf-8"))
     cfg["camera"] = {"camera_type": "webcam", "source": 0, "width": 640, "height": 480, "fps": 30,
-                     "backend": "MSMF", "fourcc": "MJPG", "calibration_file": yml.name}
+                     "backend": "MSMF", "fourcc": "MJPG",
+                     # absoluta: desde la meta 003 (fase 3) una ruta relativa del perfil es relativa
+                     # a codigo/, no a la carpeta del perfil (profiles.load)
+                     "calibration_file": str(yml)}
     ruta = tmp_path / "tracker_config_prueba.yaml"
     ruta.write_text(yaml.safe_dump(cfg), encoding="utf-8")
     return str(ruta)
@@ -308,7 +311,7 @@ def _json_sesion(tmp_path, medianas, nombre="escala_sesion.json") -> Path:
     """Un JSON como el que deja la sesion en vivo, con el criterio viejo (por paso)."""
     posiciones = [{"desplazamiento_mm": d, "n": 30, "mediana_mm": m, "sd_mm": [0.02, 0.01, 0.02],
                    "frames_sin_pose": 0} for d, m in zip(REGLA_IDA_VUELTA, medianas)]
-    viejo = {"fecha": "2026-10-23 14:21:17", "perfil": "iter4\\tracker_config_gs2.yaml", "detector": "sb",
+    viejo = {"fecha": "2026-10-23 14:21:17", "perfil": "profiles\\tracker_config_gs2.yaml", "detector": "sb",
              "square_mm": 24.86, "K": K.tolist(), "posiciones": posiciones,
              "pasos": ce.errores_pasos(medianas, REGLA_IDA_VUELTA), "cumple": False}
     ruta = tmp_path / nombre

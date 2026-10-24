@@ -13,9 +13,8 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from .conftest import ITER4_DIR  # noqa: F401  (pone iter4/ en sys.path)
 
-import calibrar_camara as cc
+from calibration import calibrate_camera as cc
 
 
 def K_de(fx: float, fy: float, cx: float, cy: float) -> np.ndarray:

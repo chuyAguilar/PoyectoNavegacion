@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-import sondear_camara as sc
+from diagnostics import probe_camera as sc
 
 
 class CapFalso:
@@ -313,13 +313,13 @@ def _json(ruta):
 
 
 def _camara(indice: int, puerto: str, nombre: str = "Global Shutter Camera"):
-    import camaras_uvc as cu
+    from camera import uvc as cu
     return cu.CamaraUVC(indice, nombre, "x", "32E4", "0234", "6&1", puerto,
                         "Port_#0002.Hub_#0001", "USB_VID_32E4_PID_0234_01.00.00")
 
 
 def test_controles_vienen_de_ajustes_camara() -> None:
-    import ajustes_camara
+    from camera import controls as ajustes_camara
     assert sc.CONTROLES is ajustes_camara.CONTROLES_SONDA
 
 
@@ -405,7 +405,7 @@ def test_main_leer_y_tras_msmf_exigen_puerto(tmp_path, modo: str) -> None:
 
 
 def test_main_puertos(monkeypatch, tmp_path) -> None:
-    import camaras_uvc as cu
+    from camera import uvc as cu
     cam = _camara(0, PUERTO_1)
     monkeypatch.setattr(cu, "listar_camaras_msmf", lambda con_puerto=True: [cam])
     monkeypatch.setattr(cu, "listar_camaras_dshow", lambda con_puerto=True: [cam])
@@ -418,7 +418,7 @@ def test_main_puertos(monkeypatch, tmp_path) -> None:
 
 
 def test_main_puertos_con_error_de_un_backend(monkeypatch, tmp_path) -> None:
-    import camaras_uvc as cu
+    from camera import uvc as cu
     monkeypatch.setattr(cu, "listar_camaras_msmf", lambda con_puerto=True: [])
 
     def roto(con_puerto=True):
@@ -443,7 +443,7 @@ class CapaFalsa:
         return {n: self.estado.get(n, 0.0) for n in nombres}
 
     def aplicar(self, puerto, controls, **kw):
-        import ajustes_camara
+        from camera import controls as ajustes_camara
         self.aplicados.append(dict(controls))
         self.kw = kw
         forzar = kw.get("forzar", False)
@@ -455,7 +455,7 @@ class CapaFalsa:
 
 
 def test_main_fijar_guarda_lo_escrito(monkeypatch, tmp_path) -> None:
-    import ajustes_camara
+    from camera import controls as ajustes_camara
     capa = CapaFalsa({"exposure_ms": 3.9062, "gain": 12.0})
     monkeypatch.setattr(ajustes_camara, "CapaWindowsDShow", lambda: capa)
     rc = sc.main(["--fijar", "exposure_ms=1.953,gain=12", "--puerto", PUERTO_1,
@@ -470,7 +470,7 @@ def test_main_fijar_guarda_lo_escrito(monkeypatch, tmp_path) -> None:
 
 def test_main_fijar_forzar_escribe_aunque_coincida(monkeypatch, tmp_path) -> None:
     """Alta de la marca: la lectura ya da 332 y aun asi se escribe (sesion del 2026-10-22)."""
-    import ajustes_camara
+    from camera import controls as ajustes_camara
     capa = CapaFalsa({"focus": 332.0})
     monkeypatch.setattr(ajustes_camara, "CapaWindowsDShow", lambda: capa)
     rc = sc.main(["--fijar", "focus=332", "--forzar", "--puerto", PUERTO_2,
@@ -495,7 +495,7 @@ def test_forzar_solo_con_fijar(tmp_path, argv) -> None:
 
 
 def test_main_fijar_que_no_aplica_devuelve_1_y_guarda(monkeypatch, tmp_path) -> None:
-    import ajustes_camara
+    from camera import controls as ajustes_camara
 
     class CapaQueFalla(CapaFalsa):
         def aplicar(self, puerto, controls):
@@ -511,7 +511,7 @@ def test_main_fijar_que_no_aplica_devuelve_1_y_guarda(monkeypatch, tmp_path) -> 
 
 
 def test_main_leer(monkeypatch, tmp_path) -> None:
-    import ajustes_camara
+    from camera import controls as ajustes_camara
     capa = CapaFalsa({"exposure_ms": 3.9062, "gain": 12.0, "focus": 332.0})
     monkeypatch.setattr(ajustes_camara, "CapaWindowsDShow", lambda: capa)
     rc = sc.main(["--leer", "--puerto", PUERTO_2, "--salida", str(tmp_path / "l.json"), "--timeout", "10"])
@@ -522,8 +522,8 @@ def test_main_leer(monkeypatch, tmp_path) -> None:
 
 
 def _preparar_tras_msmf(monkeypatch, capa, vc) -> None:
-    import ajustes_camara
-    import camaras_uvc as cu
+    from camera import controls as ajustes_camara
+    from camera import uvc as cu
     monkeypatch.setattr(ajustes_camara, "CapaWindowsDShow", lambda: capa)
     monkeypatch.setattr(cu, "listar_camaras_msmf", lambda con_puerto=True: [_camara(1, PUERTO_1)])
     monkeypatch.setattr(sc.cv2, "VideoCapture", vc)
@@ -594,7 +594,7 @@ def test_tras_msmf_deja_lo_medido_en_el_estado_del_vigilante(monkeypatch, tmp_pa
 
 
 def test_verificar_orden_dshow_con_ruta(monkeypatch) -> None:
-    import camaras_uvc as cu
+    from camera import uvc as cu
     cams = [_camara(0, PUERTO_1, "A"), _camara(1, PUERTO_2, "B")]
     pedidos: list[tuple] = []
 

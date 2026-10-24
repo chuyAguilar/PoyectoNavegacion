@@ -1,4 +1,4 @@
-"""camera_backend.WebcamBackend sin camara: VideoCapture, listar y capa falsos (meta 002, fase 2b).
+"""camera.backend.WebcamBackend (era camera_backend) sin camara: VideoCapture, listar y capa falsos (meta 002, fase 2b).
 
 Cubre: sin controls ni usb_port_windows, las mismas llamadas a cv2 y en el mismo
 orden que antes; create_backend con los perfiles del repo; puerto con 0, 1 y 2
@@ -13,11 +13,11 @@ import numpy as np
 import pytest
 import yaml
 
-import ajustes_camara as ac
-import camaras_uvc as cu
-import camera_backend as cb
+from camera import controls as ac
+from camera import uvc as cu
+from camera import backend as cb
 
-from .conftest import ITER4_DIR
+from .conftest import CODIGO_DIR, HISTORICO_DIR, PROFILES_DIR
 
 PUERTO_1 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)"
 PUERTO_2 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)"
@@ -148,7 +148,7 @@ def test_msmf_dice_en_una_linea_si_la_aceleracion_esta_apagada(capsys) -> None:
     e.backend.open()
     lineas = [l for l in capsys.readouterr().out.splitlines() if "Aceleracion HW de MSMF" in l]
     assert lineas == [f"[Webcam] {cu.describir_aceleracion_msmf()}"]
-    assert cb.camaras_uvc is cu       # camera_backend importa camaras_uvc (que la apaga)
+    assert cb.camaras_uvc is cu       # camera.backend importa camera.uvc (que la apaga)
 
 
 def test_sin_source_ni_puerto_para_al_construir() -> None:
@@ -168,18 +168,24 @@ def test_no_abre_para_y_libera() -> None:
 # ----------------------------------------------------------------------------
 
 def _camera(nombre: str) -> dict:
-    with open(ITER4_DIR / nombre, encoding="utf-8") as f:
+    with open(PROFILES_DIR / nombre, encoding="utf-8") as f:
         return yaml.safe_load(f)["camera"]
 
 
-def test_create_backend_femto_como_antes() -> None:
-    b = cb.create_backend(_camera("tracker_config.yaml"))
-    assert isinstance(b, cb.FemtoBoltBackend) and b.calibration_file is None
+def test_create_backend_femto_archivado_aborta() -> None:
+    """Meta 003, fase 3 (ADR-025): el perfil Femto archivado ya no crea backend; lo dice."""
+    with open(HISTORICO_DIR / "iter4" / "femto" / "tracker_config.yaml", encoding="utf-8") as f:
+        cam = yaml.safe_load(f)["camera"]
+    with pytest.raises(ValueError, match="archivado"):
+        cb.create_backend(cam)
+    assert not hasattr(cb, "FemtoBoltBackend")
 
 
 def test_create_backend_doctor_como_antes() -> None:
-    # Archivado en data/historico/ en la fase 6 de la meta 002 (2026-10-23); su contenido no cambia.
-    b = cb.create_backend(_camera("data/historico/tracker_config_doctor.yaml"))
+    # Archivado en la fase 6 de la meta 002 (2026-10-23) y en historico/iter4/old_profiles/ en la
+    # fase 3 de la meta 003; su contenido no cambia.
+    with open(HISTORICO_DIR / "iter4" / "old_profiles" / "tracker_config_doctor.yaml", encoding="utf-8") as f:
+        b = cb.create_backend(yaml.safe_load(f)["camera"])
     assert isinstance(b, cb.WebcamBackend)
     assert (b.source, b.width, b.height, b.fps, b.backend_name, b.fourcc) == \
         (1, 640, 480, 30, "MSMF", "MJPG")
@@ -200,14 +206,14 @@ def test_create_backend_gs(nombre: str, puerto: str, focus: float, yml: str | No
     assert (b.width, b.height, b.fps, b.backend_name, b.fourcc) == (1280, 960, 90, "MSMF", "MJPG")
     assert (b.calibration_file or None) == yml
     if yml:
-        assert cb.leer_tamano_yml(ITER4_DIR / yml) == (b.width, b.height)
+        assert cb.leer_tamano_yml(CODIGO_DIR / yml) == (b.width, b.height)
 
 
 def test_perfiles_gs1_gs2_contrato() -> None:
     """Lo que el plan pide de los perfiles nuevos, y lo que no cambia (principio 6)."""
     perfiles = {}
     for nombre in ("tracker_config_gs1.yaml", "tracker_config_gs2.yaml"):
-        with open(ITER4_DIR / nombre, encoding="utf-8") as f:
+        with open(PROFILES_DIR / nombre, encoding="utf-8") as f:
             perfiles[nombre] = yaml.safe_load(f)
     g1, g2 = perfiles.values()
     assert g1["camera"]["usb_port_windows"] != g2["camera"]["usb_port_windows"]
@@ -351,7 +357,7 @@ def _escribir_yml(ruta, tamano=None) -> str:
 def test_leer_tamano_yml(tmp_path) -> None:
     assert cb.leer_tamano_yml(_escribir_yml(tmp_path / "a.yml", (1280, 960))) == (1280, 960)
     assert cb.leer_tamano_yml(_escribir_yml(tmp_path / "b.yml")) is None
-    assert cb.leer_tamano_yml(ITER4_DIR / "data" / "historico" / "globalshutter.yml") == (640, 480)
+    assert cb.leer_tamano_yml(HISTORICO_DIR / "iter4" / "old_profiles" / "globalshutter.yml") == (640, 480)
     with pytest.raises(FileNotFoundError):
         cb.leer_tamano_yml(tmp_path / "no_existe.yml")
 

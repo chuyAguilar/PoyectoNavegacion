@@ -6,7 +6,7 @@
 # fase 2a (2026-10-21): las dos SVPRO tienen la misma serie 01.00.00 y la
 # instancia USB cambia con el orden de conexion; la ruta del puerto no.
 # Las dos cuelgan de un hub: si cambia el hub o el puerto raiz, cambia la
-# ruta y hay que medirla otra vez (iter4\sondear_camara.py --puertos).
+# ruta y hay que medirla otra vez (python -m diagnostics.probe_camera --puertos).
 #
 # Modo y exposicion elegidos en la fase 3 (2026-10-22, sesion en vivo):
 # 1280x960 MJPG 90 fps (P16, eleccion del autor: ningun modo llego a 88.2
@@ -35,7 +35,7 @@ camera:
   # puede saltar entre lecturas (camara 2, 2026-10-22). La marca solo es
   # fiable si se escribe a proposito. Alta de la marca de una camara nueva
   # (escribe aunque la lectura coincida, y relee):
-  #   python iter4\sondear_camara.py --fijar "focus=<valor>" --forzar ^
+  #   python -m diagnostics.probe_camera --fijar "focus=<valor>" --forzar ^
   #     --puerto "<usb_port_windows>" ^
   #     --salida "..\Claude outputs\camaras\marca_<perfil>.json" --timeout 60
   marca:
@@ -74,7 +74,7 @@ camera:
   # Calibrada en la fase 4 (2026-10-22) con el detector sb (gano al clasico:
   # RMS de control 0.146 frente a 0.181 px): 23 vistas (20 + 3 de control),
   # RMS 0.167 px, control 0.146 px, cobertura 1.00, lado del cuadro medido
-  # 24.86 mm (P17). Ruta relativa a iter4\. El backend para si el frame real
+  # 24.86 mm (P17). Ruta relativa a codigo/ (ADR-027). El backend para si el frame real
   # no es del tamano del perfil o del .yml.
   calibration_file: data/intrinsecos_gs1_1280x960.yml
 

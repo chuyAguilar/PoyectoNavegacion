@@ -6,32 +6,29 @@ Corre `tracker.estimar_pose_rigid_body` sobre un dataset grabado (las tablas de
 la pose por frame contra una referencia guardada. No cubre el filtro 1-Euro ni
 el cuaternion de `main()`: estan dentro del lazo (BACKLOG).
 
+Meta 003, fase 3 (ADR-027): el replay del dodecaedro (`test_replay.py`, sus
+datos y el perfil Femto) se archivo en codigo/historico/iter4/; sus funciones
+siguen aqui hasta que la fase 4 saque la pose multi-marker de tracker.py. La
+suite usa solo el replay de Marker0 (abajo).
+
 pytest no recoge este archivo (no empieza por `test_`). Como CLI, desde
-`codigo\\` con el venv y todos los argumentos explicitos:
-
-    python tests\\replay_util.py recortar --input iter4\\data\\captura_ba.npz \\
-        --paso 6 --output tests\\data\\replay_v2_femto.npz
-    python tests\\replay_util.py referencia --dataset tests\\data\\replay_v2_femto.npz \\
-        --config iter4\\tracker_config.yaml \\
-        --output tests\\data\\replay_v2_femto_referencia.npz
-
-La referencia no se regenera sola: si existe, `referencia` aborta salvo con
-`--sobrescribir`, y el cambio queda visible en `git diff`.
+`codigo\\` con el venv, como modulo y con todos los argumentos explicitos.
 
 Marker0 (meta 003, fase 1): las grabaciones de `tracker.py --record`
-(`iter4/pose_log.py`). `run_marker0_replay` repite la pose de los markers
+(`diagnostics/pose_log.py`). `run_marker0_replay` repite la pose de los markers
 sueltos y el 1-Euro con los tiempos grabados; `compare_marker0` la compara
 envio a envio; `compare_detection` detecta otra vez sobre los PNG guardados.
 
-    python tests\\replay_util.py copy-frames --dataset tests\\data\\marker0_gs1.npz ^
+    python -m tests.replay_util copy-frames --dataset tests\\data\\marker0_gs1.npz ^
         --frames-dir "..\\Claude outputs\\grabaciones\\003\\gs1_frames" --count 3 ^
         --output-dir tests\\data\\marker0_gs1_frames
-    python tests\\replay_util.py reference-marker0 --dataset tests\\data\\marker0_gs1.npz ^
-        --config iter4\\tracker_config_gs1.yaml ^
+    python -m tests.replay_util reference-marker0 --dataset tests\\data\\marker0_gs1.npz ^
+        --config profiles\\tracker_config_gs1.yaml ^
         --output tests\\data\\marker0_gs1_reference.npz
 
 `reference-marker0` imprime tambien el replay frente a lo enviado en vivo y lo
 guarda en el `.json`; aborta si la referencia existe salvo con `--overwrite`.
+La referencia no se regenera sola, y el cambio queda visible en `git diff`.
 """
 from __future__ import annotations
 
@@ -45,13 +42,13 @@ from pathlib import Path
 
 import numpy as np
 
-CODIGO_DIR = Path(__file__).resolve().parents[1]
-ITER4_DIR = CODIGO_DIR / "iter4"
-if str(ITER4_DIR) not in sys.path:
-    sys.path.insert(0, str(ITER4_DIR))
+import cv2
 
-import cv2  # noqa: E402
-import tracker  # noqa: E402
+import profiles
+import tracker
+
+# codigo/ va en sys.path por pytest.ini (pythonpath = .) o por `python -m tests.replay_util`.
+CODIGO_DIR = Path(__file__).resolve().parents[1]
 
 TABLAS = ("timestamps", "frame_offsets", "marker_ids", "corners_2d", "K", "dist")
 
@@ -144,7 +141,7 @@ def recortar_dataset(entrada: Path, salida: Path, paso: int) -> dict:
 
 def ruta_geometria(config: Path) -> Path:
     """La geometria del unico rigid body del config, resuelta como el tracker."""
-    cfg = tracker.cargar_config(str(config))
+    cfg = profiles.load(str(config))
     rbs = cfg.get("rigid_bodies") or []
     if len(rbs) != 1:
         raise ValueError(f"{Path(config).name}: el replay espera 1 rigid body, hay {len(rbs)}")
@@ -155,7 +152,7 @@ def ruta_geometria(config: Path) -> Path:
 
 
 def min_markers(config: Path) -> int:
-    cfg = tracker.cargar_config(str(config))
+    cfg = profiles.load(str(config))
     return int(cfg.get("rigid_bodies_quality", {}).get("min_markers", 1))
 
 
@@ -281,7 +278,7 @@ def marker0_params(profile: Path) -> dict:
     nombres, diccionario, detector y filtro. Se guarda con la referencia y la
     prueba lo compara (el perfil cambia de sitio y pierde el dodecaedro en
     esta meta; estos parametros no)."""
-    cfg = tracker.cargar_config(str(profile))
+    cfg = profiles.load(str(profile))
     return {
         "markers": [{"id": int(m["id"]), "name": str(m["name"]), "size_mm": float(m["size_mm"])}
                     for m in cfg["markers"].get("list", []) or []],
@@ -309,9 +306,9 @@ def run_marker0_replay(dataset: Path, profile: Path, name: str = "Marker0") -> d
     z > 0 (`estimar_pose_individual`), el 1-Euro de la posicion con el tiempo
     grabado y `rvec_tvec_a_matriz`. Devuelve los envios de `name` en orden:
     `sent_frame` (S,) y `M` (S, 4, 4)."""
-    from pose_log import load_recording
+    from diagnostics.pose_log import load_recording
     rec = load_recording(dataset)
-    cfg = tracker.cargar_config(str(profile))
+    cfg = profiles.load(str(profile))
     markers = _marker_list(cfg)
     rb_ids = _rigid_body_ids(cfg)
     if not any(m["name"] == name for m in markers.values()):
@@ -353,7 +350,7 @@ def run_marker0_replay(dataset: Path, profile: Path, name: str = "Marker0") -> d
 def recorded_marker0(dataset: Path, name: str = "Marker0") -> dict:
     """Los envios de `name` que hizo el tracker en vivo, con la forma de
     `run_marker0_replay`."""
-    from pose_log import load_recording
+    from diagnostics.pose_log import load_recording
     rec = load_recording(dataset)
     sel = rec["sent_name"] == name
     return {"sent_frame": rec["sent_frame"][sel].astype(np.int32),
@@ -381,7 +378,7 @@ def compare_marker0(result: dict, reference: dict) -> dict:
 
 def build_detector(profile: Path):
     """El detector de `tracker.main()` con el diccionario y los parametros del perfil."""
-    cfg = tracker.cargar_config(str(profile))
+    cfg = profiles.load(str(profile))
     params = cv2.aruco.DetectorParameters()
     params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
     tracker.aplicar_detector_params(params, cfg["markers"].get("detector", {}) or {})
@@ -392,7 +389,7 @@ def build_detector(profile: Path):
 def compare_detection(dataset: Path, frames_dir: Path, profile: Path) -> dict:
     """Detecta de nuevo sobre los PNG guardados (`frame_NNNNN.png`), aplica la
     lista blanca grabada y compara ids y esquinas con las del frame grabado."""
-    from pose_log import load_recording
+    from diagnostics.pose_log import load_recording
     rec = load_recording(dataset)
     whitelist = set(int(x) for x in rec["metadata"]["whitelist"])
     detector = build_detector(profile)
@@ -456,7 +453,7 @@ def copy_frames(dataset: Path, frames_dir: Path, count: int, output_dir: Path,
     """Copia `count` PNG guardados, repartidos a lo largo de la grabacion y
     solo de frames con pose de `name`, recomprimidos sin perdida (PNG nivel 9)
     y comprobados pixel a pixel."""
-    from pose_log import load_recording
+    from diagnostics.pose_log import load_recording
     rec = load_recording(dataset)
     con_pose = set(int(f) for f in rec["sent_frame"][rec["sent_name"] == name])
     candidatos = [int(f) for f in rec["frames_saved"] if int(f) in con_pose
@@ -483,7 +480,7 @@ def copy_frames(dataset: Path, frames_dir: Path, count: int, output_dir: Path,
 
 
 def _marker0_provenance(dataset: Path, profile: Path, result: dict) -> dict:
-    from pose_log import load_recording
+    from diagnostics.pose_log import load_recording
     rec = load_recording(dataset)
     return {
         "dataset": _rel(dataset), "dataset_sha256": sha256(dataset),

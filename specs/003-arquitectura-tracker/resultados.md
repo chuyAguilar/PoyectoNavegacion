@@ -52,3 +52,30 @@ ADR-026 y el principio 6 ya cambiados (`8969c77`). Los perfiles `tracker_config_
 - Suite completa: 468 pruebas, **446 pasan, 22 `xfail`**, 7 avisos (B22); 19.86 s y 19.95 s de pytest, 22 y 24 s de pared (dos corridas). Antes (fase 1): 461 y 439; las 7 nuevas son `test_status.py`.
 - Los fps siguen bimodales (gs1 empezó en ~20 y subió a ~33): B32, fase 6. No se probó el arranque desde el panel (opción 4 del protocolo); la fase 4 lo hace.
 - `medir_modos.py --modos` y `--exposiciones-ms` paran con gs1/gs2 («el perfil tiene que traer un solo rigid body») hasta que la fase 4 los pase a Marker0; `--enfocar` (el del panel) no cambió.
+
+## Fase 3 · La estructura nueva y el archivo (2026-10-23 sin cámara; 2026-10-24 en vivo)
+
+- Movimientos con `git mv` (R100 los que solo cambian de sitio): 17 `.py` vivos a `tracker.py`, `camera/`, `calibration/`, `diagnostics/` y `gui/`; los perfiles gs1 y gs2 a `profiles/` (cambian solo comentarios: el YAML cargado es igual al de HEAD); los dos `.yml` de intrínsecos y el tablero a `data/`, sin cambiar. Al archivo `codigo/historico/iter4/`: 9 scripts del dodecaedro, 8 geometrías, `respaldo_puntas/`, 4 pruebas y el replay del dodecaedro; el perfil, la calibración y los PNG de la Femto; los 5 archivos versionados de los perfiles viejos. Lo local (capturas, puntas, `*_calibrado.txt`), con `Move-Item`. Nuevos: `profiles/__init__.py` (una sola carga de perfil, rutas relativas a `codigo/`), los `__init__.py` de los paquetes, `historico/iter4/femto/femto_backend.py` y `historico/iter4/README.md` (B38).
+- `codigo/iter4/` ya no tiene nada versionado; en el disco quedan solo `__pycache__/` y `Log/OrbbecSDK.log.txt` (ignorados): borrarlos lo niega el permiso de los agentes y queda para el autor, con `codigo/Log/`.
+- `git grep -n iter4 -- codigo ':!codigo/historico'`: 30 líneas: 7 dicen de dónde viene un módulo, 15 nombran el archivo `historico/iter4/`, 6 son datos de procedencia (`generated_by` de los `.yml`, las `.json` de la referencia), 1 es la prueba de que `iter4/tracker.py` ya no existe y 1 el rótulo de `requirements.txt`.
+- Nombres: los once `find_spec` dan `None` sin `codigo/` en `sys.path`; con él, los nueve que existen apuntan a `codigo/` (`vision` y `transport` llegan en la fase 4).
+- Replay de Marker0: 0.0 mm / 0.0° frente a lo enviado en vivo (977 y 973 envíos) y frente a la referencia; detección sobre los 3 frames, 0.0 px, en gs1 y gs2. El tracker solo cambia sus imports y la carga del perfil (`profiles.load`).
+- Suite: **392 pruebas, 392 pasan, 0 `xfail`, 0 avisos**; 18.21 s y 18.29 s de pytest, ~22 s de pared. Antes: 468 (446 + 22 `xfail`, 7 avisos); se fueron las 4 pruebas archivadas, sus `py_compile` y los dos módulos del asistente; `test_status.py`, reescrita sin geometría ni punta, tiene 8.
+- Cada punto de entrada responde a `python -m <modulo> --help` (12 de 12).
+
+### Parte en vivo (2026-10-24, con el autor; perfil gs1, caja de luz nivel 2, Marker0 de 80 mm)
+
+Panel abierto con `.\.venv\Scripts\python.exe -m gui.panel` desde `codigo\`. Sesión y log: `Claude outputs/fases/003/fase-3-en-vivo.md`.
+
+| Botón del panel | Comando (cwd `codigo\`) | Resultado |
+|---|---|---|
+| Semáforos | — | «apto para tracker: SI» al abrir y tras cada proceso |
+| Probar cámara | `-u -m gui.camera_probe --config profiles\tracker_config_gs1.yaml` | puerto USB(3) → índice MSMF 0; entrega 1280x960 = perfil = `intrinsecos_gs1_1280x960.yml`; `exit=0` |
+| Verificar IDs | `-u -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml` | focus=500 comprobado; «visibles: [0]» en todas las líneas; `exit=0` |
+| Arrancar tracker | `-u -m tracker --config profiles\tracker_config_gs1.yaml` | `[Whitelist] IDs aceptados: [0]`; K y dist de `codigo\data\`; `[Salida limpia]`; `exit=0` |
+
+- Los 4 procesos del panel, `exit=0`. El autor vio moverse `Marker0ToTracker` en Slicer; los Hz no se midieron en esta corrida.
+- Selftest (`-m gui.panel --selftest --perfil tracker_config_gs1.yaml`): las tres recetas de la ventana de calibración salen con `-m diagnostics.measure_modes`, `-m calibration.calibrate_camera` y `-m calibration.check_scale`; «cerrando OK». La ventana de calibración no se abrió en vivo: la cubre el selftest.
+- Restos: el autor borró `codigo\iter4` y `codigo\Log` (`Test-Path` False y False). Sin `-m tracker|diagnostics|calibration` vivo y sin `Listen` en 18944 al terminar.
+- **fps de esta corrida, para la fase 6 · Dónde se va el tiempo por frame (B32):** `[FPS] Promedio` 22.3, 15.9 y 20.3 en ~65 s, es decir 16–22, por debajo de los modos ~20 y ~32 de las fases 1 y 2. El tracker solo cambió imports y la carga del perfil, y el panel estaba abierto (carga extra); la causa sigue sin aislar.
+- Veredicto: cumple la parte en vivo de la fase 3.

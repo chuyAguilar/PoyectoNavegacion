@@ -32,7 +32,7 @@ import sys
 import time
 from typing import Callable, Protocol
 
-import camaras_uvc   # antes de cv2: apaga la aceleracion HW de MSMF (fase 2b, correccion)
+from camera import uvc as camaras_uvc   # antes de cv2: apaga la aceleracion HW de MSMF (fase 2b, correccion)
 import cv2
 
 # Nombres del perfil, en el orden en que se escriben.

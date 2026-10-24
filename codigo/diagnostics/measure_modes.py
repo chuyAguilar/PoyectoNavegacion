@@ -65,20 +65,20 @@ las pruebas), convexHull, fillConvexPoly, dilate + getStructuringElement
 
 Ejemplos (desde codigo\\, con el venv):
 
-    python iter4\\medir_modos.py --config iter4\\tracker_config_gs1.yaml --enfocar ^
+    python -m diagnostics.measure_modes --config profiles\\tracker_config_gs1.yaml --enfocar ^
         --modo 1280x960:MJPG --fps 90 ^
         --salida "..\\Claude outputs\\camaras\\enfoque_gs1.json" --timeout 600
-    python iter4\\medir_modos.py --config iter4\\tracker_config_gs1.yaml ^
+    python -m diagnostics.measure_modes --config profiles\\tracker_config_gs1.yaml ^
         --exposiciones-ms 7.813,3.906,1.953,0.977,0.488 --modo 1280x960:MJPG --fps 90 ^
         --segundos-captura 10 --fov-grados 84 --luz "caja nivel 2" ^
         --salida "..\\Claude outputs\\camaras\\exposicion_gs1.json" --timeout 600
-    python iter4\\medir_modos.py --config iter4\\tracker_config_gs1.yaml ^
+    python -m diagnostics.measure_modes --config profiles\\tracker_config_gs1.yaml ^
         --modos 320x240:MJPG,640x480:MJPG,960x720:MJPG,1280x720:MJPG,1280x960:MJPG ^
         --modos-solo-captura 1920x1080:MJPG,1920x1200:MJPG,640x480:YUY2,1280x720:YUY2 ^
         --fps 90 --segundos-captura 10 --segundos-tracking 30 --fov-grados 84 ^
         --luz "caja nivel 2" --exposicion-ms 3.906 ^
         --salida "..\\Claude outputs\\camaras\\modos_gs1.json" --timeout 1800
-    python iter4\\medir_modos.py --config iter4\\tracker_config_gs1.yaml ^
+    python -m diagnostics.measure_modes --config profiles\\tracker_config_gs1.yaml ^
         --elegir "..\\Claude outputs\\camaras\\modos_gs1.json" "..\\Claude outputs\\camaras\\modos_gs2.json" ^
         --salida "..\\Claude outputs\\camaras\\eleccion_modos.json" --timeout 60
 """
@@ -92,13 +92,14 @@ import sys
 import time
 from pathlib import Path
 
-import camaras_uvc   # antes de cv2: apaga la aceleracion HW de MSMF (CONTEXT.md 4.18)
+from camera import uvc as camaras_uvc   # antes de cv2: apaga la aceleracion HW de MSMF (CONTEXT.md 4.18)
 import cv2
 import numpy as np
 
-import ajustes_camara
-from camera_backend import create_backend
-from sondear_camara import _vigilante, nitidez, parsear_modos
+from camera import controls as ajustes_camara
+from camera.backend import create_backend
+from diagnostics.probe_camera import _vigilante, nitidez, parsear_modos
+import profiles
 import tracker
 
 # Umbrales de la eleccion (clarify.md P11 y P12).
@@ -628,7 +629,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[medir] guardado {salida}")
         return rc
 
-    cfg = tracker.cargar_config(args.config)
+    cfg = profiles.load(args.config)
     if not (cfg.get("camera") or {}).get("usb_port_windows"):
         ap.error(f"el perfil {args.config} no trae camera.usb_port_windows: esta medicion abre por el puerto")
     estado["puerto"] = cfg["camera"]["usb_port_windows"]

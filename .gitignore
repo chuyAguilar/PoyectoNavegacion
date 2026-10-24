@@ -28,23 +28,27 @@ StylusTipToDodecaedro*.h5
 # equipos). Su geometria calibrada es propiedad fisica del cumulo de marcadores,
 # INDEPENDIENTE de la camara, asi que SI se versiona para que el doctor la reciba
 # por git pull. (Las calibraciones de TIP siguen siendo por-equipo -> ignoradas.)
-!codigo/iter4/data/reference_dodecaedro_v2_calibrado.txt
+# Desde la meta 003 (fase 3) esta archivado con el dodecaedro.
+!codigo/historico/iter4/dodecahedron/data/reference_dodecaedro_v2_calibrado.txt
 
 # EXCEPCION: los datos del replay de la suite (meta 001): un recorte pequeno de
 # una captura grabada y la referencia de poses contra la que se compara.
 !codigo/tests/data/*.npz
+# El replay del dodecaedro, archivado con su codigo (meta 003, fase 3).
+!codigo/historico/iter4/dodecahedron/tests/data/*.npz
 
 # EXCEPCION: respaldo de la punta vigente del contexto canonico (meta 001,
 # ADR-021). Es una COPIA en una subcarpeta para que ni el glob del snippet de
-# Slicer ni estado.py la vean; el original en iter4/data/ sigue fuera de git.
-!codigo/iter4/data/respaldo_puntas/StylusTipToDodecaedro_femto_dock.npy
-!codigo/iter4/data/respaldo_puntas/StylusTipToDodecaedro_femto_dock.txt
+# Slicer ni estado.py la vean; el original sigue fuera de git. Desde la meta 003
+# (fase 3) los dos estan archivados en codigo/historico/iter4/dodecahedron/data/.
+!codigo/historico/iter4/dodecahedron/data/respaldo_puntas/StylusTipToDodecaedro_femto_dock.npy
+!codigo/historico/iter4/dodecahedron/data/respaldo_puntas/StylusTipToDodecaedro_femto_dock.txt
 
 # Copias de seguridad del perfil que deja el panel al apuntarlo a un .yml
 # (perfil_editor.aplicar_cambio, ADR-018: <perfil>.bak-AAAAMMDD-HHMMSS junto
 # al perfil). Son locales: el historial de git ya guarda el antes (meta 002,
-# fase 5).
-codigo/iter4/*.bak-*
+# fase 5). Desde la meta 003 (fase 3) los perfiles viven en codigo/profiles/.
+codigo/profiles/*.bak-*
 
 # Archivos del sistema operativo
 .DS_Store

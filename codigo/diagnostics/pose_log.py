@@ -22,7 +22,7 @@ que `tests/replay_util.cargar_dataset` las lee igual.
 `summarize` resume una grabacion para la linea base. Como CLI, desde
 `codigo\\` con el venv y los argumentos explicitos:
 
-    python iter4\\pose_log.py --input "<grabacion>.npz" --name Marker0 ^
+    python -m diagnostics.pose_log --input "<grabacion>.npz" --name Marker0 ^
         --output "<resumen>.json"
 """
 from __future__ import annotations

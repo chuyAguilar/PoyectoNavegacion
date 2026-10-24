@@ -15,10 +15,10 @@ import sys
 
 import pytest
 
-import camaras_uvc as cu
-import procesos
+from camera import uvc as cu
+from gui import processes as procesos
 
-from .conftest import ITER4_DIR
+from .conftest import CODIGO_DIR
 
 VAR = "OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS"
 PY = sys.executable
@@ -78,12 +78,14 @@ def test_en_esta_sesion_queda_puesta() -> None:
 # Cada script que abre MSMF, importado en un proceso nuevo (sin la variable)
 # ----------------------------------------------------------------------------
 
-MODULOS_MSMF = ["camera_backend", "camaras_uvc", "ajustes_camara", "sondear_camara", "medir_modos",
-                "identificar_ids", "calibrar_camara", "comprobar_escala", "calibrar_tip_divot",
-                "captura_calibracion"]
+# Meta 003, fase 3 (ADR-027): los modulos por su paquete; calibrar_tip_divot y captura_calibracion
+# se archivaron con el dodecaedro. El paquete `camera` solo, tambien (su __init__ importa camera.uvc).
+MODULOS_MSMF = ["camera", "camera.backend", "camera.uvc", "camera.controls", "diagnostics.probe_camera",
+                "diagnostics.measure_modes", "diagnostics.identify_ids", "calibration.calibrate_camera",
+                "calibration.check_scale"]
 # (modulo, valor de la variable al lanzar o None si no esta)
 CASOS = [(m, None) for m in MODULOS_MSMF] + [("tracker", None), ("tracker", "0"),
-                                             ("camera_backend", "1")]
+                                             ("camera.backend", "1")]
 
 
 @pytest.fixture(scope="module")
@@ -99,10 +101,10 @@ def importados() -> dict:
         env = {k: v for k, v in os.environ.items() if k != VAR}
         if valor is not None:
             env[VAR] = valor
-        codigo = (f"import {modulo}, camaras_uvc as c, os; e = c.ACELERACION_MSMF; "
+        codigo = (f"import {modulo}, os; import camera.uvc as c; e = c.ACELERACION_MSMF; "
                   f"print(e['efectiva'], e['valor'], e['puesta_aqui'], os.environ.get({VAR!r}))")
         procs[(modulo, valor)] = subprocess.Popen(
-            [PY, "-c", codigo], cwd=str(ITER4_DIR), env=env, text=True,
+            [PY, "-c", codigo], cwd=str(CODIGO_DIR), env=env, text=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     salida = {}
     for clave, p in procs.items():
@@ -128,7 +130,7 @@ def test_tracker_importa_cv2_antes_y_no_la_ve(importados: dict) -> None:
 
 
 def test_un_uno_explicito_se_respeta_en_proceso_nuevo(importados: dict) -> None:
-    assert importados[("camera_backend", "1")] == ["encendida", "1", "False", "1"]
+    assert importados[("camera.backend", "1")] == ["encendida", "1", "False", "1"]
 
 
 # ----------------------------------------------------------------------------

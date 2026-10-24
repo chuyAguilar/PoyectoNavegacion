@@ -61,19 +61,19 @@ stdDeviationsIntrinsics, stdDeviationsExtrinsics, perViewErrors); retval es el
 RMS global y stdDeviationsIntrinsics empieza por fx, fy, cx, cy.
 
 Uso (desde codigo\\, con el venv; argumentos explicitos, principio 7):
-    python iter4\\calibrar_camara.py --config iter4\\tracker_config_gs1.yaml ^
-        --output iter4\\data\\intrinsecos_gs1_1280x960.yml ^
+    python -m calibration.calibrate_camera --config profiles\\tracker_config_gs1.yaml ^
+        --output data\\intrinsecos_gs1_1280x960.yml ^
         --square-mm 24.97 --medidas-mm 99.90,99.85,99.92,99.88,99.86 ^
         --cols 8 --rows 5 --detector clasico ^
         --vistas-dir "..\\Claude outputs\\camaras\\vistas_gs1" ^
         --min-vistas 15 --n-control 3 --luz "caja nivel 2" ^
         --reporte "..\\Claude outputs\\camaras\\calibracion_gs1_clasico.json" --timeout 900
-    python iter4\\calibrar_camara.py --config iter4\\tracker_config_gs1.yaml ^
+    python -m calibration.calibrate_camera --config profiles\\tracker_config_gs1.yaml ^
         --output "..\\Claude outputs\\camaras\\intrinsecos_gs1_sb.yml" --square-mm 24.97 ^
         --cols 8 --rows 5 --detector sb --desde-vistas "..\\Claude outputs\\camaras\\vistas_gs1" ^
         --min-vistas 15 --n-control 3 --reporte "..\\Claude outputs\\camaras\\calibracion_gs1_sb.json" --timeout 600
-    python iter4\\calibrar_camara.py --config iter4\\tracker_config_gs2.yaml ^
-        --output iter4\\data\\intrinsecos_gs2_1280x960.yml --square-mm 24.86 ^
+    python -m calibration.calibrate_camera --config profiles\\tracker_config_gs2.yaml ^
+        --output data\\intrinsecos_gs2_1280x960.yml --square-mm 24.86 ^
         --medidas-mm 149.1,149.1,149.1,149.1,149.4 --casillas-por-medida 6 ^
         --cols 8 --rows 5 --detector ambos --vistas-dir "..\\Claude outputs\\camaras\\vistas_gs2" ^
         --min-vistas 15 --n-control 3 --luz "caja nivel 2" ^
@@ -91,15 +91,15 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-import camaras_uvc  # noqa: F401  (antes de cv2: apaga la aceleracion HW de MSMF; meta 002, fase 2b)
+from camera import uvc as camaras_uvc  # noqa: F401  (antes de cv2: apaga la aceleracion HW de MSMF; meta 002, fase 2b)
 import cv2
 import numpy as np
 
-from camera_backend import create_backend
-from captura_calibracion import cargar_config
-from sondear_camara import _vigilante
+from camera.backend import create_backend
+import profiles
+from diagnostics.probe_camera import _vigilante
 
-TITULO_VENTANA = "Calibracion camara iter4 - ESPACIO captura, q calibra"
+TITULO_VENTANA = "Calibracion camara - ESPACIO captura, q calibra"
 DETECTORES = ("clasico", "sb")
 MODOS_DETECTOR = DETECTORES + ("ambos",)   # --detector; comprobar_escala usa solo DETECTORES
 DETECTOR_CAPTURA_AMBOS = "clasico"         # con --detector ambos se captura con este (el de la sesion en vivo)
@@ -408,7 +408,7 @@ def guardar_yml(output_path, K, dist, width, height, rmse, n_vistas,
     fs.write("n_views", int(n_vistas))
     fs.write("board", f"{cols}x{rows} inner corners @ {square_mm} mm")
     fs.write("square_mm", float(square_mm))
-    fs.write("generated_by", "iter4/calibrar_camara.py")
+    fs.write("generated_by", "calibration/calibrate_camera.py")
     fs.write("generated_at_utc", datetime.now(timezone.utc).isoformat())
     for k, v in (extra or {}).items():
         _escribir_nodo(fs, str(k), v)
@@ -623,7 +623,7 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError as e:
             ap.error(str(e))
 
-    cfg = cargar_config(args.config)
+    cfg = profiles.load(args.config, missing_ok=True)   # el .yml del perfil se esta creando: no tiene que existir
     cam_cfg = cfg["camera"]
     modo = _modo_del_perfil(cam_cfg)
     estado: dict = {"fecha": time.strftime("%Y-%m-%d %H:%M:%S"), "argv": sys.argv[1:] if argv is None else argv,

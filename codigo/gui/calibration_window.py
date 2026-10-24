@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-calibracion.py — Lo que hay detras de la ventana "Calibrar camara" del panel
-(meta 002, fase 5; P19, P20, P21). SIN Qt, para poder probarlo sin pantalla.
+calibration_window.py — Lo que hay detras de la ventana "Calibrar camara" del
+panel (meta 002, fase 5; P19, P20, P21; era gui/calibracion.py). SIN Qt, para
+poder probarlo sin pantalla.
 
 La ventana tiene tres pasos sin campos: 1 enfocar el lente, 2 calibrar con el
 tablero, 3 comprobar la escala con la regla. Todo lo fijo vive aqui y no se
@@ -31,9 +32,10 @@ from pathlib import Path
 
 import yaml
 
-import recetas
+import profiles
+from gui import recipes as recetas
 
-RUTA_TABLERO = recetas.RAIZ_CODIGO / "iter4" / "data" / "tablero_calibracion.yaml"
+RUTA_TABLERO = profiles.DATA_DIR / "tablero_calibracion.yaml"
 DIR_CAMARAS = "../Claude outputs/camaras"      # relativo a codigo\ (CWD de los procesos)
 
 # Lo fijo de la ventana (P21): no se ve, va en los argumentos.
@@ -192,7 +194,7 @@ def salidas_del_perfil(ruta_cfg, cfg) -> dict:
     vistas = f"{DIR_CAMARAS}/vistas_{slug}"
     return {
         "slug": slug,
-        "yml": f"iter4/data/intrinsecos_{slug}_{modo_del_perfil(cfg)}.yml",
+        "yml": f"data/intrinsecos_{slug}_{modo_del_perfil(cfg)}.yml",
         "vistas": vistas,
         "reporte": recetas.reporte_por_defecto(vistas, slug, DETECTOR),
         "escala": f"{DIR_CAMARAS}/escala_{slug}.json",
@@ -238,7 +240,7 @@ def receta_escala_perfil(ruta_cfg, ruta_yml, tablero: Tablero, recorrido_mm=RECO
                          idas_y_vueltas=IDAS_Y_VUELTAS):
     """Paso 3: comprobar_escala.py con el lado y el detector que declara el .yml del perfil
     (los de la calibracion) y las posiciones de ida y vuelta."""
-    from perfil_editor import leer_campos_yml
+    from gui.profile_editor import leer_campos_yml
     campos = leer_campos_yml(ruta_yml)
     detector = campos.get("detector")
     if detector not in recetas.DETECTORES_ESCALA:
@@ -321,7 +323,7 @@ def _texto_calibracion(fecha, error_px, limite, ok):
 
 
 def _calibracion_desde_yml(ruta):
-    from perfil_editor import leer_campos_yml
+    from gui.profile_editor import leer_campos_yml
     try:
         c = leer_campos_yml(ruta)
     except OSError:

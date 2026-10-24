@@ -14,15 +14,15 @@ import cv2
 import numpy as np
 import pytest
 
-import calibrar_camara as cc
-import camera_backend
-import perfil_editor
-import recetas
+from calibration import calibrate_camera as cc
+from camera import backend as camera_backend
+from gui import profile_editor as perfil_editor
+from gui import recipes as recetas
 
-from .conftest import ITER4_DIR
+from .conftest import CODIGO_DIR, PROFILES_DIR
 from . import tablero_sintetico as ts
 
-PERFIL_GS1 = str(ITER4_DIR / "tracker_config_gs1.yaml")
+PERFIL_GS1 = str(PROFILES_DIR / "tracker_config_gs1.yaml")
 COLS, ROWS, SQ = 8, 5, 24.97
 
 
@@ -566,15 +566,15 @@ def test_main_un_detector_sigue_igual(tmp_path, vistas_gs1_modulo) -> None:
 # ----------------------------------------------------------------------------
 
 def test_receta_calibrar_camara_explicita() -> None:
-    r = recetas.receta_calibrar_camara(PERFIL_GS1, "iter4/data/intrinsecos_gs1_1280x960.yml", 24.97,
+    r = recetas.receta_calibrar_camara(PERFIL_GS1, "data/intrinsecos_gs1_1280x960.yml", 24.97,
                                        "../Claude outputs/camaras/vistas_gs1", detector="sb", luz="caja nivel 2")
     a = r.argv
-    assert a[2] == "iter4/calibrar_camara.py" and a[a.index("--square-mm") + 1] == "24.97"
+    assert a[2:4] == ["-m", "calibration.calibrate_camera"] and a[a.index("--square-mm") + 1] == "24.97"
     assert a[a.index("--detector") + 1] == "sb" and a[a.index("--vistas-dir") + 1].endswith("vistas_gs1")
     assert a[a.index("--min-vistas") + 1] == "15" and a[a.index("--n-control") + 1] == "3"
     assert a[a.index("--luz") + 1] == "caja nivel 2" and a[a.index("--timeout") + 1] == "900"
     assert r.ventana_titulo == cc.TITULO_VENTANA and r.usa_camara
-    assert r.outputs == [recetas._rel("iter4/data/intrinsecos_gs1_1280x960.yml")]
+    assert r.outputs == [recetas._rel("data/intrinsecos_gs1_1280x960.yml")]
     assert "24.97 mm medidos" in r.descripcion
 
 
@@ -594,10 +594,10 @@ def test_receta_calibrar_camara_sin_square_mm_no_compila() -> None:
         recetas.receta_calibrar_camara(PERFIL_GS1, "x.yml")        # square_mm y vistas_dir sin default
 
 
-@pytest.mark.parametrize("modulo", ["calibrar_camara", "comprobar_escala"])
+@pytest.mark.parametrize("modulo", ["calibration/calibrate_camera", "calibration/check_scale"])
 def test_importa_camaras_uvc_antes_que_cv2(modulo: str) -> None:
-    fuente = (ITER4_DIR / f"{modulo}.py").read_text(encoding="utf-8")
-    assert fuente.index("import camaras_uvc") < fuente.index("import cv2")
+    fuente = (CODIGO_DIR / f"{modulo}.py").read_text(encoding="utf-8")
+    assert fuente.index("from camera import uvc") < fuente.index("import cv2")
 
 
 def test_textos_de_la_ventana_llanos_y_sin_acentos() -> None:

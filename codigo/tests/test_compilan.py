@@ -1,5 +1,7 @@
-"""Cada .py de codigo/iter4/, codigo/iter4/gui/ y codigo/slicer/ compila (meta 001, fase 1;
-los scripts de Slicer desde la meta 003, fase 2: solo compilan, importan `slicer` y `qt`).
+"""Cada .py del codigo vivo compila (meta 001, fase 1): tracker.py y los paquetes
+de codigo/ (camera, calibration, diagnostics, gui, profiles; meta 003, fase 3)
+y codigo/slicer/ (desde la meta 003, fase 2: solo compilan, importan `slicer`
+y `qt`). Lo archivado en codigo/historico/ no se recorre.
 
 El .pyc va a tmp_path: no ensucia los __pycache__ del arbol.
 """
@@ -10,10 +12,18 @@ from pathlib import Path
 
 import pytest
 
-from .conftest import CODIGO_DIR, GUI_DIR, ITER4_DIR
+from .conftest import CODIGO_DIR, PACKAGES
 
-SCRIPTS = (sorted(ITER4_DIR.glob("*.py")) + sorted(GUI_DIR.glob("*.py"))
+SCRIPTS = ([CODIGO_DIR / "tracker.py"]
+           + [p for pkg in PACKAGES for p in sorted((CODIGO_DIR / pkg).glob("*.py"))]
            + sorted((CODIGO_DIR / "slicer").glob("*.py")))
+
+
+def test_estan_los_paquetes() -> None:
+    """Ningun paquete vacio por un movimiento a medias (fase 3)."""
+    for pkg in PACKAGES:
+        assert (CODIGO_DIR / pkg / "__init__.py").is_file(), pkg
+    assert not (CODIGO_DIR / "iter4").joinpath("tracker.py").exists()
 
 
 @pytest.mark.parametrize(

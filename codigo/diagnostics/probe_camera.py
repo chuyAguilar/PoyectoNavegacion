@@ -57,18 +57,18 @@ Todo lleva tope de tiempo (--timeout) y libera la camara (principio 9); si el
 tope no alcanza para los modos pedidos, la sonda no empieza. Los argumentos van
 explicitos (principio 7). Ejemplos:
 
-    python iter4\\sondear_camara.py --source 0 --backend MSMF --controles no ^
+    python -m diagnostics.probe_camera --source 0 --backend MSMF --controles no ^
         --fps 90 --modos 640x480:MJPG,1280x720:MJPG,1920x1200:MJPG ^
         --segundos 5 --salida "..\\Claude outputs\\camaras\\modos_gs1_msmf.json" ^
         --timeout 300
-    python iter4\\sondear_camara.py --source 0 --backend DSHOW --controles probar ^
+    python -m diagnostics.probe_camera --source 0 --backend DSHOW --controles probar ^
         --salida "..\\Claude outputs\\camaras\\controles_gs1_dshow.json" --timeout 180
-    python iter4\\sondear_camara.py --puertos ^
+    python -m diagnostics.probe_camera --puertos ^
         --salida "..\\Claude outputs\\camaras\\puertos_cam1_p1.json" --timeout 60
-    python iter4\\sondear_camara.py --fijar "exposure_ms=1.953,gain=11" ^
+    python -m diagnostics.probe_camera --fijar "exposure_ms=1.953,gain=11" ^
         --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(2)" ^
         --salida "..\\Claude outputs\\camaras\\fijar_cam1.json" --timeout 60
-    python iter4\\sondear_camara.py --fijar "focus=332" --forzar ^
+    python -m diagnostics.probe_camera --fijar "focus=332" --forzar ^
         --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)" ^
         --salida "..\\Claude outputs\\camaras\\marca_gs2.json" --timeout 60
 """
@@ -83,10 +83,10 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 
-import camaras_uvc   # antes de cv2: apaga la aceleracion HW de MSMF (fase 2b, correccion)
+from camera import uvc as camaras_uvc   # antes de cv2: apaga la aceleracion HW de MSMF (fase 2b, correccion)
 import cv2
 
-import ajustes_camara
+from camera import controls as ajustes_camara
 
 # Nombre crudo del control -> propiedad de cv2 (los 12 que mide la sonda).
 # Una sola fuente: ajustes_camara.CONTROLES_SONDA (fase 2a).

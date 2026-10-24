@@ -5,8 +5,8 @@ Soporta marcadores individuales Y rigid bodies multi-marker (ej: dodecaedro).
 Cuando se ven multiples marcadores del mismo rigid body, calcula UNA sola pose
 optima usando todos los puntos 3D-2D combinados con cv2.solvePnP.
 
-Uso:
-    python tracker.py --config tracker_config.yaml
+Uso (desde codigo\\, con el venv; meta 003, fase 3, ADR-027):
+    python -m tracker --config profiles\\tracker_config_gs1.yaml
 
 Slicer debe conectarse como CLIENTE a:
     - localhost:18944 para transformadas
@@ -24,40 +24,16 @@ import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation as _Rot
 import pyigtl
-import yaml
 
-# Backend abstracto de camara (iter 4): permite webcam o femtobolt via config.
-from camera_backend import create_backend
+# Backend de camara (camera/backend.py; desde la meta 003 solo webcam).
+from camera.backend import create_backend
+# Carga del perfil: rutas relativas a codigo/ (meta 003, fase 3).
+import profiles
 
 
 # ============================================================================
 # CARGA DE CONFIGURACION Y CALIBRACION
 # ============================================================================
-
-def cargar_config(ruta):
-    """Carga el YAML de config y resuelve las rutas de archivos (geometry_file,
-    calibration_file) probando relativas al cwd y al directorio del config.
-    Asi el tracker corre desde cualquier carpeta (codigo\\ o codigo\\iter4\\)."""
-    cfg_dir = Path(ruta).resolve().parent
-    with open(ruta, "r", encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
-
-    def _resolver(p):
-        if not p:
-            return p
-        for cand in (Path(p), cfg_dir / p):
-            if cand.exists():
-                return str(cand)
-        return p
-
-    for rb in cfg.get("rigid_bodies", []) or []:
-        if rb.get("geometry_file"):
-            rb["geometry_file"] = _resolver(rb["geometry_file"])
-    cam = cfg.get("camera", {}) or {}
-    if cam.get("calibration_file"):
-        cam["calibration_file"] = _resolver(cam["calibration_file"])
-    return cfg
-
 
 def cargar_calibracion(ruta):
     """Lee el archivo de calibracion OpenCV YAML y devuelve (K, dist)."""
@@ -454,13 +430,13 @@ def main(argv=None):
     if args.duration is not None and args.duration <= 0:
         parser.error("--duration tiene que ser > 0")
 
-    cfg = cargar_config(args.config)
+    cfg = profiles.load(args.config)
 
     # Grabacion: se crea antes de abrir la camara para fallar pronto si la
     # salida ya existe.
     log = None
     if args.record:
-        from pose_log import PoseLog
+        from diagnostics.pose_log import PoseLog
         log = PoseLog(Path(args.record),
                       Path(args.save_frames) if args.save_frames else None,
                       args.frames_every)

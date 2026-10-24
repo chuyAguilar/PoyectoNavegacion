@@ -39,7 +39,7 @@ cv2) se importa antes de cv2 en quien abre MSMF; si cv2 ya estaba cargado, la
 variable no llega y describir_aceleracion_msmf() lo dice.
 
 Uso (solo lista; no necesita argumentos):
-    python iter4\\camaras_uvc.py
+    python -m camera.uvc
 """
 from __future__ import annotations
 

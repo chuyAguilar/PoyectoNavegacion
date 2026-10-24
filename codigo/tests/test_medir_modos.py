@@ -20,12 +20,13 @@ import numpy as np
 import pytest
 import yaml
 
-import medir_modos as mm
+from diagnostics import measure_modes as mm
+import profiles
 import tracker
 
-from .conftest import ITER4_DIR
+from .conftest import CODIGO_DIR, DODECAHEDRON_DIR, PROFILES_DIR
 
-PERFIL_GS1 = str(ITER4_DIR / "tracker_config_gs1.yaml")
+PERFIL_GS1 = str(PROFILES_DIR / "tracker_config_gs1.yaml")
 DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_MIP_36h12)
 
 
@@ -70,9 +71,9 @@ def cfg_gs1() -> dict:
     la meta 003 (ADR-026 lo quito del perfil). medir_modos sigue midiendo el
     tracking con el dodecaedro hasta la fase 4 (pasa a Marker0); estas pruebas
     fijan ese comportamiento de hoy, asi que le devuelven el bloque."""
-    cfg = tracker.cargar_config(PERFIL_GS1)
+    cfg = profiles.load(PERFIL_GS1)
     cfg["rigid_bodies"] = [{"name": "Dodecaedro", "marker_mm": 14.6,
-                            "geometry_file": str(ITER4_DIR / "data" / "reference_dodecaedro_v2_calibrado.txt")}]
+                            "geometry_file": str(DODECAHEDRON_DIR / "data" / "reference_dodecaedro_v2_calibrado.txt")}]
     cfg["rigid_bodies_quality"] = {"min_markers": 3}
     return cfg
 
@@ -329,7 +330,7 @@ def perfil_gs1_con_dodecaedro(tmp_path) -> str:
     `main` -> `preparar_tracking` exige hasta la fase 4 de la meta 003 (ver `cfg_gs1`)."""
     cfg = yaml.safe_load(Path(PERFIL_GS1).read_text(encoding="utf-8"))
     cfg["rigid_bodies"] = [{"name": "Dodecaedro", "marker_mm": 14.6,
-                            "geometry_file": str(ITER4_DIR / "data" / "reference_dodecaedro_v2_calibrado.txt")}]
+                            "geometry_file": str(DODECAHEDRON_DIR / "data" / "reference_dodecaedro_v2_calibrado.txt")}]
     cfg["rigid_bodies_quality"] = {"min_markers": 3}
     ruta = tmp_path / "tracker_config_gs1.yaml"
     ruta.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
@@ -363,11 +364,18 @@ def test_main_para_si_el_tope_no_alcanza(tmp_path, capsys) -> None:
     assert "el tope no alcanza" in capsys.readouterr().err
 
 
-def test_main_exige_perfil_con_puerto(tmp_path) -> None:
+def test_main_exige_perfil_con_puerto(tmp_path, capsys) -> None:
+    # Un perfil sin camera.usb_port_windows (antes, el del doctor: archivado y con el dodecaedro,
+    # que desde la meta 003, fase 3, profiles.load ya no encuentra).
+    cfg = yaml.safe_load(Path(PERFIL_GS1).read_text(encoding="utf-8"))
+    del cfg["camera"]["usb_port_windows"], cfg["camera"]["marca"], cfg["camera"]["controls"]
+    cfg["camera"]["source"] = 1
+    ruta = tmp_path / "tracker_config_sin_puerto.yaml"
+    ruta.write_text(yaml.safe_dump(cfg), encoding="utf-8")
     with pytest.raises(SystemExit):
-        mm.main(["--config", str(ITER4_DIR / "data" / "historico" / "tracker_config_doctor.yaml"),   # sin puerto (archivado, fase 6)
-                 "--enfocar", "--modo", "640x480:MJPG",
+        mm.main(["--config", str(ruta), "--enfocar", "--modo", "640x480:MJPG",
                  "--fps", "90", "--salida", str(tmp_path / "m.json"), "--timeout", "60"])
+    assert "no trae camera.usb_port_windows" in capsys.readouterr().err
 
 
 def test_main_exposicion_con_camara_falsa(tmp_path, monkeypatch) -> None:
@@ -445,8 +453,8 @@ def test_main_elegir_sin_camara(tmp_path) -> None:
 def test_importa_camaras_uvc_antes_que_cv2() -> None:
     """La aceleracion HW de MSMF se apaga antes de cargar cv2 (CONTEXT.md 4.18); lo fija
     tambien test_aceleracion_msmf.MODULOS_MSMF en un proceso nuevo."""
-    fuente = (ITER4_DIR / "medir_modos.py").read_text(encoding="utf-8")
-    assert fuente.index("import camaras_uvc") < fuente.index("import cv2")
+    fuente = (CODIGO_DIR / "diagnostics" / "measure_modes.py").read_text(encoding="utf-8")
+    assert fuente.index("from camera import uvc") < fuente.index("import cv2")
 
 
 # ----------------------------------------------------------------------------

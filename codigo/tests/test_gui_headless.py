@@ -1,13 +1,15 @@
 """El panel importa y arranca sin camara (meta 001, fase 1).
 
-- Los modulos de codigo/iter4/gui/ importan (9 desde la fase 5 de la meta 002: calibracion.py).
-- `panel.py --selftest` corre como subproceso con QT_QPA_PLATFORM=offscreen,
+- Los modulos de codigo/gui/ importan como `gui.<modulo>` (7 + __init__ desde la meta 003,
+  fase 3: sin el asistente del dodecaedro ni el monitor del BA, archivados).
+- `python -m gui.panel --selftest` corre como subproceso con QT_QPA_PLATFORM=offscreen,
   CWD codigo/ y tope de 60 s: abre el panel, refresca los semaforos, imprime
   y se cierra solo. No sondea la camara (solo bajo demanda) y el chequeo del
   puerto 18944 solo hace bind/close.
 - Desde la meta 003 (fase 2, ADR-026) el selftest se abre con el perfil gs1,
-  que ya no trae rigid_bodies: «Arrancar tracker» tiene que quedar habilitado
-  con la geometria y la punta en GRIS (no aplican).
+  que ya no trae rigid_bodies: «Arrancar tracker» tiene que quedar habilitado.
+  Desde la fase 3 ya no hay semaforos de geometria ni de punta, ni botones del
+  asistente o del dock, y las recetas lanzan `python -u -m <paquete>.<modulo>`.
 """
 from __future__ import annotations
 
@@ -22,7 +24,7 @@ import pytest
 
 from .conftest import CODIGO_DIR, GUI_DIR
 
-MODULOS_GUI = sorted(p.stem for p in GUI_DIR.glob("*.py"))
+MODULOS_GUI = sorted(f"gui.{p.stem}" for p in GUI_DIR.glob("*.py") if p.stem != "__init__")
 TOPE_SELFTEST_S = 60
 
 
@@ -37,7 +39,7 @@ def test_panel_selftest() -> None:
     entorno["PYTHONIOENCODING"] = "utf-8"
     t0 = time.monotonic()
     proc = subprocess.run(
-        [sys.executable, str(GUI_DIR / "panel.py"), "--selftest", "--perfil", "tracker_config_gs1.yaml"],
+        [sys.executable, "-m", "gui.panel", "--selftest", "--perfil", "tracker_config_gs1.yaml"],
         cwd=str(CODIGO_DIR), env=entorno, capture_output=True,
         text=True, encoding="utf-8", errors="replace",
         timeout=TOPE_SELFTEST_S,
@@ -56,22 +58,24 @@ def test_panel_selftest() -> None:
 
     # Meta 003, fase 2 (ADR-026): con gs1, sin rigid_bodies, el tracker se puede arrancar.
     assert linea("perfil") == "[panel-selftest] perfil=tracker_config_gs1.yaml"
-    assert linea("geometria").startswith("[panel-selftest] geometria=GRIS"), linea("geometria")
-    assert linea("punta").startswith("[panel-selftest] punta=GRIS"), linea("punta")
+    # Fase 3: sin semaforos de geometria ni de punta, sin botones del asistente ni del dock.
+    for fuera in ("geometria=", "punta=", "boton_asistente", "boton_divot", "asistente_"):
+        assert not any(ln.startswith(f"[panel-selftest] {fuera}") for ln in lineas), fuera
+    assert linea("config").startswith("[panel-selftest] config=VERDE"), linea("config")
     assert linea("apto_tracker") == "[panel-selftest] apto_tracker=SI", linea("apto_tracker")
     assert linea("boton_tracker_habilitado") == "[panel-selftest] boton_tracker_habilitado=True"
     assert "[panel-selftest] calcam_lado=24.86" in salida, salida
     enfocar = linea("enfocar_argv")
-    for trozo in ("iter4/medir_modos.py", "tracker_config_gs1.yaml", "--enfocar", "--modo 1280x960:MJPG",
+    for trozo in ("-m diagnostics.measure_modes", "tracker_config_gs1.yaml", "--enfocar", "--modo 1280x960:MJPG",
                   "--fps 90", "enfoque_gs1.json", "--timeout 600"):
         assert trozo in enfocar, enfocar
     calcam = linea("calcam_argv")
-    for trozo in ("--square-mm 24.86", "--cols 8 --rows 5", "--detector ambos",
+    for trozo in ("-m calibration.calibrate_camera", "--square-mm 24.86", "--cols 8 --rows 5", "--detector ambos",
                   "--medidas-mm 149.1,149.1,149.1,149.1,149.4", "--casillas-por-medida 6", "--luz caja nivel 2",
                   "--reporte ", "calibracion_gs1_ambos.json", "intrinsecos_gs1_1280x960.yml"):
         assert trozo in calcam, calcam
     escala = linea("escala_argv")
-    for trozo in ("iter4/comprobar_escala.py", "tracker_config_gs1.yaml", "--desplazamientos-mm 0,80,0,80,0,80",
+    for trozo in ("-m calibration.check_scale", "tracker_config_gs1.yaml", "--desplazamientos-mm 0,80,0,80,0,80",
                   "--frames-por-posicion 30", "--luz caja nivel 2", "escala_gs1.json"):
         assert trozo in escala, escala
     for clave in ("enfocar_ultima", "calcam_ultima", "escala_ultima"):

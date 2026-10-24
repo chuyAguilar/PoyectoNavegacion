@@ -37,11 +37,11 @@ Context7 (2026-10-22, OpenCV 4.13; instalado 4.11): solvePnP con
 SOLVEPNP_IPPE exige puntos coplanares y >= 4; imagePoints contiguos (N,1,2).
 
 Uso (desde codigo\\, con el venv):
-    python iter4\\comprobar_escala.py --config iter4\\tracker_config_gs1.yaml ^
+    python -m calibration.check_scale --config profiles\\tracker_config_gs1.yaml ^
         --cols 8 --rows 5 --square-mm 24.97 --detector clasico ^
         --desplazamientos-mm 0,100,200 --frames-por-posicion 30 --luz "caja nivel 2" ^
         --salida "..\\Claude outputs\\camaras\\escala_gs1.json" --timeout 600
-    python iter4\\comprobar_escala.py --desde-json "..\\Claude outputs\\camaras\\escala_gs2.json" ^
+    python -m calibration.check_scale --desde-json "..\\Claude outputs\\camaras\\escala_gs2.json" ^
         --salida "..\\Claude outputs\\camaras\\escala_gs2.json"
 Teclas: ESPACIO = medir esta posicion | q = salir antes
 """
@@ -53,14 +53,14 @@ import sys
 import time
 from pathlib import Path
 
-import camaras_uvc  # noqa: F401  (antes de cv2: apaga la aceleracion HW de MSMF)
+from camera import uvc as camaras_uvc  # noqa: F401  (antes de cv2: apaga la aceleracion HW de MSMF)
 import cv2
 import numpy as np
 
-from calibrar_camara import DETECTORES, construir_objp, detectar_esquinas
-from camera_backend import create_backend
-from captura_calibracion import cargar_config
-from sondear_camara import _vigilante
+from calibration.calibrate_camera import DETECTORES, construir_objp, detectar_esquinas
+from camera.backend import create_backend
+import profiles
+from diagnostics.probe_camera import _vigilante
 
 TOLERANCIA_MM_POR_100 = 1.0       # P6
 VENTANA = "Comprobar escala - ESPACIO posicion, q salir"
@@ -416,7 +416,7 @@ def main(argv: list[str] | None = None, abrir=None) -> int:
     if args.square_mm <= 0 or args.frames_por_posicion < 1:
         ap.error("--square-mm > 0 y --frames-por-posicion >= 1")
 
-    cfg = cargar_config(args.config)
+    cfg = profiles.load(args.config)
     cam_cfg = cfg["camera"]
     if not cam_cfg.get("calibration_file"):
         ap.error(f"el perfil {args.config} no tiene calibration_file: calibra primero (calibrar_camara.py) y apunta el perfil")

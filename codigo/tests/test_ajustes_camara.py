@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-import ajustes_camara as ac
-import camaras_uvc as cu
+from camera import controls as ac
+from camera import uvc as cu
 
 PUERTO_1 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(2)"
 PUERTO_2 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(3)"

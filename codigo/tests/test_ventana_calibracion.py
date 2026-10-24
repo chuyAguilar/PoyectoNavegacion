@@ -17,15 +17,15 @@ import time
 import numpy as np
 import pytest
 
-import calibracion
-import calibrar_camara as cc
-import comprobar_escala as ce
-import medir_modos as mm
-import recetas
+from gui import calibration_window as calibracion
+from calibration import calibrate_camera as cc
+from calibration import check_scale as ce
+from diagnostics import measure_modes as mm
+from gui import recipes as recetas
 
-from .conftest import DATA_DIR, ITER4_DIR
+from .conftest import DATA_DIR, PROFILES_DIR
 
-PERFIL_GS1 = str(ITER4_DIR / "tracker_config_gs1.yaml")
+PERFIL_GS1 = str(PROFILES_DIR / "tracker_config_gs1.yaml")
 MEDIDAS_P17 = [149.1, 149.1, 149.1, 149.1, 149.4]
 
 
@@ -114,7 +114,7 @@ def test_receta_enfocar_y_su_ventana() -> None:
     r = recetas.receta_enfocar(PERFIL_GS1, 1280, 960, "MJPG", 90, "../Claude outputs/camaras/enfoque_gs1.json",
                                luz="caja nivel 2")
     a = r.argv
-    assert a[2] == "iter4/medir_modos.py" and "--enfocar" in a and _a(a, "--modo") == "1280x960:MJPG"
+    assert a[2:4] == ["-m", "diagnostics.measure_modes"] and "--enfocar" in a and _a(a, "--modo") == "1280x960:MJPG"
     assert _a(a, "--fps") == "90" and _a(a, "--timeout") == "600" and _a(a, "--luz") == "caja nivel 2"
     assert _a(a, "--salida").replace("\\", "/").endswith("enfoque_gs1.json")
     assert r.clave == "enfocar" and r.usa_camara and r.ventana_titulo == mm.VENTANA
@@ -133,7 +133,7 @@ def test_receta_enfocar_invalida_para(kwargs) -> None:
 
 def test_salidas_del_perfil() -> None:
     s = calibracion.salidas_del_perfil(PERFIL_GS1, _cfg())
-    assert s["slug"] == "gs1" and s["yml"] == "iter4/data/intrinsecos_gs1_1280x960.yml"
+    assert s["slug"] == "gs1" and s["yml"] == "data/intrinsecos_gs1_1280x960.yml"
     assert s["reporte"] == "../Claude outputs/camaras/calibracion_gs1_ambos.json"
     assert s["escala"].endswith("escala_gs1.json") and s["enfoque"].endswith("enfoque_gs1.json")
     with pytest.raises(ValueError):
@@ -155,7 +155,7 @@ def test_receta_calibrar_con_el_tablero_guardado() -> None:
     assert _a(a, "--detector") == "ambos" and _a(a, "--min-vistas") == "15" and _a(a, "--n-control") == "3"
     assert _a(a, "--medidas-mm") == "149.1,149.1,149.1,149.1,149.4" and _a(a, "--casillas-por-medida") == "6"
     assert _a(a, "--luz") == "caja nivel 2" and _a(a, "--timeout") == "900"
-    assert _a(a, "--output").replace("\\", "/") == "iter4/data/intrinsecos_gs1_1280x960.yml"
+    assert _a(a, "--output").replace("\\", "/") == "data/intrinsecos_gs1_1280x960.yml"
     assert _a(a, "--reporte").replace("\\", "/").endswith("calibracion_gs1_ambos.json")
     assert cc.comprobar_lado(24.86, cc._parsear_medidas(_a(a, "--medidas-mm")), 6) == 24.86
     assert calibracion.LIMITE_ERROR_PX == cc.CRITERIO["rms_control_px"]
@@ -182,7 +182,7 @@ def _yml(tmp_path, detector="sb", cumplido=True, nombre="intrinsecos_gs9_1280x96
 def test_receta_escala_con_el_yml_del_perfil(tmp_path) -> None:
     t = calibracion.leer_tablero(DATA_DIR / "tablero_calibracion.yaml")
     a = calibracion.receta_escala_perfil(PERFIL_GS1, _yml(tmp_path), t, 80, 3).argv
-    assert a[2] == "iter4/comprobar_escala.py" and _a(a, "--square-mm") == "24.86" and _a(a, "--detector") == "sb"
+    assert a[2:4] == ["-m", "calibration.check_scale"] and _a(a, "--square-mm") == "24.86" and _a(a, "--detector") == "sb"
     assert _a(a, "--desplazamientos-mm") == "0,80,0,80,0,80" and _a(a, "--cols") == "8" and _a(a, "--rows") == "5"
     assert _a(a, "--salida").replace("\\", "/").endswith("escala_gs1.json") and _a(a, "--timeout") == "900"
     a2 = calibracion.receta_escala_perfil(PERFIL_GS1, _yml(tmp_path, "clasico"), t, 100, 2).argv

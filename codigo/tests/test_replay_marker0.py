@@ -17,7 +17,7 @@ import json
 import pytest
 
 from . import replay_util
-from .conftest import ITER4_DIR, TESTS_DATA_DIR
+from .conftest import PROFILES_DIR, TESTS_DATA_DIR
 
 CAMERAS = ("gs1", "gs2")
 TOL_MM = 1e-9
@@ -31,7 +31,7 @@ def _paths(cam: str) -> dict:
         "reference": TESTS_DATA_DIR / f"marker0_{cam}_reference.npz",
         "provenance": TESTS_DATA_DIR / f"marker0_{cam}_reference.json",
         "frames": TESTS_DATA_DIR / f"marker0_{cam}_frames",
-        "profile": ITER4_DIR / f"tracker_config_{cam}.yaml",
+        "profile": PROFILES_DIR / f"tracker_config_{cam}.yaml",
     }
 
 
