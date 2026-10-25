@@ -108,3 +108,12 @@ Protocolo `Claude outputs/fases/003/fase-4-en-vivo-protocolo.md`; sesión `fase-
 - Limpieza tras cada corrida: ningún `-m tracker` vivo y el 18944 sin `Listen`; al final solo seguía el panel abierto.
 - fps bimodales otra vez (gs1 ~22 a mano, ~34 desde el panel): dato para la fase 6 · Dónde se va el tiempo por frame (B32). No se corrió el paso 4 opcional (`measure_modes`).
 - Veredicto: cumple la parte en vivo de la fase 4.
+
+## Fase 5 · Documentación del paso 1 (2026-10-24, sin cámara)
+
+- Docs al día: `docs/ARCHITECTURE.md` §2, §3 (3.1–3.7), §4 y §6, con notas de «referencia» en §5, §7 y §8; `docs/CONTEXT.md` §3, §4 (13–17 marcadas como del dodecaedro archivado, 18 y 19) y §6; BACKLOG: B08, B10, B14, B20, B25, B29, B31 y B35 con las rutas nuevas; B21 cerrado (texto alineado con `opencv-python` 4.11).
+- `git grep -n iter4 -- codigo CLAUDE.md docs ':!docs/history'`: **184 líneas**. 87 en `codigo/historico/`; 32 en el código vivo (procedencia «era `iter4/…`», rutas a `codigo/historico/iter4/`, metadatos grabados en `tests/data/*_reference.json` y en los `.yml` de intrínsecos, la prueba de que `iter4/tracker.py` no existe); 9 en ADR de `DECISIONS.md`; 5 en `PRUEBAS.md`; 22 en el BACKLOG (rutas a `historico/iter4/`, entradas cerradas, la procedencia de B46); 14 en `ARCHITECTURE.md` y 8 en `CONTEXT.md` (rutas a `historico/iter4/`, la nota de reestructuración, «Antes, …» y las trampas 14 y 17 bajo su nota). **Las 7 de `CLAUDE.md` no son históricas:** §1 y §5; su texto nuevo está en el reporte de la fase para la dirección o el autor.
+- `git grep -n "documentos/MANUAL_simplificado" -- docs/ARCHITECTURE.md docs/CONTEXT.md codigo`: **0 líneas**.
+- Líneas de más de 2 000 caracteres en `docs/` (sin `history/`), `memory.md` y `specs/`: **0** (la más larga, 1 832).
+- Los 8 comandos `python -m` propuestos para `CLAUDE.md` §5 (`tracker`, `gui.panel`, `diagnostics.identify_ids`, `diagnostics.probe_camera`, `diagnostics.measure_modes`, `calibration.calibrate_camera`, `calibration.check_scale`, `tests.replay_util`) con `--help` desde `codigo\`: **exit 0** los 8.
+- Suite: **463/463** en 18.02 s y 17.63 s de pytest (21 s de pared); replay de Marker0 y selftest del panel 16/16. Ningún `.py` cambió.

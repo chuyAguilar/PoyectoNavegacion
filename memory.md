@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-24 (meta 003 · Arquitectura y optimización del tracker: fase 4 · El tracker en piezas hecha, sin cámara y en vivo; falta su commit)._
+_Actualizado: 2026-10-24 (meta 003 · Arquitectura y optimización del tracker: fase 5 · Documentación del paso 1 hecha; falta su commit)._
 
 Spec activo: `specs/003-arquitectura-tracker/`
 
@@ -9,7 +9,7 @@ Spec activo: `specs/003-arquitectura-tracker/`
 - Método de trabajo (ADR-020): etapas 1 (`8f398da`) y 2 (`edb9aa0`: agentes `direccion`, `planificacion`, `desarrollo`, `pruebas`; skills `planear`, `fase`, `cerrar-fase`; `docs/PRUEBAS.md`) commiteadas. La etapa 3 (hooks) queda para cuando haga falta; hasta entonces cada papel lo limitan sus `tools` y su texto, y `settings.json` niega commit, push y los datos de paciente.
 - **Meta 001 · limpieza y orden del repo** (B01–B06): cerrada el 2026-10-19 (`2ce4b5d`, `8f33b3a`, `30437e4`, `e52f58c`; ADR-021); P01 «pasa». Detalle en `specs/001-*/` y `docs/PRUEBAS.md`.
 - **Meta 002 · Calibración de las cámaras global shutter:** cerrada el 2026-10-23 (fases 1–6; P03 «pasa», 3 hallazgos menores arreglados en el cierre; ADR-023, ADR-024, ADR-025). Detalle abajo, en `specs/002-*/` y `docs/PRUEBAS.md`.
-- **Meta 003 · Arquitectura y optimización del tracker** (plan autorizado el 2026-10-23; spec activo): fases 1 (`b3679ca`), 2 (`c1409ad`) y 3 (`78ce1af`, ADR-027 en `ad25bf2`) hechas; fase 4 · El tracker en piezas hecha (sin cámara y en vivo, 2026-10-24), pendiente de su commit. Siguiente: la fase 5 · Documentación del paso 1.
+- **Meta 003 · Arquitectura y optimización del tracker** (plan autorizado el 2026-10-23; spec activo): fases 1 (`b3679ca`), 2 (`c1409ad`), 3 (`78ce1af`, ADR-027 en `ad25bf2`) y 4 (`9f500ca`) hechas; fase 5 · Documentación del paso 1 hecha (2026-10-24), pendiente de su commit: el paso 1 (la arquitectura) queda completo. Siguiente: la fase 6 · Dónde se va el tiempo por frame.
 
 ## Estado técnico (el detalle está en `docs/CONTEXT.md` §6)
 
@@ -20,7 +20,7 @@ Spec activo: `specs/003-arquitectura-tracker/`
 
 ## La suite
 
-- `codigo/tests/`: en verde. Desde la fase 4 de la meta 003: **463 pruebas, 463 pasan, 0 `xfail`, 0 avisos**; 18.4 y 18.3 s de pytest, ~21 s de pared (dos corridas). La suite niega la cámara real y el servidor pyigtl (fixture `no_real_camera`, B34). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; `pytest.ini` pone `pythonpath = .` y `-q` (para ver la línea de totales, `-o addopts="-p no:cacheprovider" -q`).
+- `codigo/tests/`: en verde. Desde la fase 4 de la meta 003: **463 pruebas, 463 pasan, 0 `xfail`, 0 avisos**; en la fase 5, 18.0 y 17.6 s de pytest, ~21 s de pared (dos corridas). La suite niega la cámara real y el servidor pyigtl (fixture `no_real_camera`, B34). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; `pytest.ini` pone `pythonpath = .` y `-q` (para ver la línea de totales, `-o addopts="-p no:cacheprovider" -q`).
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm/0.0°, detección 0.0 px; datos en `tests/data/marker0_*`, 2.17 MB) + `python -m gui.panel --selftest` (`tests/test_gui_headless.py`). El replay del dodecaedro se archivó con su código. Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -39,7 +39,8 @@ Spec activo: `specs/003-arquitectura-tracker/`
 - **Fase 1 · Línea base de Marker0 en vivo, antes de mover nada:** hecha (`b3679ca`). Marker0 de 80 mm quieto a ~37–38 cm, las dos cámaras: 100 % de frames con pose, sd z 0.043 mm (gs1) y 0.039 mm (gs2), orientación 0.10–0.13°, 0 saltos > 5°. Replay 0.0 mm / 0.0° (977 y 973 envíos); detección 0.0 px. El tracker acepta `--record`, `--no-window`, `--save-frames`, `--frames-every`, `--duration` (apagadas).
 - **Fase 2 · La cadena solo con Marker0:** hecha (`c1409ad`). Perfiles sin `rigid_bodies`; en vivo con Slicer 19.1 Hz (gs1) y 31.4 Hz (gs2), `DodecaedroToTracker` ausente, salida limpia. `codigo/slicer/receive_marker0.py` mide la cadena desde Slicer; el manual del dodecaedro está en `documentos/historico/`.
 - **Fase 3 · La estructura nueva y el archivo:** hecha (sin cámara 2026-10-23; en vivo 2026-10-24; `78ce1af`). Lo de «Estructura» arriba; el tracker solo cambia imports y carga del perfil; replay 0.0. El panel ya no tiene asistente, dock ni semáforos de geometría y punta; un perfil con `rigid_bodies` o de la Femto queda en ROJO. Las recetas lanzan `python -u -m <modulo>`. B17, B37 y B38 cerrados; B40–B47 nuevos. En vivo con gs1 por el panel: Probar cámara, Verificar IDs y Arrancar tracker con exit=0, `[Whitelist] [0]`, Marker0 llega a Slicer, selftest con los 3 argv `-m`; fps 16–22 (dato para la fase 6, B32).
-- **Fase 4 · El tracker en piezas:** hecha (sin cámara y en vivo, 2026-10-24), pendiente del commit. `tracker.py` 754 → 212 líneas; replay de Marker0 por `MarkerTracker.process_corners` 0.0 mm / 0.0° (977 y 973 envíos), detección 0.0 px. B22, B27, B28 y B34 cerrados. `measure_modes --modos` vuelve a correr con gs1/gs2; `--config` del tracker es obligatorio; `send_video: true` aborta. `IgtlSender.close()` cierra el servidor de verdad (antes `server_tx.close()` fallaba en silencio). En vivo, con gs1 y gs2 a mano y desde el panel: B28 cumple (a mano sin la variable, la cámara abre en 0.4 s, antes 40–50 s); Hz en Slicer 22.1 (gs1) y 30.9 (gs2) a mano, 28.6 y 22.8 por el panel (la ventana de 10 s cubrió arranque y cierre); «Servidor del puerto 18944 cerrado» y `[Salida limpia]` siempre, también en un fallo de arranque (cámaras en «Unknown» de Windows, reconectadas).
+- **Fase 4 · El tracker en piezas:** hecha (sin cámara y en vivo, 2026-10-24; `9f500ca`). `tracker.py` 754 → 212 líneas; replay de Marker0 por `MarkerTracker.process_corners` 0.0 mm / 0.0° (977 y 973 envíos), detección 0.0 px. B22, B27, B28 y B34 cerrados. `measure_modes --modos` vuelve a correr con gs1/gs2; `--config` del tracker es obligatorio; `send_video: true` aborta. `IgtlSender.close()` cierra el servidor de verdad (antes `server_tx.close()` fallaba en silencio). En vivo, con gs1 y gs2 a mano y desde el panel: B28 cumple (a mano sin la variable, la cámara abre en 0.4 s, antes 40–50 s); Hz en Slicer 22.1 (gs1) y 30.9 (gs2) a mano, 28.6 y 22.8 por el panel (la ventana de 10 s cubrió arranque y cierre); «Servidor del puerto 18944 cerrado» y `[Salida limpia]` siempre, también en un fallo de arranque (cámaras en «Unknown» de Windows, reconectadas).
+- **Fase 5 · Documentación del paso 1:** hecha (2026-10-24), pendiente del commit. `ARCHITECTURE.md` §2–§4 y §6 y `CONTEXT.md` §3, §4 y §6 describen la estructura nueva y solo Marker0; lo del dodecaedro, la Femto y el contexto doctor queda como referencia archivada. `git grep iter4` (codigo, CLAUDE.md, docs sin history) 184 líneas, todas históricas salvo las 7 de `CLAUDE.md`; manual 0; los 8 `python -m` con `--help`, exit 0. B21 cerrado (texto con `opencv-python` 4.11). El texto nuevo de `CLAUDE.md` §1/§5 y de `.claude/` está en `Claude outputs/fases/003/fase-5.md`.
 - **fps bimodales, ~20–21 o ~32–35, sin relación con la ventana** (causa sin aislar): dato para la fase 6 · Dónde se va el tiempo por frame (B32). B39 acotado: falta Marker0 inclinado 15–20° en vivo (baja).
 
 ## Meta 002 · Calibración de las cámaras global shutter (cerrada)
@@ -48,8 +49,8 @@ Spec activo: `specs/003-arquitectura-tracker/`
 
 ## Pendientes del autor
 
-- El commit de la fase 4 (`Claude outputs/fases/003/fase-4.md` trae el título y el `git add`).
-- Pasar a `CLAUDE.md` §1 y §5 y a `.claude/` los comandos nuevos con `python -m` (fase 5).
+- El commit de la fase 5 (`Claude outputs/fases/003/fase-5.md` trae el título y el `git add`).
+- Pasar a `CLAUDE.md` §1 y §5 y a `.claude/` (agentes `desarrollo` y `planificacion`, skill `planear`) el texto que propone `Claude outputs/fases/003/fase-5.md`: lo aplica la dirección o el autor.
 - Decidir si B19 y B20 (alta) se cierran: su código y su punta se archivaron. Decidir si B35 entra en la meta.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/` (el autor usa también Git Bash).
 

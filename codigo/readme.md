@@ -137,7 +137,7 @@ pip install -r requirements.txt
 
 > Si no existe `requirements.txt`, instala las dependencias principales del proyecto:
 > ```powershell
- pip install opencv-contrib-python numpy scipy pyyaml pyigtl h5py
+ pip install opencv-python numpy scipy pyyaml pyigtl h5py
 > ```
 > y luego congela la lista para el resto del equipo:
 > ```powershell

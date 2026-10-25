@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-23 (§6: meta 003, fase 3 · la estructura nueva y el archivo). Antes, 2026-10-23 (§6: meta 003, fase 2). Antes, 2026-10-23 (§6: meta 002, fase 5). Antes, 2026-10-22 (§6: meta 002, fase 4). Antes, 2026-10-22 (§6: meta 002, fase 3, resolución y exposición elegidas). Antes, 2026-10-22 (§4: trampas 18 y 19, la aceleración HW de MSMF y la marca `focus` sin escribir; §6: meta 002, cámaras SVPRO). Antes, 2026-10-19 (§6: suite y respaldo de la punta; §3 y §6: rutas viejas corregidas)._
+> _Última actualización: 2026-10-24 (§3, §4 y §6: meta 003, fase 5 · Documentación del paso 1: el código activo en paquetes bajo `codigo\` con `python -m`, solo las SVPRO gs1/gs2 y Marker0, OpenCV como lo declara `requirements.txt` (B21), las trampas 13–17 marcadas como del dodecaedro archivado, la 18 con B28 verificado en vivo y la 19 con el comando nuevo; §6 sin la meta 002 en curso). Antes, 2026-10-23 (§6: meta 003, fase 3 · la estructura nueva y el archivo). Antes, 2026-10-23 (§6: meta 003, fase 2). Antes, 2026-10-23 (§6: meta 002, fase 5). Antes, 2026-10-22 (§6: meta 002, fase 4). Antes, 2026-10-22 (§6: meta 002, fase 3, resolución y exposición elegidas). Antes, 2026-10-22 (§4: trampas 18 y 19, la aceleración HW de MSMF y la marca `focus` sin escribir; §6: meta 002, cámaras SVPRO). Antes, 2026-10-19 (§6: suite y respaldo de la punta; §3 y §6: rutas viejas corregidas)._
 
 ---
 
@@ -48,23 +48,29 @@
 - **Raíz del proyecto:** `C:\Dev\OrtoMeta\PoyectoNavegacion` (antes
   `C:\Dev\Dr.Milton\PoyectoNavegacion` y `C:\Dev\PoyectoNavegacion`; los archivos
   vivos se corrigieron el 2026-10-19, meta 001; los históricos las conservan).
-- **Código activo:** `codigo\iter4\`. Entorno virtual: `codigo\.venv\`
+- **Código activo:** `codigo\`, en paquetes por responsabilidad (`camera`, `vision`,
+  `transport`, `profiles`, `calibration`, `diagnostics`, `gui`, `slicer`;
+  `tracker.py`); se lanza con `python -m <paquete>.<modulo>` **desde `codigo\`** y las
+  rutas de un perfil son relativas a `codigo\` (desde 2026-10-23, meta 003, ADR-027).
+  `codigo\historico\` es archivo, no se mantiene. Entorno virtual: `codigo\.venv\`
   (**Python 3.11.9**, fijado en `.python-version`).
 - **Stack de software:**
-  - Python 3.11.9 + **OpenCV 4.11/4.13** (`opencv-contrib-python`) + scipy +
-    numpy + PyYAML + **pyigtl** + **pyorbbecsdk2** (NO el viejo `pyorbbecsdk`
-    1.3.2, roto en Windows).
+  - Python 3.11.9 + **OpenCV 4.11** (`opencv-python` 4.11.0.86: ArUco está en el
+    módulo principal, `objdetect`, desde 4.7; no hace falta el paquete contrib) + scipy
+    + numpy + PyYAML + **pyigtl** 0.3.1 + **pyorbbecsdk2** (solo para la Femto
+    archivada y `femto_pruebas/`; NO el viejo `pyorbbecsdk` 1.3.2, roto en Windows).
   - **3D Slicer 5.x** + extensión **SlicerIGT** (visualización, Fiducial
     Registration Wizard, Volume Reslice Driver). Corre aparte; no se controla
     directo, se le pasan scripts para su consola Python.
   - `open3d` 0.18 en el venv (usado por `femto_pruebas/`, hoy en pausa).
   - **PySide6 6.11.1** instalado en el venv (GUI del panel, brief-01; en
     `requirements.txt` como `pyside6>=6.7,<7`).
-- **Dos cámaras, dos contextos (ambas activas):** Femto Bolt (RGB) = contexto
-  principal (`tracker_config.yaml`, Marker0 80 mm); webcam **global shutter** =
-  contexto "doctor" (`data/historico/tracker_config_doctor.yaml` + `data/historico/globalshutter.yml`,
-  `source: 1`, Marker0 60 mm). La geometría del dodecaedro v2 es
-  cámara-independiente → se comparte entre ambos contextos.
+- **Cámaras:** dos **SVPRO AR0234 global shutter**, un perfil cada una:
+  `codigo\profiles\tracker_config_gs1.yaml` y `_gs2.yaml` (identidad por la ruta del
+  puerto USB y la marca `focus`; 1280×960 MJPG 90 fps; intrínsecos en
+  `codigo\data\intrinsecos_gs{1,2}_1280x960.yml`). Solo Marker0, de 80 mm. La Femto
+  Bolt y el contexto «doctor» están archivados en `codigo\historico\iter4\femto\` y
+  `old_profiles\` (ADR-025).
 - **Segunda máquina (a confirmar):** memoria registra un "equipo del doctor"
   aparte (marker 16.58 mm). Si sigue vivo, se documenta por separado; no es la
   máquina de referencia de estos MVD.
@@ -95,6 +101,11 @@
     Nada de quedarse mudo hasta el final.
 12. **Guardar la escena de Slicer como `.mrml`** antes de cerrar (preserva
     jerarquía y transforms).
+> **13–17, del dodecaedro archivado (nota del 2026-10-24, meta 003):** los scripts que
+> nombran están en `codigo\historico\iter4\dodecahedron\` y ya no los lanza nada vivo;
+> las rutas `iter4/data/...` son las de entonces. Quedan como registro y valen si el
+> instrumento nuevo (B40) reusa ese código.
+
 13. **`calibrar_rigid_body.py` trae defaults del stylus VIEJO** (`--ancla 170`,
     `--marker-mm 13.4`). Para el dodecaedro v2 hay que pasar **`--ancla 3
     --marker-mm 14.6`** explícitos, o el BA calibra contra el rigid body
@@ -124,12 +135,13 @@
     entorno al cargarse y ponerla después no hace nada. El código lo hace con
     `import camera` antes de `import cv2` (los scripts que abren MSMF, y desde
     la fase 4 de la meta 003 también `tracker.py`: a mano la apaga y lo dice
-    en su log; B28, en vivo pendiente) y el panel se la pasa a sus procesos
-    (`processes.entorno_hijo`).
+    en su log; B28, en vivo 2026-10-24: abre en 0.4 s) y el panel se la pasa a
+    sus procesos (`gui.processes.entorno_hijo`).
 19. **La marca `focus` de una cámara solo es fiable si se escribió.** La cámara 2
     nunca la tenía escrita y por DSHOW leía 332, 268, 362, 254, 337…, así que el
-    backend paraba («no es la del perfil») sin motivo. Al dar de alta un perfil:
-    `sondear_camara.py --fijar "focus=N" --forzar --puerto <ruta>` (`--forzar`
+    backend paraba («no es la del perfil») sin motivo. Al dar de alta un perfil
+    (desde `codigo\`): `python -m diagnostics.probe_camera --fijar "focus=N" --forzar
+    --puerto <ruta> --salida <json> --timeout <s>` (era `sondear_camara.py`; `--forzar`
     escribe aunque la lectura ya diga N; sin él `aplicar` no escribe lo que ya
     coincide). Después la marca persiste tras desenchufar.
 
@@ -161,27 +173,30 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 
 ### Hecho y validado
 
-- Pipeline de tracking (`tracker.py`) con backend `webcam | femtobolt`, detector
-  ArUco tuneado, filtro `z<0`, filtro 1-Euro.
-- Geometría del dodecaedro **v2 compartido** (IDs 3–13) calibrada por BA, validada
-  a 1.26 px.
-- Calibración de la punta por **dock** (`StylusTipToDodecaedro_femto_dock`,
-  dodecaedro v2, spread ~1.8 mm); copia versionada en
-  `iter4/data/respaldo_puntas/` desde 2026-10-19 (ADR-021, `ARCHITECTURE.md` §3.4).
-- Jerarquía de transforms en Slicer + registro **paired-point** (RMS 2.80–3.46 mm
-  histórico) y navegación tomográfica (iter 3, los cortes del CT siguen al stylus).
-- Suite pytest sin cámara (2026-10-19, meta 001): `py_compile`, selftest del panel
-  y replay de la pose contra una referencia guardada (`docs/ARCHITECTURE.md` §6).
+- **Tracking de Marker0** (`python -m tracker`, meta 003): `camera` (dos SVPRO global
+  shutter por puerto USB y marca, aceleración HW de MSMF apagada) → `vision` (ArUco con
+  lista blanca, IPPE_SQUARE con z > 0, 1-Euro de la posición) → `transport`
+  (`Marker0ToTracker` por OpenIGTLink, 18944) → Slicer. Línea base (fase 1, Marker0
+  quieto a ~37–38 cm): 100 % de frames con pose, sd z 0.043 mm (gs1) y 0.039 mm (gs2),
+  orientación 0.10–0.13°. En vivo con Slicer (fase 4): 22.1 Hz (gs1) y 30.9 Hz (gs2) a
+  mano; salida limpia y puerto libre.
+- **Las dos cámaras calibradas** (meta 002, cerrada el 2026-10-23; números en
+  `specs/002-calibracion-camaras/resultados.md`): 1280×960 MJPG 90 fps, 0.977 ms;
+  cámara 1 RMS 0.167 / control 0.146 px, cámara 2 0.154 / 0.150 px (detector `sb`,
+  tablero de 24.86 mm); escala por medias +0.27 y −0.37 mm en 80 mm. Calibración desde
+  el panel en tres pasos (enfocar, tablero, escala). **No girar ni sacar el lente de la
+  cámara 2 sin recalibrar** (cy 389.8, B36).
+- **Suite pytest sin cámara** (`codigo\tests\`, 463 pruebas, ~18 s): niega la cámara
+  real y el servidor pyigtl (B34); la comprobación de «no cambió» es la suite, el
+  selftest del panel y el replay de Marker0 (`docs/ARCHITECTURE.md` §6).
+- **Histórico (archivado, se puede retomar):** el dodecaedro v2 (IDs 3–13, BA a 1.26 px),
+  su punta por dock (spread ~1.8 mm) y la jerarquía de Slicer con registro
+  **paired-point** (RMS 2.80–3.46 mm) y navegación tomográfica (iter 3), en
+  `codigo\historico\iter4\dodecahedron\` y `documentos\historico\MANUAL_simplificado.md`.
 
 ### Vía activa
 
-- **Rumbo (2026-10-20):** se rescata solo el tracking; punta, registro, navegación en Slicer y runbooks se rehacen. Solo valen los perfiles nuevos `tracker_config_gs1.yaml` y `tracker_config_gs2.yaml` (dos SVPRO AR0234 global shutter). Los contextos viejos (Femto `tracker_config.yaml`, «doctor» `tracker_config_doctor.yaml` + `globalshutter.yml`, archivados en `iter4/data/historico/` el 2026-10-23; ADR-014/015/016) quedan como referencia.
-
-### En curso: meta 002 · calibración de las cámaras global shutter SVPRO
-
-- **Hecho (fases 1–6, 2026-10-21/23; números en `specs/002-calibracion-camaras/resultados.md`):** identidad de cada cámara por la ruta de su puerto USB y marca `focus` (`camaras_uvc.py`); ajustes por DSHOW (`ajustes_camara.py`); el código apaga la aceleración HW de MSMF; 1280×960 MJPG 90 fps y 0.977 ms en las dos; las dos calibradas con el tablero impreso (24.86 mm, detector `sb`): cámara 1 RMS 0.167 / control 0.146 px, cámara 2 0.154 / 0.150 px, cobertura 1.00; escala por medias +0.27 y −0.37 mm en 80 mm. Pose del dodecaedro quieto 99.8 % con la K real. Calibración del panel: ventana de tres pasos (enfocar, tablero, escala). **No girar ni sacar el lente de la cámara 2 sin recalibrar** (cy 389.8, B36). Con ventana el tracking da 19–25 fps (B32).
-- **Fase 6 (2026-10-23):** cadena bien con las dos cámaras; sd z cámara 2 1.08–1.15 mm (cumple, < 1.38), cámara 1 3.75–4.88 mm (no): la pose salta 11–25 mm al entrar o salir un marker de lado (B37, alta). Perfiles viejos archivados.
-- **Falta:** cerrar la meta (pruebas, ADR-023, ADR-024, el del rumbo); luego optimizar el tracker (B37 primero).
+- **Rumbo (2026-10-20; ADR-025):** se rescata solo el tracking; punta, registro, navegación en Slicer y runbooks se rehacen mejorados sobre gs1/gs2. Solo valen los perfiles `profiles\tracker_config_gs1.yaml` y `_gs2.yaml`. Los contextos viejos (Femto `tracker_config.yaml`, «doctor» `tracker_config_doctor.yaml` + `globalshutter.yml`; ADR-014/015/016) están archivados en `codigo\historico\iter4\femto\` y `old_profiles\` como referencia.
 
 ### En pausa (se conserva, se puede retomar)
 
@@ -189,9 +204,9 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 
 ### WIP / deuda técnica pendiente
 
-- **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`, números en `resultados.md`): fase 1, línea base de Marker0 (sd z 0.04 mm, replay 0.0); fase 2, la cadena publica solo `Marker0ToTracker` (ADR-026; en Slicer 19.1 y 31.4 Hz). **Fase 3 (2026-10-23, sin cámara):** el código pasa de `codigo\iter4\` a paquetes bajo `codigo\` (`camera`, `calibration`, `diagnostics`, `gui`, `profiles`, `data`; `tracker.py`), se lanza con `python -m` y las rutas de un perfil son relativas a `codigo\`; el dodecaedro, la Femto y los perfiles viejos, en `codigo\historico\iter4\` (ADR-027). Las rutas de §3 y §4 se ponen al día en la fase 5. La fase 3 quedó hecha también en vivo (2026-10-24). **Fase 4 (2026-10-24, sin cámara):** el tracker se parte en `vision\` y `transport\` y `tracker.py` queda solo con el bucle; replay de Marker0 por `MarkerTracker.process_corners` 0.0 mm / 0.0°; la suite niega la cámara real (B34), `python -m tracker` a mano apaga la aceleración HW de MSMF (B28). Falta la sesión en vivo de la fase 4.
+- **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`, números en `resultados.md`). **Paso 1, la arquitectura (fases 1–5), hecho:** fase 1, línea base de Marker0 (sd z 0.04 mm, replay 0.0); fase 2, la cadena publica solo `Marker0ToTracker` (ADR-026; en Slicer 19.1 y 31.4 Hz); fase 3 (2026-10-23/24), el código pasa de `codigo\iter4\` a paquetes bajo `codigo\`, se lanza con `python -m` y el dodecaedro, la Femto y los perfiles viejos van a `codigo\historico\iter4\` (ADR-027); fase 4 (2026-10-24, sin cámara y en vivo), el tracker se parte en `vision\` y `transport\` y `tracker.py` queda solo con el bucle (replay 0.0 mm / 0.0°; B28 cumple a mano: la cámara abre en 0.4 s); fase 5 (2026-10-24), la documentación (§3, §4 y §6 de aquí y de `ARCHITECTURE.md`). **Paso 2, la optimización:** falta; la fase 6 mide dónde se va el tiempo por frame (los fps con ventana son bimodales, ~20–21 o ~32–35, sin causa aislada; B32).
 - **Runbooks:** `documentos/historico/MANUAL_simplificado.md` (archivado el 2026-10-23) es del contexto doctor y del dodecaedro; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
-- **Panel** (brief-01/02, verificado 2026-08-13 con la Femto; detalle en el historial de git de este archivo, antes de `cd77185`): queda en vivo la captura del asistente con IDs nuevos y el dock (B10).
+- **Panel** (`python -m gui.panel`; brief-01/02, verificado 2026-08-13 con la Femto y desde la meta 003 con gs1 y gs2; detalle en el historial de git de este archivo, antes de `cd77185`): el asistente del dodecaedro y el dock se archivaron en la fase 3 de la meta 003, así que su verificación en vivo (B10) espera al instrumento nuevo (B40).
 - **Detección ~3–4 markers/vista** (histórico 5–6): revisar distancia, ángulo y luz antes que el detector.
 - **Marker0 rígido y corto** (ADR-013); **stylus impreso nuevo** (IDs 181–191, sin pose robusta, no urgente); **depth en el BA** cuando se resuelva el bias (ADR-008).
 

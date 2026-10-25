@@ -18,7 +18,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B16 | Rama de registro por superficie (en pausa) | Baja | — |
 | B19 | `validar_prerrequisitos` deja un calibrado vacío | Alta | — |
 | B20 | Slicer carga la punta por fecha | Alta | — |
-| B21 | `opencv-python` frente a `opencv-contrib-python` | Baja | — |
 | B23 | Explorar el tracker en una Jetson Orin Nano, con Slicer en BigDaddy | Baja | — |
 | B24 | Frecuencia de la red (50/60 Hz) de las SVPRO, que OpenCV no fija | Baja | — |
 | B25 | La sonda pierde los modos medidos si salta el tope | Media | — |
@@ -49,7 +48,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** alta (da resultados equivocados también en paired-point).
 
 ### B08 · Runbook para el contexto Femto
-- **Qué:** `MANUAL_simplificado.md` opera el contexto doctor; no hay uno para `tracker_config.yaml`.
+- **Qué:** `documentos/historico/MANUAL_simplificado.md` opera el contexto doctor; no hay uno para `tracker_config.yaml`. Desde la meta 003 la Femto y su perfil están archivados (`codigo/historico/iter4/femto/`, ADR-025): el runbook vigente que falta es B41.
 - **Por qué queda:** no bloquea, porque el panel cubre buena parte.
 - **De dónde:** `docs/CONTEXT.md` §6.
 - **Qué haría falta:** un runbook equivalente con Marker0 de 80 mm.
@@ -63,7 +62,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** media.
 
 ### B10 · Verificaciones en vivo pendientes del brief-02
-- **Qué:** la captura del asistente con IDs nuevos y la calibración de punta por dock desde el panel. (La calibración de cámara quedó verificada en vivo: `calibrar_camara.py` por línea de comandos en la fase 4 · Calibración de la cámara 1 y comprobación de escala, 2026-10-22, y desde el panel, con la ventana de tres pasos, en la fase 5 · Calibración de la cámara 2, 2026-10-23: cámara 2 RMS 0.154 px, control 0.150 px; meta 002.) (La fase 6 · Comparación contra P02 y archivo de los perfiles viejos, 2026-10-23, verificó el tracker desde el panel con el perfil gs1 —arranque, ventana, «Detener» por 'q', salida limpia— pero no cierra lo de arriba.) (El snippet de `documentos/MANUAL_simplificado.md` §4.2 con la ruta nueva, que se sumó en la fase 4 de la meta 001, quedó verificado en vivo por el autor el 2026-10-19: traslación [0.904, 5.471, −201.808] mm, la esperada; `docs/PRUEBAS.md` P01.)
+- **Qué:** la captura del asistente con IDs nuevos y la calibración de punta por dock desde el panel. (La calibración de cámara quedó verificada en vivo: `calibrar_camara.py` por línea de comandos en la fase 4 · Calibración de la cámara 1 y comprobación de escala, 2026-10-22, y desde el panel, con la ventana de tres pasos, en la fase 5 · Calibración de la cámara 2, 2026-10-23: cámara 2 RMS 0.154 px, control 0.150 px; meta 002.) (La fase 6 · Comparación contra P02 y archivo de los perfiles viejos, 2026-10-23, verificó el tracker desde el panel con el perfil gs1 —arranque, ventana, «Detener» por 'q', salida limpia— pero no cierra lo de arriba.) (El snippet de `MANUAL_simplificado.md` §4.2 —hoy en `documentos/historico/`— con la ruta nueva, que se sumó en la fase 4 de la meta 001, quedó verificado en vivo por el autor el 2026-10-19: traslación [0.904, 5.471, −201.808] mm, la esperada; `docs/PRUEBAS.md` P01.)
 - **Por qué queda:** necesita hardware y la placa dock física.
 - **De dónde:** `docs/CONTEXT.md` §6.
 - **Qué haría falta:** una sesión con cámara; reportar números.
@@ -94,7 +93,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** su geometría CAD es buena, pero falta pose robusta con rechazo de outliers y `marker_mm 15.7`; su BA se atora.
 - **Por qué queda:** no urgente.
 - **De dónde:** `docs/CONTEXT.md` §6.
-- **Qué haría falta:** retomar si se cambia de stylus. Su config (`tracker_config_stylus_impreso.yaml`) y su geometría calibrada están en `iter4\data\historico\` desde la fase 3 · movimientos de la meta 001 (2026-10-19): para usarlo, devolver el config a `iter4\` (el panel solo ve `iter4\tracker_config*.yaml`) y revisar sus rutas relativas.
+- **Qué haría falta:** retomar si se cambia de stylus. Su config (`tracker_config_stylus_impreso.yaml`) y su geometría calibrada (local, fuera de git) están en `codigo/historico/iter4/old_profiles/` desde la fase 3 de la meta 003 (antes, desde la meta 001, en la carpeta de perfiles viejos de entonces). Para usarlo hace falta el código multi-marker archivado (B40): devolver el config a `codigo/profiles/` (el panel solo ve `profiles/tracker_config*.yaml`) y poner sus rutas relativas a `codigo/`.
 - **Prioridad:** baja.
 
 ### B15 · Reintegrar el depth al BA
@@ -120,19 +119,12 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** alta (un calibrado vacío con nombre válido puede tomarse por bueno).
 
 ### B20 · Slicer carga la punta por fecha
-- **Qué:** el snippet de `documentos/MANUAL_simplificado.md` §4.2 carga el `StylusTipToDodecaedro*.npy` más reciente por fecha de `iter4\data\`; un `git pull`, una copia o un movimiento cambian cuál, sin aviso en Slicer (`estado.py` sí avisa).
+- **Qué:** el snippet de `documentos/historico/MANUAL_simplificado.md` §4.2 cargaba el `StylusTipToDodecaedro*.npy` más reciente por fecha de la carpeta de datos de entonces (`iter4\data\`, hoy archivada); un `git pull`, una copia o un movimiento cambian cuál, sin aviso en Slicer (`estado.py` sí avisa).
 - **Por qué queda:** toca lo que se carga en Slicer: necesita verificación en vivo.
 - **De dónde:** plan de la meta 001 · limpieza y orden del repo.
 - **Qué haría falta:** nombrar la punta explícita en el snippet y mover las puntas viejas (`StylusTipToDodecaedro.npy`, `_2`, `_divot`, `_viejo_dock`, del dodecaedro viejo) a `data\historico\`.
 - **Meta 003, fase 3 (2026-10-23):** el manual está en `documentos/historico/` (fase 2) y todas las puntas en `codigo/historico/iter4/dodecahedron/data/`; la cadena ya no publica el dodecaedro. Vale para la punta del instrumento nuevo (B40); el autor decide si se cierra.
 - **Prioridad:** alta.
-
-### B21 · `opencv-python` frente a `opencv-contrib-python`
-- **Qué:** el venv y `requirements.txt` tienen `opencv-python` 4.11; `CONTEXT.md` §3 dice contrib.
-- **Por qué queda:** no afecta a nada de hoy.
-- **De dónde:** plan de la meta 001 · limpieza y orden del repo.
-- **Qué haría falta:** alinear el texto, o el paquete si algo de contrib hiciera falta.
-- **Prioridad:** baja.
 
 ### B23 · Explorar el tracker en una Jetson Orin Nano, con Slicer en BigDaddy
 - **Qué:** conectar las cámaras global shutter a una Jetson y correr ahí el tracker, viendo la navegación en Slicer en BigDaddy por la red. La cadena no cambiaría (principio 6): `pyigtl` ya publica por TCP (18944) y Slicer se conectaría a la IP de la Jetson en lugar de a `localhost`.
@@ -154,7 +146,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** baja.
 
 ### B25 · La sonda pierde los modos medidos si salta el tope, y su presupuesto por modo se queda corto
-- **Qué:** en `sondear_camara.py`, `estado["modos"]` se asigna cuando `sondear_modos` termina; si el vigilante (`_vigilante`) salta antes, el JSON queda con `"timeout": true` y sin ninguna fila. Pasó en `modos_gs1_msmf_mjpg.json` y `modos_gs1_msmf_yuy2.json` (sesión del 2026-10-20): sus cifras solo quedaron en la consola y en `Claude outputs/fases/002/fase-1-en-vivo.md`. Además el presupuesto (`ABRIR_S + segundos + MARGEN_MODO_S` = 21 s con 5 s de captura) se queda corto: por MSMF a 90 fps cada modo tardó ~44–49 s (`total_s`; abrir ~10–11 s), y la comprobación por modo (`ABRIR_S + segundos`) no cuenta el resto.
+- **Qué:** en `sondear_camara.py` (desde la meta 003, `codigo/diagnostics/probe_camera.py`), `estado["modos"]` se asigna cuando `sondear_modos` termina; si el vigilante (`_vigilante`) salta antes, el JSON queda con `"timeout": true` y sin ninguna fila. Pasó en `modos_gs1_msmf_mjpg.json` y `modos_gs1_msmf_yuy2.json` (sesión del 2026-10-20): sus cifras solo quedaron en la consola y en `Claude outputs/fases/002/fase-1-en-vivo.md`. Además el presupuesto (`ABRIR_S + segundos + MARGEN_MODO_S` = 21 s con 5 s de captura) se queda corto: por MSMF a 90 fps cada modo tardó ~44–49 s (`total_s`; abrir ~10–11 s), y la comprobación por modo (`ABRIR_S + segundos`) no cuenta el resto.
 - **Por qué queda:** la fase 1 ya tiene sus números y la dirección cerró la fase sin abrir cámaras. No da un resultado equivocado: el JSON dice `timeout` y no trae filas.
 - **De dónde:** cierre de la fase 1 · Sonda de controles, modos e identidad (meta 002), 2026-10-21, al leer los JSON.
 - **Qué haría falta:** guardar cada fila al medirla (en el `estado` compartido con el vigilante) y subir el presupuesto por modo a lo medido (~50 s por MSMF). Lo mismo vale para `medir_modos.py` de la fase 3 · Enfoque y medición de resolución × formato, que aún no existe: conviene que su plan lo traiga desde el principio.
@@ -172,10 +164,10 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** baja.
 
 ### B29 · «Probar cámara» del panel no comprueba la marca ni aplica los ajustes
-- **Qué:** `gui/sonda_camara.py` resuelve el índice por el puerto, abre por MSMF y lee un frame, pero no lee la marca ni aplica `controls`: con las cámaras intercambiadas de puerto da «OK» (el tracker y el backend sí paran).
+- **Qué:** `gui/sonda_camara.py` (desde la meta 003, `codigo/gui/camera_probe.py`) resuelve el índice por el puerto, abre por MSMF y lee un frame, pero no lee la marca ni aplica `controls`: con las cámaras intercambiadas de puerto da «OK» (el tracker y el backend sí paran).
 - **Por qué queda:** en la fase 2b la sonda se dejó corta para caber en los 20 s del vigilante del panel; con la aceleración apagada (corrección de la 2b) ya cabría (~1 s de abrir + leer, ~1.2 s de marca).
 - **De dónde:** sesión en vivo de la fase 2b · Perfiles por cámara: identidad, ajustes y tamaño al abrir (meta 002), punto 3, 2026-10-22.
-- **Qué haría falta:** que la sonda lea la marca (sin escribir) antes de abrir, o que use `camera_backend` entero; medir que sigue dentro del vigilante de `recetas.py`.
+- **Qué haría falta:** que la sonda lea la marca (sin escribir) antes de abrir, o que use `camera.backend` entero; medir que sigue dentro del vigilante de `gui/recipes.py`.
 - **Prioridad:** media.
 
 ### B30 · Leer la marca y aplicar los controles en una sola apertura DSHOW
@@ -186,7 +178,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** baja.
 
 ### B31 · El criterio de exposición de `medir_modos.py` favorece imágenes casi saturadas
-- **Qué:** `elegir_exposicion` descarta lo que satura más de 1 % de los píxeles a 255 sobre el dodecaedro y, entre empates de markers, elige la exposición más larga. Con MJPG la imagen se queda en 250–254 sin llegar a 255, y la fracción a 255 no lo ve. En la sesión en vivo (1280×960, caja en nivel 2) eligió 3.906 ms (brillo medio 244–245, casi quemada) y la cámara 2 sola 0.488; el autor eligió 0.977 ms (brillo ~170, los mismos markers, ~4 veces menos estela de movimiento; P15).
+- **Qué:** `elegir_exposicion` (en `medir_modos.py`; desde la meta 003, `codigo/diagnostics/measure_modes.py`) descarta lo que satura más de 1 % de los píxeles a 255 sobre el dodecaedro y, entre empates de markers, elige la exposición más larga. Con MJPG la imagen se queda en 250–254 sin llegar a 255, y la fracción a 255 no lo ve. En la sesión en vivo (1280×960, caja en nivel 2) eligió 3.906 ms (brillo medio 244–245, casi quemada) y la cámara 2 sola 0.488; el autor eligió 0.977 ms (brillo ~170, los mismos markers, ~4 veces menos estela de movimiento; P15).
 - **Por qué queda:** el autor ya eligió a mano y la meta 002 no vuelve a elegir exposición; no da un resultado equivocado mientras la elija una persona con la tabla delante.
 - **De dónde:** sesión en vivo de la fase 3 · Enfoque, exposición y medición de resolución × formato (meta 002), 2026-10-22 (`Claude outputs/fases/002/fase-3-en-vivo.md`).
 - **Qué haría falta:** si el script se vuelve a usar para elegir, cambiar la regla: contar los píxeles por encima de un umbral más bajo (p. ej. ≥ 250) o fijar un techo de brillo medio (~200), y desempatar por la exposición más corta, no la más larga (menos estela). Con su prueba sin cámara.
@@ -200,7 +192,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** media.
 
 ### B35 · El criterio de escala por medias no mira la repetibilidad
-- **Qué:** desde P20, `comprobar_escala.py` juzga la escala por la distancia entre las medias de las posiciones repetidas; la repetibilidad de cada grupo se calcula, se guarda y se imprime, pero no juzga. Así, `escala_gs1_sin_topes.json` (primera sesión de la cámara 1, sin topes) cumple por medias con +0.645 mm aunque cada marca se repitió solo a 1.7–2.0 mm: una sesión con el montaje moviéndose puede pasar.
+- **Qué:** desde P20, `comprobar_escala.py` (desde la meta 003, `codigo/calibration/check_scale.py`) juzga la escala por la distancia entre las medias de las posiciones repetidas; la repetibilidad de cada grupo se calcula, se guarda y se imprime, pero no juzga. Así, `escala_gs1_sin_topes.json` (primera sesión de la cámara 1, sin topes) cumple por medias con +0.645 mm aunque cada marca se repitió solo a 1.7–2.0 mm: una sesión con el montaje moviéndose puede pasar.
 - **Por qué queda:** P20 fijó el criterio por medias y la fase 5 · Calibración de la cámara 2 no lo cambia; las dos sesiones buenas (gs1 con topes 0.39 / 0.30 mm; gs2 0.70 / 0.33 mm) tienen buena repetibilidad.
 - **De dónde:** recálculo `--desde-json` de la fase 5 · Calibración de la cámara 2 (meta 002), 2026-10-23 (`Claude outputs/fases/002/fase-5-panel.md`, «Pendiente o dudoso»).
 - **Qué haría falta:** un tope a la repetibilidad (p. ej. ≤ 1 mm por grupo) que entre en `cumple`, o al menos mostrarla en «Última» de la ventana de calibración; con su prueba sobre el JSON sin topes.
@@ -278,6 +270,10 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** baja.
 
 ## Cerrados
+
+### B21 · `opencv-python` frente a `opencv-contrib-python`
+- **Qué era:** el venv y `requirements.txt` tenían `opencv-python` 4.11, pero `CONTEXT.md` §3 decía contrib.
+- **Cerrado:** 2026-10-24, por la fase 5 · Documentación del paso 1 (meta 003 · Arquitectura y optimización del tracker): se alineó el texto, no el paquete. `CONTEXT.md` §3 dice `opencv-python` 4.11.0.86 (ArUco está en el módulo principal, `objdetect`, desde 4.7; Context7, OpenCV 4.13) y el comando de respaldo de `codigo/readme.md` §4 instala `opencv-python`. Nada del código vivo usa contrib.
 
 ### B34 · Las pruebas no deben poder abrir una cámara real aunque cambie un perfil
 - **Qué era:** nada impedía que una prueba llegara a `cv2.VideoCapture` o a `create_backend(...).open()` con un perfil real y abriera la cámara física (en la meta 002 una prueba abrió la cámara 1 real y el vigilante la cortó a los 60 s).
