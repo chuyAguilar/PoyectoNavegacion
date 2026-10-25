@@ -40,6 +40,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B49 | `python -m gui.panel --selftest` se cuelga si la salida no es UTF-8 | Baja | — |
 | B50 | Las SVPRO bajan solas los fps con poca luz: un control UVC automático que el perfil no fija | Media | — |
 | B51 | Con `--sync-capture` a 52 fps, Slicer recibió solo 5.8 Hz | Baja | — |
+| B52 | «Detener tracker» con el tracker con ventana sigue dependiendo de encontrar la ventana por su título | Baja | — |
+| B53 | Con `--stop-stdin`, la parada no se atiende mientras el tracker espera a Slicer | Baja | — |
 
 ## Abiertos
 
@@ -293,6 +295,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** primera parte en vivo de la fase 7 (meta 003 · Arquitectura y optimización del tracker), 2026-10-25 (`Claude outputs/fases/003/fase-7-en-vivo.md`).
 - **Qué haría falta:** repetir gs2 con `--sync-capture` y luz máxima, con `run(seconds=20)` arrancado antes del tracker, y comparar los Hz con los envíos; si se repite, contar en Slicer los mensajes por segundo (no solo los `TransformModifiedEvent`) para saber si se pierden o se agrupan.
 - **Prioridad:** baja (sube a alta si se ve sin `--sync-capture`: Slicer no seguiría a Marker0).
+
+### B52 · «Detener tracker» con el tracker con ventana sigue dependiendo de encontrar la ventana por su título
+- **Qué:** con la receta del tracker con ventana, «Detener tracker» (y «Detener proceso») manda `q` a la ventana por su título (`FindWindowW`); si no la encuentra en 4 s (`ESPERA_Q_S`), cae en `terminate()`, que no corre el `finally` (la cámara y el 18944 los libera el sistema al morir el proceso, no el tracker; principio 9). El tracker sin ventana ya tiene un camino limpio siempre: `--stop-stdin`.
+- **Por qué queda:** la fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras (meta 003 · Arquitectura y optimización del tracker) cambia una variable a la vez: `--stop-stdin` solo en la receta sin ventana. Decidido en su plan (`plan.md`, «Lo que va al BACKLOG», 2026-10-25).
+- **De dónde:** fase 7b, 2026-10-25.
+- **Qué haría falta:** añadir `--stop-stdin` y `stop_stdin=True` también a `receta_tracker` (la entrada estándar primero y, si no responde, `q` a la ventana), con su prueba del `Lanzador` y una corrida en vivo con ventana.
+- **Prioridad:** baja.
+
+### B53 · Con `--stop-stdin`, la parada no se atiende mientras el tracker espera a Slicer
+- **Qué:** el hilo de `--stop-stdin` arranca antes de la espera a Slicer, pero el bucle solo mira el evento una vez abierto: si el panel pide «Detener tracker» mientras el tracker espera a Slicer (hasta `--slicer-timeout`, 30 s), el `q` queda leído y el tracker no sale hasta que Slicer llega (entonces abre la cámara y sale en la primera vuelta) o hasta el tope (código 3). El panel espera 8 s (`ESPERA_STDIN_S`) y cae en `terminate()`; la cámara todavía no estaba abierta, así que lo único que se corta en duro es el servidor del 18944, que el sistema libera al morir el proceso.
+- **Por qué queda:** atenderlo pide que `IgtlSender.wait_for_client` (la cadena, principio 6) acepte un evento de parada; la fase 7b no toca `transport/`. Visto al implementar la fase 7b (meta 003 · Arquitectura y optimización del tracker), 2026-10-25.
+- **De dónde:** fase 7b, 2026-10-25.
+- **Qué haría falta:** pasar el evento a `wait_for_client(timeout_s, stop=None)` y salir con un código propio si se pide parar; su prueba sin cámara con el emisor falso.
+- **Prioridad:** baja.
 
 ## Cerrados
 

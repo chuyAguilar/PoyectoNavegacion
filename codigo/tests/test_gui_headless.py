@@ -96,3 +96,97 @@ def test_panel_selftest() -> None:
                   r"\blado\b", r"\bluz\b", r"\breporte\b", r"\bsb\b", r"cl[aá]sico", r"\bcasillas?\b",
                   r"\.yml\b", r"\bClose\b", r"\bSave\b", r"\bCancel\b"):
         assert not re.search(jerga, textos, re.IGNORECASE), f"jerga {jerga!r} a la vista: {textos}"
+    # Meta 003, fase 7b: la vista previa, el tracker sin ventana y «Detener tracker» (sin proceso,
+    # deshabilitado), y los argv de las tres recetas con gs1.
+    assert linea("boton_vista_previa_habilitado").endswith("=True")
+    assert linea("boton_tracker_sin_ventana_habilitado").endswith("=True")
+    assert linea("boton_detener_tracker_habilitado").endswith("=False")
+    gs1 = "tracker_config_gs1.yaml"
+    ids = linea("ids_argv")
+    assert ids.split("=", 1)[1].startswith("-m diagnostics.identify_ids --config ") and gs1 in ids
+    assert ids.endswith(" --timeout 600") and "--no-detect" not in ids
+    assert linea("vista_previa_argv").endswith(f"{gs1} --no-detect --timeout 600")
+    assert linea("tracker_sin_ventana_argv").split("=", 1)[1].startswith("-m tracker --config ")
+    assert linea("tracker_sin_ventana_argv").endswith(f"{gs1} --no-window --stop-stdin")
+
+
+# ----------------------------------------------------------------------------
+# Meta 003, fase 7b · Botones de tracker sin ventana y de vista previa (P12, P13)
+# ----------------------------------------------------------------------------
+
+def test_recetas_de_la_fase_7b() -> None:
+    from pathlib import Path
+    from gui import recipes
+    gs1 = str(Path("profiles") / "tracker_config_gs1.yaml")
+    ids = recipes.receta_identificar_ids(gs1)
+    assert ids.argv[2:4] == ["-m", "diagnostics.identify_ids"] and ids.argv[-2:] == ["--timeout", "600"]
+    assert ids.ventana_titulo == recipes.VENTANAS["identificar_ids"] and not ids.stop_stdin
+    perm = recipes.receta_identificar_ids(gs1, permisivo=True, timeout=30)
+    assert perm.argv[-3:] == ["--permisivo", "--timeout", "30"]
+    vp = recipes.receta_vista_previa(gs1)
+    assert vp.clave == "vista_previa" and vp.usa_camara and not vp.stop_stdin
+    assert vp.argv[2:] == ["-m", "diagnostics.identify_ids", "--config", gs1, "--no-detect", "--timeout", "600"]
+    assert vp.ventana_titulo == recipes.VENTANAS["vista_previa"]
+    tsv = recipes.receta_tracker_sin_ventana(gs1)
+    assert tsv.clave == "tracker_sin_ventana" and tsv.stop_stdin and tsv.ventana_titulo is None
+    assert tsv.argv[2:] == ["-m", "tracker", "--config", gs1, "--no-window", "--stop-stdin"]
+    assert not recipes.receta_tracker(gs1).stop_stdin
+
+
+def test_titulos_de_ventana_iguales_a_los_del_script() -> None:
+    """gui/ no importa diagnostics/ (carga cv2): los textos se comparan aqui."""
+    from diagnostics import identify_ids
+    from gui import recipes
+    assert recipes.VENTANAS["identificar_ids"] == identify_ids.WINDOW_TITLE
+    assert recipes.VENTANAS["vista_previa"] == identify_ids.PREVIEW_WINDOW_TITLE
+
+
+_HIJO_LIMPIO = ("import sys\n"
+                "print('[hijo] listo', flush=True)\n"
+                "linea = sys.stdin.readline()\n"
+                "print(f'[hijo] leyo {linea.strip()!r}', flush=True)\n"
+                "print('[Salida limpia]', flush=True)\n")
+_HIJO_SORDO = ("import time\n"
+               "print('[hijo] listo', flush=True)\n"
+               "time.sleep(60)\n")
+
+
+def _lanzar_hijo(codigo: str):
+    """Un Lanzador con un hijo real `python -c` que se detiene por la entrada estandar."""
+    import threading
+    from gui import processes, recipes
+    lineas: list[str] = []
+    fin = threading.Event()
+    rcs: list[int] = []
+    lz = processes.Lanzador(on_linea=lineas.append,
+                            on_fin=lambda receta, rc: (rcs.append(rc), fin.set()))
+    receta = recipes.Receta(clave="tracker_sin_ventana", descripcion="hijo de prueba",
+                            argv=[sys.executable, "-u", "-c", codigo], cwd=str(CODIGO_DIR),
+                            ventana_titulo=None, usa_camara=False, stop_stdin=True)
+    assert lz.lanzar(receta) is None
+    t0 = time.monotonic()
+    while not any("[hijo] listo" in ln for ln in lineas):
+        assert time.monotonic() - t0 < 20, lineas
+        time.sleep(0.05)
+    return lz, lineas, fin, rcs
+
+
+def test_lanzador_detiene_por_la_entrada_estandar() -> None:
+    lz, lineas, fin, rcs = _lanzar_hijo(_HIJO_LIMPIO)
+    t0 = time.monotonic()
+    msg = lz.detener()
+    dt = time.monotonic() - t0
+    assert msg == "cierre limpio (por la entrada estandar)", (msg, lineas)
+    assert dt < 8.0
+    assert fin.wait(5.0) and rcs == [0]
+    assert "[hijo] leyo 'q'" in lineas and "[Salida limpia]" in lineas
+
+
+def test_lanzador_sin_respuesta_cae_en_terminate(monkeypatch) -> None:
+    from gui import processes
+    monkeypatch.setattr(processes, "ESPERA_STDIN_S", 0.5)
+    lz, lineas, fin, rcs = _lanzar_hijo(_HIJO_SORDO)
+    msg = lz.detener()
+    assert msg == "cerrado con terminate() (duro)", (msg, lineas)
+    assert fin.wait(5.0) and rcs and rcs[0] != 0
+    assert any("terminate()" in ln for ln in lineas)

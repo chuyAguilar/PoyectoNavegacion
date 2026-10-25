@@ -15,6 +15,12 @@ nativo. Mecanismo de Detener decidido por la sonda del Paso 1 (2026-08-13):
      asi que no aporta nada sobre terminate() y no se usa.
   3) kill() como ultimo recurso.
 
+Meta 003, fase 7b (clarify.md P12): las recetas con `stop_stdin` (el tracker
+sin ventana, `--stop-stdin`) se lanzan con la entrada estandar en una tuberia
+y se detienen escribiendo `q` y cerrandola: el tracker sale por el mismo
+camino que con 'q' en la ventana (finally completo). Si no sale en
+ESPERA_STDIN_S, terminate() y kill() como siempre, y lo dice.
+
 Los callbacks (on_linea, on_fin) se invocan desde hilos de trabajo: el panel
 los envuelve en señales Qt (emision cross-thread segura).
 """
@@ -29,6 +35,7 @@ import threading
 WM_CHAR = 0x0102
 ESPERA_Q_S = 4.0        # tras enviar 'q', cuanto esperar el cierre limpio
 ESPERA_TERMINATE_S = 3.0
+ESPERA_STDIN_S = 8.0    # tras escribir 'q' por stdin: hilo, camara y servidor (IgtlSender.close, tope 5 s)
 
 # Meta 002, fase 2b (correccion, 2026-10-22): la aceleracion HW de MSMF hace
 # que abrir la camara tarde 43-51 s en vez de 3.6-4.0 s, sin ganar fps. cv2 la
@@ -99,6 +106,8 @@ class Lanzador:
                 proc = subprocess.Popen(
                     receta.argv,
                     cwd=receta.cwd,
+                    # solo las recetas que se detienen por stdin la reciben en tuberia
+                    stdin=subprocess.PIPE if getattr(receta, "stop_stdin", False) else None,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True, encoding="utf-8", errors="replace",
@@ -149,8 +158,12 @@ class Lanzador:
         if proc is None or proc.poll() is not None:
             return "no hay proceso corriendo"
 
-        # 1) camino nativo: tecla 'q' a la ventana OpenCV del script
-        if receta.ventana_titulo:
+        # 1a) sin ventana (fase 7b): 'q' por la entrada estandar, y se cierra
+        if getattr(receta, "stop_stdin", False):
+            if self._enviar_q_stdin(proc):
+                return "cierre limpio (por la entrada estandar)"
+        # 1b) camino nativo: tecla 'q' a la ventana OpenCV del script
+        elif receta.ventana_titulo:
             enviado = _post_q(receta.ventana_titulo)
             self._on_linea(f"[panel] detener: enviando 'q' a la ventana "
                            f"'{receta.ventana_titulo}' "
@@ -166,7 +179,7 @@ class Lanzador:
                 t0 -= 0.25
 
         # 2) cierre duro
-        self._on_linea(f"[panel] detener: {receta.clave} no cerro con 'q' — "
+        self._on_linea(f"[panel] detener: {receta.clave} no cerro limpio con 'q' — "
                        f"terminate() (cierre DURO: el finally del script no "
                        f"corre; la camara puede tardar unos segundos en "
                        f"liberarse)")
@@ -187,6 +200,31 @@ class Lanzador:
         except (OSError, subprocess.TimeoutExpired):
             pass
         return "cerrado con kill() (ultimo recurso)"
+
+    def _enviar_q_stdin(self, proc):
+        """Escribe 'q' en la entrada estandar del hijo, la cierra (el fin de la
+        entrada tambien lo detiene) y espera hasta ESPERA_STDIN_S. True si salio."""
+        self._on_linea("[panel] detener: enviando 'q' por la entrada estandar")
+        if proc.stdin is None:
+            self._on_linea("[panel] detener: el proceso no tiene la entrada estandar en tuberia")
+        else:
+            try:
+                proc.stdin.write("q\n")
+                proc.stdin.flush()
+            except (OSError, ValueError) as e:      # tuberia rota o ya cerrada: se anota y se sigue
+                self._on_linea(f"[panel] detener: no se pudo escribir en la entrada estandar ({e})")
+            try:
+                proc.stdin.close()
+            except (OSError, ValueError):
+                pass
+        fin = threading.Event()
+        restante = ESPERA_STDIN_S
+        while restante > 0:
+            if proc.poll() is not None:
+                return True
+            fin.wait(0.1)
+            restante -= 0.1
+        return proc.poll() is not None
 
     def detener_async(self, al_terminar=None):
         """Detiene en un hilo aparte para no congelar la GUI."""

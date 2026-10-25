@@ -5,11 +5,13 @@ es obligatorio; `send_video: true` aborta antes de crear nada (P7); sin Slicer e
 el tope aborta con codigo 3 sin abrir la camara (fase 7); sin frames la camara
 se da por perdida y se cierra limpio; lo que se envia es lo que `MarkerTracker`
 da con los tiempos de captura (`perf_counter`, fase 7); y `draw_poses` pinta
-sobre el frame. Ninguna prueba abre una camara ni un puerto (B34, fixture de
-conftest).
+sobre el frame. Fase 7b: `--stop-stdin` sale limpio con `q` o el fin de la
+entrada estandar, y sin la opcion no se lee la entrada. Ninguna prueba abre una
+camara ni un puerto (B34, fixture de conftest).
 """
 from __future__ import annotations
 
+import io
 from pathlib import Path
 
 import cv2
@@ -169,6 +171,46 @@ def test_config_obligatorio_y_aceleracion_en_el_log(fakes, frames_syn, profile_s
     assert "[Tracker] Aceleracion HW de MSMF" in out
     assert "[Whitelist] IDs aceptados: [0]" in out and "[Salida limpia]" in out
     assert "[OpenIGTLink] Cliente conectado" in out and "[Captura] Camara" in out
+
+
+@pytest.mark.parametrize("entrada, motivo", [("q\n", "q por la entrada estandar"),
+                                             ("", "fin de la entrada estandar"),
+                                             ("hola\nQ\n", "q por la entrada estandar")])
+def test_stop_stdin_sale_limpio(fakes, frames_syn, profile_syn, monkeypatch, capsys,
+                                entrada, motivo) -> None:
+    """Fase 7b (P12): con --stop-stdin, una linea `q` o el fin de la entrada estandar
+    detienen el bucle por el mismo camino que 'q': camara, hilo y servidor cerrados, rc 0."""
+    monkeypatch.setattr(tracker.sys, "stdin", io.StringIO(entrada))
+    rc, cam, sender, est = fakes(frames_syn, profile_syn(), extra=["--no-window", "--stop-stdin"],
+                                 loop=True)
+    assert rc == 0 and cam.closed and sender.closed and est["imshow"] == 0
+    out = capsys.readouterr().out
+    assert f"[Detener] {motivo}" in out and out.rstrip().endswith("[Salida limpia]")
+
+
+class _UnreadableStdin:
+    """Una entrada estandar que falla si alguien la lee."""
+    touched = False
+
+    def _boom(self, *_a, **_k):
+        _UnreadableStdin.touched = True
+        raise AssertionError("sin --stop-stdin no se lee la entrada estandar")
+    read = readline = readlines = __iter__ = __next__ = _boom
+
+
+def test_sin_stop_stdin_no_se_lee_la_entrada(fakes, frames_syn, profile_syn, monkeypatch) -> None:
+    _UnreadableStdin.touched = False
+    monkeypatch.setattr(tracker.sys, "stdin", _UnreadableStdin())
+    rc, cam, sender, _ = fakes(frames_syn, profile_syn(), extra=["--no-window"])
+    assert rc == 0 and cam.closed and len(sender.sent) == len(frames_syn)
+    assert not _UnreadableStdin.touched
+
+
+def test_watch_stdin_pone_el_evento() -> None:
+    stop = tracker.watch_stdin(io.StringIO("x\nq\nmas\n"))
+    assert stop.wait(2.0)
+    vacio = tracker.watch_stdin(io.StringIO(""))
+    assert vacio.wait(2.0)
 
 
 def test_draw_poses_pinta_sobre_el_frame() -> None:

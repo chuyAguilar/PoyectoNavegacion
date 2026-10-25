@@ -1,23 +1,38 @@
 # -*- coding: utf-8 -*-
 """
-IDENTIFICAR IDs de los marcadores en vivo.
+IDENTIFICAR IDs de los markers en vivo, o VISTA PREVIA para colocar la camara.
 
-Abre la camara y dibuja el ID (numero grande) sobre cada marcador detectado, mas
-un punto en la esquina 0 (top-left del marcador) para ver su ORIENTACION. Sirve
-para verificar el orden/colocacion de los marcadores del dodecaedro ANTES de
-calibrar el rigid body entero.
+Abre la camara con el perfil, igual que el tracker (`camera.backend.create_backend`
++ `open()`: puerto, marca, ajustes, modo y el .yml), y tiene dos modos:
 
-Nota: el detector ArUco decodifica la orientacion del patron, asi que el ID NO se
-confunde 6<->9 ni por giro. El numero que ves es el ID real.
+- Por defecto, IDs: dibuja el ID (numero grande) sobre cada marker detectado
+  (Marker0, o cualquiera del diccionario del perfil), mas un punto rojo en la
+  esquina 0 para ver su orientacion. El detector ArUco decodifica la
+  orientacion del patron, asi que el ID no se confunde 6<->9 ni por giro.
+- `--no-detect`, vista previa (meta 003, fase 7b; clarify.md P13 = c): solo la
+  imagen, una cruz fina en el centro y los fps que entrega la camara, para
+  colocarla y enfocarla. No detecta, no estima pose, no envia nada ni abre el
+  puerto 18944. Cada 5 s escribe `[Vista previa] camara X fps` (con poca luz
+  las SVPRO bajan de 90, B50).
 
-Funciona con el perfil que se le pase (desde la meta 003 solo webcam: gs1 y gs2).
+Sale limpio (camara cerrada, ventana destruida y `[Salida limpia]`, en un
+`finally`) con `q`, al cerrar la ventana con la X, al cumplirse `--timeout`, o
+si la camara no entrega frames durante NO_FRAMES_S (codigo 1, y lo dice).
 
-Uso (desde codigo\\, con el venv; --config obligatorio, principio 7):
-    python -m diagnostics.identify_ids --config profiles\\tracker_config_gs1.yaml
+Uso (desde codigo\\, con el venv; --config y --timeout obligatorios, principios 7 y 9):
+    python -m diagnostics.identify_ids --config profiles\\tracker_config_gs1.yaml --timeout 600
+    python -m diagnostics.identify_ids --config profiles\\tracker_config_gs1.yaml --no-detect --timeout 600
 Teclas:  q = salir
+
+Context7 (2026-10-25): OpenCV 4.13, `getWindowProperty(win, WND_PROP_VISIBLE)`
+dice si la ventana existe y es visible; `waitKey` atiende los eventos de
+HighGUI. Python 3.11, `argparse.add_mutually_exclusive_group()` y un `type`
+que lanza `ArgumentTypeError`.
 """
 import argparse
+import sys
 import time
+from pathlib import Path
 
 from camera import uvc as camaras_uvc  # noqa: F401  (antes de cv2: apaga la aceleracion HW de MSMF; meta 002, fase 2b)
 import cv2
@@ -27,20 +42,46 @@ from camera.backend import create_backend
 import profiles
 from vision.detection import apply_detector_params   # el mismo mapeo del YAML que usa el tracker
 
+# El panel manda 'q' a la ventana por su titulo exacto (gui/recipes.VENTANAS).
+WINDOW_TITLE = "Identificar IDs - q para salir"
+PREVIEW_WINDOW_TITLE = "Vista previa - q para salir"
+NO_FRAMES_S = 10.0          # sin ningun frame en este tiempo, sale con codigo 1 (principio 9)
+REPORT_EVERY_S = 5.0        # la linea [Vista previa] con los fps de la camara
+IDS_PRINT_EVERY_S = 0.5     # la linea de IDs visibles en la consola (como antes)
 
-def main():
-    ap = argparse.ArgumentParser(description="Identificar IDs de marcadores en vivo.")
+
+def _positive_seconds(text: str) -> float:
+    try:
+        value = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"tiene que ser un numero de segundos, no {text!r}")
+    if value <= 0:
+        raise argparse.ArgumentTypeError(f"tiene que ser > 0, no {value:g}")
+    return value
+
+
+def parse_args(argv: list[str] | None) -> argparse.Namespace:
+    ap = argparse.ArgumentParser(
+        description="Identificar IDs de los markers en vivo, o vista previa (--no-detect) "
+                    "para colocar la camara.")
     ap.add_argument("--config", required=True, help="Perfil, p. ej. profiles/tracker_config_gs1.yaml.")
-    ap.add_argument("--permisivo", action="store_true",
-                    help="Usar el tuning permisivo del config (mas detecciones, mas falsos).")
-    args = ap.parse_args()
+    ap.add_argument("--timeout", required=True, type=_positive_seconds,
+                    help="Tope de la corrida en segundos (> 0); al cumplirse sale limpio.")
+    modo = ap.add_mutually_exclusive_group()
+    modo.add_argument("--no-detect", action="store_true",
+                      help="Vista previa: solo la imagen, una cruz en el centro y los fps de la camara.")
+    modo.add_argument("--permisivo", action="store_true",
+                      help="Usar el tuning permisivo del perfil (mas detecciones, mas falsos).")
+    return ap.parse_args(argv)
 
-    cfg = profiles.load(args.config)
-    dict_name = cfg["markers"]["dictionary"].upper()
+
+def make_detector(cfg_markers: dict, permisive: bool) -> cv2.aruco.ArucoDetector:
+    """El detector de siempre: estricto (sin falsos positivos) o el tuning del perfil."""
+    dict_name = cfg_markers["dictionary"].upper()
     aruco_dict = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, dict_name))
     params = cv2.aruco.DetectorParameters()
     params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-    if not args.permisivo:
+    if not permisive:
         # ESTRICTO: evita falsos positivos (IDs inventados en ruido/textura).
         params.minMarkerPerimeterRate = 0.05          # ignora blobs chicos
         params.polygonalApproxAccuracyRate = 0.03     # bordes mas rectos
@@ -50,64 +91,118 @@ def main():
         print("[IDs] Deteccion ESTRICTA (sin falsos positivos). --permisivo para aflojar.")
     else:
         # mismo tuning permisivo del tracker
-        apply_detector_params(params, cfg["markers"].get("detector", {}))
-    detector = cv2.aruco.ArucoDetector(aruco_dict, params)
-    usar_api = True
+        apply_detector_params(params, cfg_markers.get("detector", {}))
+    return cv2.aruco.ArucoDetector(aruco_dict, params)
 
+
+def draw_ids(display: np.ndarray, corners, ids) -> list[int]:
+    """Dibuja cada marker (contorno, ID grande, punto rojo en la esquina 0) y la
+    linea de IDs visibles. Devuelve los IDs visibles ordenados."""
+    visibles = []
+    if ids is not None and len(ids) > 0:
+        cv2.aruco.drawDetectedMarkers(display, corners)
+        for i, mid in enumerate(ids.flatten()):
+            c = corners[i].reshape(4, 2)
+            centro = tuple(int(v) for v in c.mean(axis=0))
+            # ID grande con contorno para legibilidad
+            txt = str(int(mid))
+            cv2.putText(display, txt, centro, cv2.FONT_HERSHEY_SIMPLEX, 1.4, (0, 0, 0), 6)
+            cv2.putText(display, txt, centro, cv2.FONT_HERSHEY_SIMPLEX, 1.4, (0, 255, 0), 2)
+            # esquina 0 (top-left del marker) en rojo -> muestra orientacion
+            cv2.circle(display, tuple(int(v) for v in c[0]), 6, (0, 0, 255), -1)
+            visibles.append(int(mid))
+    visibles = sorted(visibles)
+    cv2.putText(display, f"IDs visibles ({len(visibles)}): {visibles}",
+                (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+    cv2.putText(display, "punto rojo = esquina 0 (orientacion)",
+                (15, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 255), 1)
+    return visibles
+
+
+def draw_preview(display: np.ndarray, fps_camera: float | None, profile_name: str) -> None:
+    """Una linea con el perfil, los fps de la camara y «q = salir», y una cruz fina
+    en el centro. Sin deteccion, sin pose, sin envio."""
+    h, w = display.shape[:2]
+    cx, cy = w // 2, h // 2
+    color = (0, 255, 255)
+    cv2.line(display, (0, cy), (w - 1, cy), color, 1)
+    cv2.line(display, (cx, 0), (cx, h - 1), color, 1)
+    fps_txt = f"{fps_camera:.1f}" if fps_camera is not None else "-"
+    cv2.putText(display, f"{profile_name} | camara {fps_txt} fps | q = salir",
+                (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 4)
+    cv2.putText(display, f"{profile_name} | camara {fps_txt} fps | q = salir",
+                (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    cfg = profiles.load(args.config)
+    preview = args.no_detect
+    tag = "[Vista previa]" if preview else "[IDs]"
+    win = PREVIEW_WINDOW_TITLE if preview else WINDOW_TITLE
+    profile_name = Path(args.config).name
+    detector = None if preview else make_detector(cfg["markers"], args.permisivo)
+
+    clock = time.perf_counter
     cam = create_backend(cfg["camera"])
-    cam.open()
-    print("[IDs] Apunta el dodecaedro a la camara. q = salir.")
-
-    win = "Identificar IDs - q para salir"
-    cv2.namedWindow(win, cv2.WINDOW_NORMAL)
-    ultimo_print = 0.0
-
-    while True:
-        frame, _, _ = cam.read()
-        if frame is None:
-            continue
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if usar_api:
-            corners, ids, _ = detector.detectMarkers(gray)
+    rc = 0
+    try:
+        cam.open()
+        if preview:
+            print(f"{tag} Coloca la camara: imagen, cruz en el centro y fps de la camara. "
+                  f"q o la X = salir (tope {args.timeout:.0f} s).")
         else:
-            corners, ids, _ = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=params)
+            print(f"{tag} Apunta los markers (Marker0) a la camara. q o la X = salir "
+                  f"(tope {args.timeout:.0f} s).")
+        cv2.namedWindow(win, cv2.WINDOW_NORMAL)
+        t_start = t_last_frame = t_report = clock()
+        t_print = float("-inf")         # la primera linea de IDs sale con el primer frame, como antes
+        frames_report = 0
+        fps_camera = None
+        shown = False
+        while True:
+            frame, _, _ = cam.read()
+            t = clock()
+            if frame is not None:
+                t_last_frame = t
+                frames_report += 1
+                disp = frame.copy()
+                if preview:
+                    if t - t_report >= REPORT_EVERY_S:
+                        fps_camera = frames_report / (t - t_report)
+                        print(f"{tag} camara {fps_camera:.1f} fps")
+                        t_report, frames_report = t, 0
+                    draw_preview(disp, fps_camera, profile_name)
+                else:
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    corners, ids, _ = detector.detectMarkers(gray)
+                    visibles = draw_ids(disp, corners, ids)
+                    if t - t_print > IDS_PRINT_EVERY_S:   # por si no miras la ventana
+                        print(f"  visibles: {visibles}")
+                        t_print = t
+                cv2.imshow(win, disp)
+                shown = True
+            elif t - t_last_frame > NO_FRAMES_S:
+                print(f"[ERROR] {tag} la camara no entrega frames desde hace {NO_FRAMES_S:.0f} s. "
+                      f"Saliendo.", file=sys.stderr)
+                rc = 1
+                break
 
-        disp = frame.copy()
-        visibles = []
-        if ids is not None and len(ids) > 0:
-            cv2.aruco.drawDetectedMarkers(disp, corners)
-            for i, mid in enumerate(ids.flatten()):
-                c = corners[i].reshape(4, 2)
-                centro = c.mean(axis=0).astype(int)
-                # ID grande con contorno para legibilidad
-                txt = str(int(mid))
-                cv2.putText(disp, txt, tuple(centro), cv2.FONT_HERSHEY_SIMPLEX,
-                            1.4, (0, 0, 0), 6)
-                cv2.putText(disp, txt, tuple(centro), cv2.FONT_HERSHEY_SIMPLEX,
-                            1.4, (0, 255, 0), 2)
-                # esquina 0 (top-left del marcador) en rojo -> muestra orientacion
-                cv2.circle(disp, tuple(c[0].astype(int)), 6, (0, 0, 255), -1)
-                visibles.append(int(mid))
-
-        visibles = sorted(visibles)
-        cv2.putText(disp, f"IDs visibles ({len(visibles)}): {visibles}",
-                    (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-        cv2.putText(disp, "punto rojo = esquina 0 (orientacion)",
-                    (15, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 255), 1)
-        cv2.imshow(win, disp)
-
-        # Imprime a consola cada 0.5 s (por si no miras la ventana)
-        t = time.time()
-        if t - ultimo_print > 0.5:
-            print(f"  visibles: {visibles}")
-            ultimo_print = t
-
-        if (cv2.waitKey(1) & 0xFF) == ord('q'):
-            break
-
-    cam.close()
-    cv2.destroyAllWindows()
+            if (cv2.waitKey(1) & 0xFF) == ord("q"):
+                print(f"{tag} q: saliendo.")
+                break
+            if shown and cv2.getWindowProperty(win, cv2.WND_PROP_VISIBLE) < 1:
+                print(f"{tag} ventana cerrada: saliendo.")
+                break
+            if t - t_start >= args.timeout:
+                print(f"{tag} tope de {args.timeout:.0f} s: saliendo.")
+                break
+    finally:
+        cam.close()
+        cv2.destroyAllWindows()
+        print("[Salida limpia]")
+    return rc
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

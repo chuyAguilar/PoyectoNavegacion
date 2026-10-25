@@ -28,6 +28,7 @@ VENV_PY = RAIZ_CODIGO / ".venv" / "Scripts" / "python.exe"
 # camino nativo de los scripts, validado por la sonda del Paso 1).
 VENTANAS = {
     "identificar_ids": "Identificar IDs - q para salir",
+    "vista_previa": "Vista previa - q para salir",     # identify_ids.PREVIEW_WINDOW_TITLE (fase 7b)
     "tracker": "Tracker Multi-Marker - q para salir",
     "calibrar_camara": "Calibracion camara - ESPACIO captura, q calibra",   # calibrate_camera.TITULO_VENTANA
     "comprobar_escala": "Comprobar escala - ESPACIO posicion, q salir",
@@ -46,7 +47,7 @@ MODULOS = {
 
 @dataclass
 class Receta:
-    clave: str               # identificar_ids | tracker | calibrar_camara | comprobar_escala | enfocar | sonda_camara
+    clave: str               # identificar_ids | vista_previa | tracker | tracker_sin_ventana | calibrar_camara | comprobar_escala | enfocar | sonda_camara
     descripcion: str
     argv: list = field(default_factory=list)
     cwd: str = str(RAIZ_CODIGO)
@@ -54,6 +55,7 @@ class Receta:
     usa_camara: bool = True
     outputs: list = field(default_factory=list)  # rutas que el script escribiria
     timeout_s: float | None = None      # watchdog (solo sondas cortas)
+    stop_stdin: bool = False            # se detiene por la entrada estandar (tracker --stop-stdin; fase 7b)
 
     def comando_legible(self):
         return " ".join(str(a) for a in self.argv)
@@ -89,15 +91,35 @@ def slug_de_perfil(ruta_cfg):
     return stem.replace("tracker_config_", "").replace("tracker_config", "perfil")
 
 
-def receta_identificar_ids(ruta_cfg, permisivo=False):
+# Tope de "Verificar IDs" y de la vista previa (identify_ids --timeout, obligatorio
+# desde la meta 003, fase 7b: principio 9).
+IDS_TIMEOUT_S = 600
+
+
+def receta_identificar_ids(ruta_cfg, permisivo=False, timeout: int = IDS_TIMEOUT_S):
     argv = _modulo("identificar_ids") + ["--config", _rel(ruta_cfg)]
     if permisivo:
         argv.append("--permisivo")
+    argv += ["--timeout", str(int(timeout))]
     return Receta(
         clave="identificar_ids",
-        descripcion="Verificar IDs y orientacion de los markers (q para salir)",
+        descripcion=f"Verificar IDs y orientacion de los markers (q para salir; autocierre {int(timeout)}s)",
         argv=argv,
         ventana_titulo=VENTANAS["identificar_ids"],
+        usa_camara=True,
+    )
+
+
+def receta_vista_previa(ruta_cfg, timeout: int = IDS_TIMEOUT_S):
+    """Vista previa para colocar la camara (meta 003, fase 7b; P13 = c):
+    identify_ids sin deteccion, con la cruz en el centro y los fps de la camara."""
+    argv = _modulo("identificar_ids") + ["--config", _rel(ruta_cfg), "--no-detect",
+                                         "--timeout", str(int(timeout))]
+    return Receta(
+        clave="vista_previa",
+        descripcion=f"Vista previa para colocar la camara (q para salir; autocierre {int(timeout)}s)",
+        argv=argv,
+        ventana_titulo=VENTANAS["vista_previa"],
         usa_camara=True,
     )
 
@@ -110,6 +132,20 @@ def receta_tracker(ruta_cfg):
         argv=argv,
         ventana_titulo=VENTANAS["tracker"],
         usa_camara=True,
+    )
+
+
+def receta_tracker_sin_ventana(ruta_cfg):
+    """El tracker sin ventana (meta 003, fase 7b; P10, P12): se detiene por la
+    entrada estandar ('Detener tracker' escribe q y la cierra)."""
+    argv = _modulo("tracker") + ["--config", _rel(ruta_cfg), "--no-window", "--stop-stdin"]
+    return Receta(
+        clave="tracker_sin_ventana",
+        descripcion="Tracker en vivo sin ventana (Slicer conectado ANTES; 'Detener tracker' para salir)",
+        argv=argv,
+        ventana_titulo=None,
+        usa_camara=True,
+        stop_stdin=True,
     )
 
 
@@ -366,7 +402,8 @@ if __name__ == "__main__":
     # Smoke check: imprime las recetas que no necesitan medidas para el perfil gs1.
     cfg = "profiles/tracker_config_gs1.yaml"
     print("[recetas] comandos que compondria el panel (perfil gs1):")
-    for r in (receta_identificar_ids(cfg), receta_tracker(cfg), receta_sonda_camara(cfg)):
+    for r in (receta_identificar_ids(cfg), receta_vista_previa(cfg), receta_tracker(cfg),
+              receta_tracker_sin_ventana(cfg), receta_sonda_camara(cfg)):
         print(f"\n  [{r.clave}] {r.descripcion}")
         print(f"    cwd={r.cwd}")
         print(f"    {r.comando_legible()}")

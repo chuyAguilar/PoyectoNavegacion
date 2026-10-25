@@ -41,6 +41,7 @@
 | 026 | La cadena publica solo `Marker0ToTracker` | Aceptada |
 | 027 | El código se ordena por responsabilidad en `codigo/` y se lanza con `python -m` | Aceptada |
 | 028 | La captura va en un hilo con el último frame y el envío no espera | Aceptada |
+| 029 | El panel detiene el tracker con un botón propio y, sin ventana, por la entrada estándar | Aceptada |
 
 ---
 
@@ -599,3 +600,15 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 3. `t_now`, la entrada del 1-Euro, es la hora de captura por `perf_counter`. Antes era `time.time()`, con 15.6 ms de resolución.
 
 **Consecuencias.** El envío baja a 0.02 ms. La pose de un frame no cambia (replay 0.0 mm / 0.0°), pero cambian qué frames se procesan y los `dt` del filtro. Los mensajes llegan a Slicer en ráfagas de 1–2 por tic, con la misma latencia máxima. En vivo, con la caja de luz al máximo y la cámara a 90: gs1, 61.7 fps con ventana y sd z de 0.033 mm; gs2, 55.2 fps y sd z de 0.034 mm (el autor lo acepta, P11). Con menos luz la cámara baja sola a 22–31 fps (B50), y la SVPRO no tiene modo de 60 a 1280×960. Quedan abiertas B48 (la cola puede entregar poses viejas al reconectar) y B51 (Slicer recibió 5.8 Hz con 52 fps enviados con `--sync-capture`). Alternativas descartadas: un envío propio (reimplementa el transporte de la cadena), un hilo de envío con buzón del último (descarta poses) y decodificar el MJPG en gris (puede mover las esquinas).
+
+## ADR-029 — El panel detiene el tracker con un botón propio y, sin ventana, por la entrada estándar
+**Fecha:** 2026-10-25 · **Estado:** Aceptada
+
+**Contexto.** La fase 6 de la meta 003 midió que la ventana del tracker cuesta ~3.7 ms por frame, y con ella el tracker no pasaba de 55–62 fps. El autor pidió el 2026-10-24 un tracker sin ventana y una vista previa para colocar las cámaras (fase 7b, `specs/003-arquitectura-tracker/clarify.md` P10). Sin ventana, el panel no puede mandar `q` a una ventana por su título (2026-08-13), y CTRL_BREAK y `terminate()` no cierran limpio: no corre el `finally` y la cámara y el puerto pueden quedar tomados (principio 9).
+
+**Decisión.**
+1. «Detener tracker» es el botón del tracker en «2 · Operar» (P12), y la receta elige el camino: con ventana, `q` a la ventana por su título; sin ventana, el tracker corre con `--stop-stdin` y el panel escribe `q` por su entrada estándar y la cierra (el fin de la entrada también lo detiene). Si no sale en 8 s, `terminate()` / `kill()`, como antes. `--stop-stdin` viene apagada: sin ella el bucle no cambia.
+2. La vista previa es `diagnostics.identify_ids --no-detect` (P13), no un módulo aparte. `identify_ids` exige `--timeout` y cierra la cámara en un `finally`.
+3. El modo normal del panel pasa a ser sin ventana (P14 = b, 2026-10-25): lo hace la fase 8; los perfiles no cambian.
+
+**Consecuencias.** En vivo, con la caja de luz al máximo: sin ventana, el bucle va al ritmo de la cámara (gs1 89.9 fps, gs2 88.8), sd z 0.037 y 0.030 mm, 99.96 % con pose; con ventana, gs1 ~82. Todos los cierres desde el panel salieron limpios (exit 0, el 18944 libre). Slicer cuenta ~66 Hz con el tracker a ~90: el criterio «Hz ≥ fps − 10 %» no se cumple y la fase 8 investiga de dónde sale el techo (P15). En la fase 8, «Verificar IDs» absorbe la vista previa en un solo botón (P16). Quedan B52 (con ventana, la parada depende del título) y B53 (`--stop-stdin` no se atiende mientras el tracker espera a Slicer). Alternativas descartadas: un archivo de parada, CTRL_BREAK con un manejador de `SIGBREAK` (solo llega con consola compartida) y un módulo `diagnostics/preview.py`.

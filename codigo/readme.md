@@ -212,8 +212,14 @@ python -m gui.panel
 # Tracker (Slicer conectado como cliente a localhost:18944 ANTES)
 python -m tracker --config profiles\tracker_config_gs1.yaml
 
-# Verificar los IDs que ve la cámara
-python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml
+# Tracker sin ventana (más fps); sale con q + Enter o al cerrar la entrada (el panel: «Detener tracker»)
+python -m tracker --config profiles\tracker_config_gs1.yaml --no-window --stop-stdin
+
+# Verificar los IDs que ve la cámara (--timeout obligatorio, en segundos; q o la X para salir)
+python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml --timeout 600
+
+# Vista previa para colocar la cámara: imagen, cruz en el centro y fps de la cámara, sin detección
+python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml --no-detect --timeout 600
 
 # La suite de pruebas (sin cámara)
 python -m pytest tests -q

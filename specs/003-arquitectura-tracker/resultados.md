@@ -199,3 +199,22 @@ Sesión: `Claude outputs/fases/003/fase-7-en-vivo.md` (partes 1 y 2). Logs, `.js
 - **Con la cámara a 90 el límite es el bucle:** la detección sube de ~6 a 8–10 ms porque el hilo decodifica los 90 frames/s aunque el bucle use 55–62. Lo que falta para gs2 (tracking sin ventana) va a la fase 7b · Botones de tracker sin ventana y de vista previa.
 - Hz en Slicer ≈ fps en las corridas con hilo; con `--sync-capture` a 52 fps, 5.8 Hz (B51, sin explicar). B32 cerrado.
 - Limpieza tras cada corrida: ningún `-m tracker` vivo y el 18944 sin `Listen`.
+
+## Fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras (2026-10-25, sin cámara y en vivo)
+
+Autorizada el 2026-10-25 con P12 («Detener tracker», por dentro `--stop-stdin`) y P13 = c (`identify_ids --no-detect`). Reporte: `Claude outputs/fases/003/fase-7b.md`; protocolo en vivo: `fase-7b-en-vivo-protocolo.md`.
+
+- **Sin cámara:** suite 514/514 en 24.4 y 25.3 s (eran 491), 0 avisos; replay de Marker0 0.0 mm / 0.0° (`test_replay_marker0.py`, 8 pruebas); `python -m gui.panel --selftest` con `PYTHONIOENCODING=utf-8`: `boton_vista_previa_habilitado=True`, `boton_tracker_sin_ventana_habilitado=True`, `boton_detener_tracker_habilitado=False`, y los argv `-m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml --timeout 600`, `… --no-detect --timeout 600` y `-m tracker --config profiles\tracker_config_gs1.yaml --no-window --stop-stdin`; `python -m diagnostics.identify_ids --help` exit 0 y, sin `--timeout`, el error de `argparse` (exit 2). El `Lanzador` con un hijo real se detiene «por la entrada estandar» (exit 0, `[Salida limpia]`), y uno que la ignora cae en `terminate()`.
+- **En vivo (2026-10-25, caja de luz al máximo, Marker0 de 80 mm quieto a ~37–38 cm; reporte en `Claude outputs/fases/003/fase-7b-en-vivo.md`):**
+
+| cámara | vista previa: fps de cámara | tracker sin ventana (panel / `--record`): fps bucle | fps cámara | Hz en Slicer | sd z sin ventana (mm) | con pose | con ventana: fps / sd z |
+|---|---|---|---|---|---|---|---|
+| gs1 | 87.7, 86.3 (1a); 87.2, 87.1 (1b) | 89.9 / 89.7 | 90.0 / 89.9 | 66.5 / 65.8 | 0.037 (tope 0.047) | 99.96 % | fase 7: 61.7 / 0.033; panel hoy (2b): ~82 (80.7) |
+| gs2 | 85.9 (1b; 1a cerrada antes de la primera línea de fps) | 88.8 / 89.6 | 89.9 / 90.0 | 66.0 / 67.4 | 0.030 (tope 0.043) | 99.96 % | fase 7: 55.2 / 0.034 |
+
+- **Paso 1, vista previa y «Verificar IDs» (gs1 y gs2):** «Detener proceso» envía `q` a la ventana (`cierre limpio (por 'q')`), la X de la ventana cierra con `ventana cerrada: saliendo.`, «Verificar IDs» da `visibles: [0]` y sale con `q`. Los seis: `[Webcam] Cerrada.`, `[Salida limpia]`, exit 0.
+- **Paso 2, tracker sin ventana desde el panel con «Detener tracker»:** gs1 `[FPS] Promedio` 89.9–90.0, saltados 9, 6805 envíos; gs2 87.8–90.0, saltados 50, 3961 envíos. Los dos: `[Detener] q por la entrada estandar`, servidor del 18944 cerrado, `[Salida limpia]`, exit 0; sin `python` del tracker vivo y el 18944 sin `Listen`. **El bucle va al ritmo de la cámara** (con ventana, fase 7: 61.7 y 55.2).
+- **Paso 2b, con ventana desde el panel (gs1):** bucle 80.7 fps (cámara 86.1, saltados 332), cierre limpio. Los 61.7 de la fase 7 llevaban `--record`; sin explicar del todo.
+- **Paso 3, sd z sin ventana con `--record`:** gs1 bucle 89.7, 2693 frames, sd z 0.037, sd x 0.006, sd y 0.033, sd orientación 0.10°, 0 saltos > 5°, paso máx. 0.88 mm; gs2 bucle 89.6, 2690 frames, sd z 0.030, sd x 0.009, sd y 0.006, sd orientación 0.14°, 0 saltos > 5°, paso máx. 0.06 mm. La grabación no frena el bucle sin ventana.
+- **No se cumple: «Hz en Slicer ≥ fps − 10 %».** Con el tracker a ~89–90 fps, Slicer cuenta 65.8–67.4 Hz en las cuatro corridas sin ventana, con las dos cámaras (~81 pedidos). El tracker sí envía ~90/s (envíos / segundos). Hipótesis sin confirmar: el conector de Slicer importa los mensajes a un ritmo propio y `receive_marker0` cuenta modificaciones del nodo, no mensajes. **Por P15 (`clarify.md`), la fase 8 mide de dónde sale el techo.** El resto del criterio, cumplido.
+- **Decisiones del autor tras la sesión:** P14 = b (fase 8: el botón principal lanza sin ventana, el otro pasa a «Arrancar tracker con ventana»; perfiles sin cambio), P15 = b, P16 = b (un solo botón «Verificar IDs y colocar la cámara», fase 8).

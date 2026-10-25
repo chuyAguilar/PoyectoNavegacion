@@ -72,3 +72,35 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** a) perfiles a 90 y la ventana en uno de cada dos frames, y se repiten las corridas (recomendada); b) perfiles a 90 y cerrar con lo que hay: gs1 cumple, gs2 se queda en 55 y lo demás va a la fase 7b (sin ventana).
 - **Respuesta del autor:** b) perfiles a 90 y cerrar con lo que hay.
 - **Fecha:** 2026-10-25
+
+## P12 · Cómo se detiene limpio el tracker sin ventana desde el panel (fase 7b)
+
+- **Opciones:** a) `--stop-stdin`: el panel escribe `q` por la entrada estándar del tracker y la cierra; el fin de la entrada también lo detiene (recomendada: se prueba sin cámara con un hijo real y no depende de una consola ni de una ventana); b) un archivo de parada (`--stop-file <ruta>`) que el bucle mira: si algo falla queda el archivo, y hay que elegir dónde; c) CTRL_BREAK con un manejador de `SIGBREAK` en el tracker: solo llega si el panel comparte consola con el hijo, y la sonda del 2026-08-13 lo vio matar en duro; d) `terminate()`: no corre el `finally` (la cámara y el puerto pueden quedar tomados, principio 9).
+- **Respuesta del autor:** «un botón para eso en el panel». La dirección lo lee así: un botón propio en el panel para detener el tracker sin ventana, limpio; por dentro, el mecanismo que el plan elija para que ese botón cierre limpio (la recomendación era a) `--stop-stdin`).
+- **Fecha:** 2026-10-25
+
+## P13 · Con qué se hace la vista previa (fase 7b)
+
+- **Opciones:** a) un módulo nuevo y corto, `diagnostics/preview.py`, que abre la cámara como el tracker (puerto, marca, ajustes, modo y `.yml`) y muestra solo la imagen, los fps de la cámara y una cruz en el centro (recomendada); b) `measure_modes --enfocar`: ya tiene ventana y tope, pero pisa el modo del perfil, no comprueba el `.yml`, exige `--salida` y pinta la nitidez; c) `identify_ids` con una opción para no detectar: no tiene tope ni cierra en un `finally`, y ya es otro botón. Si no se quiere la cruz, se quita.
+- **Respuesta del autor:** c) `identify_ids` sin detección. Le faltan el tope y el cierre en un `finally`, que el plan añade.
+- **Fecha:** 2026-10-25. Ese mismo día el autor autorizó la fase 7b en el chat, con estas respuestas.
+
+## P14 · Si el modo normal del tracker pasa a ser sin ventana (se contesta con los números de la fase 7b)
+
+- **Opciones:** a) no: «Arrancar tracker» sigue con ventana y «sin ventana» queda como la opción para más fps; b) sí: en la fase 8 el botón principal del panel lanza sin ventana y el otro pasa a «Arrancar tracker con ventana», sin tocar los perfiles; c) sí, y además `debug.show_window: false` en los dos perfiles, para que a mano también arranque sin ventana (cambia el contenido de los perfiles). Recomendación: decidir tras medir; si sin ventana da ≥ 60 fps en las dos cámaras y la vista previa basta para colocarlas, b).
+- **Datos (en vivo, 2026-10-25, caja al máximo):** sin ventana, bucle 89.9 / 89.7 fps (gs1) y 88.8 / 89.6 (gs2), sd z 0.037 y 0.030 mm, 99.96 % con pose; con ventana desde el panel, gs1 ~82 fps. Detalle en `resultados.md` (fase 7b).
+- **Respuesta del autor:** b) en la fase 8, el botón principal del panel lanza el tracker sin ventana y el otro pasa a «Arrancar tracker con ventana»; los perfiles no cambian.
+- **Fecha:** 2026-10-25
+
+## P15 · El techo de ~66 Hz en Slicer sin ventana (tras la sesión en vivo de la fase 7b)
+
+- **Datos:** con el tracker a ~89–90 fps sin ventana, `receive_marker0.py` cuenta 65.8–67.4 Hz en las cuatro corridas, con las dos cámaras; el plan pedía ≥ los fps − 10 % (~81). El tracker envía ~90/s (envíos / duración). Hipótesis sin confirmar: el ritmo al que el conector de Slicer importa los mensajes o cómo cuenta `receive_marker0`.
+- **Opciones:** a) cerrar la fase 7b con 66 Hz y una entrada del BACKLOG (baja); b) la fase 7b se cierra con ese criterio sin cumplir y declarado, y la fase 8 mide de dónde sale el techo antes de cerrar la meta.
+- **Respuesta del autor:** b) se investiga en la fase 8.
+- **Fecha:** 2026-10-25
+
+## P16 · Uno o dos botones para verificar IDs y colocar la cámara (observación del autor en la sesión en vivo de la fase 7b)
+
+- **Opciones:** a) dejar los dos, «Verificar IDs» y «Vista previa (colocar la cámara)»; b) un solo botón: se quita «Vista previa» y «Verificar IDs» muestra también la cruz y los fps de la cámara, con el nombre «Verificar IDs y colocar la cámara».
+- **Respuesta del autor:** b) un solo botón, en la fase 8.
+- **Fecha:** 2026-10-25

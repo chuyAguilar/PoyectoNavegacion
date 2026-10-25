@@ -11,6 +11,10 @@ Grupos de acciones:
     calibrar camara: una ventana de tres pasos sin campos (enfocar, tablero,
     escala; meta 002, fase 5, P21), con lo fijo en calibration_window.py.
   2 Operar: tracker (gating duro + recordatorio de Slicer), detener.
+Meta 003, fase 7b (P10, P12, P13): «Vista previa (colocar la cámara)» en 1
+(identify_ids --no-detect), y en 2 «Arrancar tracker sin ventana» (--no-window
+--stop-stdin) y «Detener tracker», que detiene las dos recetas del tracker
+limpio: sin ventana por la entrada estandar, con ventana con 'q' a la ventana.
 Meta 003, fase 3 (ADR-027): se van el asistente "dodecaedro nuevo" y
 "Calibrar punta (dock)" (archivados en codigo/historico/iter4/dodecahedron/);
 los perfiles se listan de codigo/profiles/.
@@ -49,6 +53,9 @@ COLORES = {
     estado.ROJO: "#c5221f",
     estado.GRIS: "#8a8a8a",
 }
+
+# Las recetas que «Detener tracker» detiene (meta 003, fase 7b; P12).
+CLAVES_TRACKER = ("tracker", "tracker_sin_ventana")
 
 
 class FilaSemaforo(QWidget):
@@ -449,18 +456,25 @@ class Panel(QMainWindow):
         g1 = QGroupBox("1 · Verificar / Preparar")
         c1 = QVBoxLayout(g1)
         self.btn_ids = QPushButton("Verificar IDs")
+        self.btn_vista_previa = QPushButton("Vista previa (colocar la cámara)")
         self.btn_camara = QPushButton("Probar camara")
         self.btn_calcam = QPushButton("Calibrar cámara (enfocar, tablero, escala)…")
         c1.addWidget(self.btn_ids)
+        c1.addWidget(self.btn_vista_previa)
         c1.addWidget(self.btn_camara)
         c1.addWidget(self.btn_calcam)
         c1.addStretch(1)
         g3 = QGroupBox("2 · Operar")
         c3 = QVBoxLayout(g3)
         self.btn_tracker = QPushButton("Arrancar tracker")
+        self.btn_tracker_sin_ventana = QPushButton("Arrancar tracker sin ventana")
+        self.btn_detener_tracker = QPushButton("Detener tracker")
+        self.btn_detener_tracker.setEnabled(False)
         self.btn_detener = QPushButton("Detener proceso")
         self.btn_detener.setEnabled(False)
         c3.addWidget(self.btn_tracker)
+        c3.addWidget(self.btn_tracker_sin_ventana)
+        c3.addWidget(self.btn_detener_tracker)
         c3.addWidget(self.btn_detener)
         c3.addStretch(1)
         fila_acc.addWidget(g1)
@@ -468,9 +482,10 @@ class Panel(QMainWindow):
         raiz.addLayout(fila_acc)
 
         self.botones = {
-            "ids": self.btn_ids, "camara": self.btn_camara,
-            "calcam": self.btn_calcam,
-            "tracker": self.btn_tracker, "detener": self.btn_detener,
+            "ids": self.btn_ids, "vista_previa": self.btn_vista_previa,
+            "camara": self.btn_camara, "calcam": self.btn_calcam,
+            "tracker": self.btn_tracker, "tracker_sin_ventana": self.btn_tracker_sin_ventana,
+            "detener_tracker": self.btn_detener_tracker, "detener": self.btn_detener,
         }
 
         # --- Log ---
@@ -488,9 +503,12 @@ class Panel(QMainWindow):
         QShortcut(QKeySequence("F5"), self, activated=self.refrescar)
         self.combo.currentIndexChanged.connect(self._perfil_cambiado)
         self.btn_ids.clicked.connect(self._accion_ids)
+        self.btn_vista_previa.clicked.connect(self._accion_vista_previa)
         self.btn_camara.clicked.connect(self._accion_camara)
         self.btn_calcam.clicked.connect(self._accion_calcam)
         self.btn_tracker.clicked.connect(self._accion_tracker)
+        self.btn_tracker_sin_ventana.clicked.connect(self._accion_tracker_sin_ventana)
+        self.btn_detener_tracker.clicked.connect(self._accion_detener_tracker)
         self.btn_detener.clicked.connect(self._accion_detener)
 
         # Perfil inicial: CLI > ultima seleccion > gs1 (ADR-024)
@@ -561,13 +579,18 @@ class Panel(QMainWindow):
 
         libre = not corriendo
         self.btn_ids.setEnabled(libre and verde("entorno") and verde("config"))
+        self.btn_vista_previa.setEnabled(libre and verde("entorno") and verde("config"))
         self.btn_camara.setEnabled(libre and verde("config"))
         self.btn_calcam.setEnabled(libre and verde("entorno")
                                    and verde("config"))
         ok, malos = estado.apto_para_tracker(self.chequeos)
-        self.btn_tracker.setEnabled(libre and ok)
-        self.btn_tracker.setToolTip(
-            "" if ok else f"Bloqueado por: {', '.join(malos)} (fail-loud)")
+        motivo = "" if ok else f"Bloqueado por: {', '.join(malos)} (fail-loud)"
+        for boton in (self.btn_tracker, self.btn_tracker_sin_ventana):
+            boton.setEnabled(libre and ok)
+            boton.setToolTip(motivo)
+        activa = self.lanzador.receta_activa()
+        self.btn_detener_tracker.setEnabled(
+            corriendo and activa is not None and activa.clave in CLAVES_TRACKER)
         self.btn_detener.setEnabled(corriendo)
         self.combo.setEnabled(libre)
 
@@ -664,25 +687,43 @@ class Panel(QMainWindow):
     def _accion_ids(self):
         self.lanzar_receta(recetas.receta_identificar_ids(self.perfil_activo()))
 
+    def _accion_vista_previa(self):
+        self.lanzar_receta(recetas.receta_vista_previa(self.perfil_activo()))
+
     def _accion_camara(self):
         self.lanzar_receta(recetas.receta_sonda_camara(self.perfil_activo()))
 
     def _accion_calcam(self):
         VentanaCalibrarCamara(self).exec()
 
-    def _accion_tracker(self):
+    def _confirmar_slicer(self):
+        """La pregunta de Slicer de los dos botones del tracker. True si se lanza."""
         cfg = self._cfg or {}
         puerto = ((cfg.get("igtlink") or {}).get("transforms_port", 18944))
         r = QMessageBox.question(
             self, "Tracker — Slicer primero",
-            f"El tracker SE BLOQUEA si Slicer no esta conectado (CONTEXT §4.5).\n\n"
+            f"El tracker espera a Slicer hasta 30 s y, si no llega, aborta con "
+            f"código 3 (CONTEXT §4.5).\n\n"
             f"¿Slicer ya esta conectado como cliente OpenIGTLink "
             f"(localhost:{puerto}, conector Active)?")
         if r != QMessageBox.StandardButton.Yes:
             self.log_msg("tracker: cancelado — conectar Slicer primero "
                          "(codigo/slicer/README.md: receive_marker0.py)")
-            return
-        self.lanzar_receta(recetas.receta_tracker(self.perfil_activo()))
+            return False
+        return True
+
+    def _accion_tracker(self):
+        if self._confirmar_slicer():
+            self.lanzar_receta(recetas.receta_tracker(self.perfil_activo()))
+
+    def _accion_tracker_sin_ventana(self):
+        if self._confirmar_slicer():
+            self.lanzar_receta(recetas.receta_tracker_sin_ventana(self.perfil_activo()))
+
+    def _accion_detener_tracker(self):
+        self.log_msg("detener tracker: sin ventana, 'q' por la entrada estandar; con "
+                     "ventana, 'q' a la ventana (cierre duro solo si no responde)...")
+        self.lanzador.detener_async()
 
     def _accion_detener(self):
         self.log_msg("solicitando detencion (primero 'q' a la ventana del "
@@ -731,6 +772,11 @@ def main():
             # P19/P21 (fase 5): la ventana de tres pasos compone sus recetas con
             # el tablero guardado, sin lanzarlas (ninguna camara se abre aqui).
             gs1 = estado.DIR_PERFILES / "tracker_config_gs1.yaml"
+            # Fase 7b: los argv de Verificar IDs, la vista previa y el tracker sin ventana.
+            for nombre, componer in (("ids", recetas.receta_identificar_ids),
+                                     ("vista_previa", recetas.receta_vista_previa),
+                                     ("tracker_sin_ventana", recetas.receta_tracker_sin_ventana)):
+                print(f"[panel-selftest] {nombre}_argv={' '.join(componer(str(gs1)).argv[2:])}")
             v = VentanaCalibrarCamara(panel, str(gs1))
             print(f"[panel-selftest] calcam_lado={v.tablero.lado_mm:.2f}"
                   if v.tablero else "[panel-selftest] calcam_lado=SIN TABLERO")

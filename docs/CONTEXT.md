@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Antes, 2026-10-24 (§6: meta 003, fase 6 · Dónde se va el tiempo por frame, con la tabla en vivo; la suite, 475). Antes, 2026-10-24 (§3, §4 y §6: meta 003, fase 5 · Documentación del paso 1). Las actualizaciones anteriores, en el historial de git._
+> _Última actualización: 2026-10-25 (§4.5 y §6: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, hecha sin cámara). Antes, 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Antes, 2026-10-24 (§6: meta 003, fase 6 · Dónde se va el tiempo por frame, con la tabla en vivo; la suite, 475). Antes, 2026-10-24 (§3, §4 y §6: meta 003, fase 5 · Documentación del paso 1). Las actualizaciones anteriores, en el historial de git._
 
 ---
 
@@ -90,7 +90,8 @@
    («Slicer no se conecto al puerto 18944 en 30 s»), no abre la cámara, cierra el servidor
    y sale con código 3 (fase 7 de la meta 003, ADR-028; en vivo se vio el mensaje, la
    cámara sin abrir y la salida limpia; el código lo fija la suite). Antes de la fase 7,
-   `pyigtl` bloqueaba el bucle.
+   `pyigtl` bloqueaba el bucle. Desde la fase 7b (2026-10-25) el panel lo pregunta en los
+   dos botones del tracker (con y sin ventana) con ese texto, ya sin «SE BLOQUEA».
 6. **Marcadores impresos en NEGRO mate**, no colores (contraste en escala de
    grises para la detección).
 7. **Capturas con *depth*: SIEMPRE fuera de la caja de luz** (multipath ToF:
@@ -175,7 +176,7 @@ Desde el 2026-10-19, el método por specs: `docs/constitution.md` (lo que no se 
   tablero de 24.86 mm); escala por medias +0.27 y −0.37 mm en 80 mm. Calibración desde
   el panel en tres pasos (enfocar, tablero, escala). **No girar ni sacar el lente de la
   cámara 2 sin recalibrar** (cy 389.8, B36).
-- **Suite pytest sin cámara** (`codigo\tests\`, 491 pruebas desde la fase 7 de la meta 003, ~22–26 s): niega la cámara
+- **Suite pytest sin cámara** (`codigo\tests\`, 514 pruebas desde la fase 7b de la meta 003, ~24–26 s): niega la cámara
   real y el servidor pyigtl (B34); la comprobación de «no cambió» es la suite, el
   selftest del panel y el replay de Marker0 (`docs/ARCHITECTURE.md` §6).
 - **Histórico (archivado, se puede retomar):** el dodecaedro v2 (IDs 3–13, BA a 1.26 px),
@@ -193,7 +194,8 @@ Desde el 2026-10-19, el método por specs: `docs/constitution.md` (lo que no se 
 
 ### WIP / deuda técnica pendiente
 
-- **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`, números en `resultados.md`). **Paso 1, la arquitectura (fases 1–5), hecho:** fase 1, línea base de Marker0 (sd z 0.04 mm, replay 0.0); fase 2, la cadena publica solo `Marker0ToTracker` (ADR-026; en Slicer 19.1 y 31.4 Hz); fase 3 (2026-10-23/24), el código pasa de `codigo\iter4\` a paquetes bajo `codigo\`, se lanza con `python -m` y el dodecaedro, la Femto y los perfiles viejos van a `codigo\historico\iter4\` (ADR-027); fase 4 (2026-10-24, sin cámara y en vivo), el tracker se parte en `vision\` y `transport\` y `tracker.py` queda solo con el bucle (replay 0.0 mm / 0.0°; B28 cumple a mano: la cámara abre en 0.4 s); fase 5 (2026-10-24), la documentación (§3, §4 y §6 de aquí y de `ARCHITECTURE.md`). **Paso 2, la optimización:** fase 6 · Dónde se va el tiempo por frame (2026-10-24, `tracker --timing`, en vivo): gris + detección + pose ~6.5 ms y ventana ~3.7 ms por frame; pesan el envío de `pyigtl` (9–12.5 ms: espera el tic de 15.6 ms de Windows) y, en el modo lento, la captura (32 ms); fase 7 · Subir los fps con ventana (2026-10-25, cerrada; B32 cerrado): captura en un hilo, envío sin esperar (0.02 ms) y espera a Slicer con tope y aborto (ADR-028); en vivo, caja al máximo, con ventana: gs1 61.7 fps (sd z 0.033 mm, 56.9 Hz en Slicer) y gs2 55.2 (sd z 0.034 mm, 50.4 Hz), que el autor acepta (P11). Sigue la fase 7b · Botones de tracker sin ventana y de vista previa (la autoriza el autor) y la fase 8 · Cierre de la meta.
+- **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`, números en `resultados.md`). Hecho: la arquitectura (fases 1–5; ADR-026 y ADR-027), dónde se va el tiempo por frame (fase 6), subir los fps con ventana (fase 7; ADR-028) y los botones de tracker sin ventana y de vista previa para posicionar las cámaras (fase 7b, en vivo el 2026-10-25: bucle ~89 fps sin ventana, sd z 0.030–0.037 mm; Slicer cuenta ~66 Hz, no cumple y se investiga).
+  Falta la fase 8 · Cierre de la meta: botón principal sin ventana (P14), un solo botón «Verificar IDs y colocar la cámara» (P16) y medir el techo de ~66 Hz en Slicer (P15).
 - **Runbooks:** `documentos/historico/MANUAL_simplificado.md` (archivado el 2026-10-23) es del contexto doctor y del dodecaedro; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
 - **Panel** (`python -m gui.panel`; brief-01/02, verificado 2026-08-13 con la Femto y desde la meta 003 con gs1 y gs2; detalle en el historial de git de este archivo, antes de `cd77185`): el asistente del dodecaedro y el dock se archivaron en la fase 3 de la meta 003, así que su verificación en vivo (B10) espera al instrumento nuevo (B40).
 - **Detección ~3–4 markers/vista** (histórico 5–6): revisar distancia, ángulo y luz antes que el detector.

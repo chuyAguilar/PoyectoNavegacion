@@ -34,6 +34,11 @@ Meta 003, fase 7 · Subir los fps con ventana (clarify.md P9):
     entrada del filtro: declarado en el plan; el replay usa los tiempos grabados.
 Presiona 'q' en la ventana de video para salir.
 
+Meta 003, fase 7b (clarify.md P12): `--stop-stdin` (apagada por defecto) sale
+limpio, por el mismo camino que 'q', al leer una linea `q` o el fin de la
+entrada estandar. La usa el panel con el tracker sin ventana («Detener
+tracker»); sin la opcion no se lee la entrada estandar.
+
 B28: `import camera` va antes que `import cv2`, asi la aceleracion HW de MSMF
 queda apagada tambien lanzado a mano (camera/__init__.py importa camera.uvc).
 """
@@ -41,7 +46,9 @@ queda apagada tambien lanzado a mano (camera/__init__.py importa camera.uvc).
 import argparse
 import hashlib
 import sys
+import threading
 import time
+import typing
 from pathlib import Path
 
 import camera  # noqa: F401  (primero: apaga la aceleracion HW de MSMF antes de cargar cv2; B28)
@@ -111,6 +118,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--sync-capture", action="store_true",
                         help="Lee la camara en el bucle, sin hilo de captura (para medir una "
                              "variable a la vez; por defecto la captura va en un hilo).")
+    # Parada por la entrada estandar (meta 003, fase 7b; P12). Apagada por defecto.
+    parser.add_argument("--stop-stdin", action="store_true",
+                        help="Sale limpio al leer 'q' o el fin de la entrada estandar; lo usa el "
+                             "panel con el tracker sin ventana.")
     args = parser.parse_args(argv)
     if args.save_frames and not args.record:
         parser.error("--save-frames necesita --record")
@@ -123,6 +134,27 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     if args.slicer_timeout <= 0:
         parser.error("--slicer-timeout tiene que ser > 0")
     return args
+
+
+def watch_stdin(stream: typing.TextIO) -> threading.Event:
+    """Un hilo daemon lee lineas de `stream` y pone el evento al leer `q` o al
+    llegar al fin (el panel cerro la tuberia o murio: tambien se sale, principio 9)."""
+    stop = threading.Event()
+
+    def _run() -> None:
+        reason = "fin de la entrada estandar"
+        try:
+            for line in iter(stream.readline, ""):
+                if line.strip().lower() == "q":
+                    reason = "q por la entrada estandar"
+                    break
+        except (OSError, ValueError, AttributeError) as e:
+            reason = f"entrada estandar ilegible ({e})"
+        print(f"[Detener] {reason}")
+        stop.set()
+
+    threading.Thread(target=_run, name="stop-stdin", daemon=True).start()
+    return stop
 
 
 def _no_mark(_stage: str) -> None:
@@ -207,7 +239,11 @@ def main(argv: list[str] | None = None) -> int:
     port = int(cfg_igtl["transforms_port"])
     sender = IgtlSender(port)
     print(f"[Esperando] Conecta Slicer como cliente a ese puerto (tope {args.slicer_timeout:.0f} s).")
-    print("Presiona 'q' en la ventana para salir.")
+    print("Presiona 'q' en la ventana para salir."
+          + (" Sin ventana: q + Enter por la entrada estandar (en el panel, 'Detener tracker')."
+             if args.stop_stdin else ""))
+    # Sin --stop-stdin no se crea ni el hilo ni el evento: no se lee la entrada estandar.
+    stop = watch_stdin(sys.stdin) if args.stop_stdin else None
 
     show_window = bool(cfg.get("debug", {}).get("show_window", True)) and not args.no_window
     verbose = bool(cfg.get("debug", {}).get("verbose", False))
@@ -246,6 +282,8 @@ def main(argv: list[str] | None = None) -> int:
         grabber.start()
         print(f"[Captura] {'en el bucle (--sync-capture)' if args.sync_capture else 'en un hilo, ultimo frame'}")
         while True:
+            if stop is not None and stop.is_set():
+                break               # la misma salida que 'q' (el hilo ya escribio [Detener])
             got = grabber.next_frame(READ_TIMEOUT_S)
             if got is None:
                 if grabber.failed:

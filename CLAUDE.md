@@ -65,7 +65,8 @@ Comandos de operación (desde `codigo\`, con el venv). Los argumentos van explí
 ```powershell
 python -m gui.panel                                              # panel: compone y lanza lo demás
 python -m tracker --config profiles\tracker_config_gs1.yaml      # Slicer conectado ANTES
-python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml
+python -m tracker --config profiles\tracker_config_gs1.yaml --no-window --stop-stdin   # sin ventana; q + Enter para salir
+python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml --timeout 600
 ```
 
 ## 6. Cómo reportar
