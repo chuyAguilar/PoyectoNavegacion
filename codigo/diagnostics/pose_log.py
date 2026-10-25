@@ -24,13 +24,21 @@ que `tests/replay_util.cargar_dataset` las lee igual.
 
     python -m diagnostics.pose_log --input "<grabacion>.npz" --name Marker0 ^
         --output "<resumen>.json"
+
+`Stopwatch` (meta 003, fase 6 · Donde se va el tiempo por frame) cronometra
+el bucle del tracker por etapa (`tracker --timing <json>`): `mark(etapa)`
+suma a esa etapa el tiempo desde la marca anterior y `end_frame()` cierra el
+frame, con lo no marcado en la etapa `other`. Asi la suma de las etapas de un
+frame es exactamente el tiempo entre dos `end_frame` seguidos.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
+from typing import Callable, Sequence
 
 import cv2
 import numpy as np
@@ -216,6 +224,117 @@ def summarize(npz_path: Path, name: str = "Marker0") -> dict:
         "max_step_mm": float(paso_t.max()) if len(paso_t) else 0.0,
     })
     return out
+
+
+# ---------------------------------------------------------------------------
+# Tiempo por etapa del bucle (meta 003, fase 6)
+# ---------------------------------------------------------------------------
+
+OTHER_STAGE = "other"
+
+
+def timing_stats(ms: Sequence[float]) -> dict:
+    """Media, p50 y p95 (ms) de una serie de tiempos en ms; None si esta vacia."""
+    a = np.asarray(ms, dtype=np.float64)
+    if a.size == 0:
+        return {"mean_ms": None, "p50_ms": None, "p95_ms": None, "max_ms": None}
+    return {"mean_ms": float(a.mean()), "p50_ms": float(np.percentile(a, 50)),
+            "p95_ms": float(np.percentile(a, 95)), "max_ms": float(a.max())}
+
+
+class Stopwatch:
+    """Cronometro por etapa, frame a frame, con un reloj monotono (perf_counter).
+
+    El tiempo cuenta desde que se crea (o desde el ultimo `end_frame`). Una
+    etapa que no se marco en un frame cuenta 0 ms en ese frame. El reloj no es
+    el del tracker (`time.time`), asi que activarlo no cambia los tiempos con
+    que se filtra la pose.
+    """
+
+    def __init__(self, clock: Callable[[], float] = time.perf_counter) -> None:
+        self._clock = clock
+        self._order: list[str] = []
+        self._frames: list[dict[str, float]] = []
+        self._frame_ms: list[float] = []
+        self._current: dict[str, float] = {}
+        self._t_last = self._t_frame = clock()
+
+    @property
+    def n_frames(self) -> int:
+        return len(self._frame_ms)
+
+    def mark(self, stage: str) -> None:
+        """Suma a `stage` el tiempo desde la marca anterior (o desde el inicio del frame)."""
+        now = self._clock()
+        if stage not in self._order:
+            self._order.append(stage)
+        self._current[stage] = self._current.get(stage, 0.0) + (now - self._t_last) * 1000.0
+        self._t_last = now
+
+    def end_frame(self) -> None:
+        """Cierra el frame: lo no marcado va a `other`; el frame dura desde el `end_frame` anterior."""
+        self.mark(OTHER_STAGE)
+        now = self._t_last
+        self._frame_ms.append((now - self._t_frame) * 1000.0)
+        self._frames.append(self._current)
+        self._current = {}
+        self._t_frame = now
+
+    def stages(self) -> list[str]:
+        """Las etapas en el orden en que aparecieron, con `other` al final."""
+        return [s for s in self._order if s != OTHER_STAGE] + (
+            [OTHER_STAGE] if OTHER_STAGE in self._order else [])
+
+    def per_frame(self) -> dict[str, list[float]]:
+        """Los ms de cada etapa y del frame, frame a frame (0.0 si no se marco)."""
+        out = {s: [f.get(s, 0.0) for f in self._frames] for s in self.stages()}
+        out["frame"] = list(self._frame_ms)
+        return out
+
+    def summary(self) -> dict:
+        """Media, p50 y p95 por etapa y del frame; la suma de las medias y su cociente con el frame."""
+        pf = self.per_frame()
+        stages = {s: timing_stats(pf[s]) for s in self.stages()}
+        frame = timing_stats(self._frame_ms)
+        sum_means = float(sum(v["mean_ms"] for v in stages.values())) if self._frame_ms else None
+        return {
+            "frames": self.n_frames,
+            "stages": stages,
+            "frame": frame,
+            "sum_of_stage_means_ms": sum_means,
+            "sum_over_frame_mean": (sum_means / frame["mean_ms"]
+                                    if sum_means is not None and frame["mean_ms"] else None),
+            "fps_from_frame_mean": (1000.0 / frame["mean_ms"] if frame["mean_ms"] else None),
+        }
+
+    def save(self, path: Path, metadata: dict) -> Path:
+        """Escribe el resumen, los ms frame a frame y `metadata` en un JSON (no pisa uno que exista)."""
+        path = Path(path)
+        if path.exists():
+            raise FileExistsError(f"La salida de tiempos ya existe, no se pisa: {path}")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        data = {"summary": self.summary(), "metadata": metadata,
+                "per_frame_ms": {k: [round(x, 4) for x in v] for k, v in self.per_frame().items()}}
+        path.write_text(json.dumps(data, indent=1, ensure_ascii=False, default=str) + "\n",
+                        encoding="utf-8")
+        return path
+
+
+def format_timing(summary: dict) -> str:
+    """La tabla de `Stopwatch.summary()` en texto: una linea por etapa, mas el frame y la suma."""
+    lineas = [f"{'etapa':<12} {'media':>8} {'p50':>8} {'p95':>8}  (ms, {summary['frames']} frames)"]
+
+    def fila(nombre: str, st: dict) -> str:
+        if st["mean_ms"] is None:
+            return f"{nombre:<12} {'-':>8} {'-':>8} {'-':>8}"
+        return f"{nombre:<12} {st['mean_ms']:8.3f} {st['p50_ms']:8.3f} {st['p95_ms']:8.3f}"
+    for nombre, st in summary["stages"].items():
+        lineas.append(fila(nombre, st))
+    lineas.append(fila("FRAME", summary["frame"]))
+    if summary["sum_of_stage_means_ms"] is not None:
+        lineas.append(f"suma de medias {summary['sum_of_stage_means_ms']:.3f} ms; "
+                      f"{summary['fps_from_frame_mean']:.1f} fps por la media del frame")
+    return "\n".join(lineas)
 
 
 def main(argv: list[str] | None = None) -> int:

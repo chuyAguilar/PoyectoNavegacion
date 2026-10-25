@@ -117,3 +117,55 @@ Protocolo `Claude outputs/fases/003/fase-4-en-vivo-protocolo.md`; sesión `fase-
 - Líneas de más de 2 000 caracteres en `docs/` (sin `history/`), `memory.md` y `specs/`: **0** (la más larga, 1 832).
 - Los 8 comandos `python -m` propuestos para `CLAUDE.md` §5 (`tracker`, `gui.panel`, `diagnostics.identify_ids`, `diagnostics.probe_camera`, `diagnostics.measure_modes`, `calibration.calibrate_camera`, `calibration.check_scale`, `tests.replay_util`) con `--help` desde `codigo\`: **exit 0** los 8.
 - Suite: **463/463** en 18.02 s y 17.63 s de pytest (21 s de pared); replay de Marker0 y selftest del panel 16/16. Ningún `.py` cambió.
+
+## Fase 6 · Dónde se va el tiempo por frame (2026-10-24, sin cámara y en vivo)
+
+- Entrega: `diagnostics.pose_log.Stopwatch` (`mark`, `end_frame`, `summary`, `save`; reloj `perf_counter`), `tracker --timing <json>` (apagado por defecto; etapas `capture`, `gray`, `detect`, `pose_filter`, `send`, `record`, `draw`, `imshow`, `key`, `other`) y `diagnostics/measure_window.py`. `tracker.py` 212 → 282 líneas; `pose_log.py` 239 → 358; `measure_window.py` 151; `tests/test_timing.py` 245 (12 pruebas).
+- **`measure_window.py`** (300 vueltas por modo, 10 de calentamiento, tope 60 s, frame de 1280×960 de `tests/data/`; JSON en `Claude outputs/grabaciones/003/fase6_measure_window_*.json`), ms por vuelta:
+
+| corrida | modo | `imshow` | tecla | total (media) | p50 | p95 | fps equivalentes |
+|---|---|---|---|---|---|---|---|
+| gs1 (a) | `waitKey(1)` | 0.431 | 1.765 | 2.196 | 1.911 | 2.803 | 455 |
+| gs1 (a) | `pollKey()` | 0.453 | 1.574 | 2.026 | 1.938 | 2.610 | 494 |
+| gs2 | `waitKey(1)` | 0.469 | 1.888 | 2.357 | 2.013 | 3.417 | 424 |
+| gs2 | `pollKey()` | 0.440 | 1.540 | 1.980 | 1.964 | 2.443 | 505 |
+| gs1 (b) | `waitKey(1)` | 0.469 | 1.579 | 2.048 | 1.993 | 2.508 | 488 |
+| gs1 (b) | `pollKey()` | 0.460 | 1.555 | 2.015 | 1.970 | 2.364 | 496 |
+
+- **La hipótesis a) del plan no se sostiene en esta máquina:** `waitKey(1)` no espera un tic de ~15 ms; cuesta 1.6–1.9 ms, y `pollKey()` ahorra 0.0–0.35 ms de media. La ventana entera (`imshow` + tecla) son ~2 ms por frame.
+- Aparte, sin cámara (script de trabajo fuera del repo, 100 vueltas sobre los 3 frames guardados de cada cámara, `MarkerTracker` del perfil, 12 hilos de OpenCV): gris 0.47–0.53 ms, detección 5.6–5.8 ms (p95 6.5–6.7), pose y filtro 0.17 ms, copia del frame para dibujar 0.84–0.86 ms. Con la ventana, ~10 ms por frame: el proceso daría ~100 fps. A 20–33 fps (30–50 ms por frame), lo que falta estaría en la captura (`cam.read()` esperando el frame); es la hipótesis que la tabla en vivo confirma o descarta.
+- Replay de Marker0 en 0.0 mm / 0.0° (en la suite). `--timing` no cambia lo enviado (prueba con cámara y emisor falsos: las mismas matrices con y sin la opción).
+- Suite: **475/475** en 18.06 s y 17.94 s de pytest, 0 avisos.
+
+### Parte en vivo (2026-10-24, con el autor; caja de luz nivel 2, Marker0 de 80 mm quieto a ~37–38 cm)
+
+Protocolo `Claude outputs/fases/003/fase-6-en-vivo-protocolo.md`; sesión `fase-6-en-vivo.md`. Por cámara, 30 s con ventana y 30 s `--no-window`, con `--duration 30 --timing <json>`, panel cerrado, Slicer conectado antes con `codigo/slicer/receive_marker0.py` (`run(seconds=20)`). JSON y logs: `Claude outputs/grabaciones/003/fase6_{gs1,gs2}_{ventana,sinventana}_timing.json` y `.log`.
+
+ms por etapa, **media / p50 / p95** (reloj `perf_counter`):
+
+| etapa | gs1 con ventana | gs1 sin ventana | gs2 con ventana | gs2 sin ventana |
+|---|---|---|---|---|
+| `capture` | **32.09** / 28.43 / 44.08 | 8.64 / 8.48 / 11.84 | 7.87 / 8.00 / 9.98 | 8.59 / 8.46 / 11.94 |
+| `gray` | 0.50 / 0.48 / 0.60 | 0.49 / 0.48 / 0.61 | 0.49 / 0.47 / 0.58 | 0.46 / 0.46 / 0.54 |
+| `detect` | 5.75 / 5.85 / 6.98 | 5.85 / 6.19 / 7.01 | 5.98 / 6.30 / 7.14 | 5.58 / 6.04 / 6.61 |
+| `pose_filter` | 0.17 / 0.17 / 0.21 | 0.17 / 0.17 / 0.22 | 0.18 / 0.18 / 0.23 | 0.17 / 0.17 / 0.21 |
+| `send` | 9.07 / 9.17 / 11.21 | **12.53 / 15.02 / 19.69** | 12.53 / 12.72 / 15.93 | **12.20 / 15.19 / 19.99** |
+| `draw` | 1.17 / 1.13 / 1.46 | — | 1.19 / 1.16 / 1.50 | — |
+| `imshow` | 0.76 / 0.67 / 0.84 | — | 0.72 / 0.66 / 0.83 | — |
+| `key` (`waitKey(1)`) | 1.86 / 1.75 / 2.37 | — | 1.76 / 1.65 / 2.39 | — |
+| `other` | 0.005 | 0.004 | 0.005 | 0.004 |
+| **frame** | **51.36** / 47.60 / 63.37 | 27.69 / 30.90 / 33.17 | 30.72 / 31.20 / 33.29 | 27.00 / 30.86 / 33.24 |
+| frames | 576 | 1 072 | 967 | 1 099 |
+| fps (media del frame / `[FPS]` de toda la corrida) | 19.5 / 19.2 | 36.1 / 35.7 | 32.6 / 32.2 | 37.0 / 36.6 |
+| suma de etapas / frame de `[FPS]` | **0.984** | **0.988** | **0.989** | **0.988** |
+| Hz en Slicer (20 s) | 19.4 | 36.2 | 8.3 (no vale\*) | 12.5 (no vale\*) |
+
+\* En gs2 la escena de Slicer no se cerró y el script dijo «conector existente»: la ventana de 20 s empezó antes que el tracker. En gs1 (escena nueva) Slicer recibió lo enviado (19.4 frente a 19.2; 36.2 frente a 35.7).
+
+- **Criterio: cumple.** La suma de las etapas queda entre −1.1 % y −1.6 % del tiempo por frame de `[FPS] Promedio` (tolerancia ±10 %). Las cuatro corridas: «Servidor del puerto 18944 cerrado», `[Salida limpia]` y limpieza vacía.
+- **El proceso propio es ~6.5 ms** (gris + detección + pose y filtro), como en el banco sin cámara; la ventana entera ~3.7–3.8 ms (dibujo 1.2, `imshow` 0.7, `waitKey(1)` 1.8). Lo que pesa son el **envío** (9–12.5 ms de media en las cuatro) y, en el modo lento, la **captura** (gs1 con ventana: 32 ms; en las otras tres, 7.9–8.6 ms).
+- **El bucle va enganchado al tic del reloj de Windows (15.625 ms).** La duración de cada frame cae cerca de un múltiplo del tic: distancia media al múltiplo más cercano 0.96–1.07 ms (sería ~3.9 ms sin enganche). gs1 con ventana: 392 frames de 3 tics y 175 de 4; las otras tres, 2 tics la mayoría (765–926) y 1 tic el resto (40–322). Lo que no es envío suma 14.8–18.2 ms en las tres corridas rápidas y 42.3 ms en la lenta; el envío completa hasta el siguiente tic.
+- **Por qué el envío tarda (leído de `pyigtl/comm.py` 0.3.1 en el venv; Context7 `/lassoan/pyigtl` no documenta el hilo):** `send_message(msg, wait=True)` mete el mensaje en una cola (`deque(maxlen=100)`) y espera a que se vacíe con `time.sleep(0.001)`. La cola la vacía el hilo del servidor (`TCPRequestHandler.handle`), que en cada vuelta hace primero un `recv` con `settimeout(0.01)`: Slicer no le manda nada, así que espera el tope entero, y en Windows ese tope de 10 ms acaba en el tic. Micro-banco sin cámara ni puerto 18944 (un `socketpair` con el mismo tope, 60 vueltas, dos corridas): **15.5–15.6 ms** de media (p5 14.8–15.0, p95 16.1); `time.sleep(0.001)` dura 1.53–1.55 ms. El envío espera, pues, hasta que el hilo despierta en el siguiente tic: de ~0 a un tic, más si el bucle de recepción da otra vuelta (máximo visto 24.5 ms).
+- **El modo lento es la captura, no la ventana:** en la misma sesión gs2 con ventana capturó en 7.9 ms y gs1 sin ventana en 8.6 ms. Con 32 ms de captura y ~19 ms del resto, gs1 iba atado a ~19.5 fps. Si es la cámara o MSMF entregando menos frames, o la lectura que espera otra cosa, no se puede separar con estos datos (no se corrió el paso 5 opcional, `measure_modes`).
+- **Aviso para la fase 7:** `t_now` del bucle sale de `time.time()`, que en este venv tiene resolución de 15.625 ms (`time.get_clock_info('time')`: `GetSystemTimeAsFileTime`). Hoy no estorba porque cada frame dura al menos un tic; por encima de 64 fps dos frames compartirían `t_now` y el 1-Euro tomaría `dt = 1e-3` (su mínimo), con `beta` 0.05 en los perfiles. Si la fase 7 suelta el bucle del tic, `t_now` tiene que pasar a `perf_counter` o a la marca del frame (cambia la entrada del 1-Euro: se declara).
+- Suite al cerrar: **475/475** en 18.89 s y 18.51 s de pytest; replay de Marker0 0.0 mm / 0.0° dentro de ella. Ningún `.py` cambió en esta parte.

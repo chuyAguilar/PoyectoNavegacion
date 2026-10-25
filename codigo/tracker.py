@@ -15,6 +15,10 @@ Lo que publica (principio 6, ADR-026): solo `Marker0ToTracker`, en el puerto
 Uso (desde codigo\, con el venv; --config obligatorio, principio 7):
     python -m tracker --config profiles\tracker_config_gs1.yaml
 
+Tiempo por etapa (meta 003, fase 6; apagado por defecto):
+    python -m tracker --config profiles\tracker_config_gs1.yaml --duration 30 ^
+        --timing "<salida>.json"
+
 Slicer se conecta como CLIENTE a localhost:18944 ANTES de arrancar: pyigtl
 espera a que se vacie la cola de envio y sin cliente bloquea (CONTEXT.md 4.5).
 Presiona 'q' en la ventana de video para salir.
@@ -76,6 +80,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                         help="Con --save-frames, guarda 1 de cada N frames (defecto 30).")
     parser.add_argument("--duration", type=float, default=None,
                         help="Sale solo, limpio, a los N segundos de bucle (tope de la corrida).")
+    # Tiempo por frame (meta 003, fase 6). Apagada por defecto: sin ella no se cronometra.
+    parser.add_argument("--timing", default=None,
+                        help="Cronometra cada etapa del bucle y escribe el resumen en este .json.")
     args = parser.parse_args(argv)
     if args.save_frames and not args.record:
         parser.error("--save-frames necesita --record")
@@ -83,7 +90,46 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         parser.error("--frames-every tiene que ser >= 1")
     if args.duration is not None and args.duration <= 0:
         parser.error("--duration tiene que ser > 0")
+    if args.timing is not None and Path(args.timing).suffix != ".json":
+        parser.error("--timing tiene que terminar en .json")
     return args
+
+
+def _no_mark(_stage: str) -> None:
+    """Sin --timing: las marcas del cronometro no hacen nada."""
+
+
+def _no_end_frame() -> None:
+    """Sin --timing: el cierre de frame del cronometro no hace nada."""
+
+
+def _save_timing(sw, args: argparse.Namespace, argv, show_window: bool, n_frames: int,
+                 t_start: float, t_end: float) -> None:
+    """Escribe el JSON de --timing y su tabla en el log. El tiempo por frame que lo
+    contrasta es el del promedio de [FPS] (time.time), medido aparte del cronometro."""
+    from diagnostics.pose_log import format_timing
+    fps = n_frames / (t_end - t_start) if t_end > t_start else None
+    summary = sw.summary()
+    frame_ms_fps = 1000.0 / fps if fps else None
+    sum_ms = summary["sum_of_stage_means_ms"]
+    meta = {
+        "config": str(Path(args.config).resolve()),
+        "argv": sys.argv if argv is None else list(argv),
+        "show_window": bool(show_window),
+        "record": bool(args.record),
+        "frames_loop": n_frames,
+        "fps_average": fps,
+        "frame_ms_from_fps": frame_ms_fps,
+        "sum_over_frame_ms_from_fps": (sum_ms / frame_ms_fps
+                                       if sum_ms is not None and frame_ms_fps else None),
+        "clock": "time.perf_counter",
+        "opencv": cv2.__version__, "numpy": np.__version__,
+    }
+    path = sw.save(Path(args.timing), meta)
+    print(f"[Tiempos] Guardados en {path}\n{format_timing(summary)}")
+    if meta["sum_over_frame_ms_from_fps"] is not None:
+        print(f"[Tiempos] Frame por [FPS]: {frame_ms_fps:.3f} ms ({fps:.1f} fps); "
+              f"suma de etapas / frame = {meta['sum_over_frame_ms_from_fps']:.3f}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -108,6 +154,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[Grabacion] {args.record}"
               + (f" (frames cada {args.frames_every} en {args.save_frames})"
                  if args.save_frames else ""))
+    if args.timing and Path(args.timing).exists():
+        raise FileExistsError(f"La salida de tiempos ya existe, no se pisa: {args.timing}")
 
     # La camara se crea aqui y se abre despues del servidor OpenIGTLink (como antes).
     cam = create_backend(cfg["camera"])
@@ -122,12 +170,20 @@ def main(argv: list[str] | None = None) -> int:
     t_start = time.time()
     last_fps_print = t_start
     K = dist = None
+    sw = None
+    mark, end_frame = _no_mark, _no_end_frame
     try:
         cam.open()          # el warmup va dentro de open()
         K, dist = cam.get_intrinsics()
         print(f"[Calibracion] K cargada de la camara:\n{K}")
         print(f"  dist = {dist}")
         t_start = last_fps_print = time.time()
+        if args.timing:
+            # Su reloj es perf_counter, no time.time: no toca los tiempos del 1-Euro.
+            from diagnostics.pose_log import Stopwatch
+            sw = Stopwatch()
+            mark, end_frame = sw.mark, sw.end_frame
+            print(f"[Tiempos] Cronometrando cada etapa -> {args.timing}")
 
         n_fail_consec = 0
         while True:
@@ -147,29 +203,40 @@ def main(argv: list[str] | None = None) -> int:
                 n_fail_consec = 0
             n_frames += 1
             t_now = time.time()
+            mark("capture")         # desde el frame anterior: cam.read() (y lo que espera)
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            mark("gray")
             corners, ids = tracker.detect(gray)
+            mark("detect")
             poses = (tracker.process_corners(zip(ids.flatten().tolist(), corners), t_now, K, dist)
                      if ids is not None and len(ids) > 0 else [])
+            mark("pose_filter")
             for p in poses:
                 sender.send(f"{p.name}ToTracker", p.matrix)
                 if verbose:
                     print(f"  [{p.name}] t=[{p.tvec[0, 0]:.1f}, {p.tvec[1, 0]:.1f}, {p.tvec[2, 0]:.1f}]")
+            mark("send")
 
             if log is not None:
                 log.add(t_now, ids, corners, [(p.name, p.matrix) for p in poses], gray)
+                mark("record")
 
             if show_window:
                 display = frame.copy()
                 draw_poses(display, poses, K, dist)
+                mark("draw")
                 cv2.imshow(WINDOW_TITLE, display)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
+                mark("imshow")
+                key = cv2.waitKey(1)
+                mark("key")
+                if key & 0xFF == ord("q"):
                     break
 
             if t_now - last_fps_print > 5.0:
                 print(f"[FPS] Promedio: {n_frames / (t_now - t_start):.1f}")
                 last_fps_print = t_now
+            end_frame()
 
             if args.duration is not None and t_now - t_start >= args.duration:
                 print(f"[Duracion] {args.duration:.0f} s cumplidos, saliendo.")
@@ -178,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("\n[Interrupcion del usuario]")
     finally:
+        t_loop_end = time.time() if sw is not None else None   # antes de cerrar nada
         cam.close()
         if show_window:
             cv2.destroyAllWindows()
@@ -204,6 +272,8 @@ def main(argv: list[str] | None = None) -> int:
             path = log.save(K, dist, meta)
             fps_txt = f"{meta['fps_average']:.1f}" if meta["fps_average"] is not None else "-"
             print(f"[Grabacion] Guardada {path}: {log.n_frames} frames, fps medio {fps_txt}")
+        if sw is not None:
+            _save_timing(sw, args, argv, show_window, n_frames, t_start, t_loop_end)
         print("[Salida limpia]")
     return 0
 

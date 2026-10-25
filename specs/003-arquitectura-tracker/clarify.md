@@ -49,3 +49,12 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** a) los del diagrama, en español (`camara`, `vision`, `envio`, `calibracion`, `diagnostico`, `gui`, `slicer`, `perfiles`, `data`, `historico`), y los perfiles con su nombre de hoy (`tracker_config_gs1.yaml`, `_gs2.yaml`) (recomendada: el código ya está en español); b) carpetas en inglés, como pide `CLAUDE.md` para los identificadores; c) a), pero los perfiles pasan a `gs1.yaml` y `gs2.yaml`.
 - **Respuesta del autor:** b) carpetas en inglés, como pide `CLAUDE.md` para los identificadores (p. ej. `camera`, `vision`, `transport`, `calibration`, `diagnostics`, `gui`, `slicer`, `profiles`, `data`, `historico` → el plan propone el nombre de cada una). Los perfiles los nombra el plan con el mismo criterio.
 - **Fecha:** 2026-10-23
+
+## P9 · Las opciones de la fase 7 · Subir los fps con ventana (tras la tabla de la fase 6)
+
+- **Envío. Opciones:** E1 `send_message(wait=False)` con guarda de conexión (recomendada); E3 envío propio (ADR-028); E4 hilo con el último (cambia lo que se envía). **Respuesta del autor:** E1, sin esperar y con guarda.
+- **Sin Slicer al arrancar. Opciones:** a) el tracker espera a que Slicer se conecte, con tope de tiempo, y si no llega aborta y lo dice (recomendada); b) arranca sin Slicer, no envía y cuenta lo no enviado. **Respuesta del autor:** a) espera a Slicer con tope.
+- **Captura. Opciones:** C0 + C1, primero medir la captura sola en el modo lento de gs1 y después un hilo de captura con el último frame (ADR-028; calidad sd z ≤ 1.10 × la de la fase 1) (recomendada); C1 sin medir; no tocar la captura. **Respuesta del autor:** C0 y después C1.
+- **El objetivo. Opciones:** mantener ≥ 60 fps con ventana y revisarlo tras C0 (recomendada); bajar a 45. **Respuesta del autor:** 60, y se revisa tras C0.
+- Va con la fase 7 sea cual sea la opción: `t_now` deja `time.time()` (`perf_counter` o la hora de captura de C1), declarado porque cambia la entrada del 1-Euro.
+- **Fecha:** 2026-10-24
