@@ -9,7 +9,6 @@ se sustituyen en el modulo `tracker`.
 """
 from __future__ import annotations
 
-import types
 from pathlib import Path
 
 import numpy as np
@@ -22,7 +21,7 @@ import tracker
 
 from . import replay_util
 from .conftest import PROFILES_DIR
-from .synthetic import DIST_SYN, K_SYN, FakeCamera, FakeSender, render_marker
+from .synthetic import DIST_SYN, K_SYN, FakeCamera, FakeSender, fake_time, render_marker
 
 N_FRAMES = 12
 
@@ -125,12 +124,11 @@ def profile_syn(tmp_path: Path) -> Path:
 
 def _run_main(monkeypatch, frames, profile: Path, extra: list[str]):
     """Corre tracker.main con camara, emisor y reloj falsos; devuelve (camara, emisor)."""
-    reloj = iter(np.arange(1000.0, 1000.0 + 10 * (len(frames) + 50), 0.011).tolist())
     cam = FakeCamera(frames)
     FakeSender.instances = []
     monkeypatch.setattr(tracker, "create_backend", lambda cfg_cam: cam)
     monkeypatch.setattr(tracker, "IgtlSender", FakeSender)
-    monkeypatch.setattr(tracker, "time", types.SimpleNamespace(time=lambda: next(reloj)))
+    monkeypatch.setattr(tracker, "time", fake_time())       # fase 7: perf_counter falso, 11 ms por llamada
 
     def _sin_ventana(*a, **k):
         raise AssertionError("con --no-window no se abre ventana")
@@ -209,4 +207,6 @@ def test_main_duration_sale_limpio(tmp_path: Path, monkeypatch, frames_syn, prof
     assert cam.closed and srv.closed
     assert cam.i < len(frames_syn) * 20
     rec = pose_log.load_recording(tmp_path / "g.npz")
-    assert rec["timestamps"][-1] - rec["metadata"]["t_start"] >= 0.5
+    # Fase 7: timestamps y t_loop_start van por perf_counter; t_start/t_end son de pared.
+    assert rec["timestamps"][-1] - rec["metadata"]["t_loop_start"] >= 0.5
+    assert rec["metadata"]["t_end"] >= rec["metadata"]["t_start"]

@@ -169,3 +169,33 @@ ms por etapa, **media / p50 / p95** (reloj `perf_counter`):
 - **El modo lento es la captura, no la ventana:** en la misma sesión gs2 con ventana capturó en 7.9 ms y gs1 sin ventana en 8.6 ms. Con 32 ms de captura y ~19 ms del resto, gs1 iba atado a ~19.5 fps. Si es la cámara o MSMF entregando menos frames, o la lectura que espera otra cosa, no se puede separar con estos datos (no se corrió el paso 5 opcional, `measure_modes`).
 - **Aviso para la fase 7:** `t_now` del bucle sale de `time.time()`, que en este venv tiene resolución de 15.625 ms (`time.get_clock_info('time')`: `GetSystemTimeAsFileTime`). Hoy no estorba porque cada frame dura al menos un tic; por encima de 64 fps dos frames compartirían `t_now` y el 1-Euro tomaría `dt = 1e-3` (su mínimo), con `beta` 0.05 en los perfiles. Si la fase 7 suelta el bucle del tic, `t_now` tiene que pasar a `perf_counter` o a la marca del frame (cambia la entrada del 1-Euro: se declara).
 - Suite al cerrar: **475/475** en 18.89 s y 18.51 s de pytest; replay de Marker0 0.0 mm / 0.0° dentro de ella. Ningún `.py` cambió en esta parte.
+
+## Fase 7 · Subir los fps con ventana (2026-10-25, sin cámara y en vivo)
+
+Opciones del autor (`clarify.md` P9): E1, envío con `send_message(wait=False)` y guarda de conexión; espera a Slicer con tope (`--slicer-timeout`, 30 s) y aborto con código 3 sin abrir la cámara; C0 y C1, hilo de captura con el último frame (`camera/grabber.py`, `--sync-capture` para comparar); `t_now` por `time.perf_counter`. ADR-028 propuesto (lo escribe la dirección). `tracker.py` 282 → 357 líneas, `transport/igtl.py` 60 → 94, `camera/grabber.py` nuevo (202), `tests/test_grabber.py` nuevo (198).
+
+- Sin cámara: banco con el servidor pyigtl real y cámara simulada a 90 fps: 88.6 fps con ventana y 90.1 sin ella, el cliente recibe todo lo enviado; `send_message` 0.03 ms con `wait=False` (4.5 ms con `wait=True`). Replay de Marker0 0.0 mm / 0.0°, detección 0.0 px.
+- Suite: **491/491**, 0 avisos; 21.2 y 21.5 s de pytest con el código de la fase; 25.9 y 24.6 s al cierre, con los perfiles de vuelta a 90 (el replay, dentro, en 0.0 mm / 0.0°).
+
+### En vivo (2026-10-25, con el autor; Marker0 de 80 mm quieto, Slicer con *Close Scene* y `receive_marker0.py`, `run(seconds=20)`)
+
+Sesión: `Claude outputs/fases/003/fase-7-en-vivo.md` (partes 1 y 2). Logs, `.json` de tiempos y `.npz` en `Claude outputs/grabaciones/003/fase7_*`.
+
+| corrida | luz caja | cámara pedida | cámara fps | tracker fps con ventana | detect ms | send ms | sd z (mm) | Hz en Slicer |
+|---|---|---|---|---|---|---|---|---|
+| gs1 E1 (`--sync-capture`) | 2–3 | 90 | 23.0 | 23.0 | 5.7 | 0.022 | — | 23.4 |
+| gs2 E1b (`--sync-capture`) | ? | 90 | 51.9 | 51.9 | 6.1 | 0.024 | 0.045 | 5.8 (B51) |
+| gs2 C1c (hilo) | 3 | 90 | 31.0 | 30.9 | 5.7 | 0.025 | 0.045 | 30.9 |
+| gs2 C1max (hilo) | máx. | 90 | 90 → ~30 a mitad | 45.6 | 7.2 | — | 0.034 | 46.0 |
+| **gs1 C1max** (hilo, `--record`) | máx. | 90 | **90.0 estable** | **61.7** | 8.2 | — | **0.033** | **56.9** |
+| **gs2 final** (hilo) | máx. | 90 | **88.8 estable** | **55.2** | 9.7 (p95 16.7) | — | — | **50.4** |
+| gs1 60 (hilo, parte 2) | máx. | 60 | **28.9** | 28.0 | 8.5 | — | — | 27.6 |
+
+- **Criterio (≥ 60 fps de media con ventana, sd z ≤ 1.10 × la de la fase 1):** gs1 **cumple** (61.7 fps; sd z 0.033 mm frente al tope de 0.047). gs2 **no llega a 60** (55.2 fps, cámara a 88.8; sd z 0.034 mm de la corrida C1max frente al tope de 0.043): el autor lo acepta y cierra la fase con lo medido (`clarify.md` P11, opción b).
+- **Envío:** 0.02 ms por frame (antes 9–12.5 ms). E1 cumple.
+- **Sin Slicer:** «Slicer no se conecto al puerto 18944 en 30 s», no abrió la cámara, «Servidor … cerrado (0 envios)», `[Salida limpia]` (el código de salida no se anotó en vivo; la suite fija el 3).
+- **La cámara no tiene modo de 60** a 1280×960 MJPG: pedir 60 dio 28.9 con la caja al máximo (MSMF baja al de 30). Los perfiles siguen a 90.
+- **El modo lento es de la cámara y de la luz:** con la caja en nivel 2–3, 22–31 fps de cámara; al máximo, 90 (B50; regla en `docs/CONTEXT.md` §4.20).
+- **Con la cámara a 90 el límite es el bucle:** la detección sube de ~6 a 8–10 ms porque el hilo decodifica los 90 frames/s aunque el bucle use 55–62. Lo que falta para gs2 (tracking sin ventana) va a la fase 7b · Botones de tracker sin ventana y de vista previa.
+- Hz en Slicer ≈ fps en las corridas con hilo; con `--sync-capture` a 52 fps, 5.8 Hz (B51, sin explicar). B32 cerrado.
+- Limpieza tras cada corrida: ningún `-m tracker` vivo y el 18944 sin `Listen`.

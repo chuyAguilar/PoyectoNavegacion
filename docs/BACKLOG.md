@@ -25,7 +25,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B29 | «Probar cámara» del panel no comprueba la marca ni aplica los ajustes | Media | — |
 | B30 | Leer la marca y aplicar los controles en una sola apertura DSHOW | Baja | — |
 | B31 | El criterio de exposición de `medir_modos.py` favorece imágenes casi saturadas | Media | — |
-| B32 | Optimizar el tracker: la ventana limita a 19–25 fps en cualquier resolución | Media | — |
 | B35 | El criterio de escala por medias no mira la repetibilidad | Media | — |
 | B36 | Cámara 2 con el punto principal 90 px sobre el centro | Baja | — |
 | B39 | Con el detector de los perfiles gs1/gs2, un Marker0 sintético inclinado se lee como ID 87 o 115 | Baja | — |
@@ -37,6 +36,10 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B45 | `femto_pruebas/`, `open3d` y `pyorbbecsdk2` siguen aunque la Femto esté archivada | Baja | — |
 | B46 | `calibration/` importa `_vigilante` de `diagnostics/probe_camera.py` | Baja | — |
 | B47 | `python -m camera.uvc` avisa de que el módulo ya estaba importado | Baja | — |
+| B48 | Tras una desconexión de Slicer, la cola de `pyigtl` puede entregar poses viejas al reconectar | Baja | — |
+| B49 | `python -m gui.panel --selftest` se cuelga si la salida no es UTF-8 | Baja | — |
+| B50 | Las SVPRO bajan solas los fps con poca luz: un control UVC automático que el perfil no fija | Media | — |
+| B51 | Con `--sync-capture` a 52 fps, Slicer recibió solo 5.8 Hz | Baja | — |
 
 ## Abiertos
 
@@ -184,13 +187,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** si el script se vuelve a usar para elegir, cambiar la regla: contar los píxeles por encima de un umbral más bajo (p. ej. ≥ 250) o fijar un techo de brillo medio (~200), y desempatar por la exposición más corta, no la más larga (menos estela). Con su prueba sin cámara.
 - **Prioridad:** media.
 
-### B32 · Optimizar el tracker: la ventana limita a 19–25 fps en cualquier resolución
-- **Qué:** en la fase 3 el tracking con ventana (`debug.show_window`) dio 19–25 fps en todos los modos, incluso 320×240 (18.9–19.2); sin ventana, 90 hasta 640×480 y 62–68 fps por encima (960×720 a 1280×960; 1280×960: 61.9 y 61.6). La captura da ~90 en todos los modos, incluidos 1920×1200. Explica los ~20–26 fps de P02. Ningún modo llegó a 88.2 fps con ventana en ninguna de las dos cámaras. **Meta 003, fase 6 · Dónde se va el tiempo por frame (2026-10-24, sin cámara):** la ventana sola cuesta ~2 ms por frame (`diagnostics.measure_window`, 1280×960, 300 vueltas: `imshow` 0.43–0.47 ms, `waitKey(1)` 1.58–1.89 ms, `pollKey()` 1.54–1.57 ms), no los ~15 ms supuestos en el plan; gris + detección + pose + copia del frame dan ~7.5 ms sobre los frames guardados. En vivo (`tracker --timing`, tabla en `specs/003-arquitectura-tracker/resultados.md`): el envío cuesta 9–12.5 ms por frame (`pyigtl` espera a que su hilo, que despierta en el tic de 15.6 ms de Windows, vacíe la cola) y engancha el bucle al tic; el modo lento es la captura (gs1 con ventana, 32 ms; las otras corridas, ~8). Las opciones van a la fase 7.
-- **Por qué queda:** el plan lo manda a la meta de optimizar el tracker (decisión del autor, 2026-10-20); la fase 3 no toca `tracker.py` (principio 6). El autor eligió 1280×960 MJPG (P16) sabiendo que el tracking con ventana no llega a 90.
-- **De dónde:** sesión en vivo de la fase 3 (meta 002), 2026-10-22; tablas en `Claude outputs/fases/002/fase-3-en-vivo.md`.
-- **Qué haría falta:** en la meta de optimizar el tracker: medir qué cuesta más (dibujo, `imshow`, `waitKey(1)`, detección a 1280×960, 1-Euro) y sacarlo del bucle (ventana en otro hilo o a menor frecuencia, detección en una región de interés tras la primera, hilo propio de captura); extraer el paso por frame de `tracker.main()` a una función que usen el tracker y `medir_modos.medir_tracking` (hoy este repite el bucle); la línea base es la tabla de la fase 3 y se repite con intrínsecos reales (fases 4–5). Con la K real de la cámara 1 (fase 4, 1280×960, dodecaedro quieto): sin ventana 56 fps con pose casi siempre (99.8 %); la fase 3 daba 62 sin pose (la K nominal no resolvía la pose): más trabajo por frame. Con ventana, 21.4 fps. Fase 6 (2026-10-23, 1280×960): ~20–22 fps desde el panel sin `verbose` (21.6 / 19.9); con `verbose` y `Tee-Object` 14–19 (el log también cuesta). **Meta 003, fase 1 (2026-10-23), solo Marker0:** los fps son bimodales, ~20–21 o ~32–35, y no siguen a la ventana (gs1: con ventana 32.5, sin 20.9, hoy 33.0; gs2: 32.4, 35.2, 20.7); causa sin aislar (CPU de otros procesos, temporizador de Windows, cadencia de la cámara); se mide en la fase 6 de la meta 003. **Fase 2 (2026-10-23), en vivo con Slicer:** gs1 empezó en ~20 y subió a ~33 a mitad de corrida; gs2 ~31; Slicer recibió 19.1 y 31.4 Hz, lo que el tracker envió.
-- **Prioridad:** media.
-
 ### B35 · El criterio de escala por medias no mira la repetibilidad
 - **Qué:** desde P20, `comprobar_escala.py` (desde la meta 003, `codigo/calibration/check_scale.py`) juzga la escala por la distancia entre las medias de las posiciones repetidas; la repetibilidad de cada grupo se calcula, se guarda y se imprime, pero no juzga. Así, `escala_gs1_sin_topes.json` (primera sesión de la cámara 1, sin topes) cumple por medias con +0.645 mm aunque cada marca se repitió solo a 1.7–2.0 mm: una sesión con el montaje moviéndose puede pasar.
 - **Por qué queda:** P20 fijó el criterio por medias y la fase 5 · Calibración de la cámara 2 no lo cambia; las dos sesiones buenas (gs1 con topes 0.39 / 0.30 mm; gs2 0.70 / 0.33 mm) tienen buena repetibilidad.
@@ -269,7 +265,40 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** lanzar la lista desde `diagnostics.probe_camera --puertos`, o un `__main__` aparte.
 - **Prioridad:** baja.
 
+### B48 · Tras una desconexión de Slicer, la cola de `pyigtl` puede entregar poses viejas al reconectar
+- **Qué:** desde la fase 7 · Subir los fps con ventana (meta 003 · Arquitectura y optimización del tracker) `IgtlSender.send` encola con `send_message(wait=False)` y no encola si `is_connected()` es falso. `pyigtl` 0.3.1 solo marca la desconexión cuando falla un `sendall` (o al parar), así que entre que Slicer cierra y el primer envío falla pueden quedar en la cola (`deque(maxlen=100)`) unas pocas poses, y al reconectar Slicer las recibiría antes que las nuevas. Con Slicer conectado todo el rato no pasa nada; el tracker está pensado para arrancar con Slicer ya conectado (espera con tope y aborta si no llega).
+- **Por qué queda:** el autor eligió E1 (encolar sin esperar, con guarda) frente a un envío propio (E3); vaciar la cola al reconectar exige tocar el objeto interno de `pyigtl` (`outgoing_messages`) o reemplazar el transporte (ADR-028 lo preveía para E3).
+- **De dónde:** fase 7 · Subir los fps con ventana (meta 003), 2026-10-24, al escribir la guarda de `transport/igtl.py`.
+- **Qué haría falta:** medirlo en vivo (desconectar y reconectar el conector en Slicer con el tracker corriendo) y, si estorba, vaciar `outgoing_messages` bajo su candado al detectar `is_connected()` falso, o pasar a E3.
+- **Al día (2026-10-25, primera parte en vivo de la fase 7):** sin desconexiones, gs2 con `--sync-capture` a 52 fps dio 5.8 Hz en Slicer; puede venir de las ráfagas de `wait=False`, pero es otra cosa: va aparte en B51.
+- **Prioridad:** baja.
+
+### B49 · `python -m gui.panel --selftest` se cuelga si la salida no es UTF-8
+- **Qué:** con la salida redirigida (Bash, `> archivo`), `print` usa cp1252; la etiqueta «Última: ✔ …» de la calibración trae `✔`, el `print` del temporizador del selftest lanza `UnicodeEncodeError`, nunca llega a `app.quit()` y el proceso queda vivo para siempre (dos procesos huérfanos). Con `PYTHONIOENCODING=utf-8` termina en 1.2 s con exit 0 y los 3 argv `-m`.
+- **Por qué queda:** no cambia la fase 7; en consola interactiva no pasa. Lo vio «verifica» de la fase 7 · Subir los fps con ventana (meta 003).
+- **De dónde:** fase 7 · Subir los fps con ventana, 2026-10-25.
+- **Qué haría falta:** en `dump_y_cerrar`, `try/finally` que cierre siempre, o `sys.stdout.reconfigure(encoding="utf-8")` en el selftest; y un tope en el arranque de quien lo corra.
+- **Prioridad:** baja.
+
+### B50 · Las SVPRO bajan solas los fps con poca luz: un control UVC automático que el perfil no fija
+- **Qué:** con la caja de luz por debajo del máximo (nivel 2–3), las dos SVPRO entregan 22–31 fps aunque el perfil pida 90 y la exposición manual sea de 0.977 ms; con la caja al máximo, 90 (gs1 estable; gs2 una vez estable y otra cayendo a ~30 a mitad de la corrida). Lo mide el hilo de captura (`camara X fps`), así que es la cámara, no el bucle. El perfil no escribe ningún ajuste al abrir (`escritos: ninguno`): lo que baja los fps es algún control automático que el perfil no lista, probablemente la prioridad de exposición (UVC *auto exposure priority*) o una prioridad de fps del firmware.
+- **Por qué queda:** la fase 7 · Subir los fps con ventana (meta 003 · Arquitectura y optimización del tracker) no lo arregla con código: la regla es trabajar con la caja al máximo (`docs/CONTEXT.md` §4.20). Decisión del autor, 2026-10-25.
+- **De dónde:** primera parte en vivo de la fase 7, 2026-10-25 (`Claude outputs/fases/003/fase-7-en-vivo.md`, «C0, la captura sola»). **Al día (2026-10-25, segunda parte):** pedir 60 fps dio 29 en gs1 con la caja al máximo (28.9 de cámara): la SVPRO no tiene modo de 60 a 1280×960 MJPG y MSMF baja al de 30; los perfiles siguen a 90 (`clarify.md` P11).
+- **Qué haría falta:** buscar el control: leer por DSHOW y en AMCap lo que expone la cámara (la exposición automática y su prioridad, PowerLine, B24), con la caja en nivel 2 y al máximo, y ver cuál cambia los fps de captura (`diagnostics.measure_modes --modos` lee `fps_captura`), una variable a la vez. Si se puede fijar, añadirlo a `controls` de los dos perfiles con su prueba sin cámara; si solo se fija a mano, anotarlo en `CONTEXT.md` §4 como el PowerLine.
+- **Prioridad:** media.
+
+### B51 · Con `--sync-capture` a 52 fps, Slicer recibió solo 5.8 Hz
+- **Qué:** en la corrida gs2 E1b de la fase 7 · Subir los fps con ventana (captura en el bucle, `--sync-capture`, envío con `wait=False`), el tracker envió 1 559 poses en 30 s (51.9 fps, 100 % con pose, «sin cliente 0») y `receive_marker0.py` contó 5.8 Hz. En las corridas con el hilo de captura, los Hz en Slicer siguen a los fps (46.0, 56.9, 50.4, 30.9). Sin explicar: pueden ser las ráfagas de `wait=False` (B48), Slicer con el bucle de eventos ocupado o un arranque tardío de `run()`.
+- **Por qué queda:** `--sync-capture` es solo para comparar; el modo por defecto entrega. La segunda parte en vivo de la fase 7 no lo repitió (se cerró con lo medido, `clarify.md` P11).
+- **De dónde:** primera parte en vivo de la fase 7 (meta 003 · Arquitectura y optimización del tracker), 2026-10-25 (`Claude outputs/fases/003/fase-7-en-vivo.md`).
+- **Qué haría falta:** repetir gs2 con `--sync-capture` y luz máxima, con `run(seconds=20)` arrancado antes del tracker, y comparar los Hz con los envíos; si se repite, contar en Slicer los mensajes por segundo (no solo los `TransformModifiedEvent`) para saber si se pierden o se agrupan.
+- **Prioridad:** baja (sube a alta si se ve sin `--sync-capture`: Slicer no seguiría a Marker0).
+
 ## Cerrados
+
+### B32 · Optimizar el tracker: la ventana limita a 19–25 fps en cualquier resolución
+- **Qué era:** en la fase 3 de la meta 002 el tracking con ventana dio 19–25 fps en todos los modos (sin ventana, 62–68 a 1280×960), y en la meta 003 los fps eran bimodales (~20 o ~32–37). La fase 6 · Dónde se va el tiempo por frame lo midió: el envío costaba 9–12.5 ms por frame (`pyigtl` con `wait=True` espera el tic de 15.6 ms de Windows) y el modo lento era la captura (32 ms); la ventana sola, ~2 ms.
+- **Cerrado:** 2026-10-25, por la fase 7 · Subir los fps con ventana (meta 003 · Arquitectura y optimización del tracker; `clarify.md` P9 y P11): envío sin esperar (`wait=False`, 0.02 ms en vivo), el tracker espera a Slicer con tope (`--slicer-timeout` 30 s) y aborta si no llega, hilo de captura con el último frame (`camera/grabber.py`) y `t_now` por `perf_counter`. En vivo, caja de luz al máximo, cámara a 90: gs1 61.7 fps con ventana, sd z 0.033 mm, 56.9 Hz en Slicer (cumple ≥ 60); **gs2 queda en 55.2 fps** (cámara 88.8; el límite es el bucle, detección 9.7 ms), sd z 0.034 mm, 50.4 Hz; el autor lo acepta (P11). El modo lento resultó de la cámara con poca luz (B50). Lo que falta (tracking sin ventana para subir gs2) va a la fase 7b · Botones de tracker sin ventana y de vista previa. Números en `specs/003-arquitectura-tracker/resultados.md`.
 
 ### B21 · `opencv-python` frente a `opencv-contrib-python`
 - **Qué era:** el venv y `requirements.txt` tenían `opencv-python` 4.11, pero `CONTEXT.md` §3 decía contrib.

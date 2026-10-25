@@ -40,6 +40,7 @@
 | 025 | Se rescata solo el tracking; lo demás se rehace sobre las cámaras nuevas | Aceptada |
 | 026 | La cadena publica solo `Marker0ToTracker` | Aceptada |
 | 027 | El código se ordena por responsabilidad en `codigo/` y se lanza con `python -m` | Aceptada |
+| 028 | La captura va en un hilo con el último frame y el envío no espera | Aceptada |
 
 ---
 
@@ -584,3 +585,17 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 5. Los perfiles y los `.yml` conservan su nombre (`tracker_config_gs1.yaml`, `calibration_file: data/...`), y los módulos que solo se mueven no renombran sus funciones (B43). Se descarta llamar `profile.py` al cargador, porque choca con la biblioteca estándar.
 
 **Consecuencias.** La fase 3 de la meta 003 lo implementó (commit 78ce1af): suite 392/392, replay de Marker0 en 0.0 mm / 0.0° y verificación en vivo con gs1 por el panel. Los comandos de `CLAUDE.md` §1/§5 y de `.claude/` que nombran `iter4\` se ponen al día en la fase 5. `docs/history/` y los documentos archivados conservan las rutas viejas como historia.
+
+---
+
+## ADR-028 — La captura va en un hilo con el último frame y el envío no espera
+**Fecha:** 2026-10-25 · **Estado:** Aceptada
+
+**Contexto.** La fase 6 de la meta 003 midió que el envío por OpenIGTLink costaba 9–12.5 ms por frame: `pyigtl.send_message(wait=True)` espera a su hilo, que hace antes un `recv` con tope de 10 ms que en Windows dura el tic de 15.6 ms. A eso se sumaba la captura en el bucle: 8 ms en el modo rápido y 32 ms en el lento. El bucle quedaba enganchado al tic, y de ahí salían los fps en escalones (~20, ~32, ~37). El autor eligió las opciones el 2026-10-24 (`specs/003-arquitectura-tracker/clarify.md` P9).
+
+**Decisión.**
+1. `IgtlSender.send` encola con `wait=False` y una guarda de conexión: si no hay cliente, no encola, lo cuenta y lo dice. Al arrancar, el tracker espera a Slicer con tope (`--slicer-timeout`, 30 s); si Slicer no llega, aborta con código 3 sin abrir la cámara. La regla «Slicer antes, o pyigtl bloquea» pasa a ser «Slicer antes, o el tracker aborta y lo dice».
+2. `camera.grabber.FrameGrabber` lee `cam.read()` en un hilo propio, y el bucle procesa siempre el último frame. Los frames que el bucle no alcanza se saltan y se cuentan. Solo el hilo toca `VideoCapture`, que no es thread-safe, y se para antes de cerrar la cámara. `--sync-capture` conserva la captura en el bucle, para comparar.
+3. `t_now`, la entrada del 1-Euro, es la hora de captura por `perf_counter`. Antes era `time.time()`, con 15.6 ms de resolución.
+
+**Consecuencias.** El envío baja a 0.02 ms. La pose de un frame no cambia (replay 0.0 mm / 0.0°), pero cambian qué frames se procesan y los `dt` del filtro. Los mensajes llegan a Slicer en ráfagas de 1–2 por tic, con la misma latencia máxima. En vivo, con la caja de luz al máximo y la cámara a 90: gs1, 61.7 fps con ventana y sd z de 0.033 mm; gs2, 55.2 fps y sd z de 0.034 mm (el autor lo acepta, P11). Con menos luz la cámara baja sola a 22–31 fps (B50), y la SVPRO no tiene modo de 60 a 1280×960. Quedan abiertas B48 (la cola puede entregar poses viejas al reconectar) y B51 (Slicer recibió 5.8 Hz con 52 fps enviados con `--sync-capture`). Alternativas descartadas: un envío propio (reimplementa el transporte de la cadena), un hilo de envío con buzón del último (descarta poses) y decodificar el MJPG en gris (puede mover las esquinas).

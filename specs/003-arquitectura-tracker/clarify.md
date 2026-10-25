@@ -58,3 +58,17 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **El objetivo. Opciones:** mantener ≥ 60 fps con ventana y revisarlo tras C0 (recomendada); bajar a 45. **Respuesta del autor:** 60, y se revisa tras C0.
 - Va con la fase 7 sea cual sea la opción: `t_now` deja `time.time()` (`perf_counter` o la hora de captura de C1), declarado porque cambia la entrada del 1-Euro.
 - **Fecha:** 2026-10-24
+
+## P10 · Tracker sin ventana y vista previa para posicionar las cámaras
+
+- **Propuesta del autor:** una opción para arrancar el tracker sin ventana, para subir los fps, y un paso para abrir la cámara sin tracking que sirva para colocarla; después, todo el tracking sin ventana.
+- **Dónde. Opciones:** a) una fase nueva después de la 7, la 7b, con los dos botones en el panel y los fps sin ventana medidos (recomendada); b) dentro de la fase 7; c) al BACKLOG. **Respuesta del autor:** a) la fase 7b; se autoriza al presentarla.
+- **El criterio. Opciones:** a) se mantiene «≥ 60 fps con ventana» y, con los números de la fase 7, el autor decide si el modo normal pasa a ser sin ventana (recomendada); b) sin ventana desde ya (cambia el spec); c) con ventana, como está. **Respuesta del autor:** a) se decide tras medir.
+- **Fecha:** 2026-10-24
+
+## P11 · Cómo se cierra la fase 7 (tras la sesión en vivo)
+
+- **Datos:** con la caja al máximo y la cámara a 90, gs1 61.7 fps con ventana (sd z 0.033 mm) y gs2 55.2 (cámara 88.8; el bucle limita: detección 9.7 ms). Pedir 60 fps a la cámara dio 29 en gs1 con la caja al máximo: la SVPRO no tiene modo de 60 a 1280×960 y MSMF baja al de 30.
+- **Opciones:** a) perfiles a 90 y la ventana en uno de cada dos frames, y se repiten las corridas (recomendada); b) perfiles a 90 y cerrar con lo que hay: gs1 cumple, gs2 se queda en 55 y lo demás va a la fase 7b (sin ventana).
+- **Respuesta del autor:** b) perfiles a 90 y cerrar con lo que hay.
+- **Fecha:** 2026-10-25

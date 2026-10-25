@@ -48,7 +48,7 @@ En el mismo cambio que la fase, antes de que el autor haga el commit:
 - **La cadena (principio 6).** Una fase que toque `tracker.py`, `camera/`, `vision/`, `transport/` o los scripts de Slicer dice en su plan cómo verifica que la cadena sigue igual.
 - **Verificación.** Antes de dar una fase por terminada: la suite en verde, con su tiempo, y la comprobación de «no cambió» que fije el spec (suite + replay sobre un dataset grabado, cuando exista). Lo que necesita cámara o Slicer se verifica en vivo con el autor y se reporta el número.
 - **Tras editar** un `.py`: `py_compile` y conteo de líneas (Edit/Write han truncado archivos antes).
-- **Hardware.** Slicer (OpenIGTLink IF activo) se conecta ANTES de arrancar el tracker: `pyigtl` bloquea. Webcam con backend MSMF + MJPG. El resto de trampas, en `docs/CONTEXT.md` §4.
+- **Hardware.** Slicer (OpenIGTLink IF activo) se conecta ANTES de arrancar el tracker: si no llega en `--slicer-timeout` (30 s), el tracker aborta sin abrir la cámara (ADR-028). Webcam con backend MSMF + MJPG. El resto de trampas, en `docs/CONTEXT.md` §4.
 - **Idioma.** Español para las personas (docs, reportes, mensajes); inglés para los identificadores. Directo y honesto, incluida la incertidumbre.
 - **Alcance.** Lo que convendría hacer y no se pidió va al BACKLOG o a las sugerencias del reporte, no al código.
 - **Sin memoria privada.** Lo que haya que recordar va a `memory.md` o a `docs/`, nunca a la memoria privada de Claude Code (`autoMemoryEnabled: false`).

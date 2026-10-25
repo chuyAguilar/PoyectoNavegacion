@@ -9,7 +9,6 @@ abre ninguna ventana). Ninguna prueba abre una camara ni un puerto (B34).
 from __future__ import annotations
 
 import json
-import types
 from pathlib import Path
 
 import cv2
@@ -23,7 +22,7 @@ from diagnostics.pose_log import Stopwatch, timing_stats
 import tracker
 
 from .conftest import PROFILES_DIR, TESTS_DATA_DIR
-from .synthetic import FakeCamera, FakeSender, render_marker
+from .synthetic import FakeCamera, FakeSender, fake_time, render_marker
 
 GS1 = PROFILES_DIR / "tracker_config_gs1.yaml"
 FRAME_GS1 = TESTS_DATA_DIR / "marker0_gs1_frames" / "frame_00240.png"
@@ -120,12 +119,11 @@ def frames_syn() -> list[np.ndarray]:
 
 
 def _run(monkeypatch, frames, profile: Path, extra: list[str]):
-    reloj = iter(np.arange(1000.0, 1000.0 + 0.011 * (10 * len(frames) + 500), 0.011).tolist())
     cam = FakeCamera(frames)
     FakeSender.instances = []
     monkeypatch.setattr(tracker, "create_backend", lambda cfg_cam: cam)
     monkeypatch.setattr(tracker, "IgtlSender", FakeSender)
-    monkeypatch.setattr(tracker, "time", types.SimpleNamespace(time=lambda: next(reloj)))
+    monkeypatch.setattr(tracker, "time", fake_time())       # fase 7: perf_counter falso, 11 ms por llamada
     monkeypatch.setattr(tracker.cv2, "imshow", lambda title, img: None)
     monkeypatch.setattr(tracker.cv2, "waitKey", lambda ms: -1)
     monkeypatch.setattr(tracker.cv2, "destroyAllWindows", lambda: None)
@@ -149,6 +147,7 @@ def test_timing_con_ventana_escribe_las_etapas(tmp_path: Path, monkeypatch, fram
     meta = data["metadata"]
     assert meta["show_window"] is True and meta["frames_loop"] == len(frames_syn)
     assert meta["fps_average"] > 0 and meta["clock"] == "time.perf_counter"
+    assert meta["capture"]["mode"] == "thread" and meta["capture"]["frames_read"] >= len(frames_syn)
     log = capsys.readouterr().out
     assert "[Tiempos] Guardados en" in log and "FRAME" in log and "[Salida limpia]" in log
 
