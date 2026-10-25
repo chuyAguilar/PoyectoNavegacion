@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-24 (§3, §4 y §6: meta 003, fase 5 · Documentación del paso 1: el código activo en paquetes bajo `codigo\` con `python -m`, solo las SVPRO gs1/gs2 y Marker0, OpenCV como lo declara `requirements.txt` (B21), las trampas 13–17 marcadas como del dodecaedro archivado, la 18 con B28 verificado en vivo y la 19 con el comando nuevo; §6 sin la meta 002 en curso). Antes, 2026-10-23 (§6: meta 003, fase 3 · la estructura nueva y el archivo). Antes, 2026-10-23 (§6: meta 003, fase 2). Antes, 2026-10-23 (§6: meta 002, fase 5). Antes, 2026-10-22 (§6: meta 002, fase 4). Antes, 2026-10-22 (§6: meta 002, fase 3, resolución y exposición elegidas). Antes, 2026-10-22 (§4: trampas 18 y 19, la aceleración HW de MSMF y la marca `focus` sin escribir; §6: meta 002, cámaras SVPRO). Antes, 2026-10-19 (§6: suite y respaldo de la punta; §3 y §6: rutas viejas corregidas)._
+> _Última actualización: 2026-10-24 (§3, §4 y §6: meta 003, fase 5 · Documentación del paso 1: el código activo en paquetes bajo `codigo\` con `python -m`, solo las SVPRO gs1/gs2 y Marker0, OpenCV como lo declara `requirements.txt` (B21), las trampas 13–17 marcadas como del dodecaedro archivado, la 18 con B28 verificado en vivo y la 19 con el comando nuevo; §6 sin la meta 002 en curso; §5 reducida a remitir al método por specs). Las actualizaciones anteriores, en el historial de git._
 
 ---
 
@@ -147,27 +147,7 @@
 
 ## 5. Metodología de trabajo (cómo colaboramos humano + IA)
 
-Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
-
-> **2026-10-19:** se monta el método por specs (`docs/constitution.md`,
-> `CLAUDE.md`, `memory.md`, `specs/`). Donde choque con lo de abajo, mandan la
-> constitución y `CLAUDE.md`; en particular, ningún agente hace commit ni push:
-> los hace el autor.
-
-- **Leer los 3 MVD (`ARCHITECTURE.md`, `DECISIONS.md`, `CONTEXT.md`) ANTES de
-  tocar código.** Son la fuente de verdad.
-- **Roles:** el doctor + orquestador (Cowork) planean y escriben un `brief.md`
-  acotado → el implementador (Claude Code, con acceso al repo) lee el brief + los
-  3 MVD y devuelve un **PLAN sin ejecutar** → se aprueba → implementa → el
-  orquestador valida (lee el código, corre tests/build) → Claude Code hace commit,
-  **actualiza los MVD** y hace push. El doctor es el puente.
-- **Principios:** sondear el terreno real antes de codificar (probar
-  API/dispositivo/entorno, no suponer); fallar fuerte, no en silencio; revisión
-  adversarial del código nuevo; **verificar empíricamente antes de declarar
-  "hecho"**; cambios pequeños en iteraciones numeradas con criterio de aceptación;
-  memoria para no perder el hilo entre sesiones.
-- **Al terminar una iteración, actualizar los MVD** (y `CLAUDE.md` si cambian
-  rutas/estado). Un MVD desactualizado es peor que no tenerlo.
+Desde el 2026-10-19, el método por specs: `docs/constitution.md` (lo que no se negocia), `CLAUDE.md` (cómo se trabaja), `memory.md` y `specs/` (ADR-020). Ningún agente hace commit ni push; los hace el autor. El método anterior de briefs (adoptado el 2026-08-13) queda en el historial de git de este archivo.
 
 ## 6. Estado del proyecto (hecho / en pausa / WIP)
 

@@ -13,7 +13,7 @@ En este orden:
 3. Consulta `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/BACKLOG.md` y `docs/PRUEBAS.md` por sección: primero su índice, después solo la sección que haga falta.
 4. `docs/history/` solo cuando haga falta saber cómo se llegó a algo. Es copia literal y no se edita.
 
-Antes de escribir código, lee el que ya existe en `codigo/iter4/` (y `codigo/iter4/gui/`). No reinventes lo que hay.
+Antes de escribir código, lee el que ya existe en `codigo/` (paquetes y `tracker.py`; `historico/` es archivo). No reinventes lo que hay.
 Si al retomar el estado es ambiguo, una sola pregunta al autor y se sigue.
 
 ## 2. El flujo de una meta
@@ -45,7 +45,7 @@ En el mismo cambio que la fase, antes de que el autor haga el commit:
   Los subagentes no preguntan: si algo los para, devuelven una sola línea, «Parado: por qué». `pruebas` no escribe código y solo escribe `docs/PRUEBAS.md` (al final) y `Claude outputs/pruebas/`; lo que necesita hardware lo deja como protocolo para el autor.
 - **Git.** Ningún agente ejecuta `git commit` ni `git push` (principio 1): `.claude/settings.json` lo niega. Git de lectura, `git mv` y `git rm --cached` sí, y **siempre desde PowerShell**, nunca desde un sandbox Linux (principio 9). No se reescribe el historial.
 - **Datos de paciente (principio 5).** No se leen ni se editan `herramientas/A/`, `*.nrrd`, `*.dcm` ni `documentos/VERONICA/`; `settings.json` lo niega. Una negación no se rodea: se dice en el reporte.
-- **La cadena (principio 6).** Una fase que toque `tracker.py`, `camera_backend.py`, el envío por `pyigtl` o los scripts de Slicer dice en su plan cómo verifica que la cadena sigue igual.
+- **La cadena (principio 6).** Una fase que toque `tracker.py`, `camera/`, `vision/`, `transport/` o los scripts de Slicer dice en su plan cómo verifica que la cadena sigue igual.
 - **Verificación.** Antes de dar una fase por terminada: la suite en verde, con su tiempo, y la comprobación de «no cambió» que fije el spec (suite + replay sobre un dataset grabado, cuando exista). Lo que necesita cámara o Slicer se verifica en vivo con el autor y se reporta el número.
 - **Tras editar** un `.py`: `py_compile` y conteo de líneas (Edit/Write han truncado archivos antes).
 - **Hardware.** Slicer (OpenIGTLink IF activo) se conecta ANTES de arrancar el tracker: `pyigtl` bloquea. Webcam con backend MSMF + MJPG. El resto de trampas, en `docs/CONTEXT.md` §4.
@@ -56,18 +56,16 @@ En el mismo cambio que la fase, antes de que el autor haga el commit:
 ## 5. Entorno
 
 - Windows 11 (máquina BigDaddy, RTX 3060). Shell: PowerShell para git; Git Bash disponible.
-- Raíz: `C:\Dev\OrtoMeta\PoyectoNavegacion`. Código activo: `codigo\iter4\`. Python 3.11.9 en `codigo\.venv`; dependencias en `codigo\requirements.txt`.
+- Raíz: `C:\Dev\OrtoMeta\PoyectoNavegacion`. Código activo: `codigo\`, en paquetes por responsabilidad, lanzado con `python -m` desde `codigo\` (ADR-027). Python 3.11.9 en `codigo\.venv`; dependencias en `codigo\requirements.txt`.
 - Las pruebas: `codigo\.venv\Scripts\python.exe -m pytest codigo\tests -q`; cuántas son, cuánto tardan y su estado, en `memory.md`.
 - 3D Slicer 5.x + SlicerIGT corre aparte: no se controla directo; se le pasan scripts para su consola Python.
 
 Comandos de operación (desde `codigo\`, con el venv). Los argumentos van explícitos (principio 7):
 
 ```powershell
-python iter4\identificar_ids.py --config iter4\tracker_config.yaml
-python iter4\tracker.py --config iter4\tracker_config.yaml          # Slicer conectado ANTES
-python iter4\gui\panel.py                                          # panel de control
-python iter4\calibrar_rigid_body.py --ancla 3 --marker-mm 14.6 --no-depth --no-sparse --output <explícito>
-python iter4\calibrar_tip_divot.py --config iter4\tracker_config.yaml --divot DOCK --plate-id 2 --plate-mm 59.6
+python -m gui.panel                                              # panel: compone y lanza lo demás
+python -m tracker --config profiles\tracker_config_gs1.yaml      # Slicer conectado ANTES
+python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml
 ```
 
 ## 6. Cómo reportar

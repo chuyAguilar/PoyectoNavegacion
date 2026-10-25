@@ -8,7 +8,7 @@ Planea la meta. No escribas código ni toques `codigo/`, `docs/` ni `memory.md`.
 
 1. **La carpeta.** Es `specs/$ARGUMENTS/`; si no se dio, la del spec activo que nombra `memory.md`. Si no existe o no tiene `spec.md`, dilo y para.
 2. **Lo que se lee.** Completos, `spec.md` y, si existen, `clarify.md` y `tasks.md`.
-   De `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/BACKLOG.md` y `docs/PRUEBAS.md`, las secciones que la meta toca, buscadas por su índice. Las trampas de `docs/CONTEXT.md` §4. Y el código de `codigo/iter4/` que va a cambiar, con lo que lo importa o lo nombra (grep).
+   De `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/BACKLOG.md` y `docs/PRUEBAS.md`, las secciones que la meta toca, buscadas por su índice. Las trampas de `docs/CONTEXT.md` §4. Y el código de `codigo/` (fuera de `historico/`) que va a cambiar, con lo que lo importa o lo nombra (grep).
 3. **`plan.md`,** con las secciones de `specs/_plantilla/plan.md`:
    - lo leído, con el commit de HEAD (`git --no-optional-locks log --oneline -1`);
    - los archivos que crearás, modificarás o moverás;

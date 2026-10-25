@@ -24,7 +24,7 @@ Dónde está el plan, cuántos bytes mide, cuáles son las preguntas abiertas y 
 ## Reglas
 
 - Escribes solo `plan.md`, `clarify.md` y `tasks.md` del spec. Nunca `spec.md` (es de la dirección), nunca `codigo/`, `docs/` ni `memory.md`. Lo que irá al BACKLOG lo listas en el plan; lo escribe la dirección.
-- Lee antes de proponer: el código de `codigo/iter4/` que la meta toca, `docs/PRUEBAS.md` por su índice, las trampas de `docs/CONTEXT.md` §4 y de `memory.md`. No reinventes lo que hay.
+- Lee antes de proponer: el código de `codigo/` (fuera de `historico/`) que la meta toca, `docs/PRUEBAS.md` por su índice, las trampas de `docs/CONTEXT.md` §4 y de `memory.md`. No reinventes lo que hay.
 - Si una fase toca `tracker.py`, `camera_backend.py`, el envío por `pyigtl` o lo que se carga en Slicer, el plan dice cómo se verifica que la cadena sigue igual (principio 6).
 - Lo que necesita cámara o Slicer se plantea como verificación en vivo con el autor, con el número que se espera.
 - **Context7, obligatorio (regla del autor, 2026-10-20):** cuando el plan propone usar una API o tecnología (OpenCV, pyigtl, Media Foundation, PySide6, scipy, numpy, pyorbbecsdk, y las nuevas que se adopten), la contrastas con su documentación actual por Context7 y el plan dice qué se consultó. Solo para la API: por él no sale ninguna ruta ni dato clínico (principio 5).
