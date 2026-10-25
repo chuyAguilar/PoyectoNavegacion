@@ -1,18 +1,17 @@
-"""Grabacion de la pose del tracker y su replay, sin camara (meta 003, fase 1).
+"""Grabacion de la pose del tracker y su replay, sin camara (meta 003, fase 1; fase 4).
 
 `pose_log.PoseLog` y `summarize` sobre datos fijos, y `tracker.main()` de punta
-a punta con una camara y un servidor OpenIGTLink falsos: `--record` guarda
-exactamente lo que se envio, el replay de Marker0 lo repite en 0.0 y la
-deteccion sobre los PNG guardados da las esquinas grabadas. Ninguna prueba
-abre una camara real ni un puerto (B34): `create_backend` y el servidor se
-sustituyen.
+a punta con una camara y un emisor OpenIGTLink falsos (`tests/synthetic.py`):
+`--record` guarda exactamente lo que se envio, el replay de Marker0 lo repite
+en 0.0 y la deteccion sobre los PNG guardados da las esquinas grabadas. Ninguna
+prueba abre una camara real ni un puerto (B34): `create_backend` e `IgtlSender`
+se sustituyen en el modulo `tracker`.
 """
 from __future__ import annotations
 
 import types
 from pathlib import Path
 
-import cv2
 import numpy as np
 import pytest
 import yaml
@@ -22,9 +21,9 @@ from diagnostics import pose_log
 import tracker
 
 from . import replay_util
+from .conftest import PROFILES_DIR
+from .synthetic import DIST_SYN, K_SYN, FakeCamera, FakeSender, render_marker
 
-K_SYN = np.array([[800.0, 0.0, 320.0], [0.0, 800.0, 240.0], [0.0, 0.0, 1.0]])
-DIST_SYN = np.zeros((1, 5))
 N_FRAMES = 12
 
 
@@ -101,71 +100,17 @@ def test_summarize_numeros_conocidos(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# tracker.main() de punta a punta con camara y servidor falsos
+# tracker.main() de punta a punta con camara y emisor falsos
 # ---------------------------------------------------------------------------
-
-def _render_marker0(tz: float, tx: float) -> np.ndarray:
-    """Marker0 (ID 0, 80 mm) proyectado con K_SYN a la distancia tz (mm)."""
-    d = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_MIP_36h12)
-    side, pad = 240, 48
-    canvas = np.full((side + 2 * pad, side + 2 * pad), 255, np.uint8)
-    canvas[pad:pad + side, pad:pad + side] = cv2.aruco.generateImageMarker(d, 0, side)
-    half = (side / 2 + pad) * 80.0 / side
-    obj = np.array([[-half, half, 0], [half, half, 0], [half, -half, 0], [-half, -half, 0]])
-    rvec = Rotation.from_euler("xy", [185, 5], degrees=True).as_rotvec()
-    img_pts, _ = cv2.projectPoints(obj, rvec, np.array([tx, 5.0, tz]), K_SYN, DIST_SYN)
-    w = float(side + 2 * pad)
-    src = np.array([[0, 0], [w, 0], [w, w], [0, w]], np.float32)
-    H = cv2.getPerspectiveTransform(src, img_pts.reshape(4, 2).astype(np.float32))
-    gray = cv2.warpPerspective(canvas, H, (640, 480), borderValue=110)
-    return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-
-
-class _FakeCamera:
-    def __init__(self, frames: list[np.ndarray], clock) -> None:
-        self.frames, self.i, self.clock = frames, 0, clock
-        self.opened = self.closed = False
-
-    def open(self) -> None:
-        self.opened = True
-
-    def read(self):
-        if self.i >= len(self.frames):
-            raise KeyboardInterrupt
-        f = self.frames[self.i]
-        self.i += 1
-        return f, None, 0.0
-
-    def get_intrinsics(self):
-        return K_SYN.copy(), DIST_SYN.copy()
-
-    def close(self) -> None:
-        self.closed = True
-
-
-class _FakeServer:
-    instances: list["_FakeServer"] = []
-
-    def __init__(self, port: int) -> None:
-        self.port, self.sent, self.closed = port, [], False
-        _FakeServer.instances.append(self)
-
-    def send_message(self, msg) -> None:
-        self.sent.append((msg.device_name, np.array(msg.matrix)))
-
-    def close(self) -> None:
-        self.closed = True
-
 
 @pytest.fixture(scope="module")
 def frames_syn() -> list[np.ndarray]:
-    return [_render_marker0(450.0 + 0.3 * (i % 3), 2.0 + 0.2 * i) for i in range(N_FRAMES)]
+    return [render_marker(450.0 + 0.3 * (i % 3), 2.0 + 0.2 * i) for i in range(N_FRAMES)]
 
 
 @pytest.fixture
 def profile_syn(tmp_path: Path) -> Path:
-    gs1 = yaml.safe_load((Path(tracker.__file__).parent / "profiles" / "tracker_config_gs1.yaml")
-                         .read_text(encoding="utf-8"))
+    gs1 = yaml.safe_load((PROFILES_DIR / "tracker_config_gs1.yaml").read_text(encoding="utf-8"))
     cfg = {
         "camera": {"camera_type": "webcam"},
         "markers": gs1["markers"],
@@ -179,20 +124,20 @@ def profile_syn(tmp_path: Path) -> Path:
 
 
 def _run_main(monkeypatch, frames, profile: Path, extra: list[str]):
-    """Corre tracker.main con camara, servidor y reloj falsos; devuelve (camara, servidor)."""
+    """Corre tracker.main con camara, emisor y reloj falsos; devuelve (camara, emisor)."""
     reloj = iter(np.arange(1000.0, 1000.0 + 10 * (len(frames) + 50), 0.011).tolist())
-    cam = _FakeCamera(frames, None)
-    _FakeServer.instances = []
+    cam = FakeCamera(frames)
+    FakeSender.instances = []
     monkeypatch.setattr(tracker, "create_backend", lambda cfg_cam: cam)
-    monkeypatch.setattr(tracker.pyigtl, "OpenIGTLinkServer", _FakeServer)
+    monkeypatch.setattr(tracker, "IgtlSender", FakeSender)
     monkeypatch.setattr(tracker, "time", types.SimpleNamespace(time=lambda: next(reloj)))
 
     def _sin_ventana(*a, **k):
         raise AssertionError("con --no-window no se abre ventana")
     monkeypatch.setattr(tracker.cv2, "imshow", _sin_ventana)
-    tracker.main(["--config", str(profile), "--no-window", *extra])
-    assert len(_FakeServer.instances) == 1
-    return cam, _FakeServer.instances[0]
+    assert tracker.main(["--config", str(profile), "--no-window", *extra]) == 0
+    assert len(FakeSender.instances) == 1
+    return cam, FakeSender.instances[0]
 
 
 def test_main_record_guarda_lo_enviado_y_el_replay_lo_repite(
@@ -232,7 +177,7 @@ def test_main_record_guarda_lo_enviado_y_el_replay_lo_repite(
 
 def test_main_sin_opciones_envia_lo_mismo(tmp_path: Path, monkeypatch, frames_syn,
                                           profile_syn) -> None:
-    """Las opciones nuevas no cambian lo que se envia: mismo reloj, mismos frames."""
+    """Las opciones de grabacion no cambian lo que se envia: mismo reloj, mismos frames."""
     _, srv_a = _run_main(monkeypatch, frames_syn, profile_syn, [])
     _, srv_b = _run_main(monkeypatch, frames_syn, profile_syn,
                          ["--record", str(tmp_path / "g.npz")])

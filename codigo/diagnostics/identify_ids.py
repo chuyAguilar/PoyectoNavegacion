@@ -25,7 +25,7 @@ import numpy as np
 
 from camera.backend import create_backend
 import profiles
-import tracker   # aplicar_detector_params: el mismo mapeo del YAML que usa el tracker
+from vision.detection import apply_detector_params   # el mismo mapeo del YAML que usa el tracker
 
 
 def main():
@@ -50,7 +50,7 @@ def main():
         print("[IDs] Deteccion ESTRICTA (sin falsos positivos). --permisivo para aflojar.")
     else:
         # mismo tuning permisivo del tracker
-        tracker.aplicar_detector_params(params, cfg["markers"].get("detector", {}))
+        apply_detector_params(params, cfg["markers"].get("detector", {}))
     detector = cv2.aruco.ArucoDetector(aruco_dict, params)
     usar_api = True
 

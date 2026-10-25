@@ -79,3 +79,32 @@ Panel abierto con `.\.venv\Scripts\python.exe -m gui.panel` desde `codigo\`. Ses
 - Restos: el autor borró `codigo\iter4` y `codigo\Log` (`Test-Path` False y False). Sin `-m tracker|diagnostics|calibration` vivo y sin `Listen` en 18944 al terminar.
 - **fps de esta corrida, para la fase 6 · Dónde se va el tiempo por frame (B32):** `[FPS] Promedio` 22.3, 15.9 y 20.3 en ~65 s, es decir 16–22, por debajo de los modos ~20 y ~32 de las fases 1 y 2. El tracker solo cambió imports y la carga del perfil, y el panel estaba abierto (carga extra); la causa sigue sin aislar.
 - Veredicto: cumple la parte en vivo de la fase 3.
+
+## Fase 4 · El tracker en piezas (2026-10-24, sin cámara y en vivo)
+
+- Piezas: `vision/` (detection, pose, filtering, tracking: `MarkerTracker`), `transport/igtl.py` (`IgtlSender`); `tracker.py` 754 → 212 líneas (solo el bucle); `measure_modes` sobre `MarkerTracker` (vuelve a correr con gs1/gs2). `pose_rigid_body.py` archivado en `historico/iter4/dodecahedron/`.
+- Replay de Marker0 a través de `MarkerTracker.process_corners`: gs1 977 envíos y gs2 973, 0 frames distintos, **0.0 mm / 0.0°** frente a lo enviado en vivo y frente a la referencia (tolerancia 1e-9). Detección por `vision.detection` sobre los 3 frames por cámara: **0.0 px**.
+- Pose de un cuadrado proyectado con la K real de gs1: 2.6e-5 mm / 1e-4° a 450 y 380 mm; 1.4e-4 mm / 2e-3° a 600 mm casi de frente. No llega a 1e-6 mm del plan (suelo: `astype(float32)` de las esquinas, ya estaba así); la prueba fija < 1e-3 mm y < 1e-2°.
+- 1-Euro igual bit a bit sobre una serie fija de 200 muestras; `IgtlSender` manda `Marker0ToTracker` 4×4 float32 con un servidor falso; el bucle con cámara y emisor falsos sale con `q` y cierra todo.
+- B34: el fixture `no_real_camera` niega la cámara real y el servidor pyigtl a toda la suite. B22: 55 archivos de `codigo/` compilan con los avisos como errores, 0 avisos. B28: `import tracker` apaga la aceleración HW y lo dice (prueba). B27: `abrir_camara` ya no existe.
+- Suite: **463 pruebas, 463 pasan, 0 avisos**; 18.40 s y 18.28 s de pytest, ~21 s de pared (dos corridas en «verifica»). Antes, 392. `py_compile` con `-W error` de los 19 `.py` tocados o nuevos, sin error.
+
+### Parte en vivo (2026-10-24, con el autor; caja de luz nivel 2, Marker0 de 80 mm)
+
+Protocolo `Claude outputs/fases/003/fase-4-en-vivo-protocolo.md`; sesión `fase-4-en-vivo.md`. Slicer con *Close Scene* y `codigo/slicer/receive_marker0.py` (`run(seconds=10)`) antes de cada corrida. Logs a mano: `Claude outputs/grabaciones/003/fase4_gs1_mano.log` y `fase4_gs2_mano.log`.
+
+| corrida | aceleración MSMF | `Abierta en` | Hz en Slicer (10 s) | último `[FPS] Promedio` | servidor 18944 cerrado | salida |
+|---|---|---|---|---|---|---|
+| a mano gs1, sin la variable | «puesta por el codigo» | 0.4 s | **22.1** (CONNECTED) | 21.9 (20.8–24.9) | sí | `[Salida limpia]` |
+| a mano gs2, sin la variable | «puesta por el codigo» | 0.4 s | **30.9** (CONNECTED) | 32.7 | sí | `[Salida limpia]` |
+| panel gs1 | «del entorno» | 0.4 s | **28.6** (CONNECTED) | 34.1 (31.8–34.1) | sí | `[Salida limpia]`, `exit=0 OK` |
+| panel gs2 | «del entorno» | 0.5 s | **22.8** (conector WAIT al final) | 32.2 | sí | `[Salida limpia]`, `exit=0 OK` |
+
+- Primer intento a mano con gs1: `ValueError` («el puerto '…USB(3)' no coincide con ninguna camara conectada»); Windows tenía las cámaras en estado «Unknown». El autor las reconectó. El tracker falló fuerte y aun así cerró el servidor del 18944 y salió con `[Salida limpia]`.
+- En las cuatro corridas: `[Whitelist] IDs aceptados: [0]` y `DodecaedroToTracker` ausente (correcto, ADR-026). El autor movió Marker0 y la posición cambió en Slicer.
+- **B28 cumple:** a mano, sin la variable de entorno, la cámara abre en 0.4 s (antes 40–50 s).
+- **Lo nuevo cumple:** «[OpenIGTLink] Servidor del puerto 18944 cerrado» en las cinco salidas, incluida la del fallo.
+- Los Hz del panel salen por debajo de los fps porque las corridas duraron 16 s (gs1) y 12 s (gs2) y la ventana de 10 s de Slicer cubrió el arranque y, en gs2, el cierre. En las corridas a mano, más largas, Slicer recibe lo que se envía (22.1 frente a 21.9; 30.9 frente a 32.7).
+- Limpieza tras cada corrida: ningún `-m tracker` vivo y el 18944 sin `Listen`; al final solo seguía el panel abierto.
+- fps bimodales otra vez (gs1 ~22 a mano, ~34 desde el panel): dato para la fase 6 · Dónde se va el tiempo por frame (B32). No se corrió el paso 4 opcional (`measure_modes`).
+- Veredicto: cumple la parte en vivo de la fase 4.

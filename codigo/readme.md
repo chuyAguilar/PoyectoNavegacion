@@ -189,6 +189,8 @@ módulo, **siempre desde `codigo\`** y con los argumentos explícitos (principio
 |---|---|
 | `tracker.py` | El bucle del tracker: cámara → detección y pose → envío por OpenIGTLink → ventana. |
 | `camera\` | Backend de captura, identidad por el puerto USB y ajustes por DSHOW. |
+| `vision\` | Detección ArUco, pose de un marker (IPPE_SQUARE), filtro 1-Euro y el paso por frame (`MarkerTracker`). |
+| `transport\` | El servidor OpenIGTLink y el envío de transforms (`IgtlSender`). |
 | `calibration\` | Calibración de la lente con tablero y comprobación de la escala con regla. |
 | `diagnostics\` | Sondear la cámara, medir modos y enfocar, verificar IDs, grabar y resumir poses. |
 | `gui\` | El panel de control (PySide6). |

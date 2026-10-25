@@ -22,7 +22,8 @@ Cuatro modos, uno por corrida (todos con --config, --salida y --timeout):
       --segundos-captura 10 --fov-grados 84 --luz "..."
       Medicion 1: por candidata, FPS de captura (solo leyendo frames), y sobre
       una muestra de esos frames (uno cada MUESTRA_CADA_S) el brillo medio, la
-      fraccion saturada sobre el dodecaedro y la mediana de markers. Elige la
+      fraccion saturada sobre los markers del perfil (Marker0 desde la meta
+      003) y la mediana de markers. Elige la
       exposicion (elegir_exposicion) y dice si la exposicion pedida cambia de
       verdad el brillo (exposicion_cambia_brillo).
 
@@ -30,8 +31,9 @@ Cuatro modos, uno por corrida (todos con --config, --salida y --timeout):
       --fps 90 --segundos-captura 10 --segundos-tracking 30 --fov-grados 84
       --luz "..." [--exposicion-ms 3.906]
       Medicion 2: por modo, tamano real, exposicion leida, FPS de captura, FPS
-      de tracking sin y con ventana (deteccion + lista blanca + pose del
-      dodecaedro + 1-Euro, con las funciones de tracker.py; sin pyigtl),
+      de tracking sin y con ventana (deteccion + lista blanca + pose de Marker0
+      + 1-Euro, con `vision.tracking.MarkerTracker`, el mismo paso por frame
+      del tracker; sin servidor OpenIGTLink; meta 003, fase 4, B32),
       mediana de markers y fraccion de frames con pose. Los de
       --modos-solo-captura solo captura (y la muestra). Con --intrinsecos
       RUTA.yml (fase 4, B33) la pose usa la K real del backend (el modo tiene
@@ -100,7 +102,8 @@ from camera import controls as ajustes_camara
 from camera.backend import create_backend
 from diagnostics.probe_camera import _vigilante, nitidez, parsear_modos
 import profiles
-import tracker
+from tracker import draw_poses
+from vision.tracking import MarkerTracker
 
 # Umbrales de la eleccion (clarify.md P11 y P12).
 FPS_MIN = 90.0
@@ -302,45 +305,32 @@ def medir_captura(cam, segundos: float, muestra_cada_s: float = MUESTRA_CADA_S) 
 
 
 def preparar_tracking(cfg: dict) -> dict:
-    """Lo que el tracker construye antes del bucle: detector, lista blanca, geometria, filtros."""
-    aruco_dict = tracker.obtener_diccionario(cfg["markers"]["dictionary"])
-    params = cv2.aruco.DetectorParameters()
-    params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-    tracker.aplicar_detector_params(params, cfg["markers"].get("detector", {}) or {})
-    rbs = cfg.get("rigid_bodies", []) or []
-    if len(rbs) != 1:
-        raise ValueError(f"el perfil tiene que traer un solo rigid body (el dodecaedro), no {len(rbs)}")
-    geometria = tracker.cargar_rigid_body(rbs[0]["geometry_file"])
-    individuales = {m["id"] for m in cfg["markers"].get("list", []) or []}
-    return {
-        "detector": cv2.aruco.ArucoDetector(aruco_dict, params),
-        "geometria": geometria,
-        "ids_rb": set(geometria),
-        "ids_conocidos": set(geometria) | individuales,
-        "min_markers": int((cfg.get("rigid_bodies_quality") or {}).get("min_markers", 1)),
-        "filtering": cfg.get("filtering") or {"enabled": False},
-    }
+    """Lo que el tracker construye antes del bucle: el `MarkerTracker` del perfil
+    (detector, lista blanca y filtros de `markers.list`; meta 003, fase 4)."""
+    if not (cfg["markers"].get("list") or []):
+        raise ValueError("el perfil no trae markers.list (Marker0): no hay nada que medir")
+    mt = MarkerTracker(cfg["markers"], cfg.get("filtering"))
+    return {"tracker": mt, "ids_conocidos": set(mt.valid_ids)}
 
 
-def _detectar_rb(ctx: dict, gray: np.ndarray) -> dict:
-    """{id: esquinas} de los markers del dodecaedro en el frame (lista blanca aplicada)."""
-    corners, ids, _rej = ctx["detector"].detectMarkers(gray)
+def _detectar(ctx: dict, gray: np.ndarray) -> list:
+    """[(id, esquinas)] de los markers del perfil en el frame (lista blanca aplicada), en el orden del detector."""
+    corners, ids = ctx["tracker"].detect(gray)
     if ids is None or len(ids) == 0:
-        return {}
-    return {int(mid): corners[i] for i, mid in enumerate(ids.flatten().tolist())
-            if int(mid) in ctx["ids_rb"]}
+        return []
+    return list(zip(ids.flatten().tolist(), corners))
 
 
 def analizar_muestra(muestra: list, ctx: dict) -> dict:
-    """Brillo medio, fraccion saturada sobre el dodecaedro y mediana de markers de la muestra."""
+    """Brillo medio, fraccion saturada sobre los markers del perfil y mediana de markers de la muestra."""
     brillos, saturadas, markers = [], [], []
     for frame in muestra:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
         brillos.append(float(gray.mean()))
-        det = _detectar_rb(ctx, gray)
+        det = _detectar(ctx, gray)
         markers.append(len(det))
         if det:
-            s = fraccion_saturada(gray, list(det.values()))
+            s = fraccion_saturada(gray, [c for _mid, c in det])
             if s is not None:
                 saturadas.append(s)
     return {
@@ -351,22 +341,15 @@ def analizar_muestra(muestra: list, ctx: dict) -> dict:
     }
 
 
-def _filtros(ctx: dict):
-    f = ctx["filtering"]
-    if not f.get("enabled"):
-        return None, None
-    return ([tracker.OneEuroFilter(f["min_cutoff"], f["beta"]) for _ in range(3)],
-            [tracker.OneEuroFilter(f["min_cutoff"], f["beta"]) for _ in range(4)])
-
-
 def medir_tracking(cam, ctx: dict, segundos: float, ventana: bool,
                    K: np.ndarray, dist: np.ndarray) -> dict:
     """FPS haciendo por frame lo del tracker sin enviar: gris, deteccion, lista blanca,
-    pose del dodecaedro (tracker.estimar_pose_rigid_body) y 1-Euro; con `ventana`,
-    tambien el dibujo, imshow y waitKey(1). q en la ventana interrumpe el pase."""
-    from scipy.spatial.transform import Rotation as Rot
-    f_pos, f_rot = _filtros(ctx)
-    prev_q = None
+    pose de Marker0 y 1-Euro (`MarkerTracker.process_corners`, el mismo paso que el
+    tracker); con `ventana`, tambien el dibujo (`tracker.draw_poses`), imshow y
+    waitKey(1). q en la ventana interrumpe el pase. Los filtros empiezan de cero en
+    cada pase, como arranca el tracker."""
+    mt: MarkerTracker = ctx["tracker"]
+    mt.reset()
     n, fallos, con_pose, markers, interrumpida = 0, 0, 0, [], False
     t0 = time.monotonic()
     while True:
@@ -379,35 +362,15 @@ def medir_tracking(cam, ctx: dict, segundos: float, ventana: bool,
             continue
         n += 1
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        det = _detectar_rb(ctx, gray)
+        det = _detectar(ctx, gray)
         markers.append(len(det))
-        display = frame.copy() if ventana else None
-        pose = None
-        if len(det) >= ctx["min_markers"]:
-            r = tracker.estimar_pose_rigid_body(det, ctx["geometria"], K, dist)
-            if r is not None:
-                rvec, tvec, _n = r
-                if f_pos is not None:
-                    tv = tvec.flatten()
-                    tvec = np.array([f_pos[j].filtrar(tv[j], t_now) for j in range(3)]).reshape(3, 1)
-                    q = Rot.from_rotvec(rvec.flatten()).as_quat()
-                    if prev_q is not None and float(np.dot(q, prev_q)) < 0.0:
-                        q = -q
-                    qf = np.array([f_rot[j].filtrar(float(q[j]), t_now) for j in range(4)])
-                    nq = float(np.linalg.norm(qf))
-                    if nq > 1e-9:
-                        qf = qf / nq
-                        prev_q = qf
-                        rvec = Rot.from_quat(qf).as_rotvec().reshape(3, 1)
-                pose = (rvec, tvec)
-                con_pose += 1
+        poses = mt.process_corners(det, t_now, K, dist) if det else []
+        if poses:
+            con_pose += 1
         if ventana:
-            if det:
-                cv2.aruco.drawDetectedMarkers(display, list(det.values()),
-                                              np.array([[i] for i in det], dtype=np.int32))
-            if pose is not None:
-                cv2.drawFrameAxes(display, K, dist, pose[0], pose[1], 30.0)
-            cv2.putText(display, f"Dodecaedro: {len(det)} markers", (10, 30),
+            display = frame.copy()
+            draw_poses(display, poses, K, dist)
+            cv2.putText(display, f"{len(det)} markers, pose {'si' if poses else 'no'}", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
             cv2.imshow(VENTANA, display)
             if cv2.waitKey(1) & 0xFF == ord("q"):

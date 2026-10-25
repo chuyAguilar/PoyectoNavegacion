@@ -23,8 +23,7 @@ Los archivos conservan su nombre de entonces.
 | `data/respaldo_puntas/` | La copia versionada de la punta vigente, `StylusTipToDodecaedro_femto_dock` (ADR-021). |
 | `data/` (locales) | Capturas del BA (`captura_ba*.npz`, `smoke_captura.npz`), muestras del divot y poses de pivote, las puntas `StylusTipToDodecaedro*` y `reference_dodecaedro_calibrado.txt` (del stylus viejo). |
 | `tests/` | Las pruebas que se fueron con su código: `test_calibrar_rigid_body.py`, `test_captura_calibracion.py`, `test_generar_reference_dodecaedro.py` (las 22 `xfail` de B17 estaban aquí) y `test_replay.py` con `tests/data/replay_v2_femto*` (el replay del dodecaedro con el perfil Femto). |
-
-La pose multi-marker (`estimar_pose_rigid_body`, `cargar_rigid_body`) sigue por ahora en `codigo/tracker.py`; la fase 4 de la meta 003 la saca a `dodecahedron/pose_rigid_body.py`.
+| `pose_rigid_body.py` | La pose multi-marker (`estimar_pose_rigid_body`, con el rechazo de outliers de la iter 5, y `cargar_rigid_body`), sacada tal cual de `codigo/tracker.py` en la fase 4 de la meta 003 (2026-10-24). El tracker vivo solo estima Marker0 (`vision/`). |
 
 ## `femto/` — la Femto Bolt (ADR-025: solo valen las SVPRO gs1 y gs2)
 

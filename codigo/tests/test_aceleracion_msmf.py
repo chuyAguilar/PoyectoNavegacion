@@ -3,9 +3,9 @@
 Sin camara. Cubre: camaras_uvc.apagar_aceleracion_msmf (pone 0 con setdefault
 solo en Windows, respeta un valor explicito, dice lo que ve cv2 si ya estaba
 cargado), su linea de log, que en esta misma sesion queda puesta, que cada
-script que abre MSMF la deja apagada al importarse en un proceso nuevo (y que
-tracker.py, que importa cv2 antes, no: B28), y el entorno de los procesos del
-panel (procesos.entorno_hijo).
+script que abre MSMF la deja apagada al importarse en un proceso nuevo
+(tracker.py tambien, desde la meta 003, fase 4: importa `camera` antes que
+cv2; cierra B28), y el entorno de los procesos del panel (procesos.entorno_hijo).
 """
 from __future__ import annotations
 
@@ -80,12 +80,12 @@ def test_en_esta_sesion_queda_puesta() -> None:
 
 # Meta 003, fase 3 (ADR-027): los modulos por su paquete; calibrar_tip_divot y captura_calibracion
 # se archivaron con el dodecaedro. El paquete `camera` solo, tambien (su __init__ importa camera.uvc).
+# Fase 4 (B28): tracker.py entra en la lista, importa `camera` antes que cv2.
 MODULOS_MSMF = ["camera", "camera.backend", "camera.uvc", "camera.controls", "diagnostics.probe_camera",
                 "diagnostics.measure_modes", "diagnostics.identify_ids", "calibration.calibrate_camera",
-                "calibration.check_scale"]
+                "calibration.check_scale", "tracker"]
 # (modulo, valor de la variable al lanzar o None si no esta)
-CASOS = [(m, None) for m in MODULOS_MSMF] + [("tracker", None), ("tracker", "0"),
-                                             ("camera.backend", "1")]
+CASOS = [(m, None) for m in MODULOS_MSMF] + [("tracker", "0"), ("camera.backend", "1")]
 
 
 @pytest.fixture(scope="module")
@@ -123,10 +123,16 @@ def test_cada_script_la_deja_apagada(importados: dict, modulo: str) -> None:
     assert importados[(modulo, None)] == ["apagada", "0", "True", "0"]
 
 
-def test_tracker_importa_cv2_antes_y_no_la_ve(importados: dict) -> None:
-    """tracker.py no se toca (principio 6): lanzado a mano necesita la variable en el entorno (B28)."""
-    assert importados[("tracker", None)] == ["encendida", "0", "True", "0"]
+def test_tracker_a_mano_la_apaga_y_respeta_el_entorno(importados: dict) -> None:
+    """B28 cerrado (meta 003, fase 4): `python -m tracker` a mano la apaga solo (esta en
+    MODULOS_MSMF) y, si el entorno ya la trae (el panel), la respeta."""
+    assert importados[("tracker", None)] == ["apagada", "0", "True", "0"]
     assert importados[("tracker", "0")] == ["apagada", "0", "False", "0"]
+
+
+def test_tracker_importa_camera_antes_que_cv2() -> None:
+    fuente = (CODIGO_DIR / "tracker.py").read_text(encoding="utf-8")
+    assert fuente.index("\nimport camera") < fuente.index("\nimport cv2")
 
 
 def test_un_uno_explicito_se_respeta_en_proceso_nuevo(importados: dict) -> None:

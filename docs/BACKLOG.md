@@ -19,18 +19,14 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B19 | `validar_prerrequisitos` deja un calibrado vacío | Alta | — |
 | B20 | Slicer carga la punta por fecha | Alta | — |
 | B21 | `opencv-python` frente a `opencv-contrib-python` | Baja | — |
-| B22 | Secuencias de escape inválidas en docstrings de `iter4\` | Baja | — |
 | B23 | Explorar el tracker en una Jetson Orin Nano, con Slicer en BigDaddy | Baja | — |
 | B24 | Frecuencia de la red (50/60 Hz) de las SVPRO, que OpenCV no fija | Baja | — |
 | B25 | La sonda pierde los modos medidos si salta el tope | Media | — |
 | B26 | Modos de las SVPRO que no sirven o no son estables | Baja | — |
-| B27 | `tracker.abrir_camara`, función que nadie llama | Baja | — |
-| B28 | `tracker.py` lanzado a mano abre MSMF con la aceleración HW encendida | Media | — |
 | B29 | «Probar cámara» del panel no comprueba la marca ni aplica los ajustes | Media | — |
 | B30 | Leer la marca y aplicar los controles en una sola apertura DSHOW | Baja | — |
 | B31 | El criterio de exposición de `medir_modos.py` favorece imágenes casi saturadas | Media | — |
 | B32 | Optimizar el tracker: la ventana limita a 19–25 fps en cualquier resolución | Media | — |
-| B34 | Las pruebas no deben poder abrir una cámara real aunque cambie un perfil | Media | — |
 | B35 | El criterio de escala por medias no mira la repetibilidad | Media | — |
 | B36 | Cámara 2 con el punto principal 90 px sobre el centro | Baja | — |
 | B39 | Con el detector de los perfiles gs1/gs2, un Marker0 sintético inclinado se lee como ID 87 o 115 | Baja | — |
@@ -138,14 +134,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** alinear el texto, o el paquete si algo de contrib hiciera falta.
 - **Prioridad:** baja.
 
-### B22 · Secuencias de escape inválidas en docstrings de `iter4\`
-- **Qué:** 14 scripts de `iter4\` y `gui\` (rutas Windows en el docstring, p.ej. `\)`) dan `DeprecationWarning: invalid escape sequence` al compilar; eran los 14 avisos de la suite. Desde la fase 3 · movimientos de la meta 001 (2026-10-19), 6 de ellos están en `codigo\historico\iter4_diagnosticos\` y quedan 8 avisos (`calibrar_camara`, `calibrar_tip_divot`, `captura_calibracion`, `identificar_ids`, `limpiar_captura_fantasmas`, `gui\ba_monitor`, `gui\estado`, `gui\panel`). En Python 3.12+ pasa a `SyntaxWarning`.
-- **Por qué queda:** con Python 3.11.9 no cambia nada; corregirlo toca scripts activos.
-- **De dónde:** fase 1 · suite y replay de la meta 001, 2026-10-19.
-- **Qué haría falta:** docstrings crudos (`r"""`) o barras dobles, al tocar cada script por otra razón o antes de subir de Python.
-- **Meta 003, fase 3 (2026-10-23):** la suite da 0 avisos: los scripts que los daban se archivaron o se reescribió su docstring al moverlos. Se cierra con su criterio en la fase 4.
-- **Prioridad:** baja.
-
 ### B23 · Explorar el tracker en una Jetson Orin Nano, con Slicer en BigDaddy
 - **Qué:** conectar las cámaras global shutter a una Jetson y correr ahí el tracker, viendo la navegación en Slicer en BigDaddy por la red. La cadena no cambiaría (principio 6): `pyigtl` ya publica por TCP (18944) y Slicer se conectaría a la IP de la Jetson en lugar de a `localhost`.
 - **El equipo (escaneo del autor, 2026-10-19):** Jetson Orin Nano Developer Kit Super (Yahboom, hostname `yahboom`); Ubuntu 22.04.5, aarch64, JetPack 6.2 (L4T R36.4.3), CUDA 12.6; modo MAXN_SUPER; 7.4 GB de RAM unificada (~5.2 GB libres) y ~11 GB de swap; NVMe con ~21 GB libres (88 % usado); escritorio gráfico con escritorio remoto (3389, 5900); Docker 27.5 con runtime de GPU; Tailscale. Comparte la máquina con Ollama (13 modelos, 37 GB en disco), JupyterLab, openclaw-gateway y CUPS.
@@ -183,20 +171,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Al día (2026-10-22, fase 3):** medido con la aceleración HW de MSMF apagada (`medir_modos.py`, las dos cámaras): 1920×1080 y 1920×1200 en MJPG y 640×480 y 1280×720 en YUY2 dan ~90 fps de captura (89.5–90), no los ~30 y ≤ 59 de la fase 1, que se midieron con la aceleración encendida. Esos modos sí sirven para captura; la resolución elegida (1280×960 MJPG, P16) no depende de ello. Los que no abren o no entregan (800×600, 1024×768 en la cámara 2, 960×720 YUY2) no se volvieron a medir.
 - **Prioridad:** baja.
 
-### B27 · `tracker.abrir_camara`, función que nadie llama
-- **Qué:** `abrir_camara(cfg_cam)` en `codigo/iter4/tracker.py` (línea 181) no la llama nadie (grep); el tracker abre la cámara por `camera_backend.create_backend`.
-- **Por qué queda:** no estorba y `tracker.py` es la cadena (principio 6): la meta 002 no lo toca.
-- **De dónde:** plan de la meta 002 · Calibración de las cámaras global shutter, al buscar quién abre la cámara; confirmado por grep en la fase 2a, 2026-10-21.
-- **Qué haría falta:** quitarla (o usarla) en una fase que ya toque `tracker.py`, con la suite y el replay.
-- **Prioridad:** baja.
-
-### B28 · `tracker.py` lanzado a mano abre MSMF con la aceleración HW encendida
-- **Qué:** `OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0` baja la apertura de una SVPRO de 43–51 s a 3.6–4.0 s sin cambiar los fps (sesión en vivo de la fase 2b, 2026-10-21/22). El código la pone en `camaras_uvc` al importarse, pero cv2 solo la ve si se puso antes de cargarse: `cv2.pyd` del venv (4.11) lleva el CRT estático y copia el entorno al cargarse (comprobado sin cámara con `OPENCV_IO_ENABLE_OPENEXR`). `tracker.py` importa `cv2` (línea 23) antes que `camera_backend` (línea 30), así que lanzado a mano desde PowerShell sigue con la aceleración encendida; el backend lo dice en su log («Aceleracion HW de MSMF ENCENDIDA: cv2 se cargo antes…») y `tests/test_aceleracion_msmf.py` lo fija. Desde el panel no pasa: `procesos.entorno_hijo` se la pasa apagada a sus procesos (verificado en vivo en la fase 6, 2026-10-23: «Arrancar tracker» con el perfil gs1 imprime `Aceleracion HW de MSMF apagada (…, del entorno)`, abre en 0.5 s). Queda solo `tracker.py` a mano.
-- **Por qué queda:** el encargo de la corrección de la fase 2b dice que `tracker.py` no cambia (principio 6).
-- **De dónde:** corrección de la fase 2b · Perfiles por cámara: identidad, ajustes y tamaño al abrir (meta 002), 2026-10-22.
-- **Qué haría falta:** una línea en `tracker.py`, `import camaras_uvc` antes de `import cv2`, en una fase que ya toque el tracker (con la suite, el replay y la comprobación de la cadena); mientras tanto, lanzar a mano con `$env:OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS='0'`. Cambiar entonces la prueba `test_tracker_importa_cv2_antes_y_no_la_ve`.
-- **Prioridad:** media.
-
 ### B29 · «Probar cámara» del panel no comprueba la marca ni aplica los ajustes
 - **Qué:** `gui/sonda_camara.py` resuelve el índice por el puerto, abre por MSMF y lee un frame, pero no lee la marca ni aplica `controls`: con las cámaras intercambiadas de puerto da «OK» (el tracker y el backend sí paran).
 - **Por qué queda:** en la fase 2b la sonda se dejó corta para caber en los 20 s del vigilante del panel; con la aceleración apagada (corrección de la 2b) ya cabría (~1 s de abrir + leer, ~1.2 s de marca).
@@ -223,13 +197,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** el plan lo manda a la meta de optimizar el tracker (decisión del autor, 2026-10-20); la fase 3 no toca `tracker.py` (principio 6). El autor eligió 1280×960 MJPG (P16) sabiendo que el tracking con ventana no llega a 90.
 - **De dónde:** sesión en vivo de la fase 3 (meta 002), 2026-10-22; tablas en `Claude outputs/fases/002/fase-3-en-vivo.md`.
 - **Qué haría falta:** en la meta de optimizar el tracker: medir qué cuesta más (dibujo, `imshow`, `waitKey(1)`, detección a 1280×960, 1-Euro) y sacarlo del bucle (ventana en otro hilo o a menor frecuencia, detección en una región de interés tras la primera, hilo propio de captura); extraer el paso por frame de `tracker.main()` a una función que usen el tracker y `medir_modos.medir_tracking` (hoy este repite el bucle); la línea base es la tabla de la fase 3 y se repite con intrínsecos reales (fases 4–5). Con la K real de la cámara 1 (fase 4, 1280×960, dodecaedro quieto): sin ventana 56 fps con pose casi siempre (99.8 %); la fase 3 daba 62 sin pose (la K nominal no resolvía la pose): más trabajo por frame. Con ventana, 21.4 fps. Fase 6 (2026-10-23, 1280×960): ~20–22 fps desde el panel sin `verbose` (21.6 / 19.9); con `verbose` y `Tee-Object` 14–19 (el log también cuesta). **Meta 003, fase 1 (2026-10-23), solo Marker0:** los fps son bimodales, ~20–21 o ~32–35, y no siguen a la ventana (gs1: con ventana 32.5, sin 20.9, hoy 33.0; gs2: 32.4, 35.2, 20.7); causa sin aislar (CPU de otros procesos, temporizador de Windows, cadencia de la cámara); se mide en la fase 6 de la meta 003. **Fase 2 (2026-10-23), en vivo con Slicer:** gs1 empezó en ~20 y subió a ~33 a mitad de corrida; gs2 ~31; Slicer recibió 19.1 y 31.4 Hz, lo que el tracker envió.
-- **Prioridad:** media.
-
-### B34 · Las pruebas no deben poder abrir una cámara real aunque cambie un perfil
-- **Qué:** nada impide hoy que una prueba llegue a `camera_backend.create_backend` o a `cv2.VideoCapture` con un perfil real y abra la cámara física. En la fase 4, al apuntar `tracker_config_gs1.yaml` a su `.yml`, `test_comprobar_escala.py::test_main_exige_argumentos_explicitos` (que suponía gs1 sin calibrar) pasó a abrir la cámara 1 real; el vigilante la cortó a los 60 s, sin procesos vivos después.
-- **Por qué queda:** la fase 4 lo cerró solo en sus dos módulos (`test_calibrar_camara.py` y `test_comprobar_escala.py`: un fixture autouse cambia `create_backend` por uno que falla) y arregló las dos pruebas que suponían gs1 sin calibrar; el resto de la suite sigue expuesta a un cambio de perfil.
-- **De dónde:** sesión en vivo de la fase 4 · Calibración de la cámara 1 y comprobación de escala (meta 002), paso 3, 2026-10-22 (`Claude outputs/fases/002/fase-4-en-vivo.md`).
-- **Qué haría falta:** un fixture autouse en `codigo/tests/conftest.py` que niegue `camera_backend.create_backend` y `cv2.VideoCapture` a toda la suite, salvo las pruebas marcadas a propósito (y las que usan una cámara falsa); con su prueba de que un perfil real no abre nada.
 - **Prioridad:** media.
 
 ### B35 · El criterio de escala por medias no mira la repetibilidad
@@ -311,6 +278,22 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** baja.
 
 ## Cerrados
+
+### B34 · Las pruebas no deben poder abrir una cámara real aunque cambie un perfil
+- **Qué era:** nada impedía que una prueba llegara a `cv2.VideoCapture` o a `create_backend(...).open()` con un perfil real y abriera la cámara física (en la meta 002 una prueba abrió la cámara 1 real y el vigilante la cortó a los 60 s).
+- **Cerrado:** 2026-10-24, por la fase 4 · El tracker en piezas (meta 003 · Arquitectura y optimización del tracker): el fixture autouse `no_real_camera` de `codigo/tests/conftest.py` niega a toda la suite `cv2.VideoCapture`, `camera.uvc.listar_camaras_msmf/dshow`, `WebcamBackend.open` sin un `abrir` falso inyectado y `pyigtl.OpenIGTLinkServer` (`RealHardwareForbidden`). `tests/test_no_real_camera.py` lo prueba con los perfiles gs1 y gs2 reales y con `tracker.main`. No niega `create_backend` (construir el backend no toca hardware).
+
+### B28 · `tracker.py` lanzado a mano abre MSMF con la aceleración HW encendida
+- **Qué era:** `tracker.py` importaba `cv2` antes que el código que apaga la aceleración HW de MSMF, así que lanzado a mano desde PowerShell la apertura tardaba 43–51 s en vez de ~4 s.
+- **Cerrado:** 2026-10-24, por la fase 4 · El tracker en piezas (meta 003): `tracker.py` hace `import camera` antes que `import cv2` y escribe «[Tracker] Aceleracion HW de MSMF apagada (…, puesta por el codigo)»; `test_aceleracion_msmf.py` lo fija (`test_tracker_a_mano_la_apaga_y_respeta_el_entorno`, `test_tracker_importa_camera_antes_que_cv2`). **Falta verlo en vivo a mano** (apertura ~4 s; protocolo en `Claude outputs/fases/003/fase-4-en-vivo-protocolo.md`): si no baja, se reabre.
+
+### B27 · `tracker.abrir_camara`, función que nadie llama
+- **Qué era:** `abrir_camara(cfg_cam)` en el tracker, sin ningún llamador.
+- **Cerrado:** 2026-10-24, por la fase 4 · El tracker en piezas (meta 003): el bucle nuevo de `tracker.py` no la trae (`grep` 0).
+
+### B22 · Secuencias de escape inválidas en docstrings
+- **Qué era:** docstrings con rutas Windows (`\)`) daban `DeprecationWarning: invalid escape sequence` al compilar; en Python 3.12+ serían `SyntaxWarning`.
+- **Cerrado:** 2026-10-24, por la fase 4 · El tracker en piezas (meta 003): `tests/test_compilan.py` compila los 55 archivos de `codigo/` (sin `historico/`) y los `tests/*.py` con los avisos como errores; 0 avisos.
 
 ### B17 · 22 pruebas desfasadas en `xfail(strict=True)`
 - **Qué era:** 22 pruebas de los 3 archivos de mayo (`test_calibrar_rigid_body.py`, `test_captura_calibracion.py`, `test_generar_reference_dodecaedro.py`) marcadas `xfail(strict=True)` en la meta 001 porque el código del dodecaedro y del BA había cambiado después.

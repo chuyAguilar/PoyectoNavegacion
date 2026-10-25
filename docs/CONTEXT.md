@@ -122,10 +122,10 @@
     defecto activa; medido 2026-10-22: 90.0 fps con y sin ella). Tiene que estar
     en `0` **antes del primer `import cv2` del proceso**: `cv2.pyd` copia el
     entorno al cargarse y ponerla después no hace nada. El código lo hace con
-    `import camaras_uvc` antes de `import cv2` (los scripts que abren MSMF) y
-    el panel se la pasa a sus procesos (`procesos.entorno_hijo`). **`tracker.py`
-    a mano desde PowerShell no la apaga** (B28): `$env:OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS='0'`
-    antes de lanzarlo.
+    `import camera` antes de `import cv2` (los scripts que abren MSMF, y desde
+    la fase 4 de la meta 003 también `tracker.py`: a mano la apaga y lo dice
+    en su log; B28, en vivo pendiente) y el panel se la pasa a sus procesos
+    (`processes.entorno_hijo`).
 19. **La marca `focus` de una cámara solo es fiable si se escribió.** La cámara 2
     nunca la tenía escrita y por DSHOW leía 332, 268, 362, 254, 337…, así que el
     backend paraba («no es la del perfil») sin motivo. Al dar de alta un perfil:
@@ -189,7 +189,7 @@ Adoptada 2026-08-13. Cualquier IA que toque el repo la respeta.
 
 ### WIP / deuda técnica pendiente
 
-- **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`, números en `resultados.md`): fase 1, línea base de Marker0 (sd z 0.04 mm, replay 0.0); fase 2, la cadena publica solo `Marker0ToTracker` (ADR-026; en Slicer 19.1 y 31.4 Hz). **Fase 3 (2026-10-23, sin cámara):** el código pasa de `codigo\iter4\` a paquetes bajo `codigo\` (`camera`, `calibration`, `diagnostics`, `gui`, `profiles`, `data`; `tracker.py`), se lanza con `python -m` y las rutas de un perfil son relativas a `codigo\`; el dodecaedro, la Femto y los perfiles viejos, en `codigo\historico\iter4\` (ADR-027). Las rutas de §3 y §4 se ponen al día en la fase 5. Faltan la parte en vivo de la fase 3 y partir el tracker (fase 4).
+- **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`, números en `resultados.md`): fase 1, línea base de Marker0 (sd z 0.04 mm, replay 0.0); fase 2, la cadena publica solo `Marker0ToTracker` (ADR-026; en Slicer 19.1 y 31.4 Hz). **Fase 3 (2026-10-23, sin cámara):** el código pasa de `codigo\iter4\` a paquetes bajo `codigo\` (`camera`, `calibration`, `diagnostics`, `gui`, `profiles`, `data`; `tracker.py`), se lanza con `python -m` y las rutas de un perfil son relativas a `codigo\`; el dodecaedro, la Femto y los perfiles viejos, en `codigo\historico\iter4\` (ADR-027). Las rutas de §3 y §4 se ponen al día en la fase 5. La fase 3 quedó hecha también en vivo (2026-10-24). **Fase 4 (2026-10-24, sin cámara):** el tracker se parte en `vision\` y `transport\` y `tracker.py` queda solo con el bucle; replay de Marker0 por `MarkerTracker.process_corners` 0.0 mm / 0.0°; la suite niega la cámara real (B34), `python -m tracker` a mano apaga la aceleración HW de MSMF (B28). Falta la sesión en vivo de la fase 4.
 - **Runbooks:** `documentos/historico/MANUAL_simplificado.md` (archivado el 2026-10-23) es del contexto doctor y del dodecaedro; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
 - **Panel** (brief-01/02, verificado 2026-08-13 con la Femto; detalle en el historial de git de este archivo, antes de `cd77185`): queda en vivo la captura del asistente con IDs nuevos y el dock (B10).
 - **Detección ~3–4 markers/vista** (histórico 5–6): revisar distancia, ángulo y luz antes que el detector.
