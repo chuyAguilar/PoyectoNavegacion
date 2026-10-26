@@ -218,3 +218,41 @@ Autorizada el 2026-10-25 con P12 («Detener tracker», por dentro `--stop-stdin`
 - **Paso 3, sd z sin ventana con `--record`:** gs1 bucle 89.7, 2693 frames, sd z 0.037, sd x 0.006, sd y 0.033, sd orientación 0.10°, 0 saltos > 5°, paso máx. 0.88 mm; gs2 bucle 89.6, 2690 frames, sd z 0.030, sd x 0.009, sd y 0.006, sd orientación 0.14°, 0 saltos > 5°, paso máx. 0.06 mm. La grabación no frena el bucle sin ventana.
 - **No se cumple: «Hz en Slicer ≥ fps − 10 %».** Con el tracker a ~89–90 fps, Slicer cuenta 65.8–67.4 Hz en las cuatro corridas sin ventana, con las dos cámaras (~81 pedidos). El tracker sí envía ~90/s (envíos / segundos). Hipótesis sin confirmar: el conector de Slicer importa los mensajes a un ritmo propio y `receive_marker0` cuenta modificaciones del nodo, no mensajes. **Por P15 (`clarify.md`), la fase 8 mide de dónde sale el techo.** El resto del criterio, cumplido.
 - **Decisiones del autor tras la sesión:** P14 = b (fase 8: el botón principal lanza sin ventana, el otro pasa a «Arrancar tracker con ventana»; perfiles sin cambio), P15 = b, P16 = b (un solo botón «Verificar IDs y colocar la cámara», fase 8).
+
+## Fase 8a · Un botón por modo en el panel (2026-10-25, sin cámara y en vivo)
+
+Autorizada el 2026-10-25 (P14 = b, P16 = b, P17 = a). Commit `01afef3`. Reporte: `Claude outputs/fases/003/fase-8a.md`; en vivo: `fase-8b-en-vivo.md`.
+
+- **Sin cámara:** suite 516/516 en 46.8 y 42.2 s (CPU al 79 % por otros programas), 0 avisos; replay de Marker0 0.0 mm / 0.0°; selftest con «Verificar IDs y colocar la cámara», «Arrancar tracker» (`--no-window --stop-stdin`), «Arrancar tracker con ventana», «Detener tracker» y «Detener proceso», y sin vista previa; `tracker.py`, `transport/`, `camera/`, `vision/` y `profiles/` sin diff.
+- **En vivo (2026-10-25 tarde, caja al máximo, Marker0 de 80 mm quieto):**
+
+| botón | gs1 | gs2 | cierre |
+|---|---|---|---|
+| Verificar IDs y colocar la cámara | `visibles: [0]`, `camara 89.9` y `90.0 fps` | `visibles: [0]`, `camara 90.1` y `89.8 fps` | `q` y X (gs1), «Detener proceso» (gs2): `[Salida limpia]`, exit 0 |
+| Arrancar tracker (sin ventana) | bucle 84.1 fps, cámara 90.2, 577 envíos (13 s) | log no conservado; consta «cierre limpio (por la entrada estandar)» | «por la entrada estandar», exit 0 |
+| Arrancar tracker con ventana | `[FPS]` 59.0–60.8; Slicer 54.6 Hz (p50 16.0 ms) | `[FPS]` 57.4–61.9; Slicer 55.4 Hz (p50 16.0 ms) | «por 'q'», exit 0 |
+
+- **Número clave:** `camara X fps` ≥ 85 en las dos cámaras (89.8–90.1): cumple. Ningún `python` del tracker vivo y el 18944 libre tras cada corrida. Hubo una corrida anterior en gs1 sin su log; sus 57.9 Hz no se usan.
+- **Dudoso:** en las corridas con ventana la cámara bajó al final (gs1 75.7, gs2 77.0 fps) y no se miró por qué.
+
+## Fase 8b · De dónde sale el techo de ~66 Hz en Slicer (2026-10-25, sin cámara y en vivo)
+
+Autorizada el 2026-10-25 (P15 = b, P18 = a). Reporte: `Claude outputs/fases/003/fase-8b.md`; nota de «implementa»: `fase-8b-implementa.md`; en vivo: `fase-8b-en-vivo.md`; CSV en `Claude outputs/grabaciones/003/fase8b_*.csv`.
+
+- **Qué se hizo:** `diagnostics/igtl_rate.py` (receptor OpenIGTLink propio y banco que usa `IgtlSender` tal cual) con 37 pruebas, y `slicer/receive_marker0.py` mide los intervalos entre actualizaciones (`run(..., name=...)`; la primera línea del reporte no cambió). `tracker.py`, `transport/`, `camera/`, `vision/` y `profiles/` sin diff.
+- **Sin cámara:** suite 555/555 en 33.1 y 33.6 s, 0 avisos; replay 0.0 mm / 0.0° (8 pruebas); selftest igual que en la 8a, `cerrando OK`.
+
+| medida | emisor | mensajes/s (receptor) | ráfagas/s | p50 ráfagas (ms) | Hz en Slicer | p50 en Slicer (ms) |
+|---|---|---|---|---|---|---|
+| E1 sin timer (×3, sin cámara ni Slicer) | 90.0 | 90.0 | 64.1 | 15.57 | — | — |
+| E1 `--timer-1ms` (×3) | 90.0 | 90.0 | 87.7–88.6 | 10.10 | — | — |
+| E2 gs1 (tracker real, receptor de control) | 77.3 fps, 974 envíos | 77.3 (974) | 60.5 | 15.46 | — | — |
+| E2 gs2 | log perdido | 79.7 | 61.6 | 15.44 | — | — |
+| E3 banco en Slicer, sin timer | 89.4 llamadas/s | — | — | — | 64.3 | 16.0 |
+| E3 banco en Slicer, `--timer-1ms` | 90.0 llamadas/s | — | — | — | 52.0 | 15.0 |
+| E4 gs1 (tracker real en Slicer) | 82.4 fps | — | — | — | 65.0 | 16.0 |
+
+- **Conclusión: R2, el techo de ~64–66 Hz es de Slicer.** El emisor sí agrupa (pyigtl despierta con el tic de Windows: 64.1 ráfagas/s, p50 15.57 ms, 1.40 mensajes por ráfaga) y con `timeBeginPeriod(1)` saca ~88 ráfagas/s, pero Slicer sigue recibiendo cada 15–16 ms y no sube (E3). No se pierde nada en el tracker: R3 descartado en gs1 (974 envíos = 974 recibidos; en gs2 no se pudo cotejar). R4 descartado: el banco sin cámara (64.3) da lo mismo que el tracker real (65.0).
+- **Por P18 no hay fase 8b2** (no salió R1). El criterio «Hz en Slicer ≥ fps − 10 %» de la 7b se declara inalcanzable por encima de ~65 Hz con este Slicer; la cadena llega y se mueve (criterio del spec en Slicer). Al BACKLOG (baja): B54, qué mirar en SlicerOpenIGTLink.
+- **Sin explicar:** los 52.0 Hz de E3 con `--timer-1ms` (una sola corrida, no repetida; no cambia la conclusión). **B51** (5.8 Hz con `--sync-capture`): esta medida no lo explica; sigue abierto, baja.
+- **Limpieza tras cada corrida en vivo:** vacía (dirección).

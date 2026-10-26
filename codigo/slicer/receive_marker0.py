@@ -11,7 +11,11 @@ no con el venv del proyecto. Lo que hace (ADR-026, meta 003):
    Marker0).
 3. Cuenta sus `TransformModifiedEvent` durante SECONDS segundos y escribe la
    frecuencia (Hz), la ultima posicion y si existe un nodo `DodecaedroToTracker`
-   en la escena (no deberia: la cadena publica solo Marker0).
+   en la escena (no deberia: la cadena publica solo Marker0). Desde la fase 8b
+   (meta 003) guarda tambien el `time.monotonic()` de cada evento y escribe una
+   segunda linea con los intervalos entre modificaciones (p50, p95 y max en ms):
+   si el p50 ronda los 15-16 ms, Slicer recibe al ritmo de las rafagas del
+   hilo de envio de pyigtl (tic de Windows), no al de los frames.
 
 Nada bloquea el hilo de Slicer: las esperas van por `qt.QTimer`, porque los
 mensajes OpenIGTLink solo llegan mientras el bucle de eventos corre.
@@ -21,6 +25,7 @@ Uso, en la consola Python de Slicer (ruta explicita, principio 7):
     exec(open(r"C:\\Dev\\OrtoMeta\\PoyectoNavegacion\\codigo\\slicer\\receive_marker0.py", encoding="utf-8").read())
     run()            # 10 s por defecto
     run(seconds=30)  # otra duracion
+    run(seconds=20, name="RateProbeToTracker")   # otro nodo: el del banco diagnostics.igtl_rate (fase 8b)
 
 El resultado tambien queda en `LAST_REPORT` (dict) para copiarlo al reporte.
 """
@@ -101,13 +106,38 @@ def _position(node):
     return [round(m.GetElement(i, 3), 2) for i in range(3)]
 
 
+def _percentile(sorted_values, q):
+    """Percentil q (0-100) de una lista ya ordenada, por interpolacion lineal (sin numpy)."""
+    if not sorted_values:
+        return None
+    k = (len(sorted_values) - 1) * q / 100.0
+    lo, hi = int(k), min(int(k) + 1, len(sorted_values) - 1)
+    return sorted_values[lo] + (sorted_values[hi] - sorted_values[lo]) * (k - lo)
+
+
+def interval_stats(times):
+    """p50, p95 y max (ms) de los intervalos entre marcas `times` (s, monotonic); None si hay < 2."""
+    if len(times) < 2:
+        return {"interval_ms_p50": None, "interval_ms_p95": None, "interval_ms_max": None}
+    iv = sorted((b - a) * 1000.0 for a, b in zip(times, times[1:]))
+    return {"interval_ms_p50": round(_percentile(iv, 50), 2),
+            "interval_ms_p95": round(_percentile(iv, 95), 2),
+            "interval_ms_max": round(iv[-1], 2)}
+
+
 def measure(node, seconds=SECONDS, done=None):
-    """Cuenta los TransformModifiedEvent de `node` durante `seconds` y reporta."""
+    """Cuenta los TransformModifiedEvent de `node` durante `seconds` y reporta.
+
+    Guarda el instante (`time.monotonic()`) de cada evento para dar los intervalos
+    entre modificaciones (fase 8b): la primera linea del reporte no cambia; la
+    segunda trae p50, p95 y max en ms."""
     count = [0]
+    stamps = []
     t0 = time.monotonic()
 
     def on_modified(_caller=None, _event=None):
         count[0] += 1
+        stamps.append(time.monotonic())
 
     tag = node.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, on_modified)
     _log(f"midiendo {node.GetName()} durante {seconds:g} s...")
@@ -126,11 +156,15 @@ def measure(node, seconds=SECONDS, done=None):
             "connector_state": state_name(connector) if connector else "sin conector",
             "legacy_present": legacy_present(),
         }
+        report.update(interval_stats(stamps))
         LAST_REPORT.clear()
         LAST_REPORT.update(report)
         _log(f"{report['node']}: {report['updates']} actualizaciones en {report['seconds']} s = "
              f"{report['hz']} Hz; ultima posicion (mm) {report['last_position_mm']}; "
              f"conector {report['connector_state']}")
+        _log(f"intervalos entre actualizaciones (ms): p50 {report['interval_ms_p50']} "
+             f"p95 {report['interval_ms_p95']} max {report['interval_ms_max']} "
+             f"(tic de Windows 15.625; un frame a 90 fps 11.1)")
         if report["legacy_present"]:
             _log(f"ATENCION: existe un nodo {LEGACY_NAME} en la escena (ADR-026: no deberia enviarse). "
                  "Si la escena es nueva, el tracker lo sigue publicando.")
@@ -167,10 +201,13 @@ def wait_for_node(name=NAME, timeout_s=WAIT_NODE_TIMEOUT_S, then=None):
     poll()
 
 
-def run(seconds=SECONDS, host=HOST, port=PORT):
-    """Conector listo -> espera Marker0ToTracker -> mide `seconds` s -> reporte."""
+def run(seconds=SECONDS, host=HOST, port=PORT, name=NAME):
+    """Conector listo -> espera el nodo `name` (Marker0ToTracker) -> mide `seconds` s -> reporte.
+
+    `name` (fase 8b) sirve para medir otro transform, p. ej. `RateProbeToTracker`,
+    el del banco `diagnostics.igtl_rate bench --external`."""
     ensure_connector(host, port)
-    wait_for_node(NAME, WAIT_NODE_TIMEOUT_S, lambda node: measure(node, seconds))
+    wait_for_node(name, WAIT_NODE_TIMEOUT_S, lambda node: measure(node, seconds))
 
 
-_log("cargado. Llama run() (10 s) o run(seconds=30).")
+_log("cargado. Llama run() (10 s), run(seconds=30) o run(seconds=20, name=\"RateProbeToTracker\").")

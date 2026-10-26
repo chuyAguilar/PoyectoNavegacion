@@ -224,6 +224,13 @@ python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml --t
 # Solo la vista previa, sin detección (imagen, cruz y fps de la cámara; solo por línea de comandos)
 python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml --no-detect --timeout 600
 
+# El ritmo de los mensajes OpenIGTLink, sin cámara (meta 003, fase 8b). `listen` sustituye a Slicer
+# como cliente del tracker (se arranca ANTES del tracker; el tracker lo ve como un cliente valido);
+# `bench` es un emisor real en este proceso, con receptor propio (E1) o con Slicer (--external, E3)
+python -m diagnostics.igtl_rate listen --port 18944 --seconds 30 --timeout 60 --device Marker0ToTracker
+python -m diagnostics.igtl_rate bench --port 18950 --hz 90 --seconds 20 --device RateProbeToTracker --timeout 10
+python -m diagnostics.igtl_rate bench --port 18944 --hz 90 --seconds 30 --device RateProbeToTracker --timeout 60 --external --timer-1ms
+
 # La suite de pruebas (sin cámara)
 python -m pytest tests -q
 ```

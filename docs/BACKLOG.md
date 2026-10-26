@@ -42,6 +42,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B51 | Con `--sync-capture` a 52 fps, Slicer recibió solo 5.8 Hz | Baja | — |
 | B52 | «Detener tracker» con el tracker con ventana sigue dependiendo de encontrar la ventana por su título | Baja | — |
 | B53 | Con `--stop-stdin`, la parada no se atiende mientras el tracker espera a Slicer | Baja | — |
+| B54 | Slicer recibe como mucho ~65 Hz de Marker0, aunque el tracker envíe ~90 | Baja | — |
 
 ## Abiertos
 
@@ -293,6 +294,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** en la corrida gs2 E1b de la fase 7 · Subir los fps con ventana (captura en el bucle, `--sync-capture`, envío con `wait=False`), el tracker envió 1 559 poses en 30 s (51.9 fps, 100 % con pose, «sin cliente 0») y `receive_marker0.py` contó 5.8 Hz. En las corridas con el hilo de captura, los Hz en Slicer siguen a los fps (46.0, 56.9, 50.4, 30.9). Sin explicar: pueden ser las ráfagas de `wait=False` (B48), Slicer con el bucle de eventos ocupado o un arranque tardío de `run()`.
 - **Por qué queda:** `--sync-capture` es solo para comparar; el modo por defecto entrega. La segunda parte en vivo de la fase 7 no lo repitió (se cerró con lo medido, `clarify.md` P11).
 - **De dónde:** primera parte en vivo de la fase 7 (meta 003 · Arquitectura y optimización del tracker), 2026-10-25 (`Claude outputs/fases/003/fase-7-en-vivo.md`).
+- **Al día (2026-10-25, fase 8b):** el techo de ~65 Hz en Slicer (B54) no lo explica: a 52 fps los 5.8 Hz quedan muy por debajo de ese techo. Sigue sin explicar.
 - **Qué haría falta:** repetir gs2 con `--sync-capture` y luz máxima, con `run(seconds=20)` arrancado antes del tracker, y comparar los Hz con los envíos; si se repite, contar en Slicer los mensajes por segundo (no solo los `TransformModifiedEvent`) para saber si se pierden o se agrupan.
 - **Prioridad:** baja (sube a alta si se ve sin `--sync-capture`: Slicer no seguiría a Marker0).
 
@@ -308,6 +310,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** atenderlo pide que `IgtlSender.wait_for_client` (la cadena, principio 6) acepte un evento de parada; la fase 7b no toca `transport/`. Visto al implementar la fase 7b (meta 003 · Arquitectura y optimización del tracker), 2026-10-25.
 - **De dónde:** fase 7b, 2026-10-25.
 - **Qué haría falta:** pasar el evento a `wait_for_client(timeout_s, stop=None)` y salir con un código propio si se pide parar; su prueba sin cámara con el emisor falso.
+- **Prioridad:** baja.
+
+### B54 · Slicer recibe como mucho ~65 Hz de Marker0, aunque el tracker envíe ~90
+- **Qué:** con el tracker a ~82–90 fps, `receive_marker0.py` cuenta 64.3–67.4 Hz en Slicer (intervalo p50 16.0 ms, el tic de Windows de 15.6). La fase 8b · De dónde sale el techo de ~66 Hz en Slicer (meta 003 · Arquitectura y optimización del tracker) lo midió: el emisor (pyigtl) agrupa los mensajes en 64.1 ráfagas/s y con `timeBeginPeriod(1)` saca ~88, pero Slicer sigue en 64.3 Hz sin cámara y 52.0 con esa opción (una corrida). No se pierde nada en el tracker (974 envíos = 974 recibidos en gs1). Conclusión R2: el techo es de Slicer.
+- **Por qué queda:** con ~65 Hz la cadena llega y se mueve (criterio del spec), y los 65 Hz superan los fps con ventana (55–62). Subirlo no está en la meta; por P18 no hay fase 8b2.
+- **De dónde:** fase 8b, 2026-10-25 (`specs/003-*/resultados.md`; `Claude outputs/fases/003/fase-8b-en-vivo.md`).
+- **Qué haría falta:** si alguna vez hacen falta más de 65 Hz en Slicer: mirar en SlicerOpenIGTLink cómo y a qué ritmo importa los mensajes a la escena (hilo de importación, refresco del conector) y si hay un ajuste; repetir el banco (`python -m diagnostics.igtl_rate bench … --external`) tras cada cambio; explicar los 52.0 Hz con `--timer-1ms`. El remedio en el tracker (timer de 1 ms o hilo de envío propio) no sube nada mientras Slicer no cambie.
 - **Prioridad:** baja.
 
 ## Cerrados

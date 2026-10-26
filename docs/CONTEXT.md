@@ -176,7 +176,7 @@ Desde el 2026-10-19, el método por specs: `docs/constitution.md` (lo que no se 
   tablero de 24.86 mm); escala por medias +0.27 y −0.37 mm en 80 mm. Calibración desde
   el panel en tres pasos (enfocar, tablero, escala). **No girar ni sacar el lente de la
   cámara 2 sin recalibrar** (cy 389.8, B36).
-- **Suite pytest sin cámara** (`codigo\tests\`, 516 pruebas desde la fase 8a de la meta 003; 42–47 s en la 8a con la CPU al 79 % por otros programas, ~24–26 s en la 7b): niega la cámara
+- **Suite pytest sin cámara** (`codigo\tests\`, 555 pruebas desde la fase 8b de la meta 003; ~33 s en la 8b, 42–47 s en la 8a con la CPU al 79 % por otros programas, ~24–26 s en la 7b): niega la cámara
   real y el servidor pyigtl (B34); la comprobación de «no cambió» es la suite, el
   selftest del panel y el replay de Marker0 (`docs/ARCHITECTURE.md` §6).
 - **Histórico (archivado, se puede retomar):** el dodecaedro v2 (IDs 3–13, BA a 1.26 px),
@@ -195,7 +195,7 @@ Desde el 2026-10-19, el método por specs: `docs/constitution.md` (lo que no se 
 ### WIP / deuda técnica pendiente
 
 - **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`, números en `resultados.md`). Hecho: la arquitectura (fases 1–5; ADR-026 y ADR-027), dónde se va el tiempo por frame (fase 6), subir los fps con ventana (fase 7; ADR-028) y los botones de tracker sin ventana y de vista previa para posicionar las cámaras (fase 7b, en vivo el 2026-10-25: bucle ~89 fps sin ventana, sd z 0.030–0.037 mm; Slicer cuenta ~66 Hz, no cumple y se investiga).
-  La fase 8 se parte en tres. Fase 8a · Un botón por modo en el panel: hecha sin cámara el 2026-10-25 («Arrancar tracker» lanza sin ventana y «Arrancar tracker con ventana» el de siempre, P14; un solo «Verificar IDs y colocar la cámara», con la cruz y los fps de la cámara, P16; `--no-detect` queda para la CLI, P17); su verificación en vivo, al empezar la sesión de la 8b. Faltan la fase 8b · De dónde sale el techo de ~66 Hz en Slicer (P15) y la fase 8c · Cierre de la meta.
+  La fase 8 se parte en tres. Fase 8a · Un botón por modo en el panel: hecha y verificada en vivo el 2026-10-25 («Arrancar tracker» lanza sin ventana y «Arrancar tracker con ventana» el de siempre, P14; un solo «Verificar IDs y colocar la cámara», con la cruz y los fps de la cámara, P16; `--no-detect` queda para la CLI, P17); `camara X fps` 89.8–90.1. Fase 8b · De dónde sale el techo de ~66 Hz en Slicer (P15): hecha el 2026-10-25, el techo es de Slicer (~65 Hz; pyigtl agrupa en 64 ráfagas/s por el tic de Windows pero Slicer no sube aunque el emisor dé 88), sin fase 8b2 (B54). Falta la fase 8c · Cierre de la meta.
 - **Runbooks:** `documentos/historico/MANUAL_simplificado.md` (archivado el 2026-10-23) es del contexto doctor y del dodecaedro; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
 - **Panel** (`python -m gui.panel`; brief-01/02, verificado 2026-08-13 con la Femto y desde la meta 003 con gs1 y gs2; detalle en el historial de git de este archivo, antes de `cd77185`): el asistente del dodecaedro y el dock se archivaron en la fase 3 de la meta 003, así que su verificación en vivo (B10) espera al instrumento nuevo (B40).
 - **Detección ~3–4 markers/vista** (histórico 5–6): revisar distancia, ángulo y luz antes que el detector.
