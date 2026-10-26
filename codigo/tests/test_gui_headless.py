@@ -96,41 +96,52 @@ def test_panel_selftest() -> None:
                   r"\blado\b", r"\bluz\b", r"\breporte\b", r"\bsb\b", r"cl[aá]sico", r"\bcasillas?\b",
                   r"\.yml\b", r"\bClose\b", r"\bSave\b", r"\bCancel\b"):
         assert not re.search(jerga, textos, re.IGNORECASE), f"jerga {jerga!r} a la vista: {textos}"
-    # Meta 003, fase 7b: la vista previa, el tracker sin ventana y «Detener tracker» (sin proceso,
-    # deshabilitado), y los argv de las tres recetas con gs1.
-    assert linea("boton_vista_previa_habilitado").endswith("=True")
-    assert linea("boton_tracker_sin_ventana_habilitado").endswith("=True")
+    # Meta 003, fase 8a (P14 = b, P16 = b): un boton por modo. «Verificar IDs y colocar la cámara»;
+    # «Arrancar tracker» lanza sin ventana y «Arrancar tracker con ventana» el de siempre; «Detener
+    # tracker» sin proceso, deshabilitado; ya no hay boton de vista previa ni «sin ventana».
+    assert linea("boton_ids_habilitado").endswith("=True")
+    assert linea("boton_tracker_con_ventana_habilitado").endswith("=True")
     assert linea("boton_detener_tracker_habilitado").endswith("=False")
+    for fuera in ("boton_vista_previa", "boton_tracker_sin_ventana", "vista_previa_argv",
+                  "tracker_sin_ventana_argv"):
+        assert not any(ln.startswith(f"[panel-selftest] {fuera}") for ln in lineas), fuera
     gs1 = "tracker_config_gs1.yaml"
     ids = linea("ids_argv")
     assert ids.split("=", 1)[1].startswith("-m diagnostics.identify_ids --config ") and gs1 in ids
     assert ids.endswith(" --timeout 600") and "--no-detect" not in ids
-    assert linea("vista_previa_argv").endswith(f"{gs1} --no-detect --timeout 600")
-    assert linea("tracker_sin_ventana_argv").split("=", 1)[1].startswith("-m tracker --config ")
-    assert linea("tracker_sin_ventana_argv").endswith(f"{gs1} --no-window --stop-stdin")
+    tracker = linea("tracker_argv").split("=", 1)[1]
+    assert tracker.startswith("-m tracker --config ") and tracker.endswith(f"{gs1} --no-window --stop-stdin")
+    from pathlib import Path
+    con_ventana = linea("tracker_con_ventana_argv").split("=", 1)[1]
+    assert con_ventana == f"-m tracker --config {Path('profiles') / gs1}", con_ventana
+    textos_botones = linea("botones_textos").split("=", 1)[1].split(" | ")
+    for esperado in ("ids:Verificar IDs y colocar la cámara", "tracker:Arrancar tracker",
+                     "tracker_con_ventana:Arrancar tracker con ventana", "detener_tracker:Detener tracker"):
+        assert esperado in textos_botones, textos_botones
 
 
 # ----------------------------------------------------------------------------
-# Meta 003, fase 7b · Botones de tracker sin ventana y de vista previa (P12, P13)
+# Meta 003, fases 7b y 8a · Las recetas de los botones (P12, P13; P14 = b, P16 = b)
 # ----------------------------------------------------------------------------
 
-def test_recetas_de_la_fase_7b() -> None:
+def test_recetas_de_los_botones() -> None:
     from pathlib import Path
     from gui import recipes
     gs1 = str(Path("profiles") / "tracker_config_gs1.yaml")
     ids = recipes.receta_identificar_ids(gs1)
-    assert ids.argv[2:4] == ["-m", "diagnostics.identify_ids"] and ids.argv[-2:] == ["--timeout", "600"]
+    assert ids.argv[2:] == ["-m", "diagnostics.identify_ids", "--config", gs1, "--timeout", "600"]
     assert ids.ventana_titulo == recipes.VENTANAS["identificar_ids"] and not ids.stop_stdin
+    assert ids.descripcion.startswith("Verificar IDs y colocar la camara (cruz y fps de la camara;")
     perm = recipes.receta_identificar_ids(gs1, permisivo=True, timeout=30)
     assert perm.argv[-3:] == ["--permisivo", "--timeout", "30"]
-    vp = recipes.receta_vista_previa(gs1)
-    assert vp.clave == "vista_previa" and vp.usa_camara and not vp.stop_stdin
-    assert vp.argv[2:] == ["-m", "diagnostics.identify_ids", "--config", gs1, "--no-detect", "--timeout", "600"]
-    assert vp.ventana_titulo == recipes.VENTANAS["vista_previa"]
+    # Fase 8a: la receta de la vista previa se va del panel (P16 = b); --no-detect queda en la CLI (P17 = a).
+    assert not hasattr(recipes, "receta_vista_previa") and "vista_previa" not in recipes.VENTANAS
     tsv = recipes.receta_tracker_sin_ventana(gs1)
     assert tsv.clave == "tracker_sin_ventana" and tsv.stop_stdin and tsv.ventana_titulo is None
     assert tsv.argv[2:] == ["-m", "tracker", "--config", gs1, "--no-window", "--stop-stdin"]
-    assert not recipes.receta_tracker(gs1).stop_stdin
+    con = recipes.receta_tracker(gs1)
+    assert con.clave == "tracker" and not con.stop_stdin and con.ventana_titulo == recipes.VENTANAS["tracker"]
+    assert con.argv[2:] == ["-m", "tracker", "--config", gs1]
 
 
 def test_titulos_de_ventana_iguales_a_los_del_script() -> None:
@@ -138,7 +149,7 @@ def test_titulos_de_ventana_iguales_a_los_del_script() -> None:
     from diagnostics import identify_ids
     from gui import recipes
     assert recipes.VENTANAS["identificar_ids"] == identify_ids.WINDOW_TITLE
-    assert recipes.VENTANAS["vista_previa"] == identify_ids.PREVIEW_WINDOW_TITLE
+    assert identify_ids.PREVIEW_WINDOW_TITLE == "Vista previa - q para salir"   # la CLI (P17 = a)
 
 
 _HIJO_LIMPIO = ("import sys\n"

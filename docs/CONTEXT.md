@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-25 (§4.5 y §6: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, hecha sin cámara). Antes, 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Antes, 2026-10-24 (§6: meta 003, fase 6 · Dónde se va el tiempo por frame, con la tabla en vivo; la suite, 475). Antes, 2026-10-24 (§3, §4 y §6: meta 003, fase 5 · Documentación del paso 1). Las actualizaciones anteriores, en el historial de git._
+> _Última actualización: 2026-10-25 (§6: meta 003, fase 8a · Un botón por modo en el panel, hecha sin cámara). Antes, 2026-10-25 (§4.5 y §6: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, hecha sin cámara). Antes, 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Antes, 2026-10-24 (§6: meta 003, fase 6 · Dónde se va el tiempo por frame, con la tabla en vivo; la suite, 475). Antes, 2026-10-24 (§3, §4 y §6: meta 003, fase 5 · Documentación del paso 1). Las actualizaciones anteriores, en el historial de git._
 
 ---
 
@@ -176,7 +176,7 @@ Desde el 2026-10-19, el método por specs: `docs/constitution.md` (lo que no se 
   tablero de 24.86 mm); escala por medias +0.27 y −0.37 mm en 80 mm. Calibración desde
   el panel en tres pasos (enfocar, tablero, escala). **No girar ni sacar el lente de la
   cámara 2 sin recalibrar** (cy 389.8, B36).
-- **Suite pytest sin cámara** (`codigo\tests\`, 514 pruebas desde la fase 7b de la meta 003, ~24–26 s): niega la cámara
+- **Suite pytest sin cámara** (`codigo\tests\`, 516 pruebas desde la fase 8a de la meta 003; 42–47 s en la 8a con la CPU al 79 % por otros programas, ~24–26 s en la 7b): niega la cámara
   real y el servidor pyigtl (B34); la comprobación de «no cambió» es la suite, el
   selftest del panel y el replay de Marker0 (`docs/ARCHITECTURE.md` §6).
 - **Histórico (archivado, se puede retomar):** el dodecaedro v2 (IDs 3–13, BA a 1.26 px),
@@ -195,7 +195,7 @@ Desde el 2026-10-19, el método por specs: `docs/constitution.md` (lo que no se 
 ### WIP / deuda técnica pendiente
 
 - **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`, números en `resultados.md`). Hecho: la arquitectura (fases 1–5; ADR-026 y ADR-027), dónde se va el tiempo por frame (fase 6), subir los fps con ventana (fase 7; ADR-028) y los botones de tracker sin ventana y de vista previa para posicionar las cámaras (fase 7b, en vivo el 2026-10-25: bucle ~89 fps sin ventana, sd z 0.030–0.037 mm; Slicer cuenta ~66 Hz, no cumple y se investiga).
-  Falta la fase 8 · Cierre de la meta: botón principal sin ventana (P14), un solo botón «Verificar IDs y colocar la cámara» (P16) y medir el techo de ~66 Hz en Slicer (P15).
+  La fase 8 se parte en tres. Fase 8a · Un botón por modo en el panel: hecha sin cámara el 2026-10-25 («Arrancar tracker» lanza sin ventana y «Arrancar tracker con ventana» el de siempre, P14; un solo «Verificar IDs y colocar la cámara», con la cruz y los fps de la cámara, P16; `--no-detect` queda para la CLI, P17); su verificación en vivo, al empezar la sesión de la 8b. Faltan la fase 8b · De dónde sale el techo de ~66 Hz en Slicer (P15) y la fase 8c · Cierre de la meta.
 - **Runbooks:** `documentos/historico/MANUAL_simplificado.md` (archivado el 2026-10-23) es del contexto doctor y del dodecaedro; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
 - **Panel** (`python -m gui.panel`; brief-01/02, verificado 2026-08-13 con la Femto y desde la meta 003 con gs1 y gs2; detalle en el historial de git de este archivo, antes de `cd77185`): el asistente del dodecaedro y el dock se archivaron en la fase 3 de la meta 003, así que su verificación en vivo (B10) espera al instrumento nuevo (B40).
 - **Detección ~3–4 markers/vista** (histórico 5–6): revisar distancia, ángulo y luz antes que el detector.

@@ -3,15 +3,21 @@
 IDENTIFICAR IDs de los markers en vivo, o VISTA PREVIA para colocar la camara.
 
 Abre la camara con el perfil, igual que el tracker (`camera.backend.create_backend`
-+ `open()`: puerto, marca, ajustes, modo y el .yml), y tiene dos modos:
++ `open()`: puerto, marca, ajustes, modo y el .yml), y la lee por el mismo hilo de
+captura (`camera.grabber.FrameGrabber`; meta 003, fase 8a): los fps de la camara
+salen de los frames que entrega la camara (`frames_read`), no de las vueltas del
+bucle, asi que con deteccion son los de la camara aunque el bucle vaya mas lento.
+Tiene dos modos:
 
-- Por defecto, IDs: dibuja el ID (numero grande) sobre cada marker detectado
-  (Marker0, o cualquiera del diccionario del perfil), mas un punto rojo en la
-  esquina 0 para ver su orientacion. El detector ArUco decodifica la
-  orientacion del patron, asi que el ID no se confunde 6<->9 ni por giro.
-- `--no-detect`, vista previa (meta 003, fase 7b; clarify.md P13 = c): solo la
-  imagen, una cruz fina en el centro y los fps que entrega la camara, para
-  colocarla y enfocarla. No detecta, no estima pose, no envia nada ni abre el
+- Por defecto, IDs y colocar la camara (fase 8a; clarify.md P16 = b): dibuja el
+  ID (numero grande) sobre cada marker detectado (Marker0, o cualquiera del
+  diccionario del perfil), mas un punto rojo en la esquina 0 para ver su
+  orientacion, y ademas la cruz fina en el centro y la linea con los fps de la
+  camara. El detector ArUco decodifica la orientacion del patron, asi que el ID
+  no se confunde 6<->9 ni por giro. Cada 5 s escribe `[IDs] camara X fps`.
+- `--no-detect`, vista previa (meta 003, fase 7b; clarify.md P13 = c; desde la
+  fase 8a solo para la linea de comandos, P17 = a): solo la imagen, la cruz y
+  los fps de la camara. No detecta, no estima pose, no envia nada ni abre el
   puerto 18944. Cada 5 s escribe `[Vista previa] camara X fps` (con poca luz
   las SVPRO bajan de 90, B50).
 
@@ -27,7 +33,10 @@ Teclas:  q = salir
 Context7 (2026-10-25): OpenCV 4.13, `getWindowProperty(win, WND_PROP_VISIBLE)`
 dice si la ventana existe y es visible; `waitKey` atiende los eventos de
 HighGUI. Python 3.11, `argparse.add_mutually_exclusive_group()` y un `type`
-que lanza `ArgumentTypeError`.
+que lanza `ArgumentTypeError`. Context7 (2026-10-25, fase 8a): OpenCV 4.13,
+`putText(img, text, org, ...)` con `org` la esquina inferior izquierda del texto
+(por eso la linea de fps va en otra altura que la de IDs) y `line` pinta en el
+mismo array.
 """
 import argparse
 import sys
@@ -39,6 +48,7 @@ import cv2
 import numpy as np
 
 from camera.backend import create_backend
+from camera.grabber import FrameGrabber
 import profiles
 from vision.detection import apply_detector_params   # el mismo mapeo del YAML que usa el tracker
 
@@ -46,8 +56,10 @@ from vision.detection import apply_detector_params   # el mismo mapeo del YAML q
 WINDOW_TITLE = "Identificar IDs - q para salir"
 PREVIEW_WINDOW_TITLE = "Vista previa - q para salir"
 NO_FRAMES_S = 10.0          # sin ningun frame en este tiempo, sale con codigo 1 (principio 9)
-REPORT_EVERY_S = 5.0        # la linea [Vista previa] con los fps de la camara
+REPORT_EVERY_S = 5.0        # la linea `<tag> camara X fps` con los fps de la camara
 IDS_PRINT_EVERY_S = 0.5     # la linea de IDs visibles en la consola (como antes)
+READ_TIMEOUT_S = 0.1        # espera maxima por un frame nuevo en cada vuelta (la ventana sigue atendida)
+PREVIEW_Y_WITH_IDS = 95     # con deteccion, la linea de fps va debajo de las dos de draw_ids (35 y 65)
 
 
 def _positive_seconds(text: str) -> float:
@@ -62,8 +74,8 @@ def _positive_seconds(text: str) -> float:
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(
-        description="Identificar IDs de los markers en vivo, o vista previa (--no-detect) "
-                    "para colocar la camara.")
+        description="Identificar IDs de los markers en vivo y colocar la camara (cruz y fps "
+                    "de la camara), o solo la vista previa (--no-detect).")
     ap.add_argument("--config", required=True, help="Perfil, p. ej. profiles/tracker_config_gs1.yaml.")
     ap.add_argument("--timeout", required=True, type=_positive_seconds,
                     help="Tope de la corrida en segundos (> 0); al cumplirse sale limpio.")
@@ -119,8 +131,10 @@ def draw_ids(display: np.ndarray, corners, ids) -> list[int]:
     return visibles
 
 
-def draw_preview(display: np.ndarray, fps_camera: float | None, profile_name: str) -> None:
-    """Una linea con el perfil, los fps de la camara y «q = salir», y una cruz fina
+def draw_preview(display: np.ndarray, fps_camera: float | None, profile_name: str,
+                 y: int = 35) -> None:
+    """Una linea con el perfil, los fps de la camara y «q = salir» (a la altura `y`;
+    con deteccion va en PREVIEW_Y_WITH_IDS para no pisar la de IDs), y una cruz fina
     en el centro. Sin deteccion, sin pose, sin envio."""
     h, w = display.shape[:2]
     cx, cy = w // 2, h // 2
@@ -129,9 +143,9 @@ def draw_preview(display: np.ndarray, fps_camera: float | None, profile_name: st
     cv2.line(display, (cx, 0), (cx, h - 1), color, 1)
     fps_txt = f"{fps_camera:.1f}" if fps_camera is not None else "-"
     cv2.putText(display, f"{profile_name} | camara {fps_txt} fps | q = salir",
-                (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 4)
+                (15, int(y)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 4)
     cv2.putText(display, f"{profile_name} | camara {fps_txt} fps | q = salir",
-                (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+                (15, int(y)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -143,8 +157,11 @@ def main(argv: list[str] | None = None) -> int:
     profile_name = Path(args.config).name
     detector = None if preview else make_detector(cfg["markers"], args.permisivo)
 
+    # El reloj del bucle es este; el hilo de captura usa el suyo (por defecto perf_counter):
+    # sus horas de captura no se usan aqui, solo su contador `frames_read`.
     clock = time.perf_counter
     cam = create_backend(cfg["camera"])
+    grabber = None
     rc = 0
     try:
         cam.open()
@@ -152,30 +169,34 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{tag} Coloca la camara: imagen, cruz en el centro y fps de la camara. "
                   f"q o la X = salir (tope {args.timeout:.0f} s).")
         else:
-            print(f"{tag} Apunta los markers (Marker0) a la camara. q o la X = salir "
-                  f"(tope {args.timeout:.0f} s).")
+            print(f"{tag} Apunta los markers (Marker0) a la camara y colocala con la cruz "
+                  f"y los fps de la camara. q o la X = salir (tope {args.timeout:.0f} s).")
         cv2.namedWindow(win, cv2.WINDOW_NORMAL)
+        grabber = FrameGrabber(cam)
+        grabber.start()
         t_start = t_last_frame = t_report = clock()
+        frames_at_report = grabber.frames_read
         t_print = float("-inf")         # la primera linea de IDs sale con el primer frame, como antes
-        frames_report = 0
         fps_camera = None
         shown = False
         while True:
-            frame, _, _ = cam.read()
+            got = grabber.next_frame(READ_TIMEOUT_S)
             t = clock()
-            if frame is not None:
+            if got is not None:
+                frame = got[0]
                 t_last_frame = t
-                frames_report += 1
+                if t - t_report >= REPORT_EVERY_S:
+                    read_now = grabber.frames_read
+                    fps_camera = (read_now - frames_at_report) / (t - t_report)
+                    print(f"{tag} camara {fps_camera:.1f} fps")
+                    t_report, frames_at_report = t, read_now
                 disp = frame.copy()
                 if preview:
-                    if t - t_report >= REPORT_EVERY_S:
-                        fps_camera = frames_report / (t - t_report)
-                        print(f"{tag} camara {fps_camera:.1f} fps")
-                        t_report, frames_report = t, 0
                     draw_preview(disp, fps_camera, profile_name)
                 else:
                     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                     corners, ids, _ = detector.detectMarkers(gray)
+                    draw_preview(disp, fps_camera, profile_name, y=PREVIEW_Y_WITH_IDS)
                     visibles = draw_ids(disp, corners, ids)
                     if t - t_print > IDS_PRINT_EVERY_S:   # por si no miras la ventana
                         print(f"  visibles: {visibles}")
@@ -198,6 +219,8 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{tag} tope de {args.timeout:.0f} s: saliendo.")
                 break
     finally:
+        if grabber is not None:
+            grabber.stop()              # el hilo suelta la camara antes de cerrarla (como el tracker)
         cam.close()
         cv2.destroyAllWindows()
         print("[Salida limpia]")

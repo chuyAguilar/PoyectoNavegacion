@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-25 (§3.2 y §3.7: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, sin cámara: `tracker --stop-stdin`; el panel gana «Vista previa (colocar la cámara)», «Arrancar tracker sin ventana» y «Detener tracker», y detiene el tracker sin ventana por la entrada estándar; `identify_ids` con `--timeout` obligatorio, `--no-detect` y cierre en un `finally`; la verificación en vivo está pendiente). Antes, 2026-10-25 (§3.1, §3.2, §3.5 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada: la captura en un hilo con el último frame (`camera/grabber.py`), el envío sin esperar (0.02 ms en vivo) y la espera a Slicer con tope y aborto; ADR-028. Los perfiles gs1/gs2 siguen pidiendo 90 fps: pedir 60 dio 29, la cámara no tiene modo de 60 a 1280×960 MJPG; `clarify.md` P11). Antes, 2026-10-24 (§3.2, §3.7 y §6: meta 003, fase 6 · Dónde se va el tiempo por frame: `tracker --timing <json>` cronometra cada etapa del bucle con `diagnostics.pose_log.Stopwatch`, apagado por defecto; `diagnostics/measure_window.py` cronometra la ventana sin cámara). Antes, 2026-10-24 (§2, §3, §4, §6 y notas en §5, §7 y §8: meta 003, fase 5 · Documentación del paso 1: la topología, los componentes y la cadena se describen con la estructura nueva (`camera`, `vision`, `transport`, `profiles`, `gui`, `calibration`, `diagnostics`, `slicer`; `tracker.py` solo el bucle) y solo Marker0; lo del dodecaedro, la Femto y el contexto doctor queda como referencia archivada).
+> _Última actualización: 2026-10-25 (§3.7: meta 003, fase 8a · Un botón por modo en el panel, sin cámara: «Arrancar tracker» lanza el tracker sin ventana y «Arrancar tracker con ventana» el de siempre; «Verificar IDs y colocar la cámara» reemplaza a «Verificar IDs» y a «Vista previa»; `identify_ids` lee por `FrameGrabber` y dibuja la cruz y los fps de la cámara también con detección; la verificación en vivo, al empezar la sesión de la 8b). Antes, 2026-10-25 (§3.2 y §3.7: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, sin cámara: `tracker --stop-stdin`; el panel gana «Vista previa (colocar la cámara)», «Arrancar tracker sin ventana» y «Detener tracker», y detiene el tracker sin ventana por la entrada estándar; `identify_ids` con `--timeout` obligatorio, `--no-detect` y cierre en un `finally`; la verificación en vivo está pendiente). Antes, 2026-10-25 (§3.1, §3.2, §3.5 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada: la captura en un hilo con el último frame (`camera/grabber.py`), el envío sin esperar (0.02 ms en vivo) y la espera a Slicer con tope y aborto; ADR-028. Los perfiles gs1/gs2 siguen pidiendo 90 fps: pedir 60 dio 29, la cámara no tiene modo de 60 a 1280×960 MJPG; `clarify.md` P11). Antes, 2026-10-24 (§3.2, §3.7 y §6: meta 003, fase 6 · Dónde se va el tiempo por frame: `tracker --timing <json>` cronometra cada etapa del bucle con `diagnostics.pose_log.Stopwatch`, apagado por defecto; `diagnostics/measure_window.py` cronometra la ventana sin cámara). Antes, 2026-10-24 (§2, §3, §4, §6 y notas en §5, §7 y §8: meta 003, fase 5 · Documentación del paso 1: la topología, los componentes y la cadena se describen con la estructura nueva (`camera`, `vision`, `transport`, `profiles`, `gui`, `calibration`, `diagnostics`, `slicer`; `tracker.py` solo el bucle) y solo Marker0; lo del dodecaedro, la Femto y el contexto doctor queda como referencia archivada).
 > Antes, 2026-10-24 (§6: meta 003, fase 4 · El tracker en piezas: `vision\` (detección, pose, 1-Euro, `MarkerTracker`) y `transport\` (`IgtlSender`); `tracker.py` queda solo con el bucle; la suite niega la cámara real y el servidor pyigtl). Antes, 2026-10-23 (§6: meta 003, fase 3 · La estructura nueva y el archivo: el código pasa de `codigo\iter4\` a paquetes por responsabilidad bajo `codigo\` (`camera`, `calibration`, `diagnostics`, `gui`, `profiles`, `data`; `tracker.py` suelto), se lanza con `python -m` y las rutas de un perfil son relativas a `codigo\` (ADR-027); el dodecaedro, la Femto y los perfiles viejos van a `codigo\historico\iter4\`; §3 y §4 se ponen al día en la fase 5). Antes, 2026-10-23 (§3.3, §4 y §6: meta 003, fase 2 · La cadena solo con Marker0: los perfiles gs1 y gs2 ya no definen `rigid_bodies`, el tracker publica solo `Marker0ToTracker` (ADR-026), `gui/estado.py` no exige la geometría si el perfil no la define, `codigo/slicer/receive_marker0.py` nuevo y el manual del dodecaedro en `documentos/historico/`). Antes, 2026-10-23 (§6: meta 003, fase 1 · Línea base de Marker0: `pose_log.py`, opciones de grabación del tracker y replay de Marker0). Antes, 2026-10-23 (§3.1, §3.3, §6 y §8: meta 002, fase 6 · Comparación contra P02 y archivo de los perfiles viejos: `tracker_config_doctor.yaml` y `globalshutter.yml` pasan a `iter4/data/historico/`; el tracker no cambió). 
 > Antes, 2026-10-23 (§3.4, §3.7 y §6: meta 002, fase 5 · Calibración de la cámara 2: `intrinsecos_gs2_1280x960.yml`; la ventana de calibración del panel en tres pasos, `gui/calibracion.py` y `data/tablero_calibracion.yaml`; `comprobar_escala.py` juzga por medias y recalcula con `--desde-json`). Antes, 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
@@ -209,7 +209,7 @@ instrumento nuevo (B40, B41); el procedimiento anterior, con el dodecaedro, est�
 
 ### 3.7 Panel de control (GUI) — `codigo/gui/`
 
-_Al día: 2026-10-25 (meta 003, fases 3 y 7b)._ `python -m gui.panel` (desde `codigo\`, con el
+_Al día: 2026-10-25 (meta 003, fases 3, 7b y 8a)._ `python -m gui.panel` (desde `codigo\`, con el
 venv). Panel de escritorio **PySide6** (brief-01 + brief-02) que **solo orquesta**
 los scripts existentes — no reimplementa tracking ni calibración (ADR-017;
 única excepción acotada: ADR-018):
@@ -235,15 +235,18 @@ los scripts existentes — no reimplementa tracking ni calibración (ADR-017;
   `escribir_tablero`, escritura atómica), las salidas por perfil, las tres recetas
   (enfocar, calibrar, escala) y los textos de «Última».
 - `panel.py` — ventana única: perfil, semáforos, «1 · Verificar / Preparar»
-  (Verificar IDs, Vista previa (colocar la cámara), Probar cámara, Calibrar cámara…) y
-  «2 · Operar» (Arrancar tracker, Arrancar tracker sin ventana, Detener tracker, Detener
-  proceso), log en vivo. Desde la fase 7b (2026-10-25): la vista previa lanza
-  `identify_ids --no-detect --timeout 600` y «Verificar IDs» `--timeout 600`; «Arrancar
-  tracker sin ventana» lanza `tracker --no-window --stop-stdin`; «Detener tracker» se
-  habilita solo con una de las dos recetas del tracker en marcha y la receta elige el
-  camino (sin ventana, la entrada estándar; con ventana, `q` a la ventana); los dos
-  botones del tracker preguntan antes por Slicer (el tracker lo espera 30 s y, si no
-  llega, aborta con código 3). «Calibrar cámara (enfocar, tablero, escala)…» abre
+  (Verificar IDs y colocar la cámara, Probar cámara, Calibrar cámara…) y «2 · Operar»
+  (Arrancar tracker, Arrancar tracker con ventana, Detener tracker, Detener proceso), log
+  en vivo. Un botón por modo desde la fase 8a (2026-10-25; P14 = b, P16 = b): «Verificar
+  IDs y colocar la cámara» lanza `identify_ids --timeout 600` (los IDs, la cruz y los fps
+  de la cámara); «Arrancar tracker», el principal, lanza `tracker --no-window
+  --stop-stdin` (receta `tracker_sin_ventana`) y «Arrancar tracker con ventana» el de
+  siempre, `tracker --config <perfil>` (receta `tracker`); los perfiles y el comando a mano
+  no cambian. El panel ya no lanza `--no-detect` (queda para la CLI, P17 = a). «Detener
+  tracker» (fase 7b) se habilita solo con una de las dos recetas del tracker en marcha y
+  la receta elige el camino (sin ventana, la entrada estándar; con ventana, `q` a la
+  ventana); los dos botones del tracker preguntan antes por Slicer (el tracker lo espera
+  30 s y, si no llega, aborta con código 3). «Calibrar cámara (enfocar, tablero, escala)…» abre
   `VentanaCalibrarCamara`: tres pasos sin campos (1 Enfocar lente con
   `diagnostics.measure_modes --enfocar`, 2 Calibrar con tablero, 3 Comprobar escala con
   regla), el último resultado de cada uno y «Volver a medir el tablero…»
@@ -266,9 +269,11 @@ en `codigo/historico/iter4/dodecahedron/gui/` (meta 003, fase 3).
 - `diagnostics/probe_camera.py` (sonda: modos, puertos, `--leer`, `--fijar`),
   `diagnostics/measure_modes.py` (`--enfocar`, exposiciones, modos, `--elegir`; el
   tracking que mide usa `MarkerTracker` con Marker0), `diagnostics/identify_ids.py`
-  (los IDs que ve la cámara; con `--no-detect`, la vista previa para colocarla: imagen,
-  cruz en el centro y fps de la cámara; `--timeout` obligatorio y cierre en un `finally`
-  desde la fase 7b) y `diagnostics/pose_log.py` (`PoseLog` graba lo que envía el
+  (los IDs que ve la cámara y, desde la fase 8a, también la cruz en el centro y los fps
+  de la cámara; con `--no-detect`, solo la vista previa: imagen, cruz y fps; `--timeout`
+  obligatorio y cierre en un `finally` desde la fase 7b; desde la 8a lee por el hilo de
+  captura del tracker, `camera.grabber.FrameGrabber`, y los fps son los `frames_read` de
+  la cámara, no las vueltas del bucle; el `finally` para el hilo antes de cerrar la cámara) y `diagnostics/pose_log.py` (`PoseLog` graba lo que envía el
   tracker con `--record`; `summarize` da frames, fps, fracción con pose, sd x/y/z, rango
   z, sd de la orientación y saltos > 5°; `Stopwatch` cronometra el bucle con `--timing`).
   Desde la fase 6 de la meta 003 (2026-10-24), `diagnostics/measure_window.py`

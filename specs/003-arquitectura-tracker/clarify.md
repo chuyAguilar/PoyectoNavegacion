@@ -104,3 +104,15 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** a) dejar los dos, «Verificar IDs» y «Vista previa (colocar la cámara)»; b) un solo botón: se quita «Vista previa» y «Verificar IDs» muestra también la cruz y los fps de la cámara, con el nombre «Verificar IDs y colocar la cámara».
 - **Respuesta del autor:** b) un solo botón, en la fase 8.
 - **Fecha:** 2026-10-25
+
+## P17 · Qué pasa con `identify_ids --no-detect` cuando el panel deja de usarlo (fase 8a)
+
+- **Opciones:** a) conservarlo para la CLI: ya tiene sus pruebas, no cuesta mantenerlo y deja ver la imagen sin IDs dibujados; con el hilo de captura que añade la 8a, los fps de la cámara salen iguales con y sin detección (recomendada); b) quitarlo: un solo modo, menos código y menos pruebas, y en `CLAUDE.md` §5 queda un solo comando de `identify_ids`.
+- **Respuesta del autor:** a) se conserva para la CLI; el panel deja de usarlo.
+- **Fecha:** 2026-10-25
+
+## P18 · Si la fase 8b da R1 (el techo lo pone el hilo de envío de pyigtl), ¿el remedio entra en esta meta?
+
+- **Opciones:** a) sí: una fase 8b2 antes del cierre (pedir 1 ms de temporizador en el tracker, o un hilo de envío propio), con su ADR y su verificación en vivo con Slicer, porque cambia el ritmo de la cadena (principio 6); b) no: va al BACKLOG (media) y la meta se cierra con el techo explicado; ~66 Hz ya supera los fps con ventana y el criterio del spec en Slicer («llega y se mueve») se cumple (recomendada: una cosa a la vez).
+- **Respuesta del autor:** a) sí: si la 8b da R1, una fase 8b2 antes del cierre, con su ADR y su verificación en vivo con Slicer.
+- **Fecha:** 2026-10-25. Ese mismo día el autor autorizó en el chat la fase 8 partida en 8a, 8b y 8c.

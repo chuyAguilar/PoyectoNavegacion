@@ -209,16 +209,19 @@ cd C:\Dev\OrtoMeta\PoyectoNavegacion\codigo
 # Panel de control (lista los perfiles y lanza todo lo de abajo)
 python -m gui.panel
 
-# Tracker (Slicer conectado como cliente a localhost:18944 ANTES)
+# Tracker (Slicer conectado como cliente a localhost:18944 ANTES); a mano, con ventana
+# (el panel: «Arrancar tracker con ventana»)
 python -m tracker --config profiles\tracker_config_gs1.yaml
 
-# Tracker sin ventana (más fps); sale con q + Enter o al cerrar la entrada (el panel: «Detener tracker»)
+# Tracker sin ventana (más fps); sale con q + Enter o al cerrar la entrada
+# (el panel: «Arrancar tracker», el principal desde la meta 003, fase 8a; se detiene con «Detener tracker»)
 python -m tracker --config profiles\tracker_config_gs1.yaml --no-window --stop-stdin
 
-# Verificar los IDs que ve la cámara (--timeout obligatorio, en segundos; q o la X para salir)
+# Verificar los IDs que ve la cámara y colocarla: IDs, cruz en el centro y fps de la cámara
+# (--timeout obligatorio, en segundos; q o la X para salir; el panel: «Verificar IDs y colocar la cámara»)
 python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml --timeout 600
 
-# Vista previa para colocar la cámara: imagen, cruz en el centro y fps de la cámara, sin detección
+# Solo la vista previa, sin detección (imagen, cruz y fps de la cámara; solo por línea de comandos)
 python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml --no-detect --timeout 600
 
 # La suite de pruebas (sin cámara)

@@ -42,6 +42,7 @@
 | 027 | El código se ordena por responsabilidad en `codigo/` y se lanza con `python -m` | Aceptada |
 | 028 | La captura va en un hilo con el último frame y el envío no espera | Aceptada |
 | 029 | El panel detiene el tracker con un botón propio y, sin ventana, por la entrada estándar | Aceptada |
+| 030 | El panel arranca el tracker sin ventana y verifica IDs y cámara con un solo botón | Aceptada |
 
 ---
 
@@ -612,3 +613,14 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 3. El modo normal del panel pasa a ser sin ventana (P14 = b, 2026-10-25): lo hace la fase 8; los perfiles no cambian.
 
 **Consecuencias.** En vivo, con la caja de luz al máximo: sin ventana, el bucle va al ritmo de la cámara (gs1 89.9 fps, gs2 88.8), sd z 0.037 y 0.030 mm, 99.96 % con pose; con ventana, gs1 ~82. Todos los cierres desde el panel salieron limpios (exit 0, el 18944 libre). Slicer cuenta ~66 Hz con el tracker a ~90: el criterio «Hz ≥ fps − 10 %» no se cumple y la fase 8 investiga de dónde sale el techo (P15). En la fase 8, «Verificar IDs» absorbe la vista previa en un solo botón (P16). Quedan B52 (con ventana, la parada depende del título) y B53 (`--stop-stdin` no se atiende mientras el tracker espera a Slicer). Alternativas descartadas: un archivo de parada, CTRL_BREAK con un manejador de `SIGBREAK` (solo llega con consola compartida) y un módulo `diagnostics/preview.py`.
+
+## ADR-030 — El panel arranca el tracker sin ventana y verifica IDs y cámara con un solo botón
+**Fecha:** 2026-10-25 · **Estado:** Aceptada
+
+**Contexto.** En la fase 7b de la meta 003, sin ventana el tracker fue al ritmo de la cámara (gs1 89.9 fps, gs2 88.8) con sd z 0.037 y 0.030 mm; con ventana, gs1 ~82 y gs2 55.2 en la fase 7. La vista previa (`identify_ids --no-detect`) y «Verificar IDs» resultaron casi el mismo botón. El autor decidió el 2026-10-25 (`specs/003-arquitectura-tracker/clarify.md` P14 = b, P16 = b, P17 = a).
+
+**Decisión.**
+1. En el panel, «Arrancar tracker» lanza el tracker sin ventana (`--no-window --stop-stdin`) y «Arrancar tracker con ventana» queda como opción. «Detener tracker» cierra los dos (ADR-029). Los perfiles no cambian: a mano, `python -m tracker --config …` sigue con ventana.
+2. Un solo botón, «Verificar IDs y colocar la cámara»: `identify_ids` con detección dibuja los IDs, la cruz del centro y los fps de la cámara, y lee por `camera.grabber.FrameGrabber` para que esos fps sean los de la cámara y no los del bucle. Sale del panel la vista previa aparte; `--no-detect` se conserva para la CLI.
+
+**Consecuencias.** Lo normal desde el panel es el modo de más fps; para ver la imagen mientras se trackea, el botón con ventana. El argv de cada receta, `tracker.py`, `transport/` y los perfiles no cambian. Se verifica en vivo al empezar la fase 8b (cámara ≥ 85 fps en «Verificar IDs y colocar la cámara», tracker sin ventana ≥ 85 fps, cierres limpios con los dos botones).
