@@ -105,3 +105,25 @@ Las validaciones de las iteraciones 1–4 (RMS de registro 3.46 → 2.80 mm, BA 
   3. Baja. En `tasks.md` la casilla de la fase 6 trae «Commit: —» aunque HEAD ya es su commit; el encargo esperaba seis casillas con commit (cinco lo tienen). Es el flujo normal (lo añade el cierre o la fase siguiente).
 - Lo dudoso: B34 sigue abierto (nada impide que una prueba nueva abra una cámara real si se cambia un perfil); no se probó ninguna cifra en vivo (sd z, fps, enfoque), solo que lo commiteado coincide con lo registrado. B37 (alta) y el criterio de la cámara 1 no cumplido quedan como los dejó la fase 6.
 - Veredicto: lo commiteado dice y hace lo que registran las fases 1–6; sin fallos de gravedad media o alta. Detalle: `Claude outputs/pruebas/002-meta/ronda.md`.
+
+## P04 · Meta 003 · Arquitectura y optimización del tracker (sin hardware)
+- Commit probado: 26e724e · Fecha: 2026-10-26
+- Comprobaciones:
+
+| qué | cómo | resultado | número o evidencia |
+|---|---|---|---|
+| Suite x2 | pytest | pasa | 555 passed, 0 avisos; 37.2 s y 32.9 s de pared (29.7 s la tercera) |
+| Replay Marker0 | test_replay_marker0 | pasa | 8 passed, 1.84 s |
+| Selftest del panel | panel --selftest (offscreen, utf-8) | pasa | rc 0; sin boton_vista_previa_*; tracker_argv = `-m tracker --config profiles\tracker_config_gs1.yaml --no-window --stop-stdin` |
+| --help | 7 módulos `python -m` de CLAUDE.md §5 y readme | pasa | todos exit 0; identify_ids sin --timeout: exit 2 |
+| Tracker sin Slicer | tracker --no-window --slicer-timeout 3 | pasa | hecho por el autor el 2026-10-26 sobre 26e724e, Slicer sin conector: «[ERROR] Slicer no se conecto al puerto 18944 en 3 s», «Servidor del puerto 18944 cerrado (0 envios)», exit=3, sin líneas [Webcam]; la dirección vio 18944 sin Listen y ningún tracker vivo |
+| Banco igtl_rate (18950) | bench 90 Hz 10 s | pasa | sin timer 64.6 ráfagas/s (E1: 64.1), 1.39 msg/ráfaga; con --timer-1ms 86.7 ráfagas/s (E1: 87.7–88.6), 902/902 enviados |
+| Docs | lectura | pasa | índices ADR hasta 031 y B54/B55 coinciden; memory.md 9 317 B; ninguna línea > 2 000; arranque 40 355 B |
+| B55 | cálculo | pasa | 0.033/0.811=0.041, 0.034→0.042, 0.037→0.046, 0.030→0.037: coinciden con resultados.md; 40.28/0.811=49.7 mm; ADR-031 y BACKLOG coherentes |
+| iter4 | git grep | pasa | no existe codigo/iter4/; lo que queda son docstrings de procedencia, rutas a historico/iter4 y `generated_by` de los .yml |
+
+- Fallos:
+  1. Resuelto (error mío de procedimiento, no del código). Lancé el punto 5 sin comprobar que Slicer estuviera cerrado: conectó, el tracker abrió la cámara y quedó en bucle (PIDs 14604 y 32120). Terminó después y la dirección confirmó que ya no existe.
+  2. Baja. `docs/DECISIONS.md` dice «Última actualización: 2026-10-23» con ADR-026 a 031 de 2026-10-25/26.
+- Lo dudoso: sin hardware no se comprobó nada en vivo. Cobertura en vivo de fases 7 a 8c según resultados.md; no vi hueco que exija en_vivo.md.
+- Veredicto: lo commiteado coincide con lo registrado, sin fallos de gravedad media o alta. Veredicto final de la meta 003: pasa. Detalle: `Claude outputs/pruebas/003-meta/ronda.md`.
