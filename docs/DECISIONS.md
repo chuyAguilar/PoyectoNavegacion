@@ -7,7 +7,7 @@
 > conserva, para no repetir errores ya pagados.
 >
 > Estados: `Aceptada` · `Reemplazada` · `En pausa` · `Propuesta`.
-> _Última actualización: 2026-10-23._
+> _Última actualización: 2026-10-26._
 
 Índice rápido:
 
