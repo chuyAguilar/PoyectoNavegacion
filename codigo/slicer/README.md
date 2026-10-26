@@ -2,7 +2,7 @@
 
 Lo que Slicer necesita para recibir lo que publica el tracker, versionado aquí en vez de pegado desde un manual (ADR-026). Se corren **dentro de Slicer** (5.x con la extensión SlicerOpenIGTLink), no con el venv del proyecto.
 
-La cadena (principio 6): el tracker publica solo `Marker0ToTracker` por OpenIGTLink, TCP 18944, solo transforms. Slicer se conecta como **cliente** a `localhost:18944` **antes** de arrancar el tracker (`pyigtl` bloquea si nadie está conectado; `docs/CONTEXT.md` §4.5).
+La cadena (principio 6): el tracker publica solo `Marker0ToTracker` por OpenIGTLink, TCP 18944, solo transforms. Slicer se conecta como **cliente** a `localhost:18944` **antes** de arrancar el tracker: el tracker lo espera hasta `--slicer-timeout` (30 s) y, si no llega, aborta sin abrir la cámara (ADR-028; `docs/CONTEXT.md` §4.5).
 
 ## `receive_marker0.py`
 
@@ -32,7 +32,7 @@ Deja el conector listo, espera `Marker0ToTracker` y mide su frecuencia.
 
 Qué se mira:
 
-- **Hz**: la frecuencia con que llega `Marker0ToTracker`. Se compara con la última línea `[FPS] Promedio` del tracker de la misma corrida: tiene que quedar a ≤ 10 % de ella (el tracker envía una vez por frame con pose). Desde la fase 7b el tracker sin ventana va a ~90 fps y Slicer cuenta ~66 Hz; la fase 8b mide de dónde sale ese techo (`codigo/diagnostics/igtl_rate.py`).
+- **Hz**: la frecuencia con que llega `Marker0ToTracker`. Se compara con la última línea `[FPS] Promedio` del tracker de la misma corrida: tiene que quedar a ≤ 10 % de ella (el tracker envía una vez por frame con pose). Eso vale por debajo de ~65 Hz: con este Slicer no se reciben más, aunque el tracker sin ventana envíe ~90 por segundo. La fase 8b (meta 003, 2026-10-25) lo midió con `codigo/diagnostics/igtl_rate.py`: no se pierde ningún envío y el techo es de Slicer (`docs/ARCHITECTURE.md` §3.5; B54).
 - **intervalos**: el tiempo entre dos modificaciones seguidas del nodo. Si el p50 ronda los 15–16 ms, Slicer recibe al ritmo de las ráfagas del hilo de envío de `pyigtl` (que despierta en el tic de Windows, 15.625 ms), no al de los frames (11.1 ms a 90 fps).
 - **`DodecaedroToTracker: no existe`**: en una escena nueva (*File → Close Scene* antes de la corrida) no debe aparecer, ni aun con el dodecaedro a la vista.
 - **conector**: `CONNECTED` mientras el tracker corre; `WAIT` cuando no hay tracker.

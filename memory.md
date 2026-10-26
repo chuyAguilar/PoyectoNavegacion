@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-25 (meta 003 · Arquitectura y optimización del tracker: fase 8b · De dónde sale el techo de ~66 Hz en Slicer, hecha y medida en vivo; falta su commit; sigue la fase 8c · Cierre de la meta)._
+_Actualizado: 2026-10-26 (meta 003 · Arquitectura y optimización del tracker: fase 8c · Cierre de la meta completa, con «se mueve» en vivo y ADR-031; falta su commit y las pruebas de la meta)._
 
 Spec activo: `specs/003-arquitectura-tracker/`
 
@@ -9,7 +9,7 @@ Spec activo: `specs/003-arquitectura-tracker/`
 - Método de trabajo (ADR-020): etapas 1 (`8f398da`) y 2 (`edb9aa0`) commiteadas; la etapa 3 (hooks) queda para cuando haga falta. `settings.json` niega commit, push y los datos de paciente.
 - **Meta 001 · limpieza y orden del repo:** cerrada el 2026-10-19 (ADR-021; P01 «pasa»).
 - **Meta 002 · Calibración de las cámaras global shutter:** cerrada el 2026-10-23 (ADR-023 a ADR-025; P03 «pasa»). Detalle en `specs/002-*/`.
-- **Meta 003 · Arquitectura y optimización del tracker** (plan autorizado el 2026-10-23): el paso 1, la arquitectura (fases 1–5), está en git (`b3679ca`, `c1409ad`, `78ce1af`, `9f500ca`, `34a8d4f`; ADR-026 y ADR-027). Fase 6 · Dónde se va el tiempo por frame: `ec259de`. Fase 7 · Subir los fps con ventana: `33d85c0` (ADR-028). Fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras: `1fe90f0`. La fase 8 se partió en 8a, 8b y 8c (autorizada el 2026-10-25; P17 = a, P18 = a). **Fase 8a · Un botón por modo en el panel:** `01afef3`, verificada en vivo el 2026-10-25. **Fase 8b · De dónde sale el techo de ~66 Hz en Slicer:** hecha el 2026-10-25, casilla marcada; falta su commit. Después, la 8c · Cierre de la meta (sin fase 8b2: P18).
+- **Meta 003 · Arquitectura y optimización del tracker** (plan autorizado el 2026-10-23): el paso 1, la arquitectura (fases 1–5), está en git (`b3679ca`, `c1409ad`, `78ce1af`, `9f500ca`, `34a8d4f`; ADR-026 y ADR-027). Fase 6 · Dónde se va el tiempo por frame: `ec259de`. Fase 7 · Subir los fps con ventana: `33d85c0` (ADR-028). Fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras: `1fe90f0`. La fase 8 se partió en 8a, 8b y 8c (autorizada el 2026-10-25; P17 = a, P18 = a). **Fase 8a · Un botón por modo en el panel:** `01afef3`, verificada en vivo el 2026-10-25. **Fase 8b · De dónde sale el techo de ~66 Hz en Slicer:** `1565200` (sin fase 8b2: P18). **Fase 8c · Cierre de la meta:** completa el 2026-10-26 (ADR-031); falta su commit y después las pruebas de la meta.
 
 ## Estado técnico (el detalle está en `docs/CONTEXT.md` §6)
 
@@ -21,7 +21,7 @@ Spec activo: `specs/003-arquitectura-tracker/`
 
 ## La suite
 
-- `codigo/tests/`: **555 pruebas, 555 pasan, 0 avisos**; 33.1 y 33.6 s de pytest (2026-10-25, fase 8b; en la 8a, con 516, 46.8 y 42.2 s con la CPU al 79 %). Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
+- `codigo/tests/`: **555 pruebas, 555 pasan, 0 avisos**; 41.1 y 56.1 s de pytest (2026-10-25, fase 8c, la segunda con la CPU al 100 % por otros programas; en la 8b, 33.1 y 33.6 s). Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm / 0.0°, detección 0.0 px) + `python -m gui.panel --selftest` (con `PYTHONIOENCODING=utf-8`, B49). Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -43,11 +43,13 @@ Spec activo: `specs/003-arquitectura-tracker/`
 - **P14–P18 (autor, 2026-10-25):** P14 = b (botón principal sin ventana, perfiles sin cambio); P15 = b (la 8b mide el techo de ~66 Hz en Slicer); P16 = b (un solo «Verificar IDs y colocar la cámara»); P17 = a (`--no-detect` queda para la CLI); P18 = a (si la 8b da R1, una fase 8b2 antes de la 8c).
 - **Fase 8a · Un botón por modo en el panel** (`01afef3`): en vivo, gs1 y gs2, `camara X fps` 89.8–90.1 (≥ 85) en «Verificar IDs y colocar la cámara»; los dos botones del tracker con cierres limpios (exit 0) y el 18944 libre.
 - **Fase 8b · De dónde sale el techo de ~66 Hz en Slicer** (2026-10-25; tabla en `resultados.md`): **R2, el techo es de Slicer.** pyigtl agrupa en 64.1 ráfagas/s (el tic de Windows; con `timeBeginPeriod(1)`, ~88), pero Slicer sigue en 64.3 Hz con el banco sin cámara y 65.0 con el tracker real; R3 descartado (974 envíos = 974 recibidos, gs1) y R4 también. Sin fase 8b2 (P18); el criterio «Hz en Slicer ≥ fps − 10 %» queda inalcanzable por encima de ~65 Hz con este Slicer. Suite 555/555, replay 0.0, selftest; la cadena sin diff. Sin explicar: 52.0 Hz en E3 con `--timer-1ms` (una corrida).
-- Lo siguiente: el commit de la fase 8b; después, la 8c · Cierre de la meta (ARCHITECTURE y CONTEXT §6 con el paso 2 y lo de la 8b). B39 acotado (baja). B48, B49, B51, B52, B53, B54 (nueva: el techo de ~65 Hz en Slicer) bajas; B50 media.
+- **Fase 8c · Cierre de la meta** (solo docs; tabla punto por punto en `resultados.md`; ADR-031): cumple. «Se mueve» en vivo el 2026-10-26 (gs1): 50 mm por regla → 40.28 mm medidos con el Marker0 de 100 mm (98.6) y el perfil en 80 = 49.6 mm reales. **B55 (alta):** dos Marker0 con el mismo ID (80 y 100 mm); con el de 100, todo sale a escala 0.81 sin aviso, y no se sabe cuál se usó en cada sesión (las conclusiones de calidad valen en el peor caso).
+- Lo siguiente: el commit de la 8c; las pruebas de la meta (`pruebas`, sobre HEAD con el árbol limpio); «Spec activo» a ningún spec activo. B39 acotado (baja). B48, B49, B51–B54 bajas; B50 media; B55 alta.
 
 ## Pendientes del autor
 
-- El commit de la fase 8b, «Mide de dónde sale el techo de Hz en Slicer (Fase 8b)»; el `git add` va en `Claude outputs/fases/003/fase-8b.md`.
+- El commit de la fase 8c, «Cierra la meta 003 · Arquitectura y optimización del tracker».
+- **Usar el Marker0 de 80 mm** (el de los perfiles) mientras B55 siga abierto, y decidir qué se hace con el de 100.
 - Decidir si B19 y B20 (alta) se cierran: su código y su punta se archivaron. Decidir si B35 entra en la meta.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/`.
 

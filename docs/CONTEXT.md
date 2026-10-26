@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-25 (§6: meta 003, fase 8a · Un botón por modo en el panel, hecha sin cámara). Antes, 2026-10-25 (§4.5 y §6: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, hecha sin cámara). Antes, 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Antes, 2026-10-24 (§6: meta 003, fase 6 · Dónde se va el tiempo por frame, con la tabla en vivo; la suite, 475). Antes, 2026-10-24 (§3, §4 y §6: meta 003, fase 5 · Documentación del paso 1). Las actualizaciones anteriores, en el historial de git._
+> _Última actualización: 2026-10-25 (§6: meta 003 · Arquitectura y optimización del tracker, fase 8c · Cierre de la meta: la meta pasa a «Hecho», con los números en vivo de las fases 7, 7b, 8a y 8b). Antes, 2026-10-25 (§6: meta 003, fase 8a · Un botón por modo en el panel, hecha sin cámara). Antes, 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Las actualizaciones anteriores, en el historial de git._
 
 ---
 
@@ -168,17 +168,23 @@ Desde el 2026-10-19, el método por specs: `docs/constitution.md` (lo que no se 
   lista blanca, IPPE_SQUARE con z > 0, 1-Euro de la posición) → `transport`
   (`Marker0ToTracker` por OpenIGTLink, 18944) → Slicer. Línea base (fase 1, Marker0
   quieto a ~37–38 cm): 100 % de frames con pose, sd z 0.043 mm (gs1) y 0.039 mm (gs2),
-  orientación 0.10–0.13°. En vivo con Slicer (fase 4): 22.1 Hz (gs1) y 30.9 Hz (gs2) a
-  mano; salida limpia y puerto libre.
+  orientación 0.10–0.13°. Desde la fase 7 (ADR-028) la captura va en un hilo con el último
+  frame y el envío no espera; en vivo (2026-10-25, caja de luz al máximo, cámara a 90):
+  con ventana, gs1 61.7 fps (sd z 0.033 mm) y gs2 55.2 (sd z 0.034, aceptado por el autor,
+  P11), Slicer 50.4–56.9 Hz; sin ventana, el bucle va al ritmo de la cámara, 89.9 y 88.8
+  fps (sd z 0.037 y 0.030 mm, 99.96 % con pose), y Slicer recibe como mucho ~65 Hz: el
+  techo es de Slicer, no del tracker (fase 8b, R2; B54). Salida limpia con los dos botones
+  del tracker del panel y el 18944 libre (fase 8a).
 - **Las dos cámaras calibradas** (meta 002, cerrada el 2026-10-23; números en
   `specs/002-calibracion-camaras/resultados.md`): 1280×960 MJPG 90 fps, 0.977 ms;
   cámara 1 RMS 0.167 / control 0.146 px, cámara 2 0.154 / 0.150 px (detector `sb`,
   tablero de 24.86 mm); escala por medias +0.27 y −0.37 mm en 80 mm. Calibración desde
   el panel en tres pasos (enfocar, tablero, escala). **No girar ni sacar el lente de la
   cámara 2 sin recalibrar** (cy 389.8, B36).
-- **Suite pytest sin cámara** (`codigo\tests\`, 555 pruebas desde la fase 8b de la meta 003; ~33 s en la 8b, 42–47 s en la 8a con la CPU al 79 % por otros programas, ~24–26 s en la 7b): niega la cámara
+- **Suite pytest sin cámara** (`codigo\tests\`, 555 pruebas desde la fase 8b de la meta 003; ~33 s en la 8b, 41 y 56 s en la 8c, 42–47 s en la 8a con la CPU al 79 % por otros programas, ~24–26 s en la 7b): niega la cámara
   real y el servidor pyigtl (B34); la comprobación de «no cambió» es la suite, el
   selftest del panel y el replay de Marker0 (`docs/ARCHITECTURE.md` §6).
+- **Meta 003 · Arquitectura y optimización del tracker** (`specs/003-arquitectura-tracker/`, números en `resultados.md`): fase 8c · Cierre de la meta hecha el 2026-10-25, a falta del commit del autor. Paso 1, la arquitectura (fases 1–5; ADR-026 y ADR-027): el código por responsabilidad bajo `codigo\`, `codigo\iter4\` vacío, el dodecaedro y la Femto archivados, la cadena solo con `Marker0ToTracker` y el replay de Marker0 en 0.0 mm / 0.0°. Paso 2, la optimización (fases 6–8b; ADR-028 a ADR-030): el envío ya no espera el tic, la captura va en un hilo, el panel arranca el tracker sin ventana (~89–90 fps) y con ventana (gs1 61.7, gs2 55.2 aceptado, P11), la sd z no empeora (0.030–0.037 mm frente a 0.039–0.043) y el techo de ~65 Hz en Slicer está explicado (R2, B54).
 - **Histórico (archivado, se puede retomar):** el dodecaedro v2 (IDs 3–13, BA a 1.26 px),
   su punta por dock (spread ~1.8 mm) y la jerarquía de Slicer con registro
   **paired-point** (RMS 2.80–3.46 mm) y navegación tomográfica (iter 3), en
@@ -194,8 +200,6 @@ Desde el 2026-10-19, el método por specs: `docs/constitution.md` (lo que no se 
 
 ### WIP / deuda técnica pendiente
 
-- **Meta 003 · Arquitectura y optimización del tracker** (en curso; `specs/003-arquitectura-tracker/`, números en `resultados.md`). Hecho: la arquitectura (fases 1–5; ADR-026 y ADR-027), dónde se va el tiempo por frame (fase 6), subir los fps con ventana (fase 7; ADR-028) y los botones de tracker sin ventana y de vista previa para posicionar las cámaras (fase 7b, en vivo el 2026-10-25: bucle ~89 fps sin ventana, sd z 0.030–0.037 mm; Slicer cuenta ~66 Hz, no cumple y se investiga).
-  La fase 8 se parte en tres. Fase 8a · Un botón por modo en el panel: hecha y verificada en vivo el 2026-10-25 («Arrancar tracker» lanza sin ventana y «Arrancar tracker con ventana» el de siempre, P14; un solo «Verificar IDs y colocar la cámara», con la cruz y los fps de la cámara, P16; `--no-detect` queda para la CLI, P17); `camara X fps` 89.8–90.1. Fase 8b · De dónde sale el techo de ~66 Hz en Slicer (P15): hecha el 2026-10-25, el techo es de Slicer (~65 Hz; pyigtl agrupa en 64 ráfagas/s por el tic de Windows pero Slicer no sube aunque el emisor dé 88), sin fase 8b2 (B54). Falta la fase 8c · Cierre de la meta.
 - **Runbooks:** `documentos/historico/MANUAL_simplificado.md` (archivado el 2026-10-23) es del contexto doctor y del dodecaedro; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
 - **Panel** (`python -m gui.panel`; brief-01/02, verificado 2026-08-13 con la Femto y desde la meta 003 con gs1 y gs2; detalle en el historial de git de este archivo, antes de `cd77185`): el asistente del dodecaedro y el dock se archivaron en la fase 3 de la meta 003, así que su verificación en vivo (B10) espera al instrumento nuevo (B40).
 - **Detección ~3–4 markers/vista** (histórico 5–6): revisar distancia, ángulo y luz antes que el detector.

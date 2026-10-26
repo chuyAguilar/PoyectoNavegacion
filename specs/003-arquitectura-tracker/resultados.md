@@ -256,3 +256,35 @@ Autorizada el 2026-10-25 (P15 = b, P18 = a). Reporte: `Claude outputs/fases/003/
 - **Por P18 no hay fase 8b2** (no salió R1). El criterio «Hz en Slicer ≥ fps − 10 %» de la 7b se declara inalcanzable por encima de ~65 Hz con este Slicer; la cadena llega y se mueve (criterio del spec en Slicer). Al BACKLOG (baja): B54, qué mirar en SlicerOpenIGTLink.
 - **Sin explicar:** los 52.0 Hz de E3 con `--timer-1ms` (una sola corrida, no repetida; no cambia la conclusión). **B51** (5.8 Hz con `--sync-capture`): esta medida no lo explica; sigue abierto, baja.
 - **Limpieza tras cada corrida en vivo:** vacía (dirección).
+
+## Fase 8c · Cierre de la meta (2026-10-25, sin cámara)
+
+Solo docs: ningún `.py` cambió desde `1565200` (fase 8b), así que lo medido en vivo en la 8a y la 8b (2026-10-25) vale aquí con su fecha. Reporte: `Claude outputs/fases/003/fase-8c.md`.
+
+El criterio de cierre del spec, punto por punto:
+
+| punto del spec | número | de dónde | veredicto |
+|---|---|---|---|
+| Nada en `codigo/iter4/` | `Test-Path` False; 0 archivos versionados | hoy | cumple |
+| `git grep iter4` solo histórico | `CLAUDE.md`: 0 líneas; código vivo: 32 (procedencia, rutas a `historico/iter4/`, metadatos grabados, la prueba de que `iter4/tracker.py` no existe); docs: las de la fase 5 | hoy; fase 5 | cumple |
+| El panel lista gs1 y gs2 y lanza tracker, calibración y diagnóstico | selftest `cerrando OK`, exit 0, con los argv de IDs, los dos del tracker, enfocar, calibrar y escala; `test_list_profiles_da_gs1_y_gs2`; en vivo, los botones del tracker y de IDs con gs1 y gs2 | hoy; fases 3 y 8a | cumple |
+| Línea base de Marker0 (sd x/y/z, rango z, fps con y sin ventana) | sd z 0.043 (gs1) y 0.039 mm (gs2), rango z 0.31 y 0.39 mm, fps 20–35 bimodal | fase 1 (2026-10-23) | cumple |
+| Paso 1, equivalencia | replay de Marker0 0.0 mm / 0.0°, detección 0.0 px (8 pruebas, 2.5 s) | hoy | cumple |
+| Paso 2, velocidad (≥ 60 fps con ventana) | gs1 61.7; gs2 55.2, aceptado por el autor (P11); con ventana desde el panel (8a) 59.0–60.8 y 57.4–61.9; sin ventana 89.9 y 88.8 | fases 7, 7b y 8a | gs1 cumple; gs2 aceptado |
+| Paso 2, calidad (sd z ≤ 1.10 × línea base) | con ventana 0.033 (tope 0.047) y 0.034 mm (tope 0.043); sin ventana 0.037 y 0.030 mm | fases 7 y 7b | cumple |
+| Slicer en vivo: llega, con cada cámara | gs1 54.6 Hz con ventana y 65.0 sin ventana; gs2 55.4 con ventana; `DodecaedroToTracker` no existe | fases 8a y 8b | cumple |
+| Slicer en vivo: se mueve | gs1 sin ventana, 2026-10-26: Marker0 deslizado 50 mm por una regla fija; Slicer CONNECTED a 66.6 y 69.2 Hz, posición de [19.25, 73.57, 369.17] a [56.82, 74.79, 354.70] mm = 40.28 mm. El Marker0 puesto era el de 100 mm (98.6 con calibrador) con el perfil en 80 mm: escala 80 / 98.6 = 0.811, así que 40.28 mm equivalen a **49.6 mm reales** (0.7 % de error; B55) | hoy | cumple |
+| Hz en Slicer | techo de ~65 Hz, de Slicer (R2; B54); el «≥ fps − 10 %» se cumple con ventana (fase 7: 56.9 Hz con 61.7 fps y 50.4 con 55.2) y es inalcanzable por encima de ~65 | fase 8b | explicado |
+| Salida limpia, ningún `python` del tracker vivo, 18944 libre | los dos botones del tracker, gs1 y gs2: sin ventana «por la entrada estandar», con ventana «por 'q'», exit 0; limpieza vacía tras cada corrida | fases 8a y 8b | cumple |
+| B28, a mano y desde el panel | a mano 0.4 s («puesta por el codigo»), panel 0.4–0.5 s («del entorno»); la suite lo fija | fase 4 (2026-10-24) | cumple |
+| Suite en verde, selftest | **555/555, 0 avisos; 41.1 y 56.1 s de pytest** (CPU al 100 % por otros programas en la segunda); selftest exit 0 | hoy | cumple |
+| Pruebas del dodecaedro, BA y punta a `historico/` | archivadas en la fase 3 (B44: no corren) | fase 3 | cumple |
+| Ninguna prueba abre una cámara real (B34) | fixture `no_real_camera` | fase 4 | cumple |
+| `ARCHITECTURE.md` con la estructura nueva | §2, §3, §4, §6 (fase 5) y §3.2, §3.5, §3.6, §3.7, §6 al día hoy | hoy | cumple |
+| `CLAUDE.md` §5 con los comandos nuevos | `python -m` desde `codigo\`; el tracker sin ventana y `identify_ids … --timeout 600` (desde el commit de la 7b, `1fe90f0`) | hoy | cumple |
+| `CONTEXT.md` §6 al día | la meta 003 pasa a «Hecho» | hoy | cumple |
+| `historico/` con índice (B38) | `codigo/historico/iter4/README.md` | fase 3 | cumple |
+
+- La cadena: ningún `.py` en el diff de la fase; `tracker.py`, `transport/`, `camera/`, `vision/` y `profiles/` sin cambios.
+
+- **El tamaño de Marker0 (2026-10-26, B55):** el autor tiene dos Marker0, de 80 y de 100 mm (98.6), y no está seguro de cuál usó en cada sesión en vivo de la meta. Con el de 100 y el perfil en 80, las posiciones y las sd salen a escala 0.811. Las conclusiones no cambian en el peor caso: si la línea base fue con el de 80 y las fases 7 y 7b con el de 100, las sd z reales serían 0.041, 0.042, 0.046 y 0.037 mm, todas bajo sus topes (0.047 y 0.043); en el caso contrario, los topes suben. Los fps y los Hz no dependen del tamaño.

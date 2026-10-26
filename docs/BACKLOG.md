@@ -43,6 +43,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B52 | «Detener tracker» con el tracker con ventana sigue dependiendo de encontrar la ventana por su título | Baja | — |
 | B53 | Con `--stop-stdin`, la parada no se atiende mientras el tracker espera a Slicer | Baja | — |
 | B54 | Slicer recibe como mucho ~65 Hz de Marker0, aunque el tracker envíe ~90 | Baja | — |
+| B55 | Con el Marker0 de 100 mm y el perfil en 80, todas las distancias salen a escala 0.81 sin aviso | Alta | — |
 
 ## Abiertos
 
@@ -286,7 +287,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 ### B50 · Las SVPRO bajan solas los fps con poca luz: un control UVC automático que el perfil no fija
 - **Qué:** con la caja de luz por debajo del máximo (nivel 2–3), las dos SVPRO entregan 22–31 fps aunque el perfil pida 90 y la exposición manual sea de 0.977 ms; con la caja al máximo, 90 (gs1 estable; gs2 una vez estable y otra cayendo a ~30 a mitad de la corrida). Lo mide el hilo de captura (`camara X fps`), así que es la cámara, no el bucle. El perfil no escribe ningún ajuste al abrir (`escritos: ninguno`): lo que baja los fps es algún control automático que el perfil no lista, probablemente la prioridad de exposición (UVC *auto exposure priority*) o una prioridad de fps del firmware.
 - **Por qué queda:** la fase 7 · Subir los fps con ventana (meta 003 · Arquitectura y optimización del tracker) no lo arregla con código: la regla es trabajar con la caja al máximo (`docs/CONTEXT.md` §4.20). Decisión del autor, 2026-10-25.
-- **De dónde:** primera parte en vivo de la fase 7, 2026-10-25 (`Claude outputs/fases/003/fase-7-en-vivo.md`, «C0, la captura sola»). **Al día (2026-10-25, segunda parte):** pedir 60 fps dio 29 en gs1 con la caja al máximo (28.9 de cámara): la SVPRO no tiene modo de 60 a 1280×960 MJPG y MSMF baja al de 30; los perfiles siguen a 90 (`clarify.md` P11).
+- **De dónde:** primera parte en vivo de la fase 7, 2026-10-25 (`Claude outputs/fases/003/fase-7-en-vivo.md`, «C0, la captura sola»). **Al día (2026-10-25, segunda parte):** pedir 60 fps dio 29 en gs1 con la caja al máximo (28.9 de cámara): la SVPRO no tiene modo de 60 a 1280×960 MJPG y MSMF baja al de 30; los perfiles siguen a 90 (`clarify.md` P11). **Al día (2026-10-25, fase 8a · Un botón por modo en el panel, en vivo):** con la caja al máximo y el tracker con ventana, la cámara bajó al final de la corrida a 75.7 (gs1) y 77.0 fps (gs2), tras empezar a ~90; no se miró por qué (puede ser este mismo control o la carga del bucle con ventana). Lo anotó el cierre de la meta 003 (fase 8c).
 - **Qué haría falta:** buscar el control: leer por DSHOW y en AMCap lo que expone la cámara (la exposición automática y su prioridad, PowerLine, B24), con la caja en nivel 2 y al máximo, y ver cuál cambia los fps de captura (`diagnostics.measure_modes --modos` lee `fps_captura`), una variable a la vez. Si se puede fijar, añadirlo a `controls` de los dos perfiles con su prueba sin cámara; si solo se fija a mano, anotarlo en `CONTEXT.md` §4 como el PowerLine.
 - **Prioridad:** media.
 
@@ -319,6 +320,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** si alguna vez hacen falta más de 65 Hz en Slicer: mirar en SlicerOpenIGTLink cómo y a qué ritmo importa los mensajes a la escena (hilo de importación, refresco del conector) y si hay un ajuste; repetir el banco (`python -m diagnostics.igtl_rate bench … --external`) tras cada cambio; explicar los 52.0 Hz con `--timer-1ms`. El remedio en el tracker (timer de 1 ms o hilo de envío propio) no sube nada mientras Slicer no cambie.
 - **Prioridad:** baja.
 
+### B55 · Con el Marker0 de 100 mm y el perfil en 80, todas las distancias salen a escala 0.81 sin aviso
+- **Qué:** el autor tiene dos Marker0, de 80 mm y de 100 mm (98.6 con calibrador), con el mismo ID. Los perfiles dicen `size_mm: 80.0`. Con el de 100 delante, la pose sale a escala 80 / 98.6 = 0.811: posiciones, distancias y sd. Nada lo detecta: el tamaño del marker y la distancia a la cámara no se distinguen en una sola imagen. En la comprobación «se mueve» de la fase 8c (meta 003 · Arquitectura y optimización del tracker), 50 mm reales salieron como 40.28.
+- **Por qué queda:** se vio al cerrar la meta; arreglarlo es una decisión (cuál se usa) y quizá código. Mientras tanto, la regla es usar el Marker0 de 80 mm.
+- **De dónde:** fase 8c, 2026-10-26 (`specs/003-*/resultados.md`).
+- **Qué haría falta:** decidir con cuál se trabaja y guardar o marcar el otro; o darle otro ID al de 100 (ArUco permite IDs distintos) y su `size_mm` en el perfil, para que el tracker no pueda confundirlos; o una comprobación de escala en «Verificar IDs y colocar la cámara» con una distancia conocida.
+- **Prioridad:** alta (puede dar un resultado equivocado sin aviso).
+
 ## Cerrados
 
 ### B32 · Optimizar el tracker: la ventana limita a 19–25 fps en cualquier resolución
@@ -335,7 +343,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 
 ### B28 · `tracker.py` lanzado a mano abre MSMF con la aceleración HW encendida
 - **Qué era:** `tracker.py` importaba `cv2` antes que el código que apaga la aceleración HW de MSMF, así que lanzado a mano desde PowerShell la apertura tardaba 43–51 s en vez de ~4 s.
-- **Cerrado:** 2026-10-24, por la fase 4 · El tracker en piezas (meta 003): `tracker.py` hace `import camera` antes que `import cv2` y escribe «[Tracker] Aceleracion HW de MSMF apagada (…, puesta por el codigo)»; `test_aceleracion_msmf.py` lo fija (`test_tracker_a_mano_la_apaga_y_respeta_el_entorno`, `test_tracker_importa_camera_antes_que_cv2`). **Falta verlo en vivo a mano** (apertura ~4 s; protocolo en `Claude outputs/fases/003/fase-4-en-vivo-protocolo.md`): si no baja, se reabre.
+- **Cerrado:** 2026-10-24, por la fase 4 · El tracker en piezas (meta 003): `tracker.py` hace `import camera` antes que `import cv2` y escribe «[Tracker] Aceleracion HW de MSMF apagada (…, puesta por el codigo)»; `test_aceleracion_msmf.py` lo fija (`test_tracker_a_mano_la_apaga_y_respeta_el_entorno`, `test_tracker_importa_camera_antes_que_cv2`). **Falta verlo en vivo a mano** (apertura ~4 s; protocolo en `Claude outputs/fases/003/fase-4-en-vivo-protocolo.md`): si no baja, se reabre. **Visto en vivo (2026-10-24, parte en vivo de la fase 4):** a mano, sin la variable de entorno, «puesta por el codigo» y la cámara abierta en 0.4 s (gs1 y gs2); desde el panel, «del entorno», 0.4–0.5 s. Desde entonces la suite lo fija (`test_aceleracion_msmf.py`); lo confirmó el cierre de la meta 003 (fase 8c, 2026-10-25).
 
 ### B27 · `tracker.abrir_camara`, función que nadie llama
 - **Qué era:** `abrir_camara(cfg_cam)` en el tracker, sin ningún llamador.

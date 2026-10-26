@@ -6,7 +6,8 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-25 (§3.7: meta 003, fase 8a · Un botón por modo en el panel, sin cámara: «Arrancar tracker» lanza el tracker sin ventana y «Arrancar tracker con ventana» el de siempre; «Verificar IDs y colocar la cámara» reemplaza a «Verificar IDs» y a «Vista previa»; `identify_ids` lee por `FrameGrabber` y dibuja la cruz y los fps de la cámara también con detección; la verificación en vivo, al empezar la sesión de la 8b). Antes, 2026-10-25 (§3.2 y §3.7: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, sin cámara: `tracker --stop-stdin`; el panel gana «Vista previa (colocar la cámara)», «Arrancar tracker sin ventana» y «Detener tracker», y detiene el tracker sin ventana por la entrada estándar; `identify_ids` con `--timeout` obligatorio, `--no-detect` y cierre en un `finally`; la verificación en vivo está pendiente). Antes, 2026-10-25 (§3.1, §3.2, §3.5 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada: la captura en un hilo con el último frame (`camera/grabber.py`), el envío sin esperar (0.02 ms en vivo) y la espera a Slicer con tope y aborto; ADR-028. Los perfiles gs1/gs2 siguen pidiendo 90 fps: pedir 60 dio 29, la cámara no tiene modo de 60 a 1280×960 MJPG; `clarify.md` P11). Antes, 2026-10-24 (§3.2, §3.7 y §6: meta 003, fase 6 · Dónde se va el tiempo por frame: `tracker --timing <json>` cronometra cada etapa del bucle con `diagnostics.pose_log.Stopwatch`, apagado por defecto; `diagnostics/measure_window.py` cronometra la ventana sin cámara). Antes, 2026-10-24 (§2, §3, §4, §6 y notas en §5, §7 y §8: meta 003, fase 5 · Documentación del paso 1: la topología, los componentes y la cadena se describen con la estructura nueva (`camera`, `vision`, `transport`, `profiles`, `gui`, `calibration`, `diagnostics`, `slicer`; `tracker.py` solo el bucle) y solo Marker0; lo del dodecaedro, la Femto y el contexto doctor queda como referencia archivada).
+> _Última actualización: 2026-10-25 (§3.2, §3.5, §3.6, §3.7 y §6: meta 003, fase 8c · Cierre de la meta: el modo sin ventana va al ritmo de la cámara (~89–90 fps) y es el del botón principal del panel; el envío sale en ráfagas al tic de Windows y Slicer recibe como mucho ~65 Hz, techo de Slicer (fase 8b, R2; B54); `receive_marker0.py` da los intervalos y acepta otro nodo; `diagnostics/igtl_rate.py`; `tracker.py` 395 líneas). Antes, 2026-10-25 (§3.7: meta 003, fase 8a · Un botón por modo en el panel, sin cámara: «Arrancar tracker» lanza el tracker sin ventana y «Arrancar tracker con ventana» el de siempre; «Verificar IDs y colocar la cámara» reemplaza a «Verificar IDs» y a «Vista previa»; `identify_ids` lee por `FrameGrabber` y dibuja la cruz y los fps de la cámara también con detección; la verificación en vivo, al empezar la sesión de la 8b).
+> Antes, 2026-10-25 (§3.2 y §3.7: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, sin cámara: `tracker --stop-stdin`; el panel gana «Vista previa (colocar la cámara)», «Arrancar tracker sin ventana» y «Detener tracker», y detiene el tracker sin ventana por la entrada estándar; `identify_ids` con `--timeout` obligatorio, `--no-detect` y cierre en un `finally`; la verificación en vivo está pendiente). Antes, 2026-10-25 (§3.1, §3.2, §3.5 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada: la captura en un hilo con el último frame (`camera/grabber.py`), el envío sin esperar (0.02 ms en vivo) y la espera a Slicer con tope y aborto; ADR-028. Los perfiles gs1/gs2 siguen pidiendo 90 fps: pedir 60 dio 29, la cámara no tiene modo de 60 a 1280×960 MJPG; `clarify.md` P11). Antes, 2026-10-24 (§3.2, §3.7 y §6: meta 003, fase 6 · Dónde se va el tiempo por frame: `tracker --timing <json>` cronometra cada etapa del bucle con `diagnostics.pose_log.Stopwatch`, apagado por defecto; `diagnostics/measure_window.py` cronometra la ventana sin cámara). Antes, 2026-10-24 (§2, §3, §4, §6 y notas en §5, §7 y §8: meta 003, fase 5 · Documentación del paso 1: la topología, los componentes y la cadena se describen con la estructura nueva (`camera`, `vision`, `transport`, `profiles`, `gui`, `calibration`, `diagnostics`, `slicer`; `tracker.py` solo el bucle) y solo Marker0; lo del dodecaedro, la Femto y el contexto doctor queda como referencia archivada).
 > Antes, 2026-10-24 (§6: meta 003, fase 4 · El tracker en piezas: `vision\` (detección, pose, 1-Euro, `MarkerTracker`) y `transport\` (`IgtlSender`); `tracker.py` queda solo con el bucle; la suite niega la cámara real y el servidor pyigtl). Antes, 2026-10-23 (§6: meta 003, fase 3 · La estructura nueva y el archivo: el código pasa de `codigo\iter4\` a paquetes por responsabilidad bajo `codigo\` (`camera`, `calibration`, `diagnostics`, `gui`, `profiles`, `data`; `tracker.py` suelto), se lanza con `python -m` y las rutas de un perfil son relativas a `codigo\` (ADR-027); el dodecaedro, la Femto y los perfiles viejos van a `codigo\historico\iter4\`; §3 y §4 se ponen al día en la fase 5). Antes, 2026-10-23 (§3.3, §4 y §6: meta 003, fase 2 · La cadena solo con Marker0: los perfiles gs1 y gs2 ya no definen `rigid_bodies`, el tracker publica solo `Marker0ToTracker` (ADR-026), `gui/estado.py` no exige la geometría si el perfil no la define, `codigo/slicer/receive_marker0.py` nuevo y el manual del dodecaedro en `documentos/historico/`). Antes, 2026-10-23 (§6: meta 003, fase 1 · Línea base de Marker0: `pose_log.py`, opciones de grabación del tracker y replay de Marker0). Antes, 2026-10-23 (§3.1, §3.3, §6 y §8: meta 002, fase 6 · Comparación contra P02 y archivo de los perfiles viejos: `tracker_config_doctor.yaml` y `globalshutter.yml` pasan a `iter4/data/historico/`; el tracker no cambió). 
 > Antes, 2026-10-23 (§3.4, §3.7 y §6: meta 002, fase 5 · Calibración de la cámara 2: `intrinsecos_gs2_1280x960.yml`; la ventana de calibración del panel en tres pasos, `gui/calibracion.py` y `data/tablero_calibracion.yaml`; `comprobar_escala.py` juzga por medias y recalcula con `--desde-json`). Antes, 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
@@ -91,9 +92,9 @@ de entrada que abre la cámara hace `import camera` antes que `import cv2` (tamb
 
 ### 3.2 Backend de tracking (`codigo/tracker.py`, `codigo/vision/`, `codigo/profiles/`)
 
-_Al día: 2026-10-24 (meta 003, fases 3 y 4; ADR-027)._ `python -m tracker --config
+_Al día: 2026-10-25 (meta 003, fases 3, 4, 7, 7b y 8c; ADR-027, ADR-028)._ `python -m tracker --config
 profiles\tracker_config_gsN.yaml` (desde `codigo\`; `--config` obligatorio). `tracker.py`
-(212 líneas) solo tiene el bucle; las piezas tienen pruebas sin cámara.
+(395 líneas) solo tiene el bucle; las piezas tienen pruebas sin cámara.
 
 - `profiles/__init__.py` — `CODE_ROOT` (= `codigo/`), `PROFILES_DIR`, `DATA_DIR`;
   `load(path)` lee el perfil y resuelve sus rutas (`calibration_file: data/...`)
@@ -125,7 +126,9 @@ Por frame, `tracker.main()`:
    del frame es la hora de captura por `time.perf_counter` (antes `time.time()`, de 15.6 ms
    de resolución; ADR-028, 2026-10-24, fase 7). En vivo (2026-10-25, caja al máximo,
    cámara a 90, con ventana): gs1 61.7 fps y gs2 55.2; el límite es el bucle (la detección
-   sube a 8–10 ms porque el hilo decodifica los 90 frames/s).
+   sube a 8–10 ms porque el hilo decodifica los 90 frames/s). Sin ventana (`--no-window`, el
+   modo del botón principal del panel desde la fase 8a) el bucle va al ritmo de la cámara:
+   89.9 (gs1) y 88.8 fps (gs2), sd z 0.037 y 0.030 mm, 99.96 % con pose (fase 7b, 2026-10-25).
 2. Lo pasa a gris y detecta con la lista blanca (`MarkerTracker.detect`).
 3. Estima la pose y filtra la posición (`MarkerTracker.process_corners`, con el tiempo
    del frame).
@@ -182,7 +185,7 @@ _Al día: 2026-10-24._
 
 ### 3.5 Transporte — OpenIGTLink (`codigo/transport/`)
 
-_Al día: 2026-10-24 (meta 003, fase 4)._ `transport/igtl.py`: `IgtlSender(port)` abre el
+_Al día: 2026-10-25 (meta 003, fases 4, 7 y 8b)._ `transport/igtl.py`: `IgtlSender(port)` abre el
 servidor `pyigtl.OpenIGTLinkServer` (TCP, **puerto 18944**, `igtlink.transforms_port`
 del perfil); `send(device_name, matrix)` exige una 4×4 y la envía como
 `TransformMessage`; `close()` para el servidor (`stop()`, con tope de 5 s) y libera el
@@ -196,13 +199,29 @@ frame en vivo (con `wait=True`, `pyigtl` esperaba su tic de 15.6 ms: 9–12.5 ms
 conecta ANTES de arrancar el tracker, o este aborta y lo dice. Los mensajes llegan en
 ráfagas de 1–2 por tic del hilo de `pyigtl`; B48.
 
+_Fase 8b (2026-10-25, el ritmo de envío; números en `specs/003-arquitectura-tracker/resultados.md`):_
+el hilo de envío de `pyigtl` despierta con el tic de Windows (15.625 ms), así que los
+mensajes salen agrupados: 64.1 ráfagas/s con 90 mensajes/s, 1.3–1.4 mensajes por ráfaga
+(banco sin cámara); con `timeBeginPeriod(1)`, ~88 ráfagas/s. No se pierde ninguno: con el
+tracker real, 974 envíos contados = 974 recibidos (gs1). **Slicer recibe como mucho ~65 Hz**
+(64.3 con el banco sin cámara, 65.0 con el tracker real, intervalo p50 16.0 ms) y no sube
+aunque el emisor dé ~88 ráfagas/s: el techo es de Slicer, no del tracker (conclusión R2;
+B54). Por eso el «Hz en Slicer ≥ fps − 10 %» solo se puede pedir por debajo de ~65 Hz; con
+ventana (55–62 fps) se cumple. El receptor de control y el banco son
+`diagnostics/igtl_rate.py` (`listen` sustituye a Slicer como cliente; `bench` publica
+`RateProbeToTracker` con `IgtlSender` tal cual, nunca como Marker0, y con `--timer-1ms`
+pide `timeBeginPeriod(1)` mientras dura el banco). El tracker no cambia por esto.
+
 ### 3.6 Aplicación — 3D Slicer + SlicerIGT (`codigo/slicer/`)
 
-_Al día: 2026-10-24._ Slicer recibe `Marker0ToTracker` por el módulo **OpenIGTLink IF**
+_Al día: 2026-10-25 (meta 003, fase 8b)._ Slicer recibe `Marker0ToTracker` por el módulo **OpenIGTLink IF**
 (conector cliente a `localhost:18944`). Lo versionado: `codigo/slicer/receive_marker0.py`
 (crea o reutiliza el conector, espera el nodo, cuenta sus `TransformModifiedEvent` y da
-los Hz, la última posición y si existe `DodecaedroToTracker`) y su `README.md` (cómo
-pegarlo en la consola de Slicer). El registro paired-point (Fiducial Registration
+los Hz, la última posición y si existe `DodecaedroToTracker`; desde la fase 8b, también
+los intervalos entre actualizaciones, p50, p95 y máximo, y `run(..., name=...)` para medir
+otro nodo, como el `RateProbeToTracker` del banco; `run()` sin argumentos da la misma
+primera línea de siempre) y su `README.md` (cómo pegarlo en la consola de Slicer). Con
+este Slicer, ~65 Hz como mucho (§3.5). El registro paired-point (Fiducial Registration
 Wizard), los cortes del CT (Volume Reslice Driver) y su runbook se rehacen con el
 instrumento nuevo (B40, B41); el procedimiento anterior, con el dodecaedro, está en
 `documentos/historico/MANUAL_simplificado.md`.
@@ -242,7 +261,9 @@ los scripts existentes — no reimplementa tracking ni calibración (ADR-017;
   de la cámara); «Arrancar tracker», el principal, lanza `tracker --no-window
   --stop-stdin` (receta `tracker_sin_ventana`) y «Arrancar tracker con ventana» el de
   siempre, `tracker --config <perfil>` (receta `tracker`); los perfiles y el comando a mano
-  no cambian. El panel ya no lanza `--no-detect` (queda para la CLI, P17 = a). «Detener
+  no cambian. En vivo (2026-10-25, gs1 y gs2): «Verificar IDs y colocar la cámara» da
+  `camara` 89.8–90.1 fps y los dos botones del tracker cierran limpio (sin ventana «por la
+  entrada estandar», con ventana «por 'q'»), exit 0. El panel ya no lanza `--no-detect` (queda para la CLI, P17 = a). «Detener
   tracker» (fase 7b) se habilita solo con una de las dos recetas del tracker en marcha y
   la receta elige el camino (sin ventana, la entrada estándar; con ventana, `q` a la
   ventana); los dos botones del tracker preguntan antes por Slicer (el tracker lo espera
@@ -337,7 +358,7 @@ Registration Wizard.
 
 Métrica histórica de referencia: RMS **3.46 mm** (iter 1) → **2.80 mm** (iter 3).
 
-## 6. Estructura del repositorio (verificada 2026-10-24, meta 003 fase 5; el código por responsabilidad desde la fase 3, ADR-027)
+## 6. Estructura del repositorio (verificada 2026-10-24, meta 003 fase 5, y al día el 2026-10-25, fase 8c; el código por responsabilidad desde la fase 3, ADR-027)
 
 ```
 C:\Dev\OrtoMeta\PoyectoNavegacion\
@@ -354,7 +375,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 ├── codigo\                         # desde 2026-10-23 (meta 003 fase 3, ADR-027): paquetes por responsabilidad; todo se lanza con `python -m <paquete>.<modulo>` desde codigo\
 │   ├── .venv\                      # Python 3.11.9
 │   ├── requirements.txt, readme.md, pytest.ini   # pytest.ini: pythonpath = . (codigo\ en sys.path para la suite)
-│   ├── tracker.py                  # solo el bucle (357 líneas desde la fase 7: `--slicer-timeout`, `--sync-capture`; `python -m tracker --config profiles\...`, --config obligatorio): cámara → `MarkerTracker.process_corners` → `IgtlSender.send` → ventana; opciones apagadas --record, --no-window, --save-frames, --frames-every, --duration y --timing (fase 6); importa `camera` antes que `cv2` (B28); `send_video: true` aborta (2026-10-24, fase 4)
+│   ├── tracker.py                  # solo el bucle (395 líneas desde la fase 7b: `--slicer-timeout`, `--sync-capture` (fase 7), `--stop-stdin` (fase 7b); `python -m tracker --config profiles\...`, --config obligatorio): cámara → `MarkerTracker.process_corners` → `IgtlSender.send` → ventana; opciones apagadas --record, --no-window, --save-frames, --frames-every, --duration y --timing (fase 6); importa `camera` antes que `cv2` (B28); `send_video: true` aborta (2026-10-24, fase 4)
 │   ├── vision\                     # detection.py (diccionario, parámetros del detector, `create_detector`, `detect` con lista blanca), pose.py (`build_object_points`, `estimate_single_pose` IPPE_SQUARE y z > 0, `rvec_tvec_to_matrix`), filtering.py (`OneEuroFilter`, `PositionFilter`), tracking.py (`MarkerPose`, `MarkerTracker.process_corners/process/reset`) (2026-10-24, fase 4)
 │   ├── transport\                  # igtl.py: `IgtlSender(port)` con `send(device_name, matrix 4×4)` (sin esperar, con guarda de conexión), `is_connected`, `wait_for_client(timeout_s)`, `close` (para el servidor pyigtl con tope de 5 s) (2026-10-24, fases 4 y 7)
 │   ├── profiles\                   # __init__.py: CODE_ROOT, PROFILES_DIR, DATA_DIR, resolve_path, load (rutas del perfil relativas a codigo\; aborta si faltan), list_profiles
@@ -364,9 +385,9 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   ├── calibration\                # calibrate_camera.py (intrínsecos con tablero, detectores clasico|sb|ambos), check_scale.py (escala contra regla)
 │   ├── diagnostics\                # probe_camera.py (sonda: modos, puertos, --fijar), measure_modes.py (--enfocar, exposiciones, modos, --elegir), identify_ids.py, pose_log.py (graba y resume poses; `Stopwatch` para --timing), measure_window.py (la ventana sin cámara; fase 6), igtl_rate.py (receptor OpenIGTLink de control y banco de ráfagas sin cámara; fase 8b, 2026-10-25)
 │   ├── gui\                        # panel PySide6 (`python -m gui.panel`): panel.py, recipes.py (argv con -m), processes.py, status.py (semáforos: entorno, config, intrínsecos, puerto, cámara), calibration_window.py, profile_editor.py, camera_probe.py
-│   ├── slicer\                     # scripts para la consola Python de Slicer: receive_marker0.py (cuenta los Hz de Marker0ToTracker y avisa si existe DodecaedroToTracker) y README.md (2026-10-23, meta 003 fase 2)
+│   ├── slicer\                     # scripts para la consola Python de Slicer: receive_marker0.py (cuenta los Hz de Marker0ToTracker y avisa si existe DodecaedroToTracker; desde la fase 8b, los intervalos entre actualizaciones y `name=` para otro nodo) y README.md (2026-10-23, meta 003 fase 2)
 │   ├── tests\                      # suite pytest; conftest.py da rutas (PROFILES_DIR, DATA_DIR, HISTORICO_DIR…) y el fixture autouse `no_real_camera` (niega `cv2.VideoCapture`, la enumeración de cámaras, `WebcamBackend.open` sin `abrir` falso y el servidor pyigtl; B34); synthetic.py: Marker0 proyectado, cámara y emisor falsos (2026-10-24, fase 4)
-│   │   ├── test_*.py                           # vision, transport, tracker_loop, profiles, no_real_camera, compilan (con avisos como errores), gui_headless (selftest del panel), replay_marker0, pose_log, timing (fase 6), status, camaras_uvc, ajustes_camara, sondear_camara, camera_backend, aceleracion_msmf, calibrar_camara, comprobar_escala, medir_modos, panel/ventana de calibración (sin cámara)
+│   │   ├── test_*.py                           # vision, transport, tracker_loop, profiles, no_real_camera, compilan (con avisos como errores), gui_headless (selftest del panel), replay_marker0, pose_log, timing (fase 6), grabber (fase 7), identify_ids (fases 7b y 8a), igtl_rate (fase 8b), status, camaras_uvc, ajustes_camara, sondear_camara, camera_backend, aceleracion_msmf, calibrar_camara, comprobar_escala, medir_modos, panel/ventana de calibración (sin cámara)
 │   │   ├── replay_util.py                      # replay de Marker0 (reference-marker0, copy-frames; `python -m tests.replay_util`); pasa las esquinas grabadas por `MarkerTracker.process_corners` (el replay del dodecaedro se archivó, fase 4)
 │   │   └── data\                               # marker0_gs1/gs2: grabación en vivo, referencia y 3 frames (2.17 MB, versionados)
 │   └── historico\                  # snapshots de iteraciones previas; no se mantienen (iter1, iter2, iter2_callejones_sin_salida, iter3 y:)

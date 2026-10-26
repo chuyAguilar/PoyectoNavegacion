@@ -43,6 +43,7 @@
 | 028 | La captura va en un hilo con el último frame y el envío no espera | Aceptada |
 | 029 | El panel detiene el tracker con un botón propio y, sin ventana, por la entrada estándar | Aceptada |
 | 030 | El panel arranca el tracker sin ventana y verifica IDs y cámara con un solo botón | Aceptada |
+| 031 | La meta 003 cierra con el tracker en paquetes, sin ventana a ~90 fps y el techo de Slicer explicado | Aceptada |
 
 ---
 
@@ -624,3 +625,16 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 2. Un solo botón, «Verificar IDs y colocar la cámara»: `identify_ids` con detección dibuja los IDs, la cruz del centro y los fps de la cámara, y lee por `camera.grabber.FrameGrabber` para que esos fps sean los de la cámara y no los del bucle. Sale del panel la vista previa aparte; `--no-detect` se conserva para la CLI.
 
 **Consecuencias.** Lo normal desde el panel es el modo de más fps; para ver la imagen mientras se trackea, el botón con ventana. El argv de cada receta, `tracker.py`, `transport/` y los perfiles no cambian. Se verifica en vivo al empezar la fase 8b (cámara ≥ 85 fps en «Verificar IDs y colocar la cámara», tracker sin ventana ≥ 85 fps, cierres limpios con los dos botones).
+
+## ADR-031 — La meta 003 cierra con el tracker en paquetes, sin ventana a ~90 fps y el techo de Slicer explicado
+**Fecha:** 2026-10-26 · **Estado:** Aceptada
+
+**Contexto.** La meta 003 · Arquitectura y optimización del tracker (`specs/003-arquitectura-tracker/`, plan autorizado el 2026-10-23) tenía dos pasos: ordenar el código sin cambiar lo que calcula, y subir los fps. Su criterio de cierre está, punto por punto, en `resultados.md`.
+
+**Decisión.** La meta se da por cerrada con:
+1. **Arquitectura:** solo Marker0 (ADR-026), el código en paquetes lanzados con `python -m` (ADR-027) y `codigo/historico/iter4/` como archivo. Equivalencia: replay de Marker0 0.0 mm / 0.0°.
+2. **Velocidad:** captura en un hilo y envío sin esperar (ADR-028). Con ventana, gs1 61.7 fps y gs2 55.2 (aceptado, P11); sin ventana, 89.9 y 88.8, al ritmo de la cámara. El panel arranca sin ventana por defecto y se detiene limpio por la entrada estándar (ADR-029, ADR-030). Calidad: sd z bajo la línea base en todas las corridas.
+3. **Slicer:** recibe como mucho ~65 Hz. La fase 8b midió que el techo es de Slicer (R2), no del tracker ni de pyigtl (B54, baja).
+4. **«Se mueve»:** 50 mm por regla salieron como 49.6 mm reales (2026-10-26).
+
+**Consecuencias.** El tracking con las SVPRO queda como base para la siguiente meta: instrumento y punta con un transform nuevo (ADR-025). Queda abierto **B55 (alta):** hay dos Marker0 con el mismo ID, de 80 y de 100 mm, y con el de 100 todas las distancias salen a escala 0.81 sin aviso. No se sabe cuál se usó en cada sesión; las conclusiones de calidad valen en el peor caso (`resultados.md`). Mientras B55 siga abierto, se trabaja con el de 80 mm. Siguen abiertos B48, B49, B50 (media), B51, B52, B53 y B54.
