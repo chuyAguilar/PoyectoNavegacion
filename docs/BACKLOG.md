@@ -46,6 +46,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B56 | `slicer/receive_marker0.py` dice que `pyigtl` bloquea si Slicer no está conectado | Baja | — |
 | B57 | El `.json` de procedencia de las referencias del replay nombra rutas de `iter4/` | Baja | — |
 | B58 | La ventana de «Calibrar con tablero» detecta la vista previa a resolución completa y va lenta sin tablero | Media | — |
+| B59 | Los comentarios de los perfiles gs1 y gs2 dicen cosas que ya no valen | Baja | — |
 
 ## Abiertos
 
@@ -343,6 +344,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** visto al implementar la fase 2c, 2026-10-26 (`Claude outputs/fases/004/fase-2c.md`).
 - **Qué haría falta:** usar en esa ventana `check_scale.PreviaEnHilo` (o moverla a un módulo común de `calibration/`): la detección de la vista previa a la mitad y en otro hilo; la captura con ESPACIO sigue con el detector de la calibración sobre el frame completo. Su prueba con una cámara falsa, como las de la fase 2c, y un minuto en vivo.
 - **Prioridad:** media.
+
+### B59 · Los comentarios de los perfiles gs1 y gs2 dicen cosas que ya no valen
+- **Qué:** los comentarios de `codigo/profiles/tracker_config_gs1.yaml` y `_gs2.yaml` dicen que «la ventana del tracker es el cuello, 19-25 fps» (la fase 6 de la meta 003 · Arquitectura y optimización del tracker vio que eran el envío y la captura, y hoy con ventana van a 55–62 fps), que la caja de luz va «en nivel 2» (hoy el tracking va con la caja al máximo, `docs/CONTEXT.md` §4.20) y que `tracker.py` lanzado a mano necesita `OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0` en el entorno (desde B28, `tracker.py` importa `camera` antes que `cv2` y la apaga solo). Los valores de los perfiles están bien; solo los comentarios despistan.
+- **Por qué queda:** los perfiles son de la cadena (principio 6) y la meta 004 · Cómo funciona el tracker no los toca.
+- **De dónde:** visto al escribir la fase 3 · La explicación y el glosario (meta 004), 2026-10-26.
+- **Qué haría falta:** poner al día esos comentarios en una fase que ya toque `profiles/`, comprobando con la suite que el perfil leído no cambia.
+- **Prioridad:** baja.
 
 ## Cerrados
 

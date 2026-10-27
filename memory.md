@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-26 (meta 004 · Cómo funciona el tracker: fases 1, 2, 2b y 2c commiteadas; sigue la fase 3 · La explicación y el glosario)._
+_Actualizado: 2026-10-26 (meta 004 · Cómo funciona el tracker: fases 1, 2, 2b y 2c commiteadas; fase 3 · La explicación y el glosario hecha, falta su commit)._
 
 Spec activo: `specs/004-como-funciona/`
 
@@ -10,7 +10,7 @@ Spec activo: `specs/004-como-funciona/`
 - **Meta 001 · limpieza y orden del repo:** cerrada el 2026-10-19 (ADR-021; P01 «pasa»).
 - **Meta 002 · Calibración de las cámaras global shutter:** cerrada el 2026-10-23 (ADR-023 a ADR-025; P03 «pasa»). Detalle en `specs/002-*/`.
 - **Meta 003 · Arquitectura y optimización del tracker:** cerrada el 2026-10-26 (ADR-026 a ADR-031; P04 «pasa»; fases en `specs/003-*/tasks.md`, de `b3679ca` a `26e724e`). Detalle en `specs/003-*/resultados.md`.
-- **Meta 004 · Cómo funciona el tracker** (plan autorizado el 2026-10-26; P1–P11 contestadas; todo en `docs/ARCHITECTURE.md` §9). Commiteadas: fase 1 · El mapa del proyecto (`f3a2d4b`; §9.1 y `docs/img/004/mapa_proyecto.svg`; si se edita el Mermaid, reexportar con `diagnostics.export_map`, ADR-032); fase 2 · El ejemplo resuelto con un frame real (`533989a`; `diagnostics/explain_pose.py` y §9.3: el frame 480 de gs1 con el Marker0 de 80 mm, y en el paso 8 la escala con 98.6 mm; si cambia `format_markdown`, regenerar el bloque con el comando de §9.3); fase 2b · «Verificar IDs» pone la cámara en verde y se quita «Probar cámara» (`54c48a7`, solo `gui/`); fase 2c · «Comprobar escala con regla» sin congelarse (`16e7f35`, solo `calibration/check_scale.py`: vista previa a la mitad y en otro hilo, la medida repinta). Sigue la fase 3 · La explicación y el glosario.
+- **Meta 004 · Cómo funciona el tracker** (plan autorizado el 2026-10-26; P1–P11 contestadas; todo en `docs/ARCHITECTURE.md` §9). Commiteadas: fase 1 · El mapa del proyecto (`f3a2d4b`; §9.1 y `docs/img/004/mapa_proyecto.svg`; si se edita el Mermaid, reexportar con `diagnostics.export_map`, ADR-032); fase 2 · El ejemplo resuelto con un frame real (`533989a`; `diagnostics/explain_pose.py` y §9.3: el frame 480 de gs1 con el Marker0 de 80 mm, y en el paso 8 la escala con 98.6 mm; si cambia `format_markdown`, regenerar el bloque con el comando de §9.3); fase 2b · «Verificar IDs» pone la cámara en verde y se quita «Probar cámara» (`54c48a7`, solo `gui/`); fase 2c · «Comprobar escala con regla» sin congelarse (`16e7f35`, solo `calibration/check_scale.py`: vista previa a la mitad y en otro hilo, la medida repinta); fase 3 · La explicación y el glosario (§9.2, §9.4 y §9.5; solo docs), hecha, falta el commit. Sigue la fase 4 · Lectura con el autor y cierre.
 
 ## Estado técnico (el detalle está en `docs/CONTEXT.md` §6)
 
@@ -22,7 +22,7 @@ Spec activo: `specs/004-como-funciona/`
 
 ## La suite
 
-- `codigo/tests/`: **618 de 618**, 0 avisos; 32.9 y 33.3 s de pytest (2026-10-26, meta 004 fase 2c). Al cerrar la meta 003, 555 de 555. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
+- `codigo/tests/`: **618 de 618**, 0 avisos; 33.9 y 33.0 s de pytest (2026-10-26, meta 004 fase 3). Al cerrar la meta 003, 555 de 555. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm / 0.0°, detección 0.0 px) + `python -m gui.panel --selftest` (con `PYTHONIOENCODING=utf-8`, B49). Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -39,12 +39,12 @@ Spec activo: `specs/004-como-funciona/`
 
 - Con ventana: gs1 61.7 fps, gs2 55.2 (aceptado, P11); sin ventana: 89.9 y 88.8 fps, sd z 0.037 y 0.030 mm. Slicer recibe como mucho ~65 Hz: el techo es de Slicer (R2, B54). «Se mueve»: 49.6 mm reales por 50 de regla.
 - **B55 (alta):** dos Marker0 con el mismo ID (80 y 100 mm); con el de 100, todo sale a escala 0.81 sin aviso.
-- Lo siguiente: terminar la meta 004 · Cómo funciona el tracker (fases 1, 2, 2b y 2c hechas; sigue la 3 · La explicación y el glosario, después la 4 · Lectura con el autor y cierre). Después, instrumento y punta con un transform nuevo (ADR-025). B39 acotado (baja). B48, B49, B51–B54, B56 y B57 bajas; B50, B55 y B58 medias.
+- Lo siguiente: terminar la meta 004 · Cómo funciona el tracker (fases 1 a 3 hechas; sigue la 4 · Lectura con el autor y cierre). Después, instrumento y punta con un transform nuevo (ADR-025). B39 acotado (baja). B48, B49, B51–B54, B56, B57 y B59 bajas; B50, B55 y B58 medias.
 
 ## Pendientes del autor
 
-- La prueba en vivo con la regla de la fase 2c (protocolo en `Claude outputs/fases/004/fase-2c.md`): que la ventana no pase a «No responde» y el resultado de escala.
-- Leer el ejemplo de la fase 2 · El ejemplo resuelto con un frame real (§9.3 y la figura) antes de la fase 3.
+- La prueba en vivo con la regla de la fase 2c no se hizo: el autor (2026-10-26) la deja; si vuelve a congelarse o ir lento, se retoma (protocolo en `Claude outputs/fases/004/fase-2c.md`).
+- Fase 4 · Lectura con el autor: leer §9 entera (§9.1 a §9.5) y marcar lo que no se entienda.
 - B55: decidido el 2026-10-26, se usa el Marker0 de 80 mm y el de 100 se guarda (media).
 - **Usar el Marker0 de 80 mm** (el de los perfiles) mientras B55 siga abierto, y decidir qué se hace con el de 100.
 - Decidir si B19 y B20 (alta) se cierran: su código y su punta se archivaron. Decidir si B35 entra en la meta.
