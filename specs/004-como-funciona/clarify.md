@@ -69,3 +69,10 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** (a) fase extra en la meta 004, tras la 2b; (b) BACKLOG media; (c) junto con la 2b.
 - **Respuesta del autor:** (a) fase extra: la 2c.
 - **Fecha:** 2026-10-26
+
+## P12 · ¿Cuánto lee el autor en la fase 4?
+
+- **Opciones:** (1) §9 entera, como dice el spec; (2) corta: solo §9.2 (los 11 pasos) y §9.4 (el glosario), y si no hay dudas cierra en una vuelta; (3) cerrar sin lectura, con «se entiende» no cumplido por decisión del autor; (4) pausar la meta.
+- **Respuesta del autor:** (2) la lectura corta. El criterio «0 dudas abiertas» se aplica a §9.2 y §9.4; §9.1 ya lo leyó en la fase 1 («se lee bien y se entiende») y §9.3 y §9.5 quedan sin lectura del autor, cubiertas por sus pruebas.
+- **Fecha:** 2026-10-26
+- **La lectura (2026-10-26):** el autor leyó §9.2 y §9.4 y confirmó **0 dudas**: «no me queda ninguna duda al leer, si después surge algo lo trabajamos de nuevo». La meta cierra con el criterio cumplido (`resultados.md`).

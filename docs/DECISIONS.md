@@ -45,6 +45,7 @@
 | 030 | El panel arranca el tracker sin ventana y verifica IDs y cámara con un solo botón | Aceptada |
 | 031 | La meta 003 cierra con el tracker en paquetes, sin ventana a ~90 fps y el techo de Slicer explicado | Aceptada |
 | 032 | El mapa de `ARCHITECTURE.md` §9.1 se exporta con `mermaid-cli`, fuera de `requirements.txt`, y una prueba lo ata al código y al Mermaid | Aceptada |
+| 033 | La meta 004 cierra con la cadena explicada en `ARCHITECTURE.md` §9 y atada al código por pruebas | Aceptada |
 
 ---
 
@@ -652,3 +653,16 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 4. Los agentes no corren `npx` (permiso negado): reexporta el autor, con el comando de `diagnostics/export_map.py`.
 
 **Consecuencias.** Si se renombra un símbolo del mapa o se edita el Mermaid sin reexportar, la suite falla. Exportar requiere Node.js y Edge en la máquina; ejecutar el tracker, no. Resultado de la fase 1: SVG de 99 584 bytes, 20 cajas, 0 referencias inexistentes, suite 572 de 572.
+
+## ADR-033 — La meta 004 cierra con la cadena explicada en `ARCHITECTURE.md` §9 y atada al código por pruebas
+**Fecha:** 2026-10-26 · **Estado:** Aceptada
+
+**Contexto.** La meta 004 · Cómo funciona el tracker (`specs/004-como-funciona/`, plan autorizado el 2026-10-26) pedía un gráfico del proyecto, la explicación de detección → pose, un ejemplo resuelto con datos reales y un glosario, sin tocar la cadena. El criterio de cierre, punto por punto, está en `resultados.md`.
+
+**Decisión.** La meta se da por cerrada con:
+1. **§9 de `docs/ARCHITECTURE.md`:** §9.1, el mapa (Mermaid y SVG, ADR-032); §9.2, la detección → pose en 11 pasos; §9.3, el ejemplo del frame 480 de gs1, generado por `diagnostics/explain_pose.py`; §9.4, el glosario de 32 términos; §9.5, la fuente de cada uno de los 35 números.
+2. **Fidelidad comprobada por la suite:** 130 referencias a código, ninguna inexistente; el bloque del ejemplo es la salida del script, y en los 6 frames guardados la 4×4 coincide con la enviada en vivo y con el replay a 0.0 mm / 0.0°.
+3. **«Se entiende»:** el autor leyó §9.2 y §9.4, el alcance acotado por P12, y no le quedó ninguna duda (2026-10-26). §9.3 y §9.5 no las leyó; las cubren sus pruebas.
+4. **Dos fases añadidas por el autor**, fuera de la cadena: 2b, «Verificar IDs» pone el semáforo «Cámara» en verde y se quita «Probar cámara» (B29 cerrado); 2c, «Comprobar escala con regla» ya no se congela (vista previa de ~250 a ~1.7 ms por frame). La prueba en vivo con la regla de la 2c no se hizo: se retoma si el problema vuelve.
+
+**Consecuencias.** Si se cambia la cadena, la suite obliga a poner §9 al día. La cadena no cambió desde `63bbdd8`: suite 618 de 618, replay 0.0 mm / 0.0°. Quedan abiertos B58 (media; «Calibrar con tablero» tiene la misma vista previa lenta) y B59 (baja; comentarios viejos en los perfiles). La siguiente meta es la 005 · Grafo de factores óptico-inercial, decidida por el autor el 2026-10-26 (`memory.md`); instrumento y punta (ADR-025) sigue pendiente.
