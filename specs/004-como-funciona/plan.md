@@ -105,6 +105,20 @@ En `codigo/tests/test_explain_pose.py`, parametrizado por cámara (gs1, gs2) y p
 - **Riesgo conocido:** si las esquinas detectadas en el PNG no son idénticas bit a bit a las grabadas, la 4×4 podría diferir en más de 1e-9 mm. Si pasa, el script calcula la pose enviada con las grabadas (lo que hace el replay) y da aparte la diferencia que producen las detectadas; se anota y no cambia el criterio.
 - **Cómo se mide:** suite. Sin cámara ni Slicer: solo datos de `codigo/tests/data/` (principio 5). Se le enseña al autor el ejemplo con sus números y la figura antes de escribir la explicación.
 
+### Fase 2b · «Verificar IDs y colocar la cámara» marca la cámara en verde y se quita «Probar cámara» — ligera
+
+_Añadida por el autor el 2026-10-26 (P10), fuera del alcance original del spec: toca solo `gui/`, no la cadena._
+- **Qué:** al cerrar bien (código 0) la receta «Verificar IDs y colocar la cámara», el semáforo «Cámara» del panel pasa a verde con la hora, como hoy lo hace «Probar cámara» (`gui/panel.py`, rama de `sonda_camara`). Si sale con otro código, rojo con el motivo. El botón «Probar cámara» se quita del panel; `gui/camera_probe.py` y `recipes.receta_sonda_camara` se quedan (la CLI y las pruebas). El texto gris de `status.chequear_camara_placeholder` pasa a nombrar «Verificar IDs y colocar la cámara».
+- **Archivos:** `gui/panel.py`, `gui/status.py`, sus pruebas; `docs/ARCHITECTURE.md` (la lista de botones de §3 y lo que diga de «Probar cámara»), `codigo/readme.md` si lo nombra.
+- **Criterio:** el selftest del panel (`--selftest --perfil tracker_config_gs1.yaml`, offscreen) no tiene `btn_camara`; una prueba simula el fin con código 0 de la receta de IDs y el semáforo «Cámara» queda verde, y con código ≠ 0, rojo; `git grep "Probar c"` fuera de `historico/` y `docs/history/` solo en texto histórico. Suite en verde, replay 0.0 mm / 0.0°, `git diff` de la cadena vacío. En vivo (el autor, 1 min): «Verificar IDs», q, y el semáforo en verde.
+
+### Fase 2c · «Comprobar escala con regla» sin congelarse y con vista previa fluida — ligera
+
+_Añadida por el autor el 2026-10-26 (P11), fuera del alcance original del spec: toca solo `calibration/check_scale.py` (y, si hace falta, `calibration/calibrate_camera.py:detectar_esquinas` sin cambiar su resultado), no la cadena._
+- **Qué ve el autor (2026-10-26):** la ventana va lenta, como con pocos fps, y al pulsar ESPACIO a veces se congela («No responde»). Causa, leída en el código: (1) la vista previa corre `findChessboardCorners` + `cornerSubPix` sobre el frame entero de 1280×960 en cada vuelta; (2) al pulsar ESPACIO, `medir_posiciones` junta hasta 30 poses con el detector de la calibración (`sb`, con `EXHAUSTIVE` y `ACCURACY`) durante hasta `SEGUNDOS_POR_POSICION` = 15 s sin llamar a `imshow`/`waitKey`, y Windows marca la ventana como colgada.
+- **Qué:** mientras junta las poses, la ventana se sigue pintando y atendiendo teclas (`waitKey` en cada vuelta), con «midiendo k/N» sobre la imagen; la vista previa no frena la ventana (detección en una imagen reducida, o cada pocos frames, o en otro hilo; lo elige desarrollo y lo dice). La medida (las poses de ESPACIO) no cambia: mismo detector, mismo frame completo, misma mediana.
+- **Criterio:** con un `cam` y un `leer_tecla` falsos, una prueba comprueba que durante la medida se llama a la función de pintar/teclas al menos una vez por pose; las pruebas de `test_comprobar_escala.py` siguen en verde y dan los mismos números; el tiempo de la vista previa por frame, medido sobre una imagen de tablero de `tests/` (o sintética) a 1280×960, anotado antes y después (objetivo: ≤ 33 ms, ≥ 30 fps de ventana). Suite en verde, replay 0.0 mm / 0.0°, `git diff` de la cadena vacío. En vivo (el autor, con la regla): la ventana no pasa a «No responde» en ninguna posición y la vista previa va fluida; el resultado de escala se anota.
+
 ### Fase 3 · La explicación y el glosario — ligera
 
 - **Entrega:** §9.2 (detección → pose, paso a paso, en español llano), §9.4 (glosario) y §9.5 (fuentes).

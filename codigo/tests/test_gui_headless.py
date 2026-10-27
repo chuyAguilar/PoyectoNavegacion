@@ -118,6 +118,18 @@ def test_panel_selftest() -> None:
     for esperado in ("ids:Verificar IDs y colocar la cámara", "tracker:Arrancar tracker",
                      "tracker_con_ventana:Arrancar tracker con ventana", "detener_tracker:Detener tracker"):
         assert esperado in textos_botones, textos_botones
+    # Meta 004, fase 2b (P10): sin el boton de la sonda corta; «Verificar IDs y colocar la cámara»
+    # pone el semaforo «Camara»: verde al cerrar con codigo 0, rojo con el motivo si no.
+    assert not any(ln.startswith("[panel-selftest] boton_camara") for ln in lineas), lineas
+    assert not any(t.startswith("camara:") or "Probar" in t for t in textos_botones), textos_botones
+    assert linea("camara_antes").endswith("=GRIS"), linea("camara_antes")
+    assert linea("camara").split(" :: ", 1)[1] == (
+        "sin verificar — usar 'Verificar IDs y colocar la cámara' (no se sondea sola)")
+    rc0 = linea("camara_tras_ids_rc0")
+    assert rc0.startswith("[panel-selftest] camara_tras_ids_rc0=VERDE :: la del perfil: entrega 89.9 fps"), rc0
+    rc1 = linea("camara_tras_ids_rc1")
+    assert rc1.startswith("[panel-selftest] camara_tras_ids_rc1=ROJO :: Verificar IDs fallo (exit 1): "
+                          "[ERROR] [IDs] la camara no entrega frames"), rc1
 
 
 # ----------------------------------------------------------------------------
@@ -150,6 +162,18 @@ def test_titulos_de_ventana_iguales_a_los_del_script() -> None:
     from gui import recipes
     assert recipes.VENTANAS["identificar_ids"] == identify_ids.WINDOW_TITLE
     assert identify_ids.PREVIEW_WINDOW_TITLE == "Vista previa - q para salir"   # la CLI (P17 = a)
+
+
+def test_linea_de_fps_de_identify_ids_la_que_lee_el_semaforo() -> None:
+    """Meta 004, fase 2b (P10): `status.PREFIJO_FPS_IDS` es el comienzo de la linea de fps que
+    escribe `identify_ids` con deteccion; si el script cambia su texto, el semaforo perderia los fps."""
+    import inspect
+    from diagnostics import identify_ids
+    from gui import status
+    fuente = inspect.getsource(identify_ids.main)
+    assert 'tag = "[Vista previa]" if preview else "[IDs]"' in fuente
+    assert 'print(f"{tag} camara {fps_camera:.1f} fps")' in fuente
+    assert status.PREFIJO_FPS_IDS == "[IDs] camara "
 
 
 _HIJO_LIMPIO = ("import sys\n"

@@ -96,3 +96,49 @@ def test_apto_para_tracker_bloquea_por_cada_requerido() -> None:
     for clave in ("entorno", "config", "intrinsecos", "puerto"):
         rotos = [estado.Chequeo(c.clave, c.titulo, estado.ROJO, "x") if c.clave == clave else c for c in base]
         assert estado.apto_para_tracker(rotos) == (False, [clave])
+
+
+# ----------------------------------------------------------------------------
+# Meta 004, fase 2b (P10) · «Verificar IDs y colocar la cámara» pone el semaforo «Camara»
+# ----------------------------------------------------------------------------
+
+def test_camara_sin_verificar_nombra_verificar_ids() -> None:
+    c = estado.chequear_camara_placeholder()
+    assert (c.clave, c.estado) == ("camara", estado.GRIS)
+    assert "Verificar IDs y colocar la cámara" in c.detalle and "Probar" not in c.detalle
+
+
+def test_verificar_ids_con_codigo_0_pone_la_camara_en_verde() -> None:
+    lineas = ["[IDs] Deteccion ESTRICTA (sin falsos positivos). --permisivo para aflojar.",
+              "[IDs] camara 90.1 fps", "  visibles: [0]", "[IDs] camara 89.8 fps",
+              "[IDs] q: saliendo.", "[Salida limpia]"]
+    c = estado.chequeo_camara_tras_receta("identificar_ids", 0, lineas, "12:34:56")
+    assert (c.clave, c.estado) == ("camara", estado.VERDE)
+    assert c.detalle == "la del perfil: entrega 89.8 fps (Verificar IDs, 12:34:56)"
+    # Cerrada antes del primer reporte de fps (5 s): verde igual, y lo dice.
+    c = estado.chequeo_camara_tras_receta("identificar_ids", 0, ["[IDs] q: saliendo.", "[Salida limpia]"], "t")
+    assert c.estado == estado.VERDE and "sin medida de fps" in c.detalle
+
+
+def test_verificar_ids_con_otro_codigo_la_pone_en_rojo_con_el_motivo() -> None:
+    sin_frames = ["[IDs] camara 90.0 fps",
+                  "[ERROR] [IDs] la camara no entrega frames desde hace 5 s. Saliendo.", "[Salida limpia]"]
+    c = estado.chequeo_camara_tras_receta("identificar_ids", 1, sin_frames, "t")
+    assert c.estado == estado.ROJO
+    assert c.detalle == ("Verificar IDs fallo (exit 1): [ERROR] [IDs] la camara no entrega frames desde "
+                         "hace 5 s. Saliendo. (t)")
+    # Una excepcion al abrir (p. ej. la marca no es la del perfil): el motivo es la ultima linea del traceback.
+    traza = ["[Salida limpia]", "Traceback (most recent call last):", '  File "x.py", line 1, in <module>',
+             "RuntimeError: [Webcam] la camara del puerto no es la del perfil", ""]
+    c = estado.chequeo_camara_tras_receta("identificar_ids", 1, traza, "t")
+    assert c.estado == estado.ROJO and "RuntimeError: [Webcam] la camara del puerto" in c.detalle
+    c = estado.chequeo_camara_tras_receta("identificar_ids", -9, [], "t")
+    assert c.estado == estado.ROJO and "(exit -9): sin salida" in c.detalle
+
+
+def test_las_demas_recetas_no_tocan_la_camara() -> None:
+    for clave in ("tracker", "tracker_sin_ventana", "calibrar_camara", "comprobar_escala", "enfocar"):
+        assert estado.chequeo_camara_tras_receta(clave, 0, ["[IDs] camara 90.0 fps"], "t") is None
+    # La sonda corta (sin boton desde la fase 2b) conserva su lectura, por si se lanza su receta.
+    c = estado.chequeo_camara_tras_receta("sonda_camara", 0, ["[CAMARA] OK 1280x960"], "t")
+    assert (c.estado, c.detalle) == (estado.VERDE, "OK 1280x960 (sondeada t)")

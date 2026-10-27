@@ -375,13 +375,15 @@ def receta_enfocar(ruta_cfg, ancho, alto, fourcc, fps, salida, luz=None,
 
 
 def receta_sonda_camara(ruta_cfg):
-    """Chequeo corto de camara bajo demanda (Paso 8): abre-lee-libera (webcam)
-    o enumera dispositivos sin abrir pipeline (femtobolt). Con watchdog: si el
-    driver se cuelga, el panel lo mata a los 20 s."""
+    """Chequeo corto de camara (Paso 8): abre-lee-libera (webcam) o enumera
+    dispositivos sin abrir pipeline (femtobolt). Con watchdog: si el driver se
+    cuelga, se mata a los 20 s. Desde la meta 004, fase 2b (P10), el panel ya no
+    tiene su boton: el semaforo «Camara» lo pone «Verificar IDs y colocar la
+    cámara». La receta queda para la CLI y las pruebas."""
     argv = _modulo("sonda_camara") + ["--config", _rel(ruta_cfg)]
     return Receta(
         clave="sonda_camara",
-        descripcion="Probar camara (chequeo corto, libera el dispositivo al terminar)",
+        descripcion="Sonda corta de camara (abre, lee y libera el dispositivo)",
         argv=argv,
         ventana_titulo=None,
         usa_camara=True,

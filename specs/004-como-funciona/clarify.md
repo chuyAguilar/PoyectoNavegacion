@@ -55,3 +55,17 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Datos:** con `--size 1400` el PNG salió de ~570 × 1400 px (83 KB): el mapa es alto y estrecho y el texto queda ilegible.
 - **Respuesta del autor:** la imagen pasa a **SVG** (vectorial, nítida a cualquier zoom) en vez de PNG, con el mismo tope de 200 KB en `docs/img/004/` (cambia P6 de `.png` a `.svg`); el mapa se dibuja **más ancho que alto** (los cuatro grupos de izquierda a derecha, cada uno de arriba abajo); el alcance sigue siendo **solo la cadena del tracking**, con una línea al pie que nombra lo que queda fuera (los demás botones del panel, otros diagnósticos, `historico/`).
 - **Fecha:** 2026-10-26
+
+## P10 · «Probar cámara» repite lo que ya hace «Verificar IDs y colocar la cámara»
+
+- **Datos:** el autor (2026-10-26): «probar cámara también es un paso extra… si uso primero ese y luego el otro, el segundo parece que no hace nada». «Probar cámara» no abre ventana: solo pone en verde el semáforo «Cámara»; «Verificar IDs» abre la cámara pero no lo pone.
+- **Opciones:** (a) BACKLOG media, tras la meta 004; (b) fase extra dentro de la meta 004; (c) BACKLOG baja.
+- **Respuesta del autor:** (b) fase extra: la 2b.
+- **Fecha:** 2026-10-26
+
+## P11 · «Comprobar escala con regla» va lento y se congela al pulsar ESPACIO
+
+- **Datos:** el autor lo vio en vivo el 2026-10-26; la causa leída en el código está en `plan.md`, fase 2c.
+- **Opciones:** (a) fase extra en la meta 004, tras la 2b; (b) BACKLOG media; (c) junto con la 2b.
+- **Respuesta del autor:** (a) fase extra: la 2c.
+- **Fecha:** 2026-10-26

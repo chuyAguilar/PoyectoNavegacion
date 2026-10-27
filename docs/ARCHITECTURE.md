@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-26 (§6 y §9.3: meta 004 · Cómo funciona el tracker, fase 2 · El ejemplo resuelto con un frame real: `diagnostics/explain_pose.py` sigue el frame 480 de gs1 desde las esquinas hasta la 4×4, el bloque generado y la figura `docs/img/004/marker0_gs1_frame_00480.png`; `tests/test_explain_pose.py` lo repite sobre los 6 frames guardados). Antes, 2026-10-26 (índice nuevo; §2, §6 y §9 nueva: meta 004, fase 1 · El mapa del proyecto: §9.1 con el mapa en Mermaid de archivo por caja y lo que pasa por cada flecha, de izquierda a derecha, su imagen SVG exportada con `diagnostics/export_map.py` (P9) y la prueba de fidelidad `tests/test_como_funciona.py`; §9.2, §9.4 y §9.5 se escriben en la fase 3)._
+> _Última actualización: 2026-10-26 (§3.7 y §9.1: meta 004 · Cómo funciona el tracker, fase 2b · «Verificar IDs y colocar la cámara» marca la cámara en verde y se quita «Probar cámara»: `status.chequeo_camara_tras_receta` pone el semáforo «Cámara» al terminar «Verificar IDs» y el panel ya no tiene el botón de la sonda corta). Antes, 2026-10-26 (§6 y §9.3: meta 004 · Cómo funciona el tracker, fase 2 · El ejemplo resuelto con un frame real: `diagnostics/explain_pose.py` sigue el frame 480 de gs1 desde las esquinas hasta la 4×4, el bloque generado y la figura `docs/img/004/marker0_gs1_frame_00480.png`; `tests/test_explain_pose.py` lo repite sobre los 6 frames guardados). Antes, 2026-10-26 (índice nuevo; §2, §6 y §9 nueva: meta 004, fase 1 · El mapa del proyecto: §9.1 con el mapa en Mermaid de archivo por caja y lo que pasa por cada flecha, de izquierda a derecha, su imagen SVG exportada con `diagnostics/export_map.py` (P9) y la prueba de fidelidad `tests/test_como_funciona.py`; §9.2, §9.4 y §9.5 se escriben en la fase 3)._
 > _Antes, 2026-10-25 (§3.2, §3.5, §3.6, §3.7 y §6: meta 003, fase 8c · Cierre de la meta: el modo sin ventana va al ritmo de la cámara (~89–90 fps) y es el del botón principal del panel; el envío sale en ráfagas al tic de Windows y Slicer recibe como mucho ~65 Hz, techo de Slicer (fase 8b, R2; B54); `receive_marker0.py` da los intervalos y acepta otro nodo; `diagnostics/igtl_rate.py`; `tracker.py` 395 líneas). Antes, 2026-10-25 (§3.7: meta 003, fase 8a · Un botón por modo en el panel, sin cámara: «Arrancar tracker» lanza el tracker sin ventana y «Arrancar tracker con ventana» el de siempre; «Verificar IDs y colocar la cámara» reemplaza a «Verificar IDs» y a «Vista previa»; `identify_ids` lee por `FrameGrabber` y dibuja la cruz y los fps de la cámara también con detección; la verificación en vivo, al empezar la sesión de la 8b).
 > Antes, 2026-10-25 (§3.2 y §3.7: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, sin cámara: `tracker --stop-stdin`; el panel gana «Vista previa (colocar la cámara)», «Arrancar tracker sin ventana» y «Detener tracker», y detiene el tracker sin ventana por la entrada estándar; `identify_ids` con `--timeout` obligatorio, `--no-detect` y cierre en un `finally`; la verificación en vivo está pendiente). Antes, 2026-10-25 (§3.1, §3.2, §3.5 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada: la captura en un hilo con el último frame (`camera/grabber.py`), el envío sin esperar (0.02 ms en vivo) y la espera a Slicer con tope y aborto; ADR-028. Los perfiles gs1/gs2 siguen pidiendo 90 fps: pedir 60 dio 29, la cámara no tiene modo de 60 a 1280×960 MJPG; `clarify.md` P11). Antes, 2026-10-24 (§3.2, §3.7 y §6: meta 003, fase 6 · Dónde se va el tiempo por frame: `tracker --timing <json>` cronometra cada etapa del bucle con `diagnostics.pose_log.Stopwatch`, apagado por defecto; `diagnostics/measure_window.py` cronometra la ventana sin cámara). Antes, 2026-10-24 (§2, §3, §4, §6 y notas en §5, §7 y §8: meta 003, fase 5 · Documentación del paso 1: la topología, los componentes y la cadena se describen con la estructura nueva (`camera`, `vision`, `transport`, `profiles`, `gui`, `calibration`, `diagnostics`, `slicer`; `tracker.py` solo el bucle) y solo Marker0; lo del dodecaedro, la Femto y el contexto doctor queda como referencia archivada).
 > Antes, 2026-10-24 (§6: meta 003, fase 4 · El tracker en piezas: `vision\` (detección, pose, 1-Euro, `MarkerTracker`) y `transport\` (`IgtlSender`); `tracker.py` queda solo con el bucle; la suite niega la cámara real y el servidor pyigtl). Antes, 2026-10-23 (§6: meta 003, fase 3 · La estructura nueva y el archivo: el código pasa de `codigo\iter4\` a paquetes por responsabilidad bajo `codigo\` (`camera`, `calibration`, `diagnostics`, `gui`, `profiles`, `data`; `tracker.py` suelto), se lanza con `python -m` y las rutas de un perfil son relativas a `codigo\` (ADR-027); el dodecaedro, la Femto y los perfiles viejos van a `codigo\historico\iter4\`; §3 y §4 se ponen al día en la fase 5). Antes, 2026-10-23 (§3.3, §4 y §6: meta 003, fase 2 · La cadena solo con Marker0: los perfiles gs1 y gs2 ya no definen `rigid_bodies`, el tracker publica solo `Marker0ToTracker` (ADR-026), `gui/estado.py` no exige la geometría si el perfil no la define, `codigo/slicer/receive_marker0.py` nuevo y el manual del dodecaedro en `documentos/historico/`). Antes, 2026-10-23 (§6: meta 003, fase 1 · Línea base de Marker0: `pose_log.py`, opciones de grabación del tracker y replay de Marker0). Antes, 2026-10-23 (§3.1, §3.3, §6 y §8: meta 002, fase 6 · Comparación contra P02 y archivo de los perfiles viejos: `tracker_config_doctor.yaml` y `globalshutter.yml` pasan a `iter4/data/historico/`; el tracker no cambió). 
@@ -252,7 +252,7 @@ instrumento nuevo (B40, B41); el procedimiento anterior, con el dodecaedro, est�
 
 ### 3.7 Panel de control (GUI) — `codigo/gui/`
 
-_Al día: 2026-10-25 (meta 003, fases 3, 7b y 8a)._ `python -m gui.panel` (desde `codigo\`, con el
+_Al día: 2026-10-26 (meta 003, fases 3, 7b y 8a; meta 004, fase 2b)._ `python -m gui.panel` (desde `codigo\`, con el
 venv). Panel de escritorio **PySide6** (brief-01 + brief-02) que **solo orquesta**
 los scripts existentes — no reimplementa tracking ni calibración (ADR-017;
 única excepción acotada: ADR-018):
@@ -260,7 +260,10 @@ los scripts existentes — no reimplementa tracking ni calibración (ADR-017;
 - `status.py` (era `estado.py`) — semáforos leyendo el **estado real del repo**:
   entorno, config del perfil, intrínsecos, puerto 18944 y cámara. Un perfil con
   `rigid_bodies` o de la Femto queda en ROJO y no arranca el tracker. Usable por
-  consola (`python -m gui.status --perfil profiles/tracker_config_gs1.yaml`).
+  consola (`python -m gui.status --perfil profiles/tracker_config_gs1.yaml`). El de
+  «Cámara» empieza en gris y lo pone `chequeo_camara_tras_receta` al terminar «Verificar
+  IDs y colocar la cámara»: verde con los últimos fps de la cámara si sale con código 0,
+  rojo con el motivo si no (fase 2b de la meta 004, 2026-10-26, P10).
 - `recipes.py` (era `recetas.py`) — composición de comandos `python -u -m <módulo>`
   con **todos los args explícitos** (principio 7).
 - `processes.py` (era `procesos.py`) — subprocesos (uno a la vez), stdout en vivo,
@@ -269,8 +272,10 @@ los scripts existentes — no reimplementa tracking ni calibración (ADR-017;
   las recetas con `stop_stdin` (el tracker sin ventana), `q` por la entrada estándar del
   hijo, que se lanza con ella en tubería y se cierra al detener (espera hasta
   `ESPERA_STDIN_S`, 8 s); `entorno_hijo` apaga la aceleración HW de MSMF en el hijo.
-- `camera_probe.py` (era `sonda_camara.py`) — chequeo corto de cámara bajo demanda
-  (subproceso con watchdog; nunca dentro del proceso GUI).
+- `camera_probe.py` (era `sonda_camara.py`) — chequeo corto de cámara (subproceso con
+  watchdog; nunca dentro del proceso GUI). Desde la fase 2b de la meta 004 (2026-10-26,
+  P10) el panel no tiene su botón: queda su receta (`receta_sonda_camara`) para la CLI y
+  las pruebas.
 - `profile_editor.py` (era `perfil_editor.py`) — la única mutación de config
   permitida (ADR-018): edición quirúrgica de `camera.calibration_file` con backup.
 - `calibration_window.py` (era `gui/calibracion.py`) — lo fijo de la ventana de
@@ -278,7 +283,7 @@ los scripts existentes — no reimplementa tracking ni calibración (ADR-017;
   `escribir_tablero`, escritura atómica), las salidas por perfil, las tres recetas
   (enfocar, calibrar, escala) y los textos de «Última».
 - `panel.py` — ventana única: perfil, semáforos, «1 · Verificar / Preparar»
-  (Verificar IDs y colocar la cámara, Probar cámara, Calibrar cámara…) y «2 · Operar»
+  (Verificar IDs y colocar la cámara, Calibrar cámara…) y «2 · Operar»
   (Arrancar tracker, Arrancar tracker con ventana, Detener tracker, Detener proceso), log
   en vivo. Un botón por modo desde la fase 8a (2026-10-25; P14 = b, P16 = b): «Verificar
   IDs y colocar la cámara» lanza `identify_ids --timeout 600` (los IDs, la cruz y los fps
@@ -555,7 +560,7 @@ La misma figura, exportada en SVG para los visores que no dibujan Mermaid (vecto
 
 ![El mapa del proyecto, exportado del Mermaid de arriba](img/004/mapa_proyecto.svg)
 
-**Lo que queda fuera del mapa, a propósito:** el mapa es solo la cadena del tracking. No están los demás botones del panel (probar cámara; calibrar cámara: enfocar, tablero y escala; volver a medir el tablero; detener tracker y detener proceso), los demás diagnósticos (`measure_modes`, `measure_window`, `igtl_rate`, `probe_camera`) ni lo archivado en `historico/`.
+**Lo que queda fuera del mapa, a propósito:** el mapa es solo la cadena del tracking. No están los demás botones del panel (calibrar cámara: enfocar, tablero y escala; volver a medir el tablero; detener tracker y detener proceso), los demás diagnósticos (`measure_modes`, `measure_window`, `igtl_rate`, `probe_camera`) ni lo archivado en `historico/`.
 
 **Las cajas, una por una.** Lo que entra y lo que sale de cada una; el detalle de cada contrato está en la sección que se cita.
 

@@ -22,7 +22,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B24 | Frecuencia de la red (50/60 Hz) de las SVPRO, que OpenCV no fija | Baja | — |
 | B25 | La sonda pierde los modos medidos si salta el tope | Media | — |
 | B26 | Modos de las SVPRO que no sirven o no son estables | Baja | — |
-| B29 | «Probar cámara» del panel no comprueba la marca ni aplica los ajustes | Media | — |
 | B30 | Leer la marca y aplicar los controles en una sola apertura DSHOW | Baja | — |
 | B31 | El criterio de exposición de `medir_modos.py` favorece imágenes casi saturadas | Media | — |
 | B35 | El criterio de escala por medias no mira la repetibilidad | Media | — |
@@ -171,13 +170,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Al día (2026-10-22, fase 2b):** la comprobación de tamaño del backend compara el frame, no el FOURCC, y detecta el caso de 1600×1200 que entrega 1280×960 (prueba sin cámara).
 - **Al día (2026-10-22, fase 3):** medido con la aceleración HW de MSMF apagada (`medir_modos.py`, las dos cámaras): 1920×1080 y 1920×1200 en MJPG y 640×480 y 1280×720 en YUY2 dan ~90 fps de captura (89.5–90), no los ~30 y ≤ 59 de la fase 1, que se midieron con la aceleración encendida. Esos modos sí sirven para captura; la resolución elegida (1280×960 MJPG, P16) no depende de ello. Los que no abren o no entregan (800×600, 1024×768 en la cámara 2, 960×720 YUY2) no se volvieron a medir.
 - **Prioridad:** baja.
-
-### B29 · «Probar cámara» del panel no comprueba la marca ni aplica los ajustes
-- **Qué:** `gui/sonda_camara.py` (desde la meta 003, `codigo/gui/camera_probe.py`) resuelve el índice por el puerto, abre por MSMF y lee un frame, pero no lee la marca ni aplica `controls`: con las cámaras intercambiadas de puerto da «OK» (el tracker y el backend sí paran).
-- **Por qué queda:** en la fase 2b la sonda se dejó corta para caber en los 20 s del vigilante del panel; con la aceleración apagada (corrección de la 2b) ya cabría (~1 s de abrir + leer, ~1.2 s de marca).
-- **De dónde:** sesión en vivo de la fase 2b · Perfiles por cámara: identidad, ajustes y tamaño al abrir (meta 002), punto 3, 2026-10-22.
-- **Qué haría falta:** que la sonda lea la marca (sin escribir) antes de abrir, o que use `camera.backend` entero; medir que sigue dentro del vigilante de `gui/recipes.py`.
-- **Prioridad:** media.
 
 ### B30 · Leer la marca y aplicar los controles en una sola apertura DSHOW
 - **Qué:** `WebcamBackend.open()` abre la cámara por DSHOW dos veces antes del video: una para leer la marca (`capa.leer`, 1.11–1.48 s) y otra para aplicar los ajustes (`capa.aplicar`, 1.26–1.57 s).
@@ -345,6 +337,10 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** baja.
 
 ## Cerrados
+
+### B29 · «Probar cámara» del panel no comprueba la marca ni aplica los ajustes
+- **Qué era:** `gui/camera_probe.py` (era `gui/sonda_camara.py`), detrás de «Probar cámara», resolvía el índice por el puerto, abría por MSMF y leía un frame, pero no leía la marca ni aplicaba `controls`: con las cámaras intercambiadas de puerto daba «OK» y ponía el semáforo «Cámara» en verde (sesión en vivo de la fase 2b de la meta 002, punto 3, 2026-10-22).
+- **Cerrado:** 2026-10-26, por la fase 2b · «Verificar IDs y colocar la cámara» marca la cámara en verde y se quita «Probar cámara» (meta 004 · Cómo funciona el tracker; P10): el panel ya no tiene el botón y el semáforo lo pone «Verificar IDs», que abre con `camera.backend` entero (marca y ajustes del perfil, como el tracker). `camera_probe.py` y su receta quedan para la CLI, sin la marca: quien los lance a mano no tiene esa comprobación.
 
 ### B32 · Optimizar el tracker: la ventana limita a 19–25 fps en cualquier resolución
 - **Qué era:** en la fase 3 de la meta 002 el tracking con ventana dio 19–25 fps en todos los modos (sin ventana, 62–68 a 1280×960), y en la meta 003 los fps eran bimodales (~20 o ~32–37). La fase 6 · Dónde se va el tiempo por frame lo midió: el envío costaba 9–12.5 ms por frame (`pyigtl` con `wait=True` espera el tic de 15.6 ms de Windows) y el modo lento era la captura (32 ms); la ventana sola, ~2 ms.

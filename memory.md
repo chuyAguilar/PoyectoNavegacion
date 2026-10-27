@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-26 (meta 004 · Cómo funciona el tracker, fase 2 · El ejemplo resuelto con un frame real: hecha, a falta del commit)._
+_Actualizado: 2026-10-26 (meta 004 · Cómo funciona el tracker, fase 2b · «Verificar IDs y colocar la cámara» marca la cámara en verde y se quita «Probar cámara»: hecha, a falta del commit y del minuto en vivo)._
 
 Spec activo: `specs/004-como-funciona/`
 
@@ -10,8 +10,9 @@ Spec activo: `specs/004-como-funciona/`
 - **Meta 001 · limpieza y orden del repo:** cerrada el 2026-10-19 (ADR-021; P01 «pasa»).
 - **Meta 002 · Calibración de las cámaras global shutter:** cerrada el 2026-10-23 (ADR-023 a ADR-025; P03 «pasa»). Detalle en `specs/002-*/`.
 - **Meta 003 · Arquitectura y optimización del tracker:** cerrada el 2026-10-26 (ADR-026 a ADR-031; P04 «pasa»; fases en `specs/003-*/tasks.md`, de `b3679ca` a `26e724e`). Detalle en `specs/003-*/resultados.md`.
-- **Meta 004 · Cómo funciona el tracker** (plan autorizado el 2026-10-26; P1–P7 contestadas, P8 pendiente). La fase 1 · El mapa del proyecto está commiteada (`f3a2d4b`): `docs/ARCHITECTURE.md` §9.1 (el mapa en Mermaid, 20 cajas) y `docs/img/004/mapa_proyecto.svg` (99 584 bytes), con `diagnostics/export_map.py`; si se edita el Mermaid, reexportar con el comando de `Claude outputs/fases/004/fase-1.md`, «Peso del SVG» (ADR-032).
-- **Fase 2 · El ejemplo resuelto con un frame real: hecha, a falta del commit** (2026-10-26). `codigo/diagnostics/explain_pose.py` (`explain_frame`, `format_markdown`, `draw_example`; CLI con argumentos explícitos) y §9.3 de `ARCHITECTURE.md`: el frame 480 de gs1 con el marker de 98.6 mm, el bloque generado entre las marcas `ejemplo` y la figura `docs/img/004/marker0_gs1_frame_00480.png` (34 748 bytes). En los 6 frames (gs1 y gs2 × 240, 480, 720): esquinas = grabadas a 0.0 px, 4×4 = enviada = replay a 0.0 mm / 0.0°, cociente de escala 1.2325, reproyección 0.053–0.204 px. Si se cambia `format_markdown`, regenerar el bloque con el comando de §9.3 (la prueba lo exige). Falta que el autor lea el ejemplo antes de la fase 3.
+- **Meta 004 · Cómo funciona el tracker** (plan autorizado el 2026-10-26; P1–P11 contestadas). La fase 1 · El mapa del proyecto está commiteada (`f3a2d4b`): `docs/ARCHITECTURE.md` §9.1 (el mapa en Mermaid, 20 cajas) y `docs/img/004/mapa_proyecto.svg` (99 584 bytes), con `diagnostics/export_map.py`; si se edita el Mermaid, reexportar con el comando de `Claude outputs/fases/004/fase-1.md`, «Peso del SVG» (ADR-032).
+- **Fase 2 · El ejemplo resuelto con un frame real:** commiteada (`533989a`). `codigo/diagnostics/explain_pose.py` (`explain_frame`, `format_markdown`, `draw_example`; CLI con argumentos explícitos) y §9.3 de `ARCHITECTURE.md`: el frame 480 de gs1 con el marker de 98.6 mm, el bloque generado entre las marcas `ejemplo` y la figura `docs/img/004/marker0_gs1_frame_00480.png` (34 748 bytes). En los 6 frames (gs1 y gs2 × 240, 480, 720): esquinas = grabadas a 0.0 px, 4×4 = enviada = replay a 0.0 mm / 0.0°, cociente de escala 1.2325, reproyección 0.053–0.204 px. Si se cambia `format_markdown`, regenerar el bloque con el comando de §9.3 (la prueba lo exige). Falta que el autor lea el ejemplo antes de la fase 3.
+- **Fases 2b y 2c, añadidas por el autor (P10, P11), solo `gui/` y `calibration/`, no la cadena.** **Fase 2b · «Verificar IDs y colocar la cámara» marca la cámara en verde y se quita «Probar cámara»: hecha, a falta del commit** (2026-10-26). `gui/status.py:chequeo_camara_tras_receta` pone el semáforo «Cámara» al terminar «Verificar IDs» (código 0: verde con los últimos fps; otro: rojo con la línea `[ERROR]` o la del traceback); el botón de la sonda corta se fue del panel (`camera_probe.py` y su receta quedan para la CLI). El selftest simula los dos finales. B29 cerrado. Falta el minuto en vivo del autor (protocolo en `Claude outputs/fases/004/fase-2b.md`). Sigue la fase 2c · «Comprobar escala con regla» sin congelarse y con vista previa fluida.
 
 ## Estado técnico (el detalle está en `docs/CONTEXT.md` §6)
 
@@ -19,11 +20,11 @@ Spec activo: `specs/004-como-funciona/`
 - Cámaras: dos SVPRO AR0234 global shutter, `profiles/tracker_config_gs1.yaml` (puerto 1, `focus` 500) y `_gs2.yaml` (puerto 2, 332), 1280×960 MJPG 90 fps (no tienen modo de 60: pedir 60 da ~29), `exposure_ms` 0.977, caja de luz al máximo (con menos luz bajan a 22–31 fps, B50), calibradas (`data/intrinsecos_gs{1,2}_1280x960.yml`). **No girar ni sacar el lente de la cámara 2 sin recalibrar** (cy 390; B36). La Femto está archivada.
 - La cadena publica solo `Marker0ToTracker` (ADR-026), puerto 18944. Desde la fase 7 (ADR-028): captura en un hilo con el último frame (`camera/grabber.py`; `--sync-capture` para comparar), envío sin esperar (`wait=False`, 0.02 ms) y el tracker espera a Slicer hasta `--slicer-timeout` (30 s); si no llega, aborta y lo dice (código 3, sin abrir la cámara).
 - Desde la fase 7b: `tracker --stop-stdin` (apagada por defecto) sale limpio con `q` o el fin de la entrada estándar; `diagnostics.identify_ids` exige `--timeout` y cierra en un `finally`; `--no-detect` es la vista previa, solo por CLI desde la 8a (P17 = a).
-- Desde la fase 8a: el panel tiene «Verificar IDs y colocar la cámara» (IDs, cruz y fps de la cámara; `identify_ids` lee por `FrameGrabber`), «Arrancar tracker» (sin ventana, `--no-window --stop-stdin`), «Arrancar tracker con ventana», «Detener tracker» y «Detener proceso». A mano, `python -m tracker --config …` sigue con ventana; los perfiles no cambian.
+- Desde la fase 8a: el panel tiene «Verificar IDs y colocar la cámara» (IDs, cruz y fps de la cámara; `identify_ids` lee por `FrameGrabber`; desde la fase 2b de la meta 004 pone también el semáforo «Cámara» y ya no hay «Probar cámara»), «Arrancar tracker» (sin ventana, `--no-window --stop-stdin`), «Arrancar tracker con ventana», «Detener tracker» y «Detener proceso». A mano, `python -m tracker --config …` sigue con ventana; los perfiles no cambian.
 
 ## La suite
 
-- `codigo/tests/`: **606 de 606**, 0 avisos; 33.0 y ~36 s de pytest (2026-10-26, meta 004 fase 2). Antes, 572 de 572 (fase 1: ~33.5 s) y 555 de 555 (meta 003, fase 8c: 41.1 y 56.1 s). Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
+- `codigo/tests/`: **611 de 611**, 0 avisos; 33.4 y 34.0 s de pytest (2026-10-26, meta 004 fase 2b). Antes, 606 de 606 (fase 2: 33.0 y ~36 s), 572 de 572 (fase 1: ~33.5 s) y 555 de 555 (meta 003, fase 8c: 41.1 y 56.1 s). Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm / 0.0°, detección 0.0 px) + `python -m gui.panel --selftest` (con `PYTHONIOENCODING=utf-8`, B49). Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -40,11 +41,12 @@ Spec activo: `specs/004-como-funciona/`
 
 - Con ventana: gs1 61.7 fps, gs2 55.2 (aceptado, P11); sin ventana: 89.9 y 88.8 fps, sd z 0.037 y 0.030 mm. Slicer recibe como mucho ~65 Hz: el techo es de Slicer (R2, B54). «Se mueve»: 49.6 mm reales por 50 de regla.
 - **B55 (alta):** dos Marker0 con el mismo ID (80 y 100 mm); con el de 100, todo sale a escala 0.81 sin aviso.
-- Lo siguiente: terminar la meta 004 · Cómo funciona el tracker (fases 1 y 2 hechas; sigue la fase 3 · La explicación y el glosario, ligera, y la 4 · Lectura con el autor y cierre). Después, instrumento y punta con un transform nuevo (ADR-025). B39 acotado (baja). B48, B49, B51–B54, B56 y B57 bajas; B50 y B55 medias.
+- Lo siguiente: terminar la meta 004 · Cómo funciona el tracker (fases 1, 2 y 2b hechas; sigue la 2c · «Comprobar escala con regla» sin congelarse y con vista previa fluida, después la 3 · La explicación y el glosario y la 4 · Lectura con el autor y cierre). Después, instrumento y punta con un transform nuevo (ADR-025). B39 acotado (baja). B48, B49, B51–B54, B56 y B57 bajas; B50 y B55 medias.
 
 ## Pendientes del autor
 
-- El commit de la fase 2 · El ejemplo resuelto con un frame real (meta 004), y leer el ejemplo (§9.3 y la figura) antes de la fase 3.
+- El commit de la fase 2b · «Verificar IDs y colocar la cámara» marca la cámara en verde y se quita «Probar cámara» (meta 004) y su minuto en vivo (panel, «Verificar IDs», q, semáforo en verde).
+- Leer el ejemplo de la fase 2 · El ejemplo resuelto con un frame real (§9.3 y la figura) antes de la fase 3.
 - B55: decidido el 2026-10-26, se usa el Marker0 de 80 mm y el de 100 se guarda (media).
 - **Usar el Marker0 de 80 mm** (el de los perfiles) mientras B55 siga abierto, y decidir qué se hace con el de 100.
 - Decidir si B19 y B20 (alta) se cierran: su código y su punta se archivaron. Decidir si B35 entra en la meta.

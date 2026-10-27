@@ -7,9 +7,9 @@ lanzan los scripts EXISTENTES como subprocesos (la GUI solo orquesta, no
 reescribe logica) + panel de log con la salida en vivo.
 
 Grupos de acciones:
-  1 Verificar/Preparar: identificar IDs, probar camara (bajo demanda) y
-    calibrar camara: una ventana de tres pasos sin campos (enfocar, tablero,
-    escala; meta 002, fase 5, P21), con lo fijo en calibration_window.py.
+  1 Verificar/Preparar: identificar IDs (y con ello la camara) y calibrar
+    camara: una ventana de tres pasos sin campos (enfocar, tablero, escala;
+    meta 002, fase 5, P21), con lo fijo en calibration_window.py.
   2 Operar: tracker (gating duro + recordatorio de Slicer), detener.
 Meta 003, fase 7b (P10, P12, P13): «Detener tracker» en 2, que detiene las dos
 recetas del tracker limpio: sin ventana por la entrada estandar, con ventana con
@@ -19,6 +19,9 @@ Meta 003, fase 8a (P14 = b, P16 = b; ADR-030 propuesto): un boton por modo. En 1
 camara; se va «Vista previa»). En 2, «Arrancar tracker» lanza el tracker SIN
 ventana (--no-window --stop-stdin) y «Arrancar tracker con ventana» el de siempre.
 Los perfiles y el comando a mano no cambian.
+Meta 004, fase 2b (P10): «Verificar IDs y colocar la cámara» pone el semaforo
+«Camara» (verde si cierra con codigo 0, rojo con el motivo si no) y se va el
+boton de la sonda corta (`gui/camera_probe.py` queda para la CLI).
 Meta 003, fase 3 (ADR-027): se van el asistente "dodecaedro nuevo" y
 "Calibrar punta (dock)" (archivados en codigo/historico/iter4/dodecahedron/);
 los perfiles se listan de codigo/profiles/.
@@ -460,10 +463,8 @@ class Panel(QMainWindow):
         g1 = QGroupBox("1 · Verificar / Preparar")
         c1 = QVBoxLayout(g1)
         self.btn_ids = QPushButton("Verificar IDs y colocar la cámara")
-        self.btn_camara = QPushButton("Probar camara")
         self.btn_calcam = QPushButton("Calibrar cámara (enfocar, tablero, escala)…")
         c1.addWidget(self.btn_ids)
-        c1.addWidget(self.btn_camara)
         c1.addWidget(self.btn_calcam)
         c1.addStretch(1)
         g3 = QGroupBox("2 · Operar")
@@ -485,8 +486,7 @@ class Panel(QMainWindow):
         raiz.addLayout(fila_acc)
 
         self.botones = {
-            "ids": self.btn_ids,
-            "camara": self.btn_camara, "calcam": self.btn_calcam,
+            "ids": self.btn_ids, "calcam": self.btn_calcam,
             "tracker": self.btn_tracker, "tracker_con_ventana": self.btn_tracker_con_ventana,
             "detener_tracker": self.btn_detener_tracker, "detener": self.btn_detener,
         }
@@ -506,7 +506,6 @@ class Panel(QMainWindow):
         QShortcut(QKeySequence("F5"), self, activated=self.refrescar)
         self.combo.currentIndexChanged.connect(self._perfil_cambiado)
         self.btn_ids.clicked.connect(self._accion_ids)
-        self.btn_camara.clicked.connect(self._accion_camara)
         self.btn_calcam.clicked.connect(self._accion_calcam)
         self.btn_tracker.clicked.connect(self._accion_tracker)
         self.btn_tracker_con_ventana.clicked.connect(self._accion_tracker_con_ventana)
@@ -581,7 +580,6 @@ class Panel(QMainWindow):
 
         libre = not corriendo
         self.btn_ids.setEnabled(libre and verde("entorno") and verde("config"))
-        self.btn_camara.setEnabled(libre and verde("config"))
         self.btn_calcam.setEnabled(libre and verde("entorno")
                                    and verde("config"))
         ok, malos = estado.apto_para_tracker(self.chequeos)
@@ -630,15 +628,10 @@ class Panel(QMainWindow):
     def _proceso_termino(self, receta, rc):
         veredicto = "OK" if rc == 0 else "FALLO — revisar el log (fail-loud)"
         self.log_msg(f"[fin] {receta.clave}: exit={rc} {veredicto}")
-        if receta.clave == "sonda_camara":
-            detalle = ""
-            for ln in reversed(self.lanzador.buffer_actual()):
-                if ln.startswith("[CAMARA]"):
-                    detalle = ln.replace("[CAMARA] ", "")
-                    break
-            est = estado.VERDE if rc == 0 else estado.ROJO
-            chi = estado.Chequeo("camara", "Camara", est,
-                                 f"{detalle} (sondeada {time.strftime('%H:%M:%S')})")
+        # Fase 2b de la meta 004 (P10): «Verificar IDs y colocar la cámara» pone el semaforo.
+        chi = estado.chequeo_camara_tras_receta(receta.clave, rc, self.lanzador.buffer_actual(),
+                                                time.strftime('%H:%M:%S'))
+        if chi is not None:
             self.resultado_camara = (self.perfil_activo(), chi)
         origen = self.origen_actual
         self.origen_actual = None
@@ -687,9 +680,6 @@ class Panel(QMainWindow):
     # ------------------------------------------------------------------
     def _accion_ids(self):
         self.lanzar_receta(recetas.receta_identificar_ids(self.perfil_activo()))
-
-    def _accion_camara(self):
-        self.lanzar_receta(recetas.receta_sonda_camara(self.perfil_activo()))
 
     def _accion_calcam(self):
         VentanaCalibrarCamara(self).exec()
@@ -804,6 +794,25 @@ def main():
             print("[panel-selftest] calcam_textos=" + " | ".join(t.replace("\n", " ") for t in textos))
             d.deleteLater()
             v.deleteLater()
+            # Fase 2b de la meta 004 (P10): el fin de «Verificar IDs y colocar la cámara», simulado
+            # por el camino de siempre (_proceso_termino) con la salida que dejaria el proceso; no se
+            # lanza nada. Codigo 0 -> «Camara» en verde; otro codigo -> rojo con el motivo.
+            print(f"[panel-selftest] camara_antes={panel._chk['camara'].estado}")
+            simuladas = (
+                ("camara_tras_ids_rc0", 0, ["[IDs] camara 89.9 fps", "[IDs] q: saliendo.",
+                                            "[Salida limpia]"]),
+                ("camara_tras_ids_rc1", 1, ["[ERROR] [IDs] la camara no entrega frames desde hace "
+                                            "5 s. Saliendo.", "[Salida limpia]"]),
+            )
+            buffer_real = panel.lanzador.buffer_actual
+            try:
+                for nombre, rc, lineas in simuladas:
+                    panel.lanzador.buffer_actual = lambda lineas=lineas: list(lineas)
+                    panel._proceso_termino(recetas.receta_identificar_ids(str(gs1)), rc)
+                    c = panel._chk["camara"]
+                    print(f"[panel-selftest] {nombre}={c.estado} :: {c.detalle}")
+            finally:
+                panel.lanzador.buffer_actual = buffer_real
             print("[panel-selftest] cerrando OK")
             panel.close()
             app.quit()

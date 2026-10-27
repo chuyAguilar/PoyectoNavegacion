@@ -179,9 +179,62 @@ def chequear_puerto(cfg):
 
 def chequear_camara_placeholder():
     """La camara no se sondea automaticamente (no robarle el dispositivo a un
-    proceso). Sondeo bajo demanda: boton 'Probar camara' (Paso 8)."""
+    proceso). Se verifica bajo demanda con «Verificar IDs y colocar la cámara»
+    (meta 004, fase 2b; P10): al cerrar bien, el panel la pone en verde
+    (`chequeo_camara_tras_receta`)."""
     return Chequeo("camara", "Camara", GRIS,
-                   "sin verificar — usar 'Probar camara' (no se sondea sola)")
+                   "sin verificar — usar 'Verificar IDs y colocar la cámara' "
+                   "(no se sondea sola)")
+
+
+# Recetas cuyo fin dice algo de la camara. «Verificar IDs y colocar la cámara»
+# abre con el backend entero (marca y ajustes del perfil, como el tracker); la
+# sonda corta (`gui.camera_probe`) ya no tiene boton, pero su receta sigue.
+CLAVES_CAMARA = ("identificar_ids", "sonda_camara")
+# La linea de fps de `diagnostics.identify_ids` («[IDs] camara 89.9 fps»): gui/ no
+# importa diagnostics/ (carga cv2), asi que el texto se fija aqui y la prueba lo compara.
+PREFIJO_FPS_IDS = "[IDs] camara "
+
+
+def _motivo_del_fallo(lineas):
+    """La ultima linea que explica un fallo: la de «[ERROR]» o, si no hay, la
+    ultima no vacia que no sea «[Salida limpia]» (p. ej. la del traceback)."""
+    for ln in reversed(lineas):
+        if ln.strip().startswith("[ERROR]"):
+            return ln.strip()
+    for ln in reversed(lineas):
+        s = ln.strip()
+        if s and s != "[Salida limpia]":
+            return s
+    return "sin salida"
+
+
+def chequeo_camara_tras_receta(clave, rc, lineas, hora):
+    """El semaforo «Camara» tras terminar una receta (meta 004, fase 2b; P10).
+
+    `clave` y `rc`: la receta y su codigo de salida; `lineas`: lo que escribio;
+    `hora`: «HH:MM:SS». Devuelve None si la receta no dice nada de la camara.
+    Con «Verificar IDs y colocar la cámara»: codigo 0 = VERDE con los ultimos fps
+    de la camara; otro codigo = ROJO con el motivo (fallar fuerte)."""
+    if clave not in CLAVES_CAMARA:
+        return None
+    if clave == "sonda_camara":
+        detalle = ""
+        for ln in reversed(lineas):
+            if ln.startswith("[CAMARA]"):
+                detalle = ln.replace("[CAMARA] ", "")
+                break
+        est = VERDE if rc == 0 else ROJO
+        return Chequeo("camara", "Camara", est, f"{detalle} (sondeada {hora})")
+    if rc == 0:
+        fps = [ln.strip() for ln in lineas
+               if ln.strip().startswith(PREFIJO_FPS_IDS) and ln.strip().endswith(" fps")]
+        medida = (f"entrega {fps[-1][len(PREFIJO_FPS_IDS):]}" if fps
+                  else "abrio y cerro bien (sin medida de fps: se cerro antes de 5 s)")
+        return Chequeo("camara", "Camara", VERDE,
+                       f"la del perfil: {medida} (Verificar IDs, {hora})")
+    return Chequeo("camara", "Camara", ROJO,
+                   f"Verificar IDs fallo (exit {rc}): {_motivo_del_fallo(lineas)} ({hora})")
 
 
 def evaluar_todo(ruta_cfg):
