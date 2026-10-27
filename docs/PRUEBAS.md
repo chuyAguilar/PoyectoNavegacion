@@ -9,6 +9,8 @@ Lo escribe solo el agente de pruebas (principio 1; ADR-020), sobre HEAD commitea
 | P01 | Meta 001, fases 1–4 · limpieza y orden | e52f58c | 2026-10-19 | pasa |
 | P02 | Cámara global shutter 1 · flujo actual con el perfil doctor | 6431bc6 | 2026-10-19/20 | cadena pasa; calibración intrínseca no concluyente |
 | P03 | Meta 002 · calibración de las cámaras global shutter (sin cámara) | 2322553 | 2026-10-23 | pasa; 3 hallazgos menores |
+| P04 | Meta 003 · Arquitectura y optimización del tracker (sin hardware) | 26e724e | 2026-10-26 | pasa |
+| P05 | Meta 004 · Cómo funciona el tracker (sin hardware) | eceef59 | 2026-10-26 | pasa; 2 hallazgos bajos |
 
 ## Formato de una entrada
 
@@ -127,3 +129,29 @@ Las validaciones de las iteraciones 1–4 (RMS de registro 3.46 → 2.80 mm, BA 
   2. Baja. `docs/DECISIONS.md` dice «Última actualización: 2026-10-23» con ADR-026 a 031 de 2026-10-25/26.
 - Lo dudoso: sin hardware no se comprobó nada en vivo. Cobertura en vivo de fases 7 a 8c según resultados.md; no vi hueco que exija en_vivo.md.
 - Veredicto: lo commiteado coincide con lo registrado, sin fallos de gravedad media o alta. Veredicto final de la meta 003: pasa. Detalle: `Claude outputs/pruebas/003-meta/ronda.md`.
+
+## P05 · Meta 004 · Cómo funciona el tracker (sin hardware)
+- Commit probado: eceef59 · Fecha: 2026-10-26
+- Comprobaciones:
+
+| qué | cómo | resultado | número o evidencia |
+|---|---|---|---|
+| Suite x2 | pytest | pasa | 618 passed, 0 avisos; 40.1 s y 39.9 s (35.2 s con -rA) |
+| Replay Marker0 | test_replay_marker0 | pasa | verde; además `explain_pose` repite 0.0 mm / 0.0° y esquinas a 0.000000 px |
+| Selftest del panel | panel --selftest (offscreen, utf-8) | pasa | rc 0; sin botón «Probar cámara»; camara_antes=GRIS, tras rc0 VERDE (89.9 fps), tras rc1 ROJO |
+| Cadena sin cambios | git diff --stat 63bbdd8 HEAD (tracker, camera, vision, transport, profiles, data, slicer) | pasa | vacío |
+| §9 fiel al código | 14 referencias a mano; números de §9.2/§9.4 contra perfil, .yml y resultados.md de la 003 | pasa | fx/fy/cx/cy, dist, RMS 0.167/0.154 y criterio 0.5, modo 1280x960 MJPG 90, ventanas 5–35/10, ±40 mm, 61.7/55.2, 89.9/88.8, 40.28, a≈0.12/0.33: coinciden; ver fallo 1 |
+| Ejemplo §9.3 | explain_pose con el comando de §9.3, salida en Claude outputs | pasa | bloque Markdown idéntico al de ARCHITECTURE.md; PNG idéntico byte a byte (sha 19FB38E7…) |
+| --help | export_map y explain_pose | pasa | exit 0 los dos (npx no se corrió) |
+| Imágenes | tamaño y sha | pasa | docs/img/004 = 134.4 KB (< 200); .sha256 = sha del Mermaid actual (e82f2d42…) |
+| Docs | lectura y script | pasa | índices ADR (33) y BACKLOG (41 abiertos) = sus entradas, hasta ADR-033, B58/B59, sin B60, B29 en Cerrados; memory.md 8 010 B; ninguna línea > 2 000; arranque 37 523 B; «ningún spec activo»; P12, resultados.md y ADR-033 dicen lo mismo (0 dudas en §9.2 y §9.4; §9.3 y §9.5 sin lectura) |
+| check_scale sin cámara | test_comprobar_escala + PreviaEnHilo | pasa | 31 pruebas verdes; sin hilos vivos tras cerrar (normal, error, doble cerrar, enviar tras cerrar); con detector lento y tope 0.3 s, `cerrar` vuelve a tiempo y el hilo muere solo al acabar |
+| Mutaciones (copia) | 6 cambios en una copia | pasa | símbolo inexistente, número del bloque, Mermaid sin SVG, quitar el filtro z ≤ 0, corte de velocidad 1→2 Hz y orden del modelo: todos hacen caer alguna prueba |
+
+- Fallos:
+  1. Baja. §9.5 da «banco sin cámara: 0.47–0.53, 5.6–5.8 y 0.17 ms» (gris, detección, pose+filtro); la tabla de la fase 6 de `resultados.md` de la 003 trae medias 0.46–0.50 (gris) y 5.58–5.98 (detect). Las cifras de §9.2 (~0.5 y ~6 ms) valen.
+  2. Baja. `PRUEBAS.md` no tenía la fila de P04 en el índice (anterior a esta ronda); solo añadí la de P05.
+- Dudas técnicas de §9.2 (sin fallo): paso 6, los dos candidatos de IPPE salen de la misma homografía y normalmente quedan los dos delante de la cámara; el descarte con z ≤ 0 (`vision/pose.py`) es una red de seguridad rara, y el texto lo dice («a veces»). El riesgo real es el caso en que gana la solución equivocada y queda delante: el texto lo reconoce, pero no hay medida de cuán frecuente es. Paso 9, «100 mm/s» es por eje; el corte de 7 Hz vale para esa velocidad en un eje.
+- Lo dudoso: no verificado en vivo, por decisión del autor, la prueba con la regla de la 2c (rendimiento de la vista previa de `check_scale`). Los hilos de `PreviaEnHilo` se probaron con detectores simulados, no con tablero real. El proceso `python -m gui.panel --perfil …` vivo (PID 13368, desde las 20:19) no es mío.
+- En vivo: ninguno nuevo.
+- Veredicto: pasa. Detalle: `Claude outputs/pruebas/004-meta/ronda.md`.

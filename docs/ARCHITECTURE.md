@@ -733,7 +733,7 @@ _Desde el 2026-10-26 (meta 004, fase 3)._ Cada número de §9.2 y §9.4, con el 
 | ~90, 22–31 y ~30 fps de cámara | con la caja de luz al máximo y con menos luz | paso 1; glosario | `resultados.md` de la meta 003, fase 7 (90.0 estable con la caja al máximo; 22–31 en nivel 2–3); B50; `docs/CONTEXT.md` §4.20 |
 | 30 y 89.8 fps | las dos corridas de «Verificar IDs» del 2026-10-26 | glosario | B50, «Al día (2026-10-26)», de la fase 2b de la meta 004 en vivo |
 | 5 s | cada cuánto se escriben los fps | paso 1; glosario | `tracker.py:main` (la línea `[FPS]`) y `diagnostics/identify_ids.py:REPORT_EVERY_S` |
-| ~0.5, ~6 y 0.17 ms | gris, detección, y pose con filtro, por frame | pasos 2 y 3 | `resultados.md` de la meta 003, fase 6 (banco sin cámara: 0.47–0.53, 5.6–5.8 y 0.17 ms) |
+| ~0.5, ~6 y 0.17 ms | gris, detección, y pose con filtro, por frame | pasos 2 y 3 | `resultados.md` de la meta 003, fase 6 (medias de las cuatro corridas con cámara, tabla por etapa: 0.46–0.50, 5.58–5.98 y 0.17–0.18 ms; corregido el 2026-10-26 por P05) |
 | 6×6 = 36 casillas, distancia mínima 12 | el diccionario | paso 3 | el nombre `DICT_ARUCO_MIP_36h12` (perfil, `markers.dictionary`): 36 bits y distancia de Hamming 12 |
 | 5 a 35 px, de 10 en 10; 7 px | las ventanas del umbral adaptativo; la del refinado subpíxel | paso 3 | perfil, `markers.detector` (`adaptive_thresh_win_size_min`, `_max`, `_step`; `corner_refinement_win_size`) |
 | ID 0; 80.0 mm | Marker0 y su lado | pasos 3, 4 y 7 | perfil, `markers.list` (`id`, `size_mm`) |
