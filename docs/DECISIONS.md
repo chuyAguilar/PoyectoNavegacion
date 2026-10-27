@@ -44,6 +44,7 @@
 | 029 | El panel detiene el tracker con un botón propio y, sin ventana, por la entrada estándar | Aceptada |
 | 030 | El panel arranca el tracker sin ventana y verifica IDs y cámara con un solo botón | Aceptada |
 | 031 | La meta 003 cierra con el tracker en paquetes, sin ventana a ~90 fps y el techo de Slicer explicado | Aceptada |
+| 032 | El mapa de `ARCHITECTURE.md` §9.1 se exporta con `mermaid-cli`, fuera de `requirements.txt`, y una prueba lo ata al código y al Mermaid | Aceptada |
 
 ---
 
@@ -638,3 +639,16 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 4. **«Se mueve»:** 50 mm por regla salieron como 49.6 mm reales (2026-10-26).
 
 **Consecuencias.** El tracking con las SVPRO queda como base para la siguiente meta: instrumento y punta con un transform nuevo (ADR-025). Queda abierto **B55 (alta):** hay dos Marker0 con el mismo ID, de 80 y de 100 mm, y con el de 100 todas las distancias salen a escala 0.81 sin aviso. No se sabe cuál se usó en cada sesión; las conclusiones de calidad valen en el peor caso (`resultados.md`). Mientras B55 siga abierto, se trabaja con el de 80 mm. Siguen abiertos B48, B49, B50 (media), B51, B52, B53 y B54.
+
+## ADR-032 — El mapa de `ARCHITECTURE.md` §9.1 se exporta con `mermaid-cli`, fuera de `requirements.txt`, y una prueba lo ata al código y al Mermaid
+**Fecha:** 2026-10-26 · **Estado:** Aceptada
+
+**Contexto.** La meta 004 · Cómo funciona el tracker (`specs/004-como-funciona/`) pide el mapa del proyecto como Mermaid (la fuente, que se diffea) y como imagen exportada (P1 = c). La regla del método es que solo vale lo que declara `codigo/requirements.txt` (`CLAUDE.md` §2), y exportar Mermaid necesita una herramienta de Node.js. La primera imagen, un PNG de ~570 × 1400 px, no se leía; el autor pidió SVG, apaisado y solo con la cadena del tracking (P9).
+
+**Decisión.**
+1. El Mermaid de §9.1 es la fuente. La imagen `docs/img/004/mapa_proyecto.svg` se exporta con `@mermaid-js/mermaid-cli@12.0.0` por `npx`, con el Edge instalado (P8 = a), mediante `python -m diagnostics.export_map`. Es una herramienta de documentación, no una dependencia del sistema: va anotada en «Notas» de `requirements.txt`, como Slicer.
+2. La exportación usa Arial y `htmlLabels: false`, y quita las fuentes incrustadas, para que el texto sea texto SVG y `docs/img/004/` pese menos de 200 KB (P6). Si pasa de ese tope, `export_map` sale sin escribir.
+3. El sha256 del bloque Mermaid se guarda junto a la imagen y la suite lo compara. Las referencias de §9 van como `ruta.py:Símbolo` y la suite comprueba que existen (`tests/test_como_funciona.py`).
+4. Los agentes no corren `npx` (permiso negado): reexporta el autor, con el comando de `diagnostics/export_map.py`.
+
+**Consecuencias.** Si se renombra un símbolo del mapa o se edita el Mermaid sin reexportar, la suite falla. Exportar requiere Node.js y Edge en la máquina; ejecutar el tracker, no. Resultado de la fase 1: SVG de 99 584 bytes, 20 cajas, 0 referencias inexistentes, suite 572 de 572.

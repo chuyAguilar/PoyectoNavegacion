@@ -6,12 +6,34 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-25 (§3.2, §3.5, §3.6, §3.7 y §6: meta 003, fase 8c · Cierre de la meta: el modo sin ventana va al ritmo de la cámara (~89–90 fps) y es el del botón principal del panel; el envío sale en ráfagas al tic de Windows y Slicer recibe como mucho ~65 Hz, techo de Slicer (fase 8b, R2; B54); `receive_marker0.py` da los intervalos y acepta otro nodo; `diagnostics/igtl_rate.py`; `tracker.py` 395 líneas). Antes, 2026-10-25 (§3.7: meta 003, fase 8a · Un botón por modo en el panel, sin cámara: «Arrancar tracker» lanza el tracker sin ventana y «Arrancar tracker con ventana» el de siempre; «Verificar IDs y colocar la cámara» reemplaza a «Verificar IDs» y a «Vista previa»; `identify_ids` lee por `FrameGrabber` y dibuja la cruz y los fps de la cámara también con detección; la verificación en vivo, al empezar la sesión de la 8b).
+> _Última actualización: 2026-10-26 (índice nuevo; §2, §6 y §9 nueva: meta 004 · Cómo funciona el tracker, fase 1 · El mapa del proyecto: §9.1 con el mapa en Mermaid de archivo por caja y lo que pasa por cada flecha, de izquierda a derecha, su imagen SVG exportada con `diagnostics/export_map.py` (P9) y la prueba de fidelidad `tests/test_como_funciona.py`; §9.2–§9.5 se escriben en las fases 2 y 3)._
+> _Antes, 2026-10-25 (§3.2, §3.5, §3.6, §3.7 y §6: meta 003, fase 8c · Cierre de la meta: el modo sin ventana va al ritmo de la cámara (~89–90 fps) y es el del botón principal del panel; el envío sale en ráfagas al tic de Windows y Slicer recibe como mucho ~65 Hz, techo de Slicer (fase 8b, R2; B54); `receive_marker0.py` da los intervalos y acepta otro nodo; `diagnostics/igtl_rate.py`; `tracker.py` 395 líneas). Antes, 2026-10-25 (§3.7: meta 003, fase 8a · Un botón por modo en el panel, sin cámara: «Arrancar tracker» lanza el tracker sin ventana y «Arrancar tracker con ventana» el de siempre; «Verificar IDs y colocar la cámara» reemplaza a «Verificar IDs» y a «Vista previa»; `identify_ids` lee por `FrameGrabber` y dibuja la cruz y los fps de la cámara también con detección; la verificación en vivo, al empezar la sesión de la 8b).
 > Antes, 2026-10-25 (§3.2 y §3.7: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, sin cámara: `tracker --stop-stdin`; el panel gana «Vista previa (colocar la cámara)», «Arrancar tracker sin ventana» y «Detener tracker», y detiene el tracker sin ventana por la entrada estándar; `identify_ids` con `--timeout` obligatorio, `--no-detect` y cierre en un `finally`; la verificación en vivo está pendiente). Antes, 2026-10-25 (§3.1, §3.2, §3.5 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada: la captura en un hilo con el último frame (`camera/grabber.py`), el envío sin esperar (0.02 ms en vivo) y la espera a Slicer con tope y aborto; ADR-028. Los perfiles gs1/gs2 siguen pidiendo 90 fps: pedir 60 dio 29, la cámara no tiene modo de 60 a 1280×960 MJPG; `clarify.md` P11). Antes, 2026-10-24 (§3.2, §3.7 y §6: meta 003, fase 6 · Dónde se va el tiempo por frame: `tracker --timing <json>` cronometra cada etapa del bucle con `diagnostics.pose_log.Stopwatch`, apagado por defecto; `diagnostics/measure_window.py` cronometra la ventana sin cámara). Antes, 2026-10-24 (§2, §3, §4, §6 y notas en §5, §7 y §8: meta 003, fase 5 · Documentación del paso 1: la topología, los componentes y la cadena se describen con la estructura nueva (`camera`, `vision`, `transport`, `profiles`, `gui`, `calibration`, `diagnostics`, `slicer`; `tracker.py` solo el bucle) y solo Marker0; lo del dodecaedro, la Femto y el contexto doctor queda como referencia archivada).
 > Antes, 2026-10-24 (§6: meta 003, fase 4 · El tracker en piezas: `vision\` (detección, pose, 1-Euro, `MarkerTracker`) y `transport\` (`IgtlSender`); `tracker.py` queda solo con el bucle; la suite niega la cámara real y el servidor pyigtl). Antes, 2026-10-23 (§6: meta 003, fase 3 · La estructura nueva y el archivo: el código pasa de `codigo\iter4\` a paquetes por responsabilidad bajo `codigo\` (`camera`, `calibration`, `diagnostics`, `gui`, `profiles`, `data`; `tracker.py` suelto), se lanza con `python -m` y las rutas de un perfil son relativas a `codigo\` (ADR-027); el dodecaedro, la Femto y los perfiles viejos van a `codigo\historico\iter4\`; §3 y §4 se ponen al día en la fase 5). Antes, 2026-10-23 (§3.3, §4 y §6: meta 003, fase 2 · La cadena solo con Marker0: los perfiles gs1 y gs2 ya no definen `rigid_bodies`, el tracker publica solo `Marker0ToTracker` (ADR-026), `gui/estado.py` no exige la geometría si el perfil no la define, `codigo/slicer/receive_marker0.py` nuevo y el manual del dodecaedro en `documentos/historico/`). Antes, 2026-10-23 (§6: meta 003, fase 1 · Línea base de Marker0: `pose_log.py`, opciones de grabación del tracker y replay de Marker0). Antes, 2026-10-23 (§3.1, §3.3, §6 y §8: meta 002, fase 6 · Comparación contra P02 y archivo de los perfiles viejos: `tracker_config_doctor.yaml` y `globalshutter.yml` pasan a `iter4/data/historico/`; el tracker no cambió). 
 > Antes, 2026-10-23 (§3.4, §3.7 y §6: meta 002, fase 5 · Calibración de la cámara 2: `intrinsecos_gs2_1280x960.yml`; la ventana de calibración del panel en tres pasos, `gui/calibracion.py` y `data/tablero_calibracion.yaml`; `comprobar_escala.py` juzga por medias y recalcula con `--desde-json`). Antes, 2026-10-22 (§3.4, §3.7 y §6: meta 002, fase 4: `calibrar_camara.py` reescrito y `comprobar_escala.py` nuevo; el `.yml` de intrínsecos de cada cámara y su veredicto; `intrinsecos_gs1_1280x960.yml`). Antes, 2026-10-22 (§6: meta 002, fase 3: `medir_modos.py` nuevo; los perfiles gs1/gs2 quedan en 1280×960 MJPG 90 fps y 0.977 ms). Antes, 2026-10-22 (§3.1 y §6: meta 002, fase 2b: `camera_backend.py` abre la webcam por el puerto, con marca, ajustes y comprobación de tamaño; perfiles `tracker_config_gs1.yaml` y `_gs2.yaml`; contrato de la aceleración HW de MSMF). Antes, 2026-10-21 (§6: meta 002, fase 2a: `ajustes_camara.py` nuevo; `camaras_uvc.py` identifica por la ruta del puerto USB; `sondear_camara.py` fija y lee por DSHOW). Antes, 2026-10-20 (§6: `camaras_uvc.py` y `sondear_camara.py`, meta 002, fase 1; corrección de la sonda: no escribe controles por MSMF ni si no se le pide). Antes, 2026-10-19 (§6: la suite y el replay, los diagnósticos fuera de `iter4\` y `PROJECT_BRIEF.md` y `briefs\` en `docs\history\`; §3.4: el respaldo de la punta). Estado: retomando tras pausa; vía activa =
 > tracking óptico + registro **paired-point**. La rama de nube de puntos / Femto
 > depth está **en stand by** (ver `CONTEXT.md` y `DECISIONS.md`)._
+
+---
+
+## Índice
+
+_Desde el 2026-10-26 (meta 004, fase 1). Una línea por sección; se lee primero el índice y después solo la sección que haga falta (`CLAUDE.md` §1)._
+
+- **§1 · Propósito del sistema:** qué se navega y con qué (instrumento, anatomía, Slicer).
+- **§2 · Topología:** el dibujo de un vistazo, 6 cajas, de Marker0 a Slicer.
+- **§3 · Componentes:** §3.1 la cámara (`camera/`), §3.2 el bucle del tracker y `vision/`, §3.3 lo que se rastrea, §3.4 los artefactos de calibración, §3.5 el transporte OpenIGTLink y el techo de ~65 Hz, §3.6 Slicer, §3.7 el panel y los scripts de calibración y diagnóstico.
+- **§4 · Flujo de datos y cadena de transforms en Slicer:** hoy solo `Marker0ToTracker`; la cadena anterior como referencia.
+- **§5 · Registro paciente ↔ modelo:** el paired-point de antes, como referencia.
+- **§6 · Estructura del repositorio:** el árbol de carpetas y la comprobación de «no cambió».
+- **§7 · Frames de coordenadas y convenciones:** el frame de la cámara, la convención de esquinas, LPS↔RAS.
+- **§8 · Decisiones de configuración (2026-08-13):** reemplazadas; quedan como registro.
+- **§9 · Cómo funciona: de la cámara a Slicer** (meta 004), para el autor:
+  - **§9.1 · El mapa del proyecto:** el panel, el arranque, el bucle por frame y Slicer, con el archivo o la función de cada caja y lo que pasa por cada flecha; su imagen exportada.
+  - **§9.2 · De la detección a la pose, paso a paso:** la explicación en español llano (fase 3).
+  - **§9.3 · Un ejemplo resuelto con un frame real:** los números de un frame de gs1 de principio a fin (fase 2).
+  - **§9.4 · Glosario:** los términos de los logs y los docs (fase 3).
+  - **§9.5 · De dónde sale cada número:** la fuente de cada número de §9 (fase 3).
 
 ---
 
@@ -53,6 +75,8 @@ y filtra la posición → `transport` la envía como `Marker0ToTracker` → Slic
 recibe en la raíz de la escena. El instrumento con su punta, el registro con el
 hueso y la navegación sobre los cortes se rehacen en sus metas (ADR-025, ADR-026;
 B40, B41); lo que hacían antes está en §4 y en `documentos/historico/MANUAL_simplificado.md`.
+
+El mapa completo, con el archivo o la función de cada caja, el panel y el arranque, y lo que pasa por cada flecha (un frame, cuatro esquinas en px, una matriz 4×4 en mm), está en §9.1.
 
 ## 3. Componentes
 
@@ -366,8 +390,9 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 ├── docs\
 │   ├── constitution.md, BACKLOG.md, PRUEBAS.md
 │   ├── ARCHITECTURE.md  DECISIONS.md  CONTEXT.md   # ← los 3 MVD
+│   ├── img\004\                    # figuras de §9 (meta 004): mapa_proyecto.svg, exportado del Mermaid de §9.1 con diagnostics\export_map.py, y mapa_proyecto.sha256 (el sha del Mermaid y la versión de mermaid-cli); < 200 KB en total
 │   └── history\                    # copia literal de lo hecho, no se edita (PROJECT_BRIEF.md y briefs\ desde 2026-10-19)
-├── specs\                          # _plantilla\ (spec, plan, clarify, tasks) y una carpeta por meta: 001-limpieza, 002-calibracion-camaras, 003-arquitectura-tracker
+├── specs\                          # _plantilla\ (spec, plan, clarify, tasks) y una carpeta por meta: 001-limpieza, 002-calibracion-camaras, 003-arquitectura-tracker, 004-como-funciona
 ├── .claude\
 │   ├── settings.json               # permisos del método
 │   ├── agents\                     # direccion, planificacion, desarrollo, pruebas
@@ -383,11 +408,11 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   ├── data\                       # intrinsecos_gs1/gs2_1280x960.yml y tablero_calibracion.yaml (nada más)
 │   ├── camera\                     # grabber.py (`FrameGrabber`: hilo de captura con el último frame; `SyncGrabber`; fase 7); __init__ importa camera.uvc (apaga la aceleración HW de MSMF); backend.py (WebcamBackend: puerto, marca, controles, tamaño; `femtobolt` aborta: archivada), uvc.py (enumeración y ruta del puerto USB), controls.py (camera.controls por DSHOW)
 │   ├── calibration\                # calibrate_camera.py (intrínsecos con tablero, detectores clasico|sb|ambos), check_scale.py (escala contra regla)
-│   ├── diagnostics\                # probe_camera.py (sonda: modos, puertos, --fijar), measure_modes.py (--enfocar, exposiciones, modos, --elegir), identify_ids.py, pose_log.py (graba y resume poses; `Stopwatch` para --timing), measure_window.py (la ventana sin cámara; fase 6), igtl_rate.py (receptor OpenIGTLink de control y banco de ráfagas sin cámara; fase 8b, 2026-10-25)
+│   ├── diagnostics\                # probe_camera.py (sonda: modos, puertos, --fijar), measure_modes.py (--enfocar, exposiciones, modos, --elegir), identify_ids.py, pose_log.py (graba y resume poses; `Stopwatch` para --timing), measure_window.py (la ventana sin cámara; fase 6), igtl_rate.py (receptor OpenIGTLink de control y banco de ráfagas sin cámara; fase 8b, 2026-10-25), export_map.py (exporta a SVG el mapa de §9.1 con mermaid-cli, Node.js fuera del venv, y escribe su .sha256; meta 004, fase 1, 2026-10-26)
 │   ├── gui\                        # panel PySide6 (`python -m gui.panel`): panel.py, recipes.py (argv con -m), processes.py, status.py (semáforos: entorno, config, intrínsecos, puerto, cámara), calibration_window.py, profile_editor.py, camera_probe.py
 │   ├── slicer\                     # scripts para la consola Python de Slicer: receive_marker0.py (cuenta los Hz de Marker0ToTracker y avisa si existe DodecaedroToTracker; desde la fase 8b, los intervalos entre actualizaciones y `name=` para otro nodo) y README.md (2026-10-23, meta 003 fase 2)
 │   ├── tests\                      # suite pytest; conftest.py da rutas (PROFILES_DIR, DATA_DIR, HISTORICO_DIR…) y el fixture autouse `no_real_camera` (niega `cv2.VideoCapture`, la enumeración de cámaras, `WebcamBackend.open` sin `abrir` falso y el servidor pyigtl; B34); synthetic.py: Marker0 proyectado, cámara y emisor falsos (2026-10-24, fase 4)
-│   │   ├── test_*.py                           # vision, transport, tracker_loop, profiles, no_real_camera, compilan (con avisos como errores), gui_headless (selftest del panel), replay_marker0, pose_log, timing (fase 6), grabber (fase 7), identify_ids (fases 7b y 8a), igtl_rate (fase 8b), status, camaras_uvc, ajustes_camara, sondear_camara, camera_backend, aceleracion_msmf, calibrar_camara, comprobar_escala, medir_modos, panel/ventana de calibración (sin cámara)
+│   │   ├── test_*.py                           # vision, transport, tracker_loop, profiles, no_real_camera, compilan (con avisos como errores), gui_headless (selftest del panel), replay_marker0, pose_log, timing (fase 6), grabber (fase 7), identify_ids (fases 7b y 8a), igtl_rate (fase 8b), como_funciona (meta 004: la fidelidad de §9 al código, el sha del mapa y el tamaño de sus imágenes), status, camaras_uvc, ajustes_camara, sondear_camara, camera_backend, aceleracion_msmf, calibrar_camara, comprobar_escala, medir_modos, panel/ventana de calibración (sin cámara)
 │   │   ├── replay_util.py                      # replay de Marker0 (reference-marker0, copy-frames; `python -m tests.replay_util`); pasa las esquinas grabadas por `MarkerTracker.process_corners` (el replay del dodecaedro se archivó, fase 4)
 │   │   └── data\                               # marker0_gs1/gs2: grabación en vivo, referencia y 3 frames (2.17 MB, versionados)
 │   └── historico\                  # snapshots de iteraciones previas; no se mantienen (iter1, iter2, iter2_callejones_sin_salida, iter3 y:)
@@ -452,3 +477,123 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
   aparte (marker 16.58 mm). Este documento describe la máquina **BigDaddy** con el
   dodecaedro **v2 (IDs 3–13)**; si el otro equipo sigue vivo, se documenta aparte.
   (Confirmar cuando aplique — no bloquea.)
+
+<!-- como-funciona:inicio -->
+## 9. Cómo funciona: de la cámara a Slicer
+
+_Desde el 2026-10-26 (meta 004 · Cómo funciona el tracker; `specs/004-como-funciona/`)._ Esta sección es el «cómo y por qué», para el autor; §1–§8 siguen siendo el «qué» (contratos, opciones, números de rendimiento, árbol) y aquí se citan por sección, no se copian. Describe lo que hay en HEAD al empezar la meta 004: solo Marker0 y `Marker0ToTracker` (ADR-026).
+
+**La regla de las referencias:** dentro de esta sección, toda referencia a código va como `<ruta>.py` o `<ruta>.py:<Símbolo>`, con la ruta relativa a `codigo/` (el símbolo puede ser `<Clase>.<método>`); un perfil o un `.yml` de datos, como `<ruta>.yaml` o `<ruta>.yml`. `tests/test_como_funciona.py` comprueba que cada una existe en el árbol vivo (fuera de `historico/`) y que el símbolo está definido; si algo se renombra, la prueba falla.
+
+### 9.1 El mapa del proyecto
+
+Cuatro grupos, de izquierda a derecha, y dentro de cada uno de arriba abajo: **1** el panel, lo que pulsa el autor; **2** el arranque del tracker, que pasa una vez; **3** el bucle, que pasa en cada frame; Slicer; **4** lo que va aparte (la calibración que alimenta la cadena y los diagnósticos que la miran). Las flechas llenas son el camino del botón «Arrancar tracker»; las de puntos, lo que entra de lado o lo que es opcional. Dentro de un grupo, las flechas van de caja a caja; entre grupos, de grupo a grupo, porque Mermaid solo respeta el «de arriba abajo» de un grupo si ninguna flecha de fuera llega a una de sus cajas. Qué caja entrega y cuál recibe en cada una de esas flechas lo dice la tabla de abajo (la columna «Entra»). Cada caja dice qué hace y, en su última línea, el archivo y la función que lo hace.
+
+<!-- mapa:inicio -->
+```mermaid
+flowchart LR
+    subgraph S1["1 · El panel: lo que pulsa el autor"]
+        direction TB
+        PANEL["Panel, ventana PySide6<br/>gui/panel.py:Panel"]
+        REC["Receta del tracker sin ventana<br/>gui/recipes.py:receta_tracker_sin_ventana"]
+        LANZ["Proceso hijo, MSMF sin aceleración HW<br/>gui/processes.py:Lanzador.lanzar"]
+    end
+    subgraph S2["2 · Arranque del tracker, una vez"]
+        direction TB
+        PERF["Perfil de la cámara, con sus rutas<br/>profiles/__init__.py:load"]
+        ESPERA["Abre el puerto 18944 y espera a Slicer, tope 30 s<br/>transport/igtl.py:IgtlSender.wait_for_client"]
+        CAM["Abre la cámara por su puerto USB y su marca<br/>camera/backend.py:WebcamBackend.open"]
+        HILO["Hilo de captura: se queda con el último frame<br/>camera/grabber.py:FrameGrabber"]
+    end
+    subgraph S3["3 · Por cada frame: el bucle de tracker.py:main"]
+        direction TB
+        GRIS["Pasa el frame a gris<br/>tracker.py:main"]
+        DET["Detección ArUco con lista blanca<br/>vision/detection.py:detect"]
+        POSE["Pose con IPPE_SQUARE, z > 0<br/>vision/pose.py:estimate_single_pose"]
+        FILT["1-Euro de la posición<br/>vision/filtering.py:PositionFilter"]
+        MAT["Matriz 4×4<br/>vision/pose.py:rvec_tvec_to_matrix"]
+        ENVIO["Envío sin esperar<br/>transport/igtl.py:IgtlSender.send"]
+        VENT["Solo con ventana: contorno y ejes<br/>tracker.py:draw_poses"]
+    end
+    SLICER["3D Slicer: nodo Marker0ToTracker en la raíz<br/>slicer/receive_marker0.py:ensure_connector"]
+    subgraph S4["4 · Aparte: calibración y diagnóstico"]
+        direction TB
+        CALIB["Calibración con tablero<br/>calibration/calibrate_camera.py:main"]
+        YML["Intrínsecos de la cámara 1<br/>data/intrinsecos_gs1_1280x960.yml"]
+        IDS["Verificar IDs y colocar la cámara<br/>diagnostics/identify_ids.py:main"]
+        LOG["Grabación de lo enviado<br/>diagnostics/pose_log.py:PoseLog"]
+        HZ["Hz que recibe Slicer<br/>slicer/receive_marker0.py:run"]
+    end
+
+    PANEL -->|"«Arrancar tracker»"| REC
+    REC -->|"argv: el perfil, sin ventana, parada por stdin"| LANZ
+    PERF -->|"camera, markers, filtering, igtlink"| ESPERA
+    ESPERA -->|"Slicer conectado"| CAM
+    CAM -->|"frames BGR 1280×960"| HILO
+    GRIS -->|"imagen gris 1280×960"| DET
+    DET -->|"4 esquinas en px, c0 a c3, ID 0"| POSE
+    POSE -->|"rvec en rad, tvec en mm"| FILT
+    FILT -->|"tvec filtrada, rvec sin filtrar"| MAT
+    MAT -->|"4×4 en mm"| ENVIO
+    MAT -.-> VENT
+    CALIB -->|"K, dist y RMS de reproyección"| YML
+    YML ~~~ IDS
+    IDS ~~~ LOG
+    LOG ~~~ HZ
+
+    S1 -->|"proceso python -m tracker"| S2
+    S2 -->|"el último frame y su hora de captura;<br/>K 3×3 y dist, 5 coeficientes, para la pose"| S3
+    S3 -->|"Marker0ToTracker por OpenIGTLink,<br/>TCP 18944, float32"| SLICER
+    SLICER -.->|"cuenta las actualizaciones"| S4
+    S1 -.->|"«Verificar IDs y colocar la cámara»"| S4
+    S3 -.->|"con record: esquinas, tiempos y 4×4"| S4
+    S4 -.->|"K y dist del .yml:<br/>camera.calibration_file del perfil"| S2
+```
+<!-- mapa:fin -->
+
+La misma figura, exportada en SVG para los visores que no dibujan Mermaid (vectorial: se lee a cualquier zoom; P9). Se regenera con `diagnostics/export_map.py:main` cada vez que cambia el bloque de arriba y nunca se edita a mano; su `.sha256` guarda el sha del bloque y la versión de `mermaid-cli`, y la suite avisa si el bloque cambió y la imagen no:
+
+![El mapa del proyecto, exportado del Mermaid de arriba](img/004/mapa_proyecto.svg)
+
+**Lo que queda fuera del mapa, a propósito:** el mapa es solo la cadena del tracking. No están los demás botones del panel (probar cámara; calibrar cámara: enfocar, tablero y escala; volver a medir el tablero; detener tracker y detener proceso), los demás diagnósticos (`measure_modes`, `measure_window`, `igtl_rate`, `probe_camera`) ni lo archivado en `historico/`.
+
+**Las cajas, una por una.** Lo que entra y lo que sale de cada una; el detalle de cada contrato está en la sección que se cita.
+
+| Caja | Archivo y función | Entra | Sale |
+|---|---|---|---|
+| Panel | `gui/panel.py:Panel`, botón «Arrancar tracker» en `gui/panel.py:Panel._accion_tracker` (pregunta antes por Slicer) | el perfil elegido en la lista | la receta del tracker sin ventana (§3.7) |
+| Receta | `gui/recipes.py:receta_tracker_sin_ventana`; con ventana, `gui/recipes.py:receta_tracker` | la ruta del perfil | el argv `python -u -m tracker --config <perfil> --no-window --stop-stdin` |
+| Proceso hijo | `gui/processes.py:Lanzador.lanzar`, con el entorno de `gui/processes.py:entorno_hijo` | el argv | el proceso del tracker, con la aceleración HW de MSMF apagada (§3.1) y la entrada estándar en tubería para pararlo |
+| Perfil | `profiles/__init__.py:load`, sobre `profiles/tracker_config_gs1.yaml` | la ruta del perfil | el perfil leído, con sus rutas resueltas desde `codigo/` (§3.2) |
+| Espera a Slicer | `transport/igtl.py:IgtlSender.wait_for_client` | el puerto del perfil | Slicer conectado, o el tracker aborta con código 3 sin abrir la cámara (§3.5) |
+| Cámara | `camera/backend.py:create_backend` y `camera/backend.py:WebcamBackend.open`; K y dist con `camera/backend.py:WebcamBackend.get_intrinsics` | la sección `camera` del perfil y su `.yml` | la cámara abierta, y K y dist (§3.1) |
+| Hilo de captura | `camera/grabber.py:FrameGrabber`, que el bucle lee con `camera/grabber.py:FrameGrabber.next_frame` | los frames de la cámara | el último frame BGR y su hora de captura; los que el bucle no alcanza se cuentan como saltados (§3.2) |
+| Gris | `tracker.py:main` | el frame BGR | la imagen en gris, del mismo tamaño |
+| Detección | `vision/tracking.py:MarkerTracker.detect`, que llama a `vision/detection.py:detect` con el detector de `vision/detection.py:create_detector` | la imagen en gris | por cada marker de la lista blanca, su ID y sus 4 esquinas en px, en el orden de §7 |
+| Pose | `vision/tracking.py:MarkerTracker.process_corners`, que llama a `vision/pose.py:estimate_single_pose` con las esquinas del modelo de `vision/pose.py:build_object_points` | las 4 esquinas, el lado del marker en mm, K y dist | rvec (la rotación, en rad) y tvec (la posición, en mm), o nada si la solución queda detrás de la cámara |
+| Filtro | `vision/filtering.py:PositionFilter.filter`, un `vision/filtering.py:OneEuroFilter` por eje | tvec y la hora del frame | tvec filtrada; la orientación no se filtra (§3.2) |
+| Matriz | `vision/pose.py:rvec_tvec_to_matrix` | rvec y tvec | la 4×4 de Marker0 en el frame de la cámara, en mm |
+| Envío | `transport/igtl.py:IgtlSender.send` | la 4×4 y el nombre `Marker0ToTracker` | el mensaje OpenIGTLink, sin esperar (§3.5) |
+| Ventana | `tracker.py:draw_poses` | el frame, las poses, K y dist | el contorno y los ejes dibujados; solo con ventana (§3.2) |
+| Slicer | `slicer/receive_marker0.py:ensure_connector` (en la consola Python de Slicer) | los mensajes del puerto 18944 | el nodo `Marker0ToTracker` en la raíz de la escena (§3.6, §4) |
+| Calibración | `calibration/calibrate_camera.py:main` | las vistas del tablero | el `.yml` de intrínsecos, `data/intrinsecos_gs1_1280x960.yml` para la cámara 1 (§3.4) |
+| Verificar IDs | `diagnostics/identify_ids.py:main`, por `gui/recipes.py:receta_identificar_ids` | la cámara del perfil | los IDs que ve, la cruz del centro y los fps de la cámara (§3.7) |
+| Grabación | `diagnostics/pose_log.py:PoseLog`, con la opción `--record` del tracker | lo de cada frame | el `.npz` con tiempos, esquinas y poses enviadas; lo usa el replay (§6) |
+| Hz en Slicer | `slicer/receive_marker0.py:run` | las actualizaciones del nodo | los Hz y los intervalos entre actualizaciones (§3.5, §3.6) |
+
+### 9.2 De la detección a la pose, paso a paso
+
+_Se escribe en la fase 3 de la meta 004._
+
+### 9.3 Un ejemplo resuelto con un frame real
+
+_Se escribe en la fase 2 de la meta 004._
+
+### 9.4 Glosario
+
+_Se escribe en la fase 3 de la meta 004._
+
+### 9.5 De dónde sale cada número
+
+_Se escribe en la fase 3 de la meta 004._
+<!-- como-funciona:fin -->

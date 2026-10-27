@@ -39,3 +39,6 @@ matplotlib>=3.7            # Diagnostico de poses, plots de pivote.
 # - 3D Slicer NO se instala via pip. Bajar desde https://download.slicer.org
 # - Modulos SlicerIGT: instalar desde Extensions Manager dentro de Slicer.
 # - Driver Orbbec (si la camara no aparece): https://www.orbbec.com/developers/orbbec-sdk/
+# - El mapa de docs/ARCHITECTURE.md seccion 9.1 se exporta a SVG con @mermaid-js/mermaid-cli@12.0.0
+#   (Node.js, fuera del venv; por npx, sin instalar en el repo; ADR-032 propuesto, meta 004):
+#   python -m diagnostics.export_map (ver su docstring). Solo hace falta al cambiar el Mermaid.

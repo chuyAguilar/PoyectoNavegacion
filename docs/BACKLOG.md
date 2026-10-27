@@ -43,7 +43,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B52 | «Detener tracker» con el tracker con ventana sigue dependiendo de encontrar la ventana por su título | Baja | — |
 | B53 | Con `--stop-stdin`, la parada no se atiende mientras el tracker espera a Slicer | Baja | — |
 | B54 | Slicer recibe como mucho ~65 Hz de Marker0, aunque el tracker envíe ~90 | Baja | — |
-| B55 | Con el Marker0 de 100 mm y el perfil en 80, todas las distancias salen a escala 0.81 sin aviso | Alta | — |
+| B55 | Con el Marker0 de 100 mm y el perfil en 80, todas las distancias salen a escala 0.81 sin aviso | Media | — |
+| B56 | `slicer/receive_marker0.py` dice que `pyigtl` bloquea si Slicer no está conectado | Baja | — |
+| B57 | El `.json` de procedencia de las referencias del replay nombra rutas de `iter4/` | Baja | — |
 
 ## Abiertos
 
@@ -325,7 +327,22 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** se vio al cerrar la meta; arreglarlo es una decisión (cuál se usa) y quizá código. Mientras tanto, la regla es usar el Marker0 de 80 mm.
 - **De dónde:** fase 8c, 2026-10-26 (`specs/003-*/resultados.md`).
 - **Qué haría falta:** decidir con cuál se trabaja y guardar o marcar el otro; o darle otro ID al de 100 (ArUco permite IDs distintos) y su `size_mm` en el perfil, para que el tracker no pueda confundirlos; o una comprobación de escala en «Verificar IDs y colocar la cámara» con una distancia conocida.
-- **Prioridad:** alta (puede dar un resultado equivocado sin aviso).
+- **Decisión del autor (2026-10-26):** se trabaja con el Marker0 de 80 mm (el de los perfiles) y el de 100 se guarda y se marca. Con eso el riesgo queda en el procedimiento, no en el código.
+- **Prioridad:** media (era alta; baja a media con la decisión del autor). Vuelve a alta si hace falta usar otro tamaño: entonces, otro ID y su `size_mm`.
+
+### B56 · `slicer/receive_marker0.py` dice que `pyigtl` bloquea si Slicer no está conectado
+- **Qué:** el docstring de `codigo/slicer/receive_marker0.py` cita `CONTEXT.md` §4.5 de antes de ADR-028 («pyigtl bloquea el bucle»). Desde la fase 7 de la meta 003 · Arquitectura y optimización del tracker, el tracker espera a Slicer con tope (`--slicer-timeout`, 30 s) y, si no llega, aborta con código 3 sin abrir la cámara.
+- **Por qué queda:** es un archivo de la cadena (principio 6) y la meta 004 · Cómo funciona el tracker no la toca; solo despista al leerlo, no cambia nada en vivo.
+- **De dónde:** visto al planear la meta 004 (2026-10-26, `specs/004-como-funciona/plan.md`); anotado en su fase 1 · El mapa del proyecto.
+- **Qué haría falta:** corregir el docstring en una fase que ya toque `codigo/slicer/` (p. ej. la del instrumento, B40), con su verificación de la cadena.
+- **Prioridad:** baja.
+
+### B57 · El `.json` de procedencia de las referencias del replay nombra rutas de `iter4/`
+- **Qué:** `codigo/tests/data/marker0_gs{1,2}_reference.json` dicen `profile: iter4/…` y `calibration_file: …\codigo\iter4\data\…`, rutas de antes de ADR-027. Los sha256 que guardan siguen valiendo (son los de `data/intrinsecos_gs{1,2}_1280x960.yml`).
+- **Por qué queda:** regenerar la referencia es un cambio visible y a propósito (`python -m tests.replay_util reference-marker0 … --overwrite`); la meta 004 · Cómo funciona el tracker no toca `tests/data/`. Solo despista.
+- **De dónde:** visto al planear la meta 004 (2026-10-26, `specs/004-como-funciona/plan.md`); anotado en su fase 1 · El mapa del proyecto.
+- **Qué haría falta:** al regenerar la referencia por otro motivo, comprobar que el `.json` nuevo nombra las rutas de hoy; o una nota en `tests/data/` que diga que las rutas son de entonces.
+- **Prioridad:** baja.
 
 ## Cerrados
 
