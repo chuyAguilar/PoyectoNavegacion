@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-26 (meta 004 · Cómo funciona el tracker, fase 2c · «Comprobar escala con regla» sin congelarse y con vista previa fluida: hecha, a falta del commit y de la prueba en vivo con la regla)._
+_Actualizado: 2026-10-26 (meta 004 · Cómo funciona el tracker: fases 1, 2, 2b y 2c commiteadas; sigue la fase 3 · La explicación y el glosario)._
 
 Spec activo: `specs/004-como-funciona/`
 
@@ -10,9 +10,7 @@ Spec activo: `specs/004-como-funciona/`
 - **Meta 001 · limpieza y orden del repo:** cerrada el 2026-10-19 (ADR-021; P01 «pasa»).
 - **Meta 002 · Calibración de las cámaras global shutter:** cerrada el 2026-10-23 (ADR-023 a ADR-025; P03 «pasa»). Detalle en `specs/002-*/`.
 - **Meta 003 · Arquitectura y optimización del tracker:** cerrada el 2026-10-26 (ADR-026 a ADR-031; P04 «pasa»; fases en `specs/003-*/tasks.md`, de `b3679ca` a `26e724e`). Detalle en `specs/003-*/resultados.md`.
-- **Meta 004 · Cómo funciona el tracker** (plan autorizado el 2026-10-26; P1–P11 contestadas). La fase 1 · El mapa del proyecto está commiteada (`f3a2d4b`): `docs/ARCHITECTURE.md` §9.1 (el mapa en Mermaid, 20 cajas) y `docs/img/004/mapa_proyecto.svg` (99 584 bytes), con `diagnostics/export_map.py`; si se edita el Mermaid, reexportar con el comando de `Claude outputs/fases/004/fase-1.md`, «Peso del SVG» (ADR-032).
-- **Fase 2 · El ejemplo resuelto con un frame real:** commiteada (`533989a`). `codigo/diagnostics/explain_pose.py` (`explain_frame`, `format_markdown`, `draw_example`; CLI con argumentos explícitos) y §9.3 de `ARCHITECTURE.md`: el frame 480 de gs1 con el marker de 98.6 mm, el bloque generado entre las marcas `ejemplo` y la figura `docs/img/004/marker0_gs1_frame_00480.png` (34 748 bytes). En los 6 frames (gs1 y gs2 × 240, 480, 720): esquinas = grabadas a 0.0 px, 4×4 = enviada = replay a 0.0 mm / 0.0°, cociente de escala 1.2325, reproyección 0.053–0.204 px. Si se cambia `format_markdown`, regenerar el bloque con el comando de §9.3 (la prueba lo exige). Falta que el autor lea el ejemplo antes de la fase 3.
-- **Fases 2b y 2c, añadidas por el autor (P10, P11), solo `gui/` y `calibration/`, no la cadena.** **Fase 2b · «Verificar IDs y colocar la cámara» marca la cámara en verde y se quita «Probar cámara»: commiteada (`54c48a7`).** `gui/status.py:chequeo_camara_tras_receta` pone el semáforo «Cámara» al terminar «Verificar IDs» (código 0: verde con los últimos fps; otro: rojo con la línea `[ERROR]` o la del traceback); el botón de la sonda corta se fue del panel (`camera_probe.py` y su receta quedan para la CLI). El selftest simula los dos finales. B29 cerrado. En vivo (2026-10-26): «Cámara» en verde; la primera corrida dio 30 fps con la caja al máximo y la segunda 89.8 (el bajón, a B50, sin investigar). **Fase 2c · «Comprobar escala con regla» sin congelarse y con vista previa fluida: hecha, a falta del commit** (2026-10-26). `calibration/check_scale.py`: la vista previa detecta a la mitad (`detectar_previa`) y en otro hilo (`PreviaEnHilo`), y la medida de ESPACIO repinta y atiende `q` en cada frame (`refrescar`, imshow + `pollKey`) con «Midiendo k de N»; la medida no cambia. Con Marker0 delante y sin tablero (el peor caso), de 245–257 ms por frame a 1.6–2.9 ms de hilo principal. B58 nuevo (la ventana de «Calibrar con tablero» tiene la misma vista previa lenta, media). Falta la prueba en vivo del autor con la regla (protocolo en `Claude outputs/fases/004/fase-2c.md`). Sigue la fase 3 · La explicación y el glosario.
+- **Meta 004 · Cómo funciona el tracker** (plan autorizado el 2026-10-26; P1–P11 contestadas; todo en `docs/ARCHITECTURE.md` §9). Commiteadas: fase 1 · El mapa del proyecto (`f3a2d4b`; §9.1 y `docs/img/004/mapa_proyecto.svg`; si se edita el Mermaid, reexportar con `diagnostics.export_map`, ADR-032); fase 2 · El ejemplo resuelto con un frame real (`533989a`; `diagnostics/explain_pose.py` y §9.3: el frame 480 de gs1 con el Marker0 de 80 mm, y en el paso 8 la escala con 98.6 mm; si cambia `format_markdown`, regenerar el bloque con el comando de §9.3); fase 2b · «Verificar IDs» pone la cámara en verde y se quita «Probar cámara» (`54c48a7`, solo `gui/`); fase 2c · «Comprobar escala con regla» sin congelarse (`16e7f35`, solo `calibration/check_scale.py`: vista previa a la mitad y en otro hilo, la medida repinta). Sigue la fase 3 · La explicación y el glosario.
 
 ## Estado técnico (el detalle está en `docs/CONTEXT.md` §6)
 
@@ -24,7 +22,7 @@ Spec activo: `specs/004-como-funciona/`
 
 ## La suite
 
-- `codigo/tests/`: **618 de 618**, 0 avisos; 32.9 y 33.3 s de pytest (2026-10-26, meta 004 fase 2c). Antes, 611 de 611 (fase 2b: 33.4 y 34.0 s), 606 de 606 (fase 2: 33.0 y ~36 s), 572 de 572 (fase 1: ~33.5 s) y 555 de 555 (meta 003, fase 8c: 41.1 y 56.1 s). Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
+- `codigo/tests/`: **618 de 618**, 0 avisos; 32.9 y 33.3 s de pytest (2026-10-26, meta 004 fase 2c). Al cerrar la meta 003, 555 de 555. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm / 0.0°, detección 0.0 px) + `python -m gui.panel --selftest` (con `PYTHONIOENCODING=utf-8`, B49). Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -45,7 +43,7 @@ Spec activo: `specs/004-como-funciona/`
 
 ## Pendientes del autor
 
-- El commit de la fase 2c · «Comprobar escala con regla» sin congelarse y con vista previa fluida (meta 004) y su prueba en vivo con la regla (la ventana no pasa a «No responde» en ninguna posición, la vista previa va fluida con y sin tablero, y el resultado de escala; protocolo en `Claude outputs/fases/004/fase-2c.md`).
+- La prueba en vivo con la regla de la fase 2c (protocolo en `Claude outputs/fases/004/fase-2c.md`): que la ventana no pase a «No responde» y el resultado de escala.
 - Leer el ejemplo de la fase 2 · El ejemplo resuelto con un frame real (§9.3 y la figura) antes de la fase 3.
 - B55: decidido el 2026-10-26, se usa el Marker0 de 80 mm y el de 100 se guarda (media).
 - **Usar el Marker0 de 80 mm** (el de los perfiles) mientras B55 siga abierto, y decidir qué se hace con el de 100.
