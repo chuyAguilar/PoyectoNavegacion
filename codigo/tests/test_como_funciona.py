@@ -14,6 +14,11 @@ Lo que se comprueba, sin cámara ni Node:
   reexporta, falla.
 - docs/img/004/ pesa menos de 200 KB (P6); el índice nombra §9.1–§9.5; ninguna
   línea de ARCHITECTURE.md pasa de 2 000 caracteres (CLAUDE.md §3).
+- (fase 2) El bloque de §9.3 entre `<!-- ejemplo:inicio -->` y `<!-- ejemplo:fin -->`
+  es la salida de `diagnostics/explain_pose.py` sobre gs1, frame 480, con 98.6 mm
+  (`format_markdown(explain_frame(...))`), y la figura
+  `docs/img/004/marker0_gs1_frame_00480.png` existe, se lee y es el recorte de
+  `draw_example` (320×320).
 - diagnostics/export_map.py, de punta a punta con un `mmdc` falso: le pasa la
   configuración de Mermaid con `-c`, quita el `@font-face` incrustado y no
   escribe un SVG de 200 KB o más.
@@ -25,19 +30,25 @@ import re
 import sys
 from pathlib import Path
 
+import cv2
+import numpy as np
 import pytest
 
-from diagnostics import export_map
+from diagnostics import explain_pose, export_map
 
-from .conftest import CODIGO_DIR
+from .conftest import CODIGO_DIR, PROFILES_DIR, TESTS_DATA_DIR
 
 ROOT = CODIGO_DIR.parent
 ARCH = ROOT / "docs" / "ARCHITECTURE.md"
 IMG_DIR = ROOT / "docs" / "img" / "004"
 MAP_SVG = IMG_DIR / "mapa_proyecto.svg"
 MAP_SHA = IMG_DIR / "mapa_proyecto.sha256"
+EXAMPLE_PNG = IMG_DIR / "marker0_gs1_frame_00480.png"
+EXAMPLE_CROP_PX = 320
 SECTION_START = "<!-- como-funciona:inicio -->"
 SECTION_END = "<!-- como-funciona:fin -->"
+EXAMPLE_START = "<!-- ejemplo:inicio -->"
+EXAMPLE_END = "<!-- ejemplo:fin -->"
 MIN_REFS = 15
 MAX_IMG_BYTES = 200 * 1024
 MAX_LINE_CHARS = 2000
@@ -189,6 +200,48 @@ def test_el_sha_ignora_crlf_y_cambia_con_una_etiqueta():
 def test_las_imagenes_pesan_menos_de_200_kb():
     total = sum(p.stat().st_size for p in IMG_DIR.glob("*") if p.is_file()) if IMG_DIR.is_dir() else 0
     assert total < MAX_IMG_BYTES, f"docs/img/004/ pesa {total} bytes"
+
+
+# ---------------------------------------------------------------- el ejemplo de §9.3 (fase 2)
+
+def example_block(doc_text: str) -> str:
+    """El bloque generado de §9.3, entre las marcas `ejemplo` (falla si faltan)."""
+    i = doc_text.find(EXAMPLE_START)
+    j = doc_text.find(EXAMPLE_END)
+    assert i >= 0 and j > i, f"faltan las marcas {EXAMPLE_START} … {EXAMPLE_END}"
+    return doc_text[i + len(EXAMPLE_START):j]
+
+
+def _lf(text: str) -> str:
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _example_result() -> dict:
+    return explain_pose.explain_frame(TESTS_DATA_DIR / "marker0_gs1.npz",
+                                      TESTS_DATA_DIR / "marker0_gs1_frames", 480,
+                                      PROFILES_DIR / "tracker_config_gs1.yaml", alt_size_mm=98.6)
+
+
+def test_el_bloque_del_ejemplo_es_la_salida_del_script():
+    block = _lf(example_block(_doc_text())).strip("\n")
+    want = _lf(explain_pose.format_markdown(_example_result())).strip("\n")
+    assert block == want, ("el bloque de §9.3 no es la salida de diagnostics/explain_pose.py sobre gs1, frame 480: "
+                           "regenerarlo con python -m diagnostics.explain_pose (ver su docstring)")
+    assert block in section_text(_doc_text())                     # dentro de §9, con sus referencias
+
+
+def test_la_figura_del_ejemplo_existe_y_es_el_recorte():
+    assert EXAMPLE_PNG.is_file(), (f"falta {EXAMPLE_PNG.relative_to(ROOT)}: python -m diagnostics.explain_pose "
+                                   f"... --output-image (docs/ARCHITECTURE.md §9.3)")
+    img = cv2.imread(str(EXAMPLE_PNG), cv2.IMREAD_UNCHANGED)
+    assert img is not None and img.shape == (EXAMPLE_CROP_PX, EXAMPLE_CROP_PX, 3), getattr(img, "shape", None)
+    r = _example_result()
+    gray = cv2.imread(str(TESTS_DATA_DIR / "marker0_gs1_frames" / r["png"]), cv2.IMREAD_UNCHANGED)
+    want = explain_pose.draw_example(gray, r, r["intrinsics"]["K"], r["intrinsics"]["dist"], EXAMPLE_CROP_PX)
+    # El mismo recorte del mismo frame: los píxeles sin dibujo coinciden (el trazo puede cambiar con OpenCV).
+    same = np.mean(img == want)
+    assert same > 0.95, f"solo el {same:.1%} de los píxeles coincide con draw_example"
+    assert "img/004/marker0_gs1_frame_00480.png" in section_text(_doc_text())
 
 
 # ---------------------------------------------------------------- el documento

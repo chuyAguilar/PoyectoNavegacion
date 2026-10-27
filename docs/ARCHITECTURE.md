@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-10-26 (índice nuevo; §2, §6 y §9 nueva: meta 004 · Cómo funciona el tracker, fase 1 · El mapa del proyecto: §9.1 con el mapa en Mermaid de archivo por caja y lo que pasa por cada flecha, de izquierda a derecha, su imagen SVG exportada con `diagnostics/export_map.py` (P9) y la prueba de fidelidad `tests/test_como_funciona.py`; §9.2–§9.5 se escriben en las fases 2 y 3)._
+> _Última actualización: 2026-10-26 (§6 y §9.3: meta 004 · Cómo funciona el tracker, fase 2 · El ejemplo resuelto con un frame real: `diagnostics/explain_pose.py` sigue el frame 480 de gs1 desde las esquinas hasta la 4×4, el bloque generado y la figura `docs/img/004/marker0_gs1_frame_00480.png`; `tests/test_explain_pose.py` lo repite sobre los 6 frames guardados). Antes, 2026-10-26 (índice nuevo; §2, §6 y §9 nueva: meta 004, fase 1 · El mapa del proyecto: §9.1 con el mapa en Mermaid de archivo por caja y lo que pasa por cada flecha, de izquierda a derecha, su imagen SVG exportada con `diagnostics/export_map.py` (P9) y la prueba de fidelidad `tests/test_como_funciona.py`; §9.2, §9.4 y §9.5 se escriben en la fase 3)._
 > _Antes, 2026-10-25 (§3.2, §3.5, §3.6, §3.7 y §6: meta 003, fase 8c · Cierre de la meta: el modo sin ventana va al ritmo de la cámara (~89–90 fps) y es el del botón principal del panel; el envío sale en ráfagas al tic de Windows y Slicer recibe como mucho ~65 Hz, techo de Slicer (fase 8b, R2; B54); `receive_marker0.py` da los intervalos y acepta otro nodo; `diagnostics/igtl_rate.py`; `tracker.py` 395 líneas). Antes, 2026-10-25 (§3.7: meta 003, fase 8a · Un botón por modo en el panel, sin cámara: «Arrancar tracker» lanza el tracker sin ventana y «Arrancar tracker con ventana» el de siempre; «Verificar IDs y colocar la cámara» reemplaza a «Verificar IDs» y a «Vista previa»; `identify_ids` lee por `FrameGrabber` y dibuja la cruz y los fps de la cámara también con detección; la verificación en vivo, al empezar la sesión de la 8b).
 > Antes, 2026-10-25 (§3.2 y §3.7: meta 003, fase 7b · Botones de tracker sin ventana y de vista previa para posicionar las cámaras, sin cámara: `tracker --stop-stdin`; el panel gana «Vista previa (colocar la cámara)», «Arrancar tracker sin ventana» y «Detener tracker», y detiene el tracker sin ventana por la entrada estándar; `identify_ids` con `--timeout` obligatorio, `--no-detect` y cierre en un `finally`; la verificación en vivo está pendiente). Antes, 2026-10-25 (§3.1, §3.2, §3.5 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada: la captura en un hilo con el último frame (`camera/grabber.py`), el envío sin esperar (0.02 ms en vivo) y la espera a Slicer con tope y aborto; ADR-028. Los perfiles gs1/gs2 siguen pidiendo 90 fps: pedir 60 dio 29, la cámara no tiene modo de 60 a 1280×960 MJPG; `clarify.md` P11). Antes, 2026-10-24 (§3.2, §3.7 y §6: meta 003, fase 6 · Dónde se va el tiempo por frame: `tracker --timing <json>` cronometra cada etapa del bucle con `diagnostics.pose_log.Stopwatch`, apagado por defecto; `diagnostics/measure_window.py` cronometra la ventana sin cámara). Antes, 2026-10-24 (§2, §3, §4, §6 y notas en §5, §7 y §8: meta 003, fase 5 · Documentación del paso 1: la topología, los componentes y la cadena se describen con la estructura nueva (`camera`, `vision`, `transport`, `profiles`, `gui`, `calibration`, `diagnostics`, `slicer`; `tracker.py` solo el bucle) y solo Marker0; lo del dodecaedro, la Femto y el contexto doctor queda como referencia archivada).
 > Antes, 2026-10-24 (§6: meta 003, fase 4 · El tracker en piezas: `vision\` (detección, pose, 1-Euro, `MarkerTracker`) y `transport\` (`IgtlSender`); `tracker.py` queda solo con el bucle; la suite niega la cámara real y el servidor pyigtl). Antes, 2026-10-23 (§6: meta 003, fase 3 · La estructura nueva y el archivo: el código pasa de `codigo\iter4\` a paquetes por responsabilidad bajo `codigo\` (`camera`, `calibration`, `diagnostics`, `gui`, `profiles`, `data`; `tracker.py` suelto), se lanza con `python -m` y las rutas de un perfil son relativas a `codigo\` (ADR-027); el dodecaedro, la Femto y los perfiles viejos van a `codigo\historico\iter4\`; §3 y §4 se ponen al día en la fase 5). Antes, 2026-10-23 (§3.3, §4 y §6: meta 003, fase 2 · La cadena solo con Marker0: los perfiles gs1 y gs2 ya no definen `rigid_bodies`, el tracker publica solo `Marker0ToTracker` (ADR-026), `gui/estado.py` no exige la geometría si el perfil no la define, `codigo/slicer/receive_marker0.py` nuevo y el manual del dodecaedro en `documentos/historico/`). Antes, 2026-10-23 (§6: meta 003, fase 1 · Línea base de Marker0: `pose_log.py`, opciones de grabación del tracker y replay de Marker0). Antes, 2026-10-23 (§3.1, §3.3, §6 y §8: meta 002, fase 6 · Comparación contra P02 y archivo de los perfiles viejos: `tracker_config_doctor.yaml` y `globalshutter.yml` pasan a `iter4/data/historico/`; el tracker no cambió). 
@@ -31,7 +31,7 @@ _Desde el 2026-10-26 (meta 004, fase 1). Una línea por sección; se lee primero
 - **§9 · Cómo funciona: de la cámara a Slicer** (meta 004), para el autor:
   - **§9.1 · El mapa del proyecto:** el panel, el arranque, el bucle por frame y Slicer, con el archivo o la función de cada caja y lo que pasa por cada flecha; su imagen exportada.
   - **§9.2 · De la detección a la pose, paso a paso:** la explicación en español llano (fase 3).
-  - **§9.3 · Un ejemplo resuelto con un frame real:** los números de un frame de gs1 de principio a fin (fase 2).
+  - **§9.3 · Un ejemplo resuelto con un frame real:** el frame 480 de gs1 de principio a fin, con sus números (esquinas, K, pose, reproyección, filtro, 4×4, la escala de B55) y su figura; lo genera `diagnostics/explain_pose.py`.
   - **§9.4 · Glosario:** los términos de los logs y los docs (fase 3).
   - **§9.5 · De dónde sale cada número:** la fuente de cada número de §9 (fase 3).
 
@@ -390,7 +390,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 ├── docs\
 │   ├── constitution.md, BACKLOG.md, PRUEBAS.md
 │   ├── ARCHITECTURE.md  DECISIONS.md  CONTEXT.md   # ← los 3 MVD
-│   ├── img\004\                    # figuras de §9 (meta 004): mapa_proyecto.svg, exportado del Mermaid de §9.1 con diagnostics\export_map.py, y mapa_proyecto.sha256 (el sha del Mermaid y la versión de mermaid-cli); < 200 KB en total
+│   ├── img\004\                    # figuras de §9 (meta 004): mapa_proyecto.svg, exportado del Mermaid de §9.1 con diagnostics\export_map.py, y mapa_proyecto.sha256 (el sha del Mermaid y la versión de mermaid-cli); marker0_gs1_frame_00480.png, la figura del ejemplo de §9.3 (diagnostics\explain_pose.py, fase 2); < 200 KB en total
 │   └── history\                    # copia literal de lo hecho, no se edita (PROJECT_BRIEF.md y briefs\ desde 2026-10-19)
 ├── specs\                          # _plantilla\ (spec, plan, clarify, tasks) y una carpeta por meta: 001-limpieza, 002-calibracion-camaras, 003-arquitectura-tracker, 004-como-funciona
 ├── .claude\
@@ -408,11 +408,11 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   ├── data\                       # intrinsecos_gs1/gs2_1280x960.yml y tablero_calibracion.yaml (nada más)
 │   ├── camera\                     # grabber.py (`FrameGrabber`: hilo de captura con el último frame; `SyncGrabber`; fase 7); __init__ importa camera.uvc (apaga la aceleración HW de MSMF); backend.py (WebcamBackend: puerto, marca, controles, tamaño; `femtobolt` aborta: archivada), uvc.py (enumeración y ruta del puerto USB), controls.py (camera.controls por DSHOW)
 │   ├── calibration\                # calibrate_camera.py (intrínsecos con tablero, detectores clasico|sb|ambos), check_scale.py (escala contra regla)
-│   ├── diagnostics\                # probe_camera.py (sonda: modos, puertos, --fijar), measure_modes.py (--enfocar, exposiciones, modos, --elegir), identify_ids.py, pose_log.py (graba y resume poses; `Stopwatch` para --timing), measure_window.py (la ventana sin cámara; fase 6), igtl_rate.py (receptor OpenIGTLink de control y banco de ráfagas sin cámara; fase 8b, 2026-10-25), export_map.py (exporta a SVG el mapa de §9.1 con mermaid-cli, Node.js fuera del venv, y escribe su .sha256; meta 004, fase 1, 2026-10-26)
+│   ├── diagnostics\                # probe_camera.py (sonda: modos, puertos, --fijar), measure_modes.py (--enfocar, exposiciones, modos, --elegir), identify_ids.py, pose_log.py (graba y resume poses; `Stopwatch` para --timing), measure_window.py (la ventana sin cámara; fase 6), igtl_rate.py (receptor OpenIGTLink de control y banco de ráfagas sin cámara; fase 8b, 2026-10-25), export_map.py (exporta a SVG el mapa de §9.1 con mermaid-cli, Node.js fuera del venv, y escribe su .sha256; meta 004, fase 1, 2026-10-26), explain_pose.py (el ejemplo resuelto de §9.3: un frame grabado desde las esquinas hasta la 4×4, el bloque Markdown y la figura; meta 004, fase 2)
 │   ├── gui\                        # panel PySide6 (`python -m gui.panel`): panel.py, recipes.py (argv con -m), processes.py, status.py (semáforos: entorno, config, intrínsecos, puerto, cámara), calibration_window.py, profile_editor.py, camera_probe.py
 │   ├── slicer\                     # scripts para la consola Python de Slicer: receive_marker0.py (cuenta los Hz de Marker0ToTracker y avisa si existe DodecaedroToTracker; desde la fase 8b, los intervalos entre actualizaciones y `name=` para otro nodo) y README.md (2026-10-23, meta 003 fase 2)
 │   ├── tests\                      # suite pytest; conftest.py da rutas (PROFILES_DIR, DATA_DIR, HISTORICO_DIR…) y el fixture autouse `no_real_camera` (niega `cv2.VideoCapture`, la enumeración de cámaras, `WebcamBackend.open` sin `abrir` falso y el servidor pyigtl; B34); synthetic.py: Marker0 proyectado, cámara y emisor falsos (2026-10-24, fase 4)
-│   │   ├── test_*.py                           # vision, transport, tracker_loop, profiles, no_real_camera, compilan (con avisos como errores), gui_headless (selftest del panel), replay_marker0, pose_log, timing (fase 6), grabber (fase 7), identify_ids (fases 7b y 8a), igtl_rate (fase 8b), como_funciona (meta 004: la fidelidad de §9 al código, el sha del mapa y el tamaño de sus imágenes), status, camaras_uvc, ajustes_camara, sondear_camara, camera_backend, aceleracion_msmf, calibrar_camara, comprobar_escala, medir_modos, panel/ventana de calibración (sin cámara)
+│   │   ├── test_*.py                           # vision, transport, tracker_loop, profiles, no_real_camera, compilan (con avisos como errores), gui_headless (selftest del panel), replay_marker0, pose_log, timing (fase 6), grabber (fase 7), identify_ids (fases 7b y 8a), igtl_rate (fase 8b), como_funciona (meta 004: la fidelidad de §9 al código, el sha del mapa, el tamaño de sus imágenes y el bloque y la figura del ejemplo de §9.3), explain_pose (meta 004, fase 2: el ejemplo sobre los 6 frames guardados: esquinas, 4×4, reproyección, escala y K), status, camaras_uvc, ajustes_camara, sondear_camara, camera_backend, aceleracion_msmf, calibrar_camara, comprobar_escala, medir_modos, panel/ventana de calibración (sin cámara)
 │   │   ├── replay_util.py                      # replay de Marker0 (reference-marker0, copy-frames; `python -m tests.replay_util`); pasa las esquinas grabadas por `MarkerTracker.process_corners` (el replay del dodecaedro se archivó, fase 4)
 │   │   └── data\                               # marker0_gs1/gs2: grabación en vivo, referencia y 3 frames (2.17 MB, versionados)
 │   └── historico\                  # snapshots de iteraciones previas; no se mantienen (iter1, iter2, iter2_callejones_sin_salida, iter3 y:)
@@ -587,7 +587,72 @@ _Se escribe en la fase 3 de la meta 004._
 
 ### 9.3 Un ejemplo resuelto con un frame real
 
-_Se escribe en la fase 2 de la meta 004._
+_Desde el 2026-10-26 (meta 004, fase 2)._ Un frame de la grabación en vivo de la cámara 1 (`marker0_gs1.npz` en `tests/data/`, 977 frames, Marker0 quieto a unos 37 cm: la línea base de la meta 003, §6), seguido desde las esquinas hasta la 4×4 que recibe Slicer con el mismo código que corre el tracker (el grupo 3 del mapa de §9.1), sin cámara ni Slicer. Lo calcula `diagnostics/explain_pose.py:explain_frame`: detecta en el PNG guardado, toma K y dist de la grabación, estima la pose, la reproyecta, pasa por el 1-Euro los frames anteriores con sus esquinas y tiempos grabados, y compara la 4×4 con la que se envió en vivo. El bloque de números de abajo lo escribe `diagnostics/explain_pose.py:format_markdown` y la figura `diagnostics/explain_pose.py:draw_example`; ninguno se edita a mano. Para regenerarlos, desde `codigo\` con el venv y los argumentos explícitos (las salidas no se pisan: borrar antes la figura):
+
+```powershell
+python -m diagnostics.explain_pose --dataset tests/data/marker0_gs1.npz --frames-dir tests/data/marker0_gs1_frames --frame 480 --config profiles/tracker_config_gs1.yaml --alt-size-mm 98.6 --output-markdown "..\Claude outputs\fases\004\ejemplo_gs1_480.md" --output-image ../docs/img/004/marker0_gs1_frame_00480.png --crop-px 320
+```
+
+![El frame 480 de gs1, recortado alrededor de Marker0: las esquinas detectadas, las reproyectadas y los ejes de la pose](img/004/marker0_gs1_frame_00480.png)
+
+En la figura (320×320 px alrededor del marker): en verde, el contorno y las esquinas detectadas, numeradas c0 a c3; las cruces naranjas son esas mismas esquinas reproyectadas desde la pose (caen encima: 0.06 px); los ejes de la pose están dibujados como en la ventana del tracker (`tracker.py:draw_poses`, 40 mm = lado/2): X en rojo, Y en verde, Z en azul; el Z apunta hacia la cámara y por eso se ve corto.
+
+<!-- ejemplo:inicio -->
+_Generado por `diagnostics/explain_pose.py:format_markdown` sobre `frame_00480.png` (el frame 480 de 977 de `marker0_gs1.npz`, grabado en vivo con `profiles/tracker_config_gs1.yaml`). No se edita a mano: `tests/test_como_funciona.py` comprueba que es la salida del script, y `tests/test_explain_pose.py` repite lo mismo sobre los 3 frames de cada cámara._
+
+**1 · El frame.** `frame_00480.png`: 1280×960 en gris, tal como lo ve `vision/detection.py:detect` (el tracker pasa a gris el frame BGR de la cámara en `tracker.py:main`). El marker es `Marker0`, ID 0 del diccionario `DICT_ARUCO_MIP_36h12`, de 80.0 mm de lado (`profiles/tracker_config_gs1.yaml`, `markers.list`).
+
+**2 · Las esquinas.** El detector del perfil (`vision/detection.py:create_detector`, con refinado subpíxel) ve el ID 0 y da 4 esquinas en píxeles, en el orden de §7 (`c0=TL c1=TR c2=BR c3=BL`: la esquina arriba-izquierda del dibujo del marker y después en el sentido de las agujas del reloj). Ese orden es el del marker, no el de la imagen: aquí c0 cae abajo a la derecha del centro porque el marker está girado en la imagen. Comparadas con las que el tracker grabó en vivo para este frame, la diferencia máxima es **0.000000 px**.
+
+| Esquina | u (px) | v (px) |
+|---|---|---|
+| c0 | 790.842 | 739.350 |
+| c1 | 614.870 | 719.867 |
+| c2 | 609.567 | 548.234 |
+| c3 | 788.559 | 554.462 |
+
+Lados en la imagen (c0c1, c1c2, c2c3, c3c0): 177.05, 171.71, 179.10, 184.90 px; media 178.19 px. Centro de las cuatro esquinas: (700.96, 640.48) px.
+
+**3 · K y dist.** Los intrínsecos de la cámara son los de `data/intrinsecos_gs1_1280x960.yml` (sha256 `0b4250e573ba…`; la grabación guardó el mismo sha: sí; diferencia máxima de K 0.0e+00 y de dist 0.0e+00). fx = 849.939, fy = 848.876 px; cx = 603.555, cy = 488.867 px; dist (k1, k2, p1, p2, k3) = 0.017026, 0.011043, 0.002818, -0.000925, -0.106537.
+
+**4 · La pose cruda.** `vision/pose.py:estimate_single_pose` llama a `solvePnP` con `SOLVEPNP_IPPE_SQUARE`: las 4 esquinas en px, las 4 esquinas del modelo en mm (`vision/pose.py:build_object_points`: (±40, ±40, 0)), K y dist. Sale rvec = (-0.018224, -2.773382, -0.148596) rad (un giro de 159.13° alrededor de ese eje) y **tvec = (41.354, 66.932, 374.361) mm**: el centro del marker está a 374.4 mm de la cámara, 41.4 mm a la derecha y 66.9 mm hacia abajo del eje óptico (§7). `Rodrigues` pasa rvec a la rotación R:
+
+```
+       -0.934335      0.031730     -0.354980
+       -0.006382      0.994380      0.105681
+        0.356338      0.101007     -0.928882
+```
+
+R[2,2] = -0.9289 < 0: el marker mira hacia la cámara, inclinado 21.7° respecto al eje óptico. z = 374.4 > 0: la solución es la de delante de la cámara (la otra de las dos de IPPE se descarta).
+
+**Comprobación: la pose devuelve las esquinas.** Proyectando las 4 esquinas del modelo con esa pose, K y dist (`projectPoints`) se vuelve a los píxeles del detector con un error de **0.056 px RMS** (máximo 0.060 px), del orden del RMS de la calibración de la cámara:
+
+| Esquina | u reproyectada | v reproyectada | error (px) |
+|---|---|---|---|
+| c0 | 790.815 | 739.400 | 0.057 |
+| c1 | 614.892 | 719.819 | 0.053 |
+| c2 | 609.546 | 548.286 | 0.056 |
+| c3 | 788.584 | 554.408 | 0.060 |
+
+**La fórmula de la cámara, con estos números.** Sin distorsión, un punto (X, Y, Z) en mm cae en u = fx·X/Z + cx, v = fy·Y/Z + cy. Para el centro del marker, (X, Y, Z) = tvec: u = 849.939·41.354/374.361 + 603.555 = **697.44**, v = **640.64** px. Con la distorsión, (697.56, 640.98) px; el centro de las cuatro esquinas está en (700.96, 640.48) px (no coincide exactamente: con el marker inclinado, el centro de un cuadrado no se proyecta en el centro de sus esquinas).
+
+**5 · A mano: la distancia por el tamaño.** Z ≈ fx · lado_mm / lado_px = 849.939 · 80.0 / 178.19 = **381.6 mm**, frente a los 374.4 mm de la pose (+7.2 mm): la cuenta a mano supone el marker de frente, y este está inclinado 21.7°, así que sus lados se ven algo más cortos y la distancia sale algo mayor. Es la misma cuenta que hace invisible B55: si el perfil dijera un lado mayor, la misma imagen daría una Z mayor en la misma proporción (punto 8).
+
+**6 · El filtro.** El 1-Euro de `vision/filtering.py:PositionFilter` (min_cutoff 2.0, beta 0.05, de `filtering` del perfil) ya lleva 480 frames de esta grabación (las esquinas y los tiempos grabados, en orden); este frame llega en t = 1792800557.6371 s, 23.9 ms después del anterior. Solo se filtra la posición: tvec pasa de (41.354, 66.932, 374.361) a **(41.378, 66.920, 374.414) mm**, un desplazamiento de 0.059 mm; la rotación no se toca.
+
+**7 · La 4×4 que recibe Slicer.** `vision/pose.py:rvec_tvec_to_matrix` junta R y la tvec filtrada (mm). `transport/igtl.py:IgtlSender.send` la manda como `Marker0ToTracker` por OpenIGTLink, y pyigtl la guarda en float32 (diferencia máxima por el redondeo: 1.1e-05 mm). Frente a la matriz que el tracker envió en vivo en este frame: **0.0 mm y 0.0°** de diferencia.
+
+```
+       -0.934335      0.031730     -0.354980     41.377635
+       -0.006382      0.994380      0.105681     66.920263
+        0.356338      0.101007     -0.928882    374.413585
+        0.000000      0.000000      0.000000      1.000000
+```
+
+**8 · La escala la fija el tamaño del marker (B55).** Las mismas 4 esquinas con un lado de 98.6 mm en vez de 80.0 dan tvec = (50.969, 82.494, 461.400) mm: cada coordenada multiplicada por **1.2325** (98.6/80.0 = 1.2325; error relativo 1.5e-08) y la misma rotación (2.1e-13°). La imagen no puede distinguir un marker grande y lejos de uno chico y cerca: solo el `size_mm` del perfil lo decide, y por eso un Marker0 de otro tamaño con el mismo ID sale a escala sin aviso.
+<!-- ejemplo:fin -->
+
+Los seis frames guardados (3 de gs1 y 3 de gs2) dan lo mismo: `tests/test_explain_pose.py` lo comprueba en cada uno (esquinas a 0.0 px de las grabadas, 4×4 a 0.0 mm / 0.0° de la enviada en vivo y de la referencia del replay, reproyección de la pose cruda por debajo de 0.3 px, con 98.6 mm el cociente 1.2325 y la misma rotación, y la K de la grabación igual a la del `.yml` del perfil), y `tests/test_como_funciona.py` comprueba que el bloque de arriba es la salida del script y que la figura es su recorte.
 
 ### 9.4 Glosario
 
