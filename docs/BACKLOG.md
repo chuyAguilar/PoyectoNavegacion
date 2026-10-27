@@ -45,6 +45,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B55 | Con el Marker0 de 100 mm y el perfil en 80, todas las distancias salen a escala 0.81 sin aviso | Media | — |
 | B56 | `slicer/receive_marker0.py` dice que `pyigtl` bloquea si Slicer no está conectado | Baja | — |
 | B57 | El `.json` de procedencia de las referencias del replay nombra rutas de `iter4/` | Baja | — |
+| B58 | La ventana de «Calibrar con tablero» detecta la vista previa a resolución completa y va lenta sin tablero | Media | — |
 
 ## Abiertos
 
@@ -281,7 +282,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 ### B50 · Las SVPRO bajan solas los fps con poca luz: un control UVC automático que el perfil no fija
 - **Qué:** con la caja de luz por debajo del máximo (nivel 2–3), las dos SVPRO entregan 22–31 fps aunque el perfil pida 90 y la exposición manual sea de 0.977 ms; con la caja al máximo, 90 (gs1 estable; gs2 una vez estable y otra cayendo a ~30 a mitad de la corrida). Lo mide el hilo de captura (`camara X fps`), así que es la cámara, no el bucle. El perfil no escribe ningún ajuste al abrir (`escritos: ninguno`): lo que baja los fps es algún control automático que el perfil no lista, probablemente la prioridad de exposición (UVC *auto exposure priority*) o una prioridad de fps del firmware.
 - **Por qué queda:** la fase 7 · Subir los fps con ventana (meta 003 · Arquitectura y optimización del tracker) no lo arregla con código: la regla es trabajar con la caja al máximo (`docs/CONTEXT.md` §4.20). Decisión del autor, 2026-10-25.
-- **De dónde:** primera parte en vivo de la fase 7, 2026-10-25 (`Claude outputs/fases/003/fase-7-en-vivo.md`, «C0, la captura sola»). **Al día (2026-10-25, segunda parte):** pedir 60 fps dio 29 en gs1 con la caja al máximo (28.9 de cámara): la SVPRO no tiene modo de 60 a 1280×960 MJPG y MSMF baja al de 30; los perfiles siguen a 90 (`clarify.md` P11). **Al día (2026-10-25, fase 8a · Un botón por modo en el panel, en vivo):** con la caja al máximo y el tracker con ventana, la cámara bajó al final de la corrida a 75.7 (gs1) y 77.0 fps (gs2), tras empezar a ~90; no se miró por qué (puede ser este mismo control o la carga del bucle con ventana). Lo anotó el cierre de la meta 003 (fase 8c).
+- **De dónde:** primera parte en vivo de la fase 7, 2026-10-25 (`Claude outputs/fases/003/fase-7-en-vivo.md`, «C0, la captura sola»). **Al día (2026-10-25, segunda parte):** pedir 60 fps dio 29 en gs1 con la caja al máximo (28.9 de cámara): la SVPRO no tiene modo de 60 a 1280×960 MJPG y MSMF baja al de 30; los perfiles siguen a 90 (`clarify.md` P11). **Al día (2026-10-25, fase 8a · Un botón por modo en el panel, en vivo):** con la caja al máximo y el tracker con ventana, la cámara bajó al final de la corrida a 75.7 (gs1) y 77.0 fps (gs2), tras empezar a ~90; no se miró por qué (puede ser este mismo control o la carga del bucle con ventana). Lo anotó el cierre de la meta 003 (fase 8c). **Al día (2026-10-26, fase 2b · «Verificar IDs y colocar la cámara» marca la cámara en verde y se quita «Probar cámara», meta 004 · Cómo funciona el tracker, en vivo):** con la caja al máximo, la primera corrida de «Verificar IDs» marcó 30 fps y la segunda 89.8 (`[IDs] camara 89.8 fps`, exit 0); el autor decidió dejarlo aquí sin investigar.
 - **Qué haría falta:** buscar el control: leer por DSHOW y en AMCap lo que expone la cámara (la exposición automática y su prioridad, PowerLine, B24), con la caja en nivel 2 y al máximo, y ver cuál cambia los fps de captura (`diagnostics.measure_modes --modos` lee `fps_captura`), una variable a la vez. Si se puede fijar, añadirlo a `controls` de los dos perfiles con su prueba sin cámara; si solo se fija a mano, anotarlo en `CONTEXT.md` §4 como el PowerLine.
 - **Prioridad:** media.
 
@@ -335,6 +336,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** visto al planear la meta 004 (2026-10-26, `specs/004-como-funciona/plan.md`); anotado en su fase 1 · El mapa del proyecto.
 - **Qué haría falta:** al regenerar la referencia por otro motivo, comprobar que el `.json` nuevo nombra las rutas de hoy; o una nota en `tests/data/` que diga que las rutas son de entonces.
 - **Prioridad:** baja.
+
+### B58 · La ventana de «Calibrar con tablero» detecta la vista previa a resolución completa y va lenta sin tablero
+- **Qué:** `calibration/calibrate_camera.py` (la captura de vistas, paso 2 de «Calibrar cámara») corre en cada frame `detectar_esquinas(gray, …, "clasico", rapido=True)` sobre el frame entero de 1280×960, como hacía `check_scale.py` antes de la fase 2c. Medido sin cámara con ese mismo detector: 245–257 ms por frame con Marker0 delante y sin tablero (~4 fps de ventana), 73 ms con un gris liso, 5 ms con el tablero. Con el tablero delante va fluida; entre una vista y otra, si el tablero sale del cuadro, se arrastra.
+- **Por qué queda:** la fase 2c · «Comprobar escala con regla» sin congelarse y con vista previa fluida (meta 004 · Cómo funciona el tracker) solo toca `check_scale.py` (P11); la ventana de calibración no se pidió.
+- **De dónde:** visto al implementar la fase 2c, 2026-10-26 (`Claude outputs/fases/004/fase-2c.md`).
+- **Qué haría falta:** usar en esa ventana `check_scale.PreviaEnHilo` (o moverla a un módulo común de `calibration/`): la detección de la vista previa a la mitad y en otro hilo; la captura con ESPACIO sigue con el detector de la calibración sobre el frame completo. Su prueba con una cámara falsa, como las de la fase 2c, y un minuto en vivo.
+- **Prioridad:** media.
 
 ## Cerrados
 

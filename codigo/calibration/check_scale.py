@@ -36,6 +36,18 @@ Todo con --timeout (vigilante) y la camara se libera (principio 9).
 Context7 (2026-10-22, OpenCV 4.13; instalado 4.11): solvePnP con
 SOLVEPNP_IPPE exige puntos coplanares y >= 4; imagePoints contiguos (N,1,2).
 
+La ventana no se congela ni va lenta (meta 004, fase 2c, P11): la vista previa
+detecta con el detector rapido sobre el frame reducido a ESCALA_PREVIA
+(detectar_previa; solo para pintar) y en otro hilo (PreviaEnHilo: la ventana se
+pinta al ritmo de la camara aunque detectar cueste mas, como con Marker0 delante,
+sin tablero, el peor caso), y mientras se juntan las poses de una
+posicion la ventana se repinta con "Midiendo k de N" y atiende las teclas en
+cada frame (`refrescar`: imshow + pollKey; q cancela). La medida no cambia:
+mismo detector (--detector), frame completo y mediana. Context7 (2026-10-26,
+OpenCV 4.13; instalado 4.11): waitKey y pollKey son las unicas funciones de
+HighGUI que atienden los eventos de la ventana; pollKey no espera y da -1 sin
+tecla.
+
 Uso (desde codigo\\, con el venv):
     python -m calibration.check_scale --config profiles\\tracker_config_gs1.yaml ^
         --cols 8 --rows 5 --square-mm 24.97 --detector clasico ^
@@ -50,6 +62,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -66,6 +79,7 @@ TOLERANCIA_MM_POR_100 = 1.0       # P6
 VENTANA = "Comprobar escala - ESPACIO posicion, q salir"
 SEGUNDOS_POR_POSICION = 15.0      # tope para juntar los frames de una posicion
 MARGEN_S = 2.0
+ESCALA_PREVIA = 0.5               # la vista previa detecta sobre el frame a la mitad (fase 2c, P11)
 
 
 def log_info(m): print(f"[INFO] {m}", flush=True)
@@ -244,23 +258,121 @@ def textos_ventana(i: int, total: int, lectura_mm: float, visto: bool) -> tuple[
             f"{estado}   |   sin girarlo entre una marca y otra   |   q = salir")
 
 
+def texto_midiendo(i: int, total: int, lectura_mm: float, k: int, n: int, sin_tablero: int = 0) -> str:
+    """La linea que se pinta mientras se juntan las poses de una posicion (sin acentos, P21)."""
+    falta = f" (sin tablero en {sin_tablero} frames)" if sin_tablero else ""
+    return (f"Midiendo posicion {i + 1} de {total} ({lectura_mm:g} mm): {k} de {n} poses{falta}"
+            f" - no muevas el tablero | q = salir")
+
+
+def detectar_previa(gray, cols: int, rows: int, escala: float = ESCALA_PREVIA):
+    """Esquinas de la vista previa, en px del frame completo, o None. Solo para pintar: el
+    detector rapido (clasico con FAST_CHECK) sobre el frame reducido por `escala` (INTER_AREA),
+    y las esquinas llevadas al frame completo. La medida (ESPACIO) no la usa (fase 2c, P11)."""
+    if not 0.0 < float(escala) <= 1.0:
+        raise ValueError(f"escala de la vista previa fuera de (0, 1]: {escala}")
+    if escala == 1.0:
+        return detectar_esquinas(gray, cols, rows, "clasico", rapido=True)
+    peque = cv2.resize(gray, None, fx=escala, fy=escala, interpolation=cv2.INTER_AREA)
+    c = detectar_esquinas(peque, cols, rows, "clasico", rapido=True)
+    if c is None:
+        return None
+    return ((c + 0.5) / escala - 0.5).astype(np.float32)    # centro de pixel a centro de pixel
+
+
+class PreviaEnHilo:
+    """La deteccion de la vista previa en otro hilo, para que la ventana se pinte al ritmo de la
+    camara aunque detectar cueste mas que un frame (con Marker0 delante, sin tablero, ~75 ms a la
+    mitad; fase 2c). `enviar(gray)` deja el frame mas reciente (sin cola: si el hilo esta ocupado,
+    el anterior pendiente se descarta); `ultimas()` da las ultimas esquinas que el hilo termino
+    (o None) y relanza aqui un error del hilo (principio 7); `cerrar()` para el hilo con tope."""
+
+    def __init__(self, cols: int, rows: int, escala: float = ESCALA_PREVIA, detectar=None):
+        if not 0.0 < float(escala) <= 1.0:
+            raise ValueError(f"escala de la vista previa fuera de (0, 1]: {escala}")
+        self.cols, self.rows, self.escala = cols, rows, float(escala)
+        self._detectar = detectar if detectar is not None else detectar_previa
+        self._lock = threading.Lock()
+        self._evento = threading.Event()
+        self._pendiente = None
+        self._esquinas = None
+        self._error: BaseException | None = None
+        self._parar = False
+        self.hechas = 0
+        self._hilo = threading.Thread(target=self._bucle, name="previa-escala", daemon=True)
+        self._hilo.start()
+
+    def enviar(self, gray) -> None:
+        with self._lock:
+            self._pendiente = gray
+            self._evento.set()
+
+    def ultimas(self):
+        with self._lock:
+            if self._error is not None:
+                raise RuntimeError(f"vista previa: {self._error}") from self._error
+            return self._esquinas
+
+    def _bucle(self) -> None:
+        while True:
+            self._evento.wait(0.1)
+            with self._lock:
+                if self._parar:
+                    return
+                gray, self._pendiente = self._pendiente, None
+                self._evento.clear()
+            if gray is None:
+                continue
+            try:
+                c = self._detectar(gray, self.cols, self.rows, self.escala)
+            except Exception as e:      # se relanza en el hilo principal (ultimas)
+                with self._lock:
+                    self._error = e
+                return
+            with self._lock:
+                self._esquinas = c
+                self.hechas += 1
+
+    def vivo(self) -> bool:
+        return self._hilo.is_alive()
+
+    def cerrar(self, tope_s: float = 2.0) -> None:
+        with self._lock:
+            self._parar = True
+            self._evento.set()
+        self._hilo.join(tope_s)
+
+
+def _refrescar_ventana(img) -> int:
+    """Pinta y atiende los eventos de la ventana sin esperar; la tecla (& 0xFF) o 255 sin tecla."""
+    cv2.imshow(VENTANA, img)
+    return cv2.pollKey() & 0xFF
+
+
 def medir_posiciones(cam, cols: int, rows: int, square_mm: float, K, dist, metodo: str,
                      desplazamientos_mm: list[float], frames_por_posicion: int, limite: float,
-                     leer_tecla=None, segundos_por_posicion: float = SEGUNDOS_POR_POSICION) -> list[dict]:
+                     leer_tecla=None, segundos_por_posicion: float = SEGUNDOS_POR_POSICION,
+                     refrescar=None, escala_previa: float = ESCALA_PREVIA) -> list[dict]:
     """Ventana: por cada desplazamiento, ESPACIO junta hasta frames_por_posicion poses (o
     segundos_por_posicion) y guarda la mediana. q sale antes. `leer_tecla()` se inyecta en las
-    pruebas (por defecto cv2.waitKey(1) & 0xFF). Devuelve una fila por posicion medida."""
+    pruebas (por defecto cv2.waitKey(1) & 0xFF). La vista previa detecta en otro hilo
+    (PreviaEnHilo) y pinta las ultimas esquinas que tiene. Mientras junta las poses,
+    `refrescar(img)` pinta "Midiendo k de N" y atiende las teclas en cada frame (por defecto
+    imshow + pollKey); si da q, la posicion no se guarda y se sale. Devuelve una fila por
+    posicion medida."""
     leer_tecla = leer_tecla if leer_tecla is not None else (lambda: cv2.waitKey(1) & 0xFF)
+    refrescar = refrescar if refrescar is not None else _refrescar_ventana
     filas: list[dict] = []
     i = 0
-    cv2.namedWindow(VENTANA, cv2.WINDOW_NORMAL)
+    hilo_previa = PreviaEnHilo(cols, rows, escala_previa)
     try:
+        cv2.namedWindow(VENTANA, cv2.WINDOW_NORMAL)
         while i < len(desplazamientos_mm) and time.monotonic() < limite:
             frame, _d, _ts = cam.read()
             if frame is None:
                 continue
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            previa = detectar_esquinas(gray, cols, rows, "clasico", rapido=True)
+            hilo_previa.enviar(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
+            previa = hilo_previa.ultimas()
             disp = frame.copy()
             if previa is not None:
                 cv2.drawChessboardCorners(disp, (cols, rows), previa, True)
@@ -274,7 +386,7 @@ def medir_posiciones(cam, cols: int, rows: int, square_mm: float, K, dist, metod
                 break
             if tecla != ord(" "):
                 continue
-            poses, fallos = [], 0
+            poses, fallos, cancelada = [], 0, False
             t0 = time.monotonic()
             while (len(poses) < frames_por_posicion and time.monotonic() - t0 < segundos_por_posicion
                    and time.monotonic() < limite):
@@ -284,8 +396,18 @@ def medir_posiciones(cam, cols: int, rows: int, square_mm: float, K, dist, metod
                 p = pose_tablero(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), cols, rows, square_mm, K, dist, metodo)
                 if p is None:
                     fallos += 1
-                    continue
-                poses.append(p[1])
+                else:
+                    poses.append(p[1])
+                disp = frame.copy()
+                cv2.putText(disp, texto_midiendo(i, len(desplazamientos_mm), desplazamientos_mm[i], len(poses),
+                                                 frames_por_posicion, fallos), (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7, (0, 255, 255), 2)
+                if refrescar(disp) == ord("q"):
+                    cancelada = True
+                    break
+            if cancelada:
+                log_warn(f"posicion {desplazamientos_mm[i]:g} mm: q durante la medida; no se guarda y se sale")
+                break
             if not poses:
                 log_warn(f"posicion {desplazamientos_mm[i]:g} mm: sin pose en {fallos} frames; vuelve a pulsar ESPACIO")
                 continue
@@ -297,6 +419,7 @@ def medir_posiciones(cam, cols: int, rows: int, square_mm: float, K, dist, metod
                      f"(sd {fila['sd_mm']}), distancia {fila['distancia_mm']} mm")
             i += 1
     finally:
+        hilo_previa.cerrar()
         cv2.destroyAllWindows()
     return filas
 

@@ -60,6 +60,7 @@ class CamSecuencia:
 def sin_ventanas(monkeypatch):
     monkeypatch.setattr(ce.cv2, "namedWindow", lambda *a, **k: None)
     monkeypatch.setattr(ce.cv2, "imshow", lambda *a, **k: None)
+    monkeypatch.setattr(ce.cv2, "pollKey", lambda: -1)          # fase 2c: refrescar durante la medida
     monkeypatch.setattr(ce.cv2, "destroyAllWindows", lambda: None)
 
 
@@ -352,3 +353,141 @@ def test_textos_de_la_ventana_llanos_y_sin_acentos() -> None:
         assert l1.isascii() and l2.isascii()
         assert l1.startswith("Posicion 2 de 6: lleva el tablero a la marca de 80 mm y pulsa ESPACIO")
         assert ("NO lo veo" in l2) is (not visto) and "q = salir" in l2
+
+
+# ----------------------------------------------------------------------------
+# Fase 2c de la meta 004 (P11): la ventana no se congela y la vista previa no la frena
+# ----------------------------------------------------------------------------
+
+class Refresco:
+    """refrescar(img) falso: cuenta las llamadas y devuelve las teclas que se le den (255 = ninguna)."""
+
+    def __init__(self, teclas=()):
+        self.llamadas = 0
+        self.teclas = iter(teclas)
+
+    def __call__(self, img) -> int:
+        assert img.ndim == 3
+        self.llamadas += 1
+        return next(self.teclas, 255)
+
+
+def _espiar_textos(monkeypatch) -> list[tuple]:
+    vistos: list[tuple] = []
+    original = ce.texto_midiendo
+
+    def espia(i, total, lectura, k, n, sin_tablero=0):
+        vistos.append((i, k, n, sin_tablero))
+        return original(i, total, lectura, k, n, sin_tablero)
+    monkeypatch.setattr(ce, "texto_midiendo", espia)
+    return vistos
+
+
+def test_medir_posiciones_repinta_en_cada_pose(monkeypatch) -> None:
+    """Durante la medida se pinta y se atienden las teclas al menos una vez por pose, con
+    'k de N' subiendo; la medida da lo mismo que sin pintar (las mismas medianas)."""
+    sin_ventanas(monkeypatch)
+    vistos = _espiar_textos(monkeypatch)
+    t0 = ts.pose_hacia(K, RVEC, (300.0, 240.0), 600.0, COLS, ROWS, SQ)
+    a, b = ts.a_bgr(_vista(t0)), ts.a_bgr(_vista(t0 + np.array([100.0, 0.0, 0.0])))
+    cam = CamSecuencia([(a, 4), (b, 4)], K, np.zeros(5))
+    teclas = iter([ord(" "), ord(" ")])
+    refresco = Refresco()
+    filas = ce.medir_posiciones(cam, COLS, ROWS, SQ, K, np.zeros(5), "clasico", [0.0, 100.0], 3,
+                                limite=float("inf"), leer_tecla=lambda: next(teclas, ord("q")), refrescar=refresco)
+    assert len(filas) == 2 and [f["n"] for f in filas] == [3, 3]
+    assert refresco.llamadas >= sum(f["n"] for f in filas)
+    assert [(i, k) for i, k, _n, _s in vistos] == [(0, 1), (0, 2), (0, 3), (1, 1), (1, 2), (1, 3)]
+    for f, img in zip(filas, (a, b)):
+        p = ce.pose_tablero(ce.cv2.cvtColor(img, ce.cv2.COLOR_BGR2GRAY), COLS, ROWS, SQ, K, np.zeros(5), "clasico")
+        assert f["mediana_mm"] == np.asarray(p[1]).round(3).tolist()
+
+
+def test_medir_posiciones_sin_tablero_repinta_y_cuenta(monkeypatch) -> None:
+    """Sin tablero (el caso que congelaba la ventana 15 s): cada frame fallido se pinta, con la cuenta."""
+    sin_ventanas(monkeypatch)
+    vistos = _espiar_textos(monkeypatch)
+    lisa = np.full((480, 640, 3), 128, dtype=np.uint8)
+    cam = CamSecuencia([(lisa, 1)], K, np.zeros(5))
+    teclas = iter([ord(" "), ord("q")])
+    refresco = Refresco()
+    filas = ce.medir_posiciones(cam, COLS, ROWS, SQ, K, np.zeros(5), "clasico", [0.0, 100.0], 2,
+                                limite=float("inf"), leer_tecla=lambda: next(teclas, ord("q")),
+                                segundos_por_posicion=0.3, refrescar=refresco)
+    assert filas == [] and refresco.llamadas >= 1 and refresco.llamadas == len(vistos)
+    assert [s for *_x, s in vistos] == list(range(1, len(vistos) + 1)) and all(k == 0 for _i, k, _n, _s in vistos)
+
+
+def test_q_durante_la_medida_cancela_y_sale(monkeypatch) -> None:
+    sin_ventanas(monkeypatch)
+    t0 = ts.pose_hacia(K, RVEC, (300.0, 240.0), 600.0, COLS, ROWS, SQ)
+    cam = CamSecuencia([(ts.a_bgr(_vista(t0)), 1)], K, np.zeros(5))
+    teclas = iter([ord(" ")])
+    refresco = Refresco([255, ord("q")])
+    filas = ce.medir_posiciones(cam, COLS, ROWS, SQ, K, np.zeros(5), "clasico", [0.0, 100.0], 30,
+                                limite=float("inf"), leer_tecla=lambda: next(teclas, ord(" ")), refrescar=refresco)
+    assert filas == [] and refresco.llamadas == 2
+
+
+def test_texto_midiendo_llano_y_sin_acentos() -> None:
+    t = ce.texto_midiendo(1, 6, 80.0, 12, 30)
+    assert t.isascii() and "Midiendo posicion 2 de 6 (80 mm): 12 de 30 poses" in t and "sin tablero" not in t
+    t = ce.texto_midiendo(0, 6, 0.0, 0, 30, sin_tablero=7)
+    assert t.isascii() and "0 de 30 poses (sin tablero en 7 frames)" in t and "q = salir" in t
+
+
+def _vista_1280():
+    K2 = ts.K_de(850.0, 850.0, 640.0, 480.0)
+    tvec = ts.pose_hacia(K2, RVEC, (640.0, 480.0), 420.0, COLS, ROWS, SQ)
+    return ts.renderizar_vista(K2, RVEC, tvec, COLS, ROWS, SQ, (1280, 960))
+
+
+def test_detectar_previa_a_la_mitad() -> None:
+    g = _vista_1280()
+    completa = cc.detectar_esquinas(g, COLS, ROWS, "clasico", rapido=True)
+    mitad = ce.detectar_previa(g, COLS, ROWS, 0.5)
+    assert completa is not None and mitad is not None and mitad.shape == completa.shape
+    assert np.abs(mitad - completa).max() < 1.0              # solo para pintar: en el frame completo
+    assert np.array_equal(ce.detectar_previa(g, COLS, ROWS, 1.0), completa)
+    assert ce.detectar_previa(np.full((960, 1280), 128, np.uint8), COLS, ROWS) is None
+    for mala in (0.0, -0.5, 1.5):
+        with pytest.raises(ValueError):
+            ce.detectar_previa(g, COLS, ROWS, mala)
+
+
+def _esperar(cond, tope_s: float = 10.0) -> bool:
+    fin = ce.time.monotonic() + tope_s
+    while ce.time.monotonic() < fin:
+        if cond():
+            return True
+        ce.time.sleep(0.01)
+    return cond()
+
+
+def test_previa_en_hilo_detecta_y_se_cierra() -> None:
+    h = ce.PreviaEnHilo(COLS, ROWS)
+    try:
+        assert h.ultimas() is None
+        h.enviar(_vista_1280())
+        assert _esperar(lambda: h.hechas >= 1)
+        assert h.ultimas() is not None and h.ultimas().shape == (COLS * ROWS, 1, 2)
+        h.enviar(np.full((960, 1280), 128, np.uint8))
+        assert _esperar(lambda: h.hechas >= 2) and h.ultimas() is None
+    finally:
+        h.cerrar()
+    assert not h.vivo()
+    with pytest.raises(ValueError):
+        ce.PreviaEnHilo(COLS, ROWS, escala=0.0)
+
+
+def test_previa_en_hilo_relanza_su_error() -> None:
+    def falla(*_a):
+        raise ce.cv2.error("detector roto")
+    h = ce.PreviaEnHilo(COLS, ROWS, detectar=falla)
+    try:
+        h.enviar(np.zeros((10, 10), np.uint8))
+        assert _esperar(lambda: not h.vivo())
+        with pytest.raises(RuntimeError, match="vista previa"):
+            h.ultimas()
+    finally:
+        h.cerrar()
