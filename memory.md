@@ -1,8 +1,10 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-28 (meta 005 · Agente de consulta para el equipo y buzón de peticiones: fase 3 · La guía `docs/EQUIPO.md` y la instalación guiada, hecha sin la lectura en vivo y pendiente del commit del autor. El grafo de factores es la meta 006, por decisión del autor del 2026-10-27)._
+_Actualizado: 2026-10-28 (meta 005 · Agente de consulta para el equipo y buzón de peticiones: fase 4 · El aviso de peticiones en `direccion` y el circuito completo, hecha sin el circuito en vivo y pendiente del commit del autor. El grafo de factores es la meta 006, por decisión del autor del 2026-10-27)._
 
 Spec activo: `specs/005-equipo-consulta/`
+
+Peticiones pendientes: 0
 
 ## Dónde estamos
 
@@ -12,7 +14,8 @@ Spec activo: `specs/005-equipo-consulta/`
 - **Meta 003 · Arquitectura y optimización del tracker:** cerrada el 2026-10-26 (ADR-026 a ADR-031; P04 «pasa»; fases en `specs/003-*/tasks.md`, de `b3679ca` a `26e724e`). Detalle en `specs/003-*/resultados.md`.
 - **Meta 004 · Cómo funciona el tracker:** cerrada el 2026-10-26 con la fase 4 · Lectura con el autor y cierre de la meta (pendiente del commit del autor): 0 dudas en §9.2 y §9.4 (P12). Fases en `specs/004-*/tasks.md` (de `f3a2d4b` a `354afe4`); números en `specs/004-*/resultados.md`; todo en `docs/ARCHITECTURE.md` §9. Si se edita el Mermaid de §9.1, reexportar con `diagnostics.export_map` (ADR-032); si cambia `explain_pose.format_markdown`, regenerar el bloque con el comando de §9.3.
 
-- **Meta 005 · Agente de consulta para el equipo y buzón de peticiones** (`specs/005-equipo-consulta/`, plan autorizado el 2026-10-28; ADR-034 y principio 1 enmendado): la fase 1 · El buzón `peticiones/` y los hooks está commiteada (`bc328b2`; `probar_hooks.ps1` 24 de 24) y espera la prueba en vivo de 7 casos del autor (protocolo en `Claude outputs/fases/005/fase-1-implementa.md`). La fase 2 · El agente `consulta` y su skill de peticiones está commiteada (`ae1e7ad`; `probar_consulta.ps1` 11 de 11, USD 0.96 y 605 s) y espera su prueba en vivo (2 envíos, con `!` y en terminal aparte; protocolo en `Claude outputs/fases/005/fase-2-en-vivo.md`). La fase 3 · La guía `docs/EQUIPO.md` y la instalación guiada está hecha (10 pasos de instalación; el paso 10 dice aceptar el diálogo de confianza, sin el cual `settings.json` pierde sus `allow`) y pendiente del commit del autor y de su lectura en vivo (protocolo en `Claude outputs/fases/005/fase-3.md`; ese clon sirve para la fase 4). Sigue la fase 4 · El aviso de peticiones en `direccion` y el circuito completo; luego la 5. El BACKLOG de la meta lo escribe la dirección (B60–B65).
+- **Meta 005 · Agente de consulta para el equipo y buzón de peticiones** (`specs/005-equipo-consulta/`, plan autorizado el 2026-10-28; ADR-034 y principio 1 enmendado): la fase 1 · El buzón `peticiones/` y los hooks está commiteada (`bc328b2`; `probar_hooks.ps1` 24 de 24) y espera la prueba en vivo de 7 casos del autor (protocolo en `Claude outputs/fases/005/fase-1-implementa.md`). La fase 2 · El agente `consulta` y su skill de peticiones está commiteada (`ae1e7ad`; `probar_consulta.ps1` 11 de 11, USD 0.96 y 605 s) y espera su prueba en vivo (2 envíos, con `!` y en terminal aparte; protocolo en `Claude outputs/fases/005/fase-2-en-vivo.md`). La fase 3 · La guía `docs/EQUIPO.md` y la instalación guiada está commiteada (`b515dd9`; 10 pasos de instalación; el paso 10 dice aceptar el diálogo de confianza, sin el cual `settings.json` pierde sus `allow`) y espera su lectura en vivo (protocolo en `Claude outputs/fases/005/fase-3.md`; ese clon sirve para el circuito de la fase 4). La fase 4 · El aviso de peticiones en `direccion` y el circuito completo está hecha y pendiente del commit del autor: `equipo/peticiones_pendientes.ps1 -Ref <ref> [-SinFetch]` (0 pendientes en HEAD y en `origin/main`), que `direccion` corre al arrancar tras leer este archivo (`direccion.md`, `CLAUDE.md` §1); los tres `allow` de la fase en `.claude/settings.json` (`git fetch origin*` en Bash y PowerShell y la línea del script) se le negaron al agente y los añade la dirección; sin ellos el script pide permiso al arrancar. El circuito en vivo, con su protocolo en `Claude outputs/fases/005/fase-4.md`. Sigue la fase 5 · Un compañero real instala, pregunta y envía una petición. El BACKLOG de la meta lo escribe la dirección (B60–B65).
+- **Lo en vivo de las fases 1 a 4 de la meta 005 queda pendiente por decisión del autor (2026-10-28):** lo aplaza hasta que vaya a compartirlo con sus compañeros. Sus protocolos, en `Claude outputs/fases/005/`.
 - Sin verificar (los `push` están negados también en el scratchpad): que `git push --dry-run origin HEAD:main` (paso 9 de `EQUIPO.md`) abra el navegador de Git Credential Manager con la copia al día; si no lo abre, la entrada a GitHub se hace en el comando 4 del primer envío.
 
 ## Estado técnico (el detalle está en `docs/CONTEXT.md` §6)
@@ -25,7 +28,7 @@ Spec activo: `specs/005-equipo-consulta/`
 
 ## La suite
 
-- `codigo/tests/`: **618 de 618**, 0 avisos; 32.9 s de pytest y 35.5 s de reloj (2026-10-28, fase 3 de la meta 005, dos corridas; `codigo/` sin cambios); 33.0 y 33.8 s en la fase 2, 37.1 y 31.7 s en la fase 1. Antes, 34.3 s al cerrar la meta 004. Al cerrar la meta 003, 555 de 555. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
+- `codigo/tests/`: **618 de 618**, 0 avisos; 59.0 s de pytest y 59 s de reloj (2026-10-28, fase 4 de la meta 005, dos corridas con la CPU al 99 % por otros programas; `codigo/` sin cambios); 32.9 s en la fase 3, 33.0 y 33.8 s en la fase 2, 37.1 y 31.7 s en la fase 1. Antes, 34.3 s al cerrar la meta 004. Al cerrar la meta 003, 555 de 555. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm / 0.0°, detección 0.0 px) + `python -m gui.panel --selftest` (con `PYTHONIOENCODING=utf-8`, B49). Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -42,7 +45,7 @@ Spec activo: `specs/005-equipo-consulta/`
 
 - Con ventana: gs1 61.7 fps, gs2 55.2 (aceptado, P11); sin ventana: 89.9 y 88.8 fps, sd z 0.037 y 0.030 mm. Slicer recibe como mucho ~65 Hz: el techo es de Slicer (R2, B54). «Se mueve»: 49.6 mm reales por 50 de regla.
 - **B55 (media desde el 2026-10-26):** dos Marker0 con el mismo ID (80 y 100 mm); con el de 100, todo sale a escala 0.81 sin aviso.
-- Lo siguiente: la meta 005 · Agente de consulta para el equipo y buzón de peticiones (en curso, fase 4 · El aviso de peticiones en `direccion` y el circuito completo); después, la meta 006 · Grafo de factores óptico-inercial (abajo). Instrumento y punta con un transform nuevo (ADR-025) sigue pendiente. B39 acotado (baja). B48, B49, B51–B54, B56, B57 y B59 bajas; B50, B55 y B58 medias.
+- Lo siguiente: la meta 005 · Agente de consulta para el equipo y buzón de peticiones (en curso, fase 5 · Un compañero real instala, pregunta y envía una petición); después, la meta 006 · Grafo de factores óptico-inercial (abajo). Instrumento y punta con un transform nuevo (ADR-025) sigue pendiente. B39 acotado (baja). B48, B49, B51–B54, B56, B57 y B59 bajas; B50, B55 y B58 medias.
 
 ## Meta 006 · Grafo de factores óptico-inercial (decidida, sin spec; era la 005 hasta el 2026-10-27)
 
@@ -51,7 +54,7 @@ Spec activo: `specs/005-equipo-consulta/`
 
 ## Pendientes del autor
 
-- Meta 005: la prueba en vivo de la fase 1 (7 casos), la de la fase 2 (2 envíos con `consulta`, uno con `!` y otro en terminal aparte, con un fallo «non-fast-forward» entre medias) y la lectura de `docs/EQUIPO.md` de la fase 3 (10 pasos en una carpeta nueva, ~20 min: pasos sin nada que no esté escrito, minutos, MB del clon), con sus protocolos en `Claude outputs/fases/005/`.
+- Meta 005 (aplazado por el autor hasta compartirlo con sus compañeros, 2026-10-28): la prueba en vivo de la fase 1 (7 casos), la de la fase 2 (2 envíos con `consulta`, uno con `!` y otro en terminal aparte, con un fallo «non-fast-forward» entre medias), la lectura de `docs/EQUIPO.md` de la fase 3 (10 pasos en una carpeta nueva, ~20 min: pasos sin nada que no esté escrito, minutos, MB del clon) y el circuito de la fase 4 (una petición de prueba a `origin` en GitHub, vista en `direccion` y cerrada como «rechazada: prueba», ~10 min), con sus protocolos en `Claude outputs/fases/005/`.
 - Instalar el GitHub MCP (lo configura el autor) antes de planear la meta 006 · Grafo de factores óptico-inercial.
 - La prueba en vivo con la regla de la fase 2c no se hizo: el autor (2026-10-26) la deja; si vuelve a congelarse o ir lento, se retoma (protocolo en `Claude outputs/fases/004/fase-2c.md`).
 - B55: decidido el 2026-10-26, se usa el Marker0 de 80 mm y el de 100 se guarda (media).

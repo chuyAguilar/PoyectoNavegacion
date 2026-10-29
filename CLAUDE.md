@@ -9,6 +9,7 @@ El conocimiento técnico detallado está en las skills `surgical-navigation-aruc
 En este orden:
 
 1. Lee completos `docs/constitution.md`, `memory.md` y `docs/CONTEXT.md`.
+   **La dirección,** justo después de `memory.md` y antes de cualquier otra cosa, corre `powershell -NoProfile -ExecutionPolicy Bypass -File equipo/peticiones_pendientes.ps1 -Ref origin/main` y le presenta al autor las peticiones del equipo con `Decisión: pendiente` y, si hay commits nuevos en `origin/main`, el recordatorio de `git pull --rebase origin main` (ADR-034; el detalle, en `.claude/agents/direccion.md`). Los subagentes no lo corren.
 2. Lee completos, del spec activo, `spec.md` y `tasks.md`, los que existan. El spec activo es el que nombra `memory.md`, siempre con las mismas palabras: «Spec activo: `specs/NNN-nombre/`» (o «Spec activo: ningún spec activo»).
 3. Consulta `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/BACKLOG.md` y `docs/PRUEBAS.md` por sección: primero su índice, después solo la sección que haga falta.
 4. `docs/history/` solo cuando haga falta saber cómo se llegó a algo. Es copia literal y no se edita.
