@@ -397,6 +397,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** la prueba de `consulta` (`claude -p` con el guion de 5 preguntas) gasta cuota de Claude Code cada vez.
 - **Por qué queda:** es informativa; por eso no se corre en cada fase.
 - **De dónde:** plan de la meta 005 · Agente de consulta para el equipo y buzón de peticiones (`specs/005-equipo-consulta/`, «Lo que va al BACKLOG»), 2026-10-28.
+- **Medido (fase 2 · El agente `consulta` y su skill de peticiones, 2026-10-28):** `equipo/pruebas/probar_consulta.ps1` hace 7 llamadas a `claude -p` con sonnet (5 preguntas y 2 órdenes): USD 0.96 en total (0.09 a 0.17 por llamada) y 605 s, casi todo espera de la API (de 15 a 222 s por llamada).
 - **Qué haría falta:** nada mientras el coste medido en la fase 2 sea bajo; si sube, correrla solo al cerrar metas que toquen `docs/` o `consulta`.
 - **Prioridad:** baja.
 
