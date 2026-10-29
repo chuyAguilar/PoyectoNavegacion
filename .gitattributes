@@ -16,6 +16,9 @@
 *.ps1   text eol=crlf
 *.bat   text eol=crlf
 
+# Hooks de git del equipo (sh de Git for Windows): LF, o fallan en Git Bash
+equipo/hooks/* text eol=lf
+
 # Binarios: nunca tocar
 *.stl       binary
 *.3mf       binary

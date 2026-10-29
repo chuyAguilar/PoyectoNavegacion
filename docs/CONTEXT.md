@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-26 (§6: meta 004 · Cómo funciona el tracker, fase 4 · Lectura con el autor y cierre de la meta: la meta pasa a «Hecho»; la suite, 618 pruebas). Antes, 2026-10-25 (§6: meta 003 · Arquitectura y optimización del tracker, fase 8c · Cierre de la meta: la meta pasa a «Hecho», con los números en vivo de las fases 7, 7b, 8a y 8b). Antes, 2026-10-25 (§6: meta 003, fase 8a · Un botón por modo en el panel, hecha sin cámara). Antes, 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Las actualizaciones anteriores, en el historial de git._
+> _Última actualización: 2026-10-28 (§5: meta 005 · Agente de consulta para el equipo y buzón de peticiones, fase 1 · El buzón `peticiones/` y los hooks: los compañeros envían peticiones nuevas, ADR-034). Antes, 2026-10-26 (§6: meta 004 · Cómo funciona el tracker, fase 4 · Lectura con el autor y cierre de la meta: la meta pasa a «Hecho»; la suite, 618 pruebas). Antes, 2026-10-25 (§6: meta 003 · Arquitectura y optimización del tracker, fase 8c · Cierre de la meta: la meta pasa a «Hecho», con los números en vivo de las fases 7, 7b, 8a y 8b). Antes, 2026-10-25 (§6: meta 003, fase 8a · Un botón por modo en el panel, hecha sin cámara). Antes, 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Las actualizaciones anteriores, en el historial de git._
 
 ---
 
@@ -158,6 +158,8 @@
 ## 5. Metodología de trabajo (cómo colaboramos humano + IA)
 
 Desde el 2026-10-19, el método por specs: `docs/constitution.md` (lo que no se negocia), `CLAUDE.md` (cómo se trabaja), `memory.md` y `specs/` (ADR-020). Ningún agente hace commit ni push; los hace el autor. El método anterior de briefs (adoptado el 2026-08-13) queda en el historial de git de este archivo.
+
+Desde el 2026-10-28 (ADR-034, meta 005 · Agente de consulta para el equipo y buzón de peticiones), los compañeros del equipo también hacen commit y push, pero solo de archivos nuevos en `peticiones/`: una petición por archivo, escrita por el agente `consulta` y enviada por el compañero con los cinco comandos de `peticiones/README.md` («Cómo se envía»). En sus máquinas la filtran los hooks `pre-commit` y `pre-push` de `equipo/hooks/` (`git config core.hooksPath equipo/hooks`); el autor decide cada petición desde `direccion`. Siguen sin hacer commit ni push los agentes, `consulta` incluido.
 
 ## 6. Estado del proyecto (hecho / en pausa / WIP)
 

@@ -1,0 +1,54 @@
+#!/bin/sh
+# pre-commit del proyecto (ADR-034). Se activa en la maquina de cada
+# companero con:  git config core.hooksPath equipo/hooks
+# En la del autor no esta activo.
+#
+# Deja pasar solo commits que traen peticiones nuevas en peticiones/, y
+# cada una con la linea "Decisión: pendiente" (la decision la escribe el
+# autor). Git lo lanza desde la raiz del repo y, con "git commit <ruta>",
+# le pasa un indice temporal con solo esa ruta: lo demas que haya en el
+# indice no lo hace fallar.
+
+# Solo builtins del sh y git: cuando sh.exe arranca fuera de Git Bash,
+# usr/bin (dirname, grep...) puede no estar en el PATH. /bin/sh siempre
+# existe en el sh de Git for Windows.
+case "$0" in */*) dir=${0%/*} ;; *) dir=. ;; esac
+cambios=$(git -c core.quotePath=false diff --cached --name-status --no-renames)
+
+# Sin nada preparado, que lo diga git ("nothing to commit").
+[ -z "$cambios" ] && exit 0
+
+rc=0
+
+if ! printf '%s\n' "$cambios" | /bin/sh "$dir/revisar_peticiones.sh"; then
+    rc=1
+fi
+
+# tiene_decision <objeto>: 0 si el contenido de "git show <objeto>" trae
+# una linea que empieza por "Decisión: pendiente" (con o sin CR al final).
+tiene_decision() {
+    git show "$1" 2>/dev/null | (
+        while IFS= read -r linea || [ -n "$linea" ]; do
+            case "$linea" in "Decisión: pendiente"*) exit 0 ;; esac
+        done
+        exit 1
+    )
+}
+
+tab=$(printf '\t')
+printf '%s\n' "$cambios" | while IFS="$tab" read -r estado ruta; do
+    case "$estado:$ruta" in
+        A:peticiones/*.md)
+            if ! tiene_decision ":$ruta"; then
+                echo "$ruta: le falta la linea 'Decisión: pendiente' del bloque Decision del autor (la decision la escribe el autor)"
+                exit 1
+            fi
+            ;;
+    esac
+done || rc=1
+
+if [ $rc -ne 0 ]; then
+    echo "Commit rechazado: solo se envian peticiones nuevas en peticiones/ (ver peticiones/README.md, 'Cómo se envía')."
+fi
+
+exit $rc

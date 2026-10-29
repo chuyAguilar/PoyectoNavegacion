@@ -1,0 +1,87 @@
+#!/bin/sh
+# pre-push del proyecto (ADR-034). Se activa en la maquina de cada
+# companero con:  git config core.hooksPath equipo/hooks
+#
+# Argumentos: $1 nombre del remoto, $2 su URL. Por la entrada estandar,
+# una linea por ref que se empuja:
+#   <local-ref> <local-oid> <remote-ref> <remote-oid>
+# con <remote-oid> todo ceros si la rama remota no existe y
+# <local-ref> = "(delete)" al borrar. Si sale distinto de 0 no se empuja nada.
+#
+# Revisa todo lo que el push anadiria al remoto (lo que hay entre la base
+# comun y lo local) con la misma regla que pre-commit: atrapa un commit
+# hecho con --no-verify y los commits locales que no son peticiones.
+
+# Solo builtins del sh y git: cuando sh.exe arranca fuera de Git Bash,
+# usr/bin (dirname, grep...) puede no estar en el PATH. /bin/sh siempre
+# existe en el sh de Git for Windows.
+case "$0" in */*) dir=${0%/*} ;; *) dir=. ;; esac
+remoto=$1
+ceros=0000000000000000000000000000000000000000
+tab=$(printf '\t')
+rc=0
+
+# tiene_decision <objeto>: 0 si el contenido de "git show <objeto>" trae
+# una linea que empieza por "Decisión: pendiente" (con o sin CR al final).
+tiene_decision() {
+    git show "$1" 2>/dev/null | (
+        while IFS= read -r linea || [ -n "$linea" ]; do
+            case "$linea" in "Decisión: pendiente"*) exit 0 ;; esac
+        done
+        exit 1
+    )
+}
+
+while read -r local_ref local_oid remote_ref remote_oid; do
+    [ -z "$local_ref" ] && continue
+
+    if [ "$local_ref" = "(delete)" ]; then
+        echo "$remote_ref: no se borran ramas del repositorio del proyecto"
+        rc=1
+        continue
+    fi
+
+    if [ "$remote_oid" = "$ceros" ]; then
+        # La rama remota no existe: se compara con origin/main.
+        if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+            base=origin/main
+        else
+            echo "$remote_ref: no hay origin/main con que comparar; ejecuta 'git fetch origin' y vuelve a intentarlo"
+            rc=1
+            continue
+        fi
+    else
+        base=$remote_oid
+    fi
+
+    # Tres puntos: solo lo que lo local anade desde la base comun, sin
+    # contar lo que el remoto tenga de mas (eso lo rechaza el propio push).
+    if ! cambios=$(git -c core.quotePath=false diff --name-status --no-renames "$base...$local_oid" 2>&1); then
+        echo "$remote_ref: no se pudo comparar $base con lo local ($cambios); ejecuta 'git fetch origin' y vuelve a intentarlo"
+        rc=1
+        continue
+    fi
+
+    [ -z "$cambios" ] && continue
+
+    if ! printf '%s\n' "$cambios" | /bin/sh "$dir/revisar_peticiones.sh"; then
+        rc=1
+    fi
+
+    printf '%s\n' "$cambios" | while IFS="$tab" read -r estado ruta; do
+        case "$estado:$ruta" in
+            A:peticiones/*.md)
+                if ! tiene_decision "$local_oid:$ruta"; then
+                    echo "$ruta: le falta la linea 'Decisión: pendiente' (la decision la escribe el autor)"
+                    exit 1
+                fi
+                ;;
+        esac
+    done || rc=1
+done
+
+if [ $rc -ne 0 ]; then
+    echo "Push a '$remoto' rechazado: solo se envian peticiones nuevas en peticiones/ (ver peticiones/README.md, 'Cómo se envía'). Avisa al autor."
+fi
+
+exit $rc

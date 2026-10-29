@@ -47,6 +47,12 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B57 | El `.json` de procedencia de las referencias del replay nombra rutas de `iter4/` | Baja | — |
 | B58 | La ventana de «Calibrar con tablero» detecta la vista previa a resolución completa y va lenta sin tablero | Media | — |
 | B59 | Los comentarios de los perfiles gs1 y gs2 dicen cosas que ya no valen | Baja | — |
+| B60 | El repo es público, versiona el DICOM y ahora más personas tienen escritura y el clon completo | Alta | — |
+| B61 | Los hooks de `peticiones/` se pueden saltar y GitHub no filtra por ruta | Media | — |
+| B62 | Enviar una petición son cinco comandos a mano | Baja | — |
+| B63 | Resumen periódico del estado para el jefe (`docs/ESTADO.md`) | Baja | — |
+| B64 | Las pruebas de `equipo/` corren fuera de la suite | Baja | — |
+| B65 | El guion de `consulta` cuesta dinero en cada corrida | Baja | — |
 
 ## Abiertos
 
@@ -350,6 +356,48 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** los perfiles son de la cadena (principio 6) y la meta 004 · Cómo funciona el tracker no los toca.
 - **De dónde:** visto al escribir la fase 3 · La explicación y el glosario (meta 004), 2026-10-26.
 - **Qué haría falta:** poner al día esos comentarios en una fase que ya toque `profiles/`, comprobando con la suite que el perfil leído no cambia.
+- **Prioridad:** baja.
+
+### B60 · El repo es público, versiona el DICOM y ahora más personas tienen escritura y el clon completo
+- **Qué:** el repo `chuyAguilar/PoyectoNavegacion` es público y versiona el DICOM y el volumen CT (ADR-019). Desde la meta 005, Kike, Armando y el doctor Milton tienen escritura y un clon completo en sus máquinas (P6), con los datos de paciente dentro.
+- **Por qué queda:** decisión del autor de mantenerlo así (2026-10-27); los tres son del equipo médico (P1), así que encaja con ADR-019. Mover el DICOM o hacer el repo privado no entra en la meta 005.
+- **De dónde:** plan de la meta 005 · Agente de consulta para el equipo y buzón de peticiones (`specs/005-equipo-consulta/`, «Lo que va al BACKLOG»), 2026-10-28.
+- **Qué haría falta:** sacar los datos de paciente del árbol y del historial (reescritura acordada con el autor), o hacer el repo privado, con su ADR.
+- **Prioridad:** alta (P4).
+
+### B61 · Los hooks de `peticiones/` se pueden saltar y GitHub no filtra por ruta
+- **Qué:** el único seguro de ADR-034 son los hooks `pre-commit` y `pre-push` de `equipo/hooks/`. Se saltan con `--no-verify`, quitando `core.hooksPath`, editando el hook o empujando con otra herramienta, y en un repo personal y público GitHub no tiene reglas de push por ruta. Con libertad total (P9), un agente en la máquina de un compañero puede cambiar su copia si él lo aprueba; el hook impide enviarlo, no hacerlo. `consulta` comprueba que el hook esté activo antes de cada envío, pero un envío sin `consulta` no pasa por esa comprobación.
+- **Por qué queda:** el autor quiere libertad para los compañeros y solo los hooks como seguro (P9, P12).
+- **De dónde:** plan de la meta 005 · Agente de consulta para el equipo y buzón de peticiones (`specs/005-equipo-consulta/`, «Lo que va al BACKLOG»), 2026-10-28.
+- **Qué haría falta:** ramas por compañero con `main` restringido al autor, una GitHub Action que avise, o un repo privado de organización con reglas por ruta.
+- **Prioridad:** media.
+
+### B62 · Enviar una petición son cinco comandos a mano
+- **Qué:** el envío son los cinco comandos de `peticiones/README.md` («Cómo se envía»), que el compañero ejecuta uno por uno (P14).
+- **Por qué queda:** el autor no quiere script de envío; falta ver si cinco comandos son demasiados.
+- **De dónde:** plan de la meta 005 · Agente de consulta para el equipo y buzón de peticiones (`specs/005-equipo-consulta/`, «Lo que va al BACKLOG»), 2026-10-28.
+- **Qué haría falta:** si en las fases 2 y 5 el compañero necesitó ayuda o se equivocó, un alias de git versionado o un script lanzado por él.
+- **Prioridad:** baja: espera los números de la fase 5.
+
+### B63 · Resumen periódico del estado para el jefe (`docs/ESTADO.md`)
+- **Qué:** un `docs/ESTADO.md` que `direccion` pondría al día al cerrar cada meta, para quien no quiere preguntarle a un agente.
+- **Por qué queda:** el jefe usa `consulta` como los demás (P3).
+- **De dónde:** plan de la meta 005 · Agente de consulta para el equipo y buzón de peticiones (`specs/005-equipo-consulta/`, «Lo que va al BACKLOG»), 2026-10-28.
+- **Qué haría falta:** el archivo y una línea en `/cerrar-fase` o en el cierre de meta de `direccion`.
+- **Prioridad:** baja.
+
+### B64 · Las pruebas de `equipo/` corren fuera de la suite
+- **Qué:** `equipo/pruebas/probar_*.ps1` no están en pytest: la suite no las corre.
+- **Por qué queda:** meterlas pediría tocar `codigo/tests`, y la meta 005 no toca `codigo/`.
+- **De dónde:** plan de la meta 005 · Agente de consulta para el equipo y buzón de peticiones (`specs/005-equipo-consulta/`, «Lo que va al BACKLOG»), 2026-10-28.
+- **Qué haría falta:** una prueba de pytest que lance los scripts de `equipo/pruebas/` con tope de tiempo, o correrlos en cada ronda de `pruebas`.
+- **Prioridad:** baja.
+
+### B65 · El guion de `consulta` cuesta dinero en cada corrida
+- **Qué:** la prueba de `consulta` (`claude -p` con el guion de 5 preguntas) gasta cuota de Claude Code cada vez.
+- **Por qué queda:** es informativa; por eso no se corre en cada fase.
+- **De dónde:** plan de la meta 005 · Agente de consulta para el equipo y buzón de peticiones (`specs/005-equipo-consulta/`, «Lo que va al BACKLOG»), 2026-10-28.
+- **Qué haría falta:** nada mientras el coste medido en la fase 2 sea bajo; si sube, correrla solo al cerrar metas que toquen `docs/` o `consulta`.
 - **Prioridad:** baja.
 
 ## Cerrados

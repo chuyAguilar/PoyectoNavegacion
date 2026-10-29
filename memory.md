@@ -1,8 +1,8 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-10-26 (meta 004 · Cómo funciona el tracker cerrada con la fase 4 · Lectura con el autor y cierre de la meta, pendiente del commit del autor; sigue planear la meta 005 · Grafo de factores óptico-inercial)._
+_Actualizado: 2026-10-28 (meta 005 · Agente de consulta para el equipo y buzón de peticiones: fase 1 · El buzón `peticiones/` y los hooks, hecha sin la prueba en vivo y pendiente del commit del autor. El grafo de factores es la meta 006, por decisión del autor del 2026-10-27)._
 
-Spec activo: ningún spec activo
+Spec activo: `specs/005-equipo-consulta/`
 
 ## Dónde estamos
 
@@ -11,6 +11,8 @@ Spec activo: ningún spec activo
 - **Meta 002 · Calibración de las cámaras global shutter:** cerrada el 2026-10-23 (ADR-023 a ADR-025; P03 «pasa»). Detalle en `specs/002-*/`.
 - **Meta 003 · Arquitectura y optimización del tracker:** cerrada el 2026-10-26 (ADR-026 a ADR-031; P04 «pasa»; fases en `specs/003-*/tasks.md`, de `b3679ca` a `26e724e`). Detalle en `specs/003-*/resultados.md`.
 - **Meta 004 · Cómo funciona el tracker:** cerrada el 2026-10-26 con la fase 4 · Lectura con el autor y cierre de la meta (pendiente del commit del autor): 0 dudas en §9.2 y §9.4 (P12). Fases en `specs/004-*/tasks.md` (de `f3a2d4b` a `354afe4`); números en `specs/004-*/resultados.md`; todo en `docs/ARCHITECTURE.md` §9. Si se edita el Mermaid de §9.1, reexportar con `diagnostics.export_map` (ADR-032); si cambia `explain_pose.format_markdown`, regenerar el bloque con el comando de §9.3.
+
+- **Meta 005 · Agente de consulta para el equipo y buzón de peticiones** (`specs/005-equipo-consulta/`, plan autorizado el 2026-10-28; ADR-034 y principio 1 enmendado): la fase 1 · El buzón `peticiones/` y los hooks está hecha (`peticiones/`, `equipo/hooks/`, `equipo/pruebas/probar_hooks.ps1`: 24 de 24 en 3 s) y pendiente del commit del autor y de su prueba en vivo de 7 casos (protocolo en `Claude outputs/fases/005/fase-1-implementa.md`). Siguen las fases 2 a 5. El BACKLOG de la meta lo escribe la dirección.
 
 ## Estado técnico (el detalle está en `docs/CONTEXT.md` §6)
 
@@ -22,7 +24,7 @@ Spec activo: ningún spec activo
 
 ## La suite
 
-- `codigo/tests/`: **618 de 618**, 0 avisos; 34.3 s de pytest (2026-10-26, cierre de la meta 004). Al cerrar la meta 003, 555 de 555. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
+- `codigo/tests/`: **618 de 618**, 0 avisos; 37.1 y 31.7 s de pytest (2026-10-28, fase 1 de la meta 005, dos corridas; `codigo/` sin cambios). Antes, 34.3 s al cerrar la meta 004. Al cerrar la meta 003, 555 de 555. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm / 0.0°, detección 0.0 px) + `python -m gui.panel --selftest` (con `PYTHONIOENCODING=utf-8`, B49). Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -39,18 +41,17 @@ Spec activo: ningún spec activo
 
 - Con ventana: gs1 61.7 fps, gs2 55.2 (aceptado, P11); sin ventana: 89.9 y 88.8 fps, sd z 0.037 y 0.030 mm. Slicer recibe como mucho ~65 Hz: el techo es de Slicer (R2, B54). «Se mueve»: 49.6 mm reales por 50 de regla.
 - **B55 (alta):** dos Marker0 con el mismo ID (80 y 100 mm); con el de 100, todo sale a escala 0.81 sin aviso.
-- Lo siguiente: la meta 005 · Grafo de factores óptico-inercial (abajo). Instrumento y punta con un transform nuevo (ADR-025) sigue pendiente. B39 acotado (baja). B48, B49, B51–B54, B56, B57 y B59 bajas; B50, B55 y B58 medias.
+- Lo siguiente: la meta 005 · Agente de consulta para el equipo y buzón de peticiones (en curso, fase 2 · El agente `consulta` y su skill de peticiones); después, la meta 006 · Grafo de factores óptico-inercial (abajo). Instrumento y punta con un transform nuevo (ADR-025) sigue pendiente. B39 acotado (baja). B48, B49, B51–B54, B56, B57 y B59 bajas; B50, B55 y B58 medias.
 
-## Meta 005 · Grafo de factores óptico-inercial (decidida, sin spec)
+## Meta 006 · Grafo de factores óptico-inercial (decidida, sin spec; era la 005 hasta el 2026-10-27)
 
 - Propuesta del autor (2026-10-26): un grafo de factores (GTSAM; Ceres no tiene bindings oficiales de Python) que fusione las poses ArUco de gs1/gs2 con un IMU, modular para pasar más adelante a puntos IR por PnP. Primero solo cámaras. Respuestas del autor del 2026-10-26: **el IMU va en el instrumento** (cámaras fijas: es tracking óptico-inercial, no VIO de la cámara); **empieza después de cerrar la meta 004**; fuentes: **GitHub MCP + Context7 + artículos**; sandbox: **scripts con prueba o notebooks, según haga falta**.
-- Pendiente para el spec: los números de cierre (convergencia en mm, oclusión de Y s con error < Z mm) y el mecanismo de sincronización (las SVPRO no dan hora de hardware: hoy `perf_counter` tras decodificar). Estas respuestas pasan a `specs/005-*/clarify.md` al crearlo.
+- Pendiente para el spec: los números de cierre (convergencia en mm, oclusión de Y s con error < Z mm) y el mecanismo de sincronización (las SVPRO no dan hora de hardware: hoy `perf_counter` tras decodificar). Estas respuestas pasan a `specs/006-*/clarify.md` al crearlo.
 
 ## Pendientes del autor
 
-- Instalar el GitHub MCP (lo configura el autor) antes de planear la meta 005.
+- Instalar el GitHub MCP (lo configura el autor) antes de planear la meta 006 · Grafo de factores óptico-inercial.
 - La prueba en vivo con la regla de la fase 2c no se hizo: el autor (2026-10-26) la deja; si vuelve a congelarse o ir lento, se retoma (protocolo en `Claude outputs/fases/004/fase-2c.md`).
-- El commit de cierre de la meta 004 · Cómo funciona el tracker y, después, la ronda de pruebas de la meta (P05).
 - B55: decidido el 2026-10-26, se usa el Marker0 de 80 mm y el de 100 se guarda (media).
 - **Usar el Marker0 de 80 mm** (el de los perfiles) mientras B55 siga abierto, y decidir qué se hace con el de 100.
 - Decidir si B19 y B20 (alta) se cierran: su código y su punta se archivaron. Decidir si B35 entra en la meta.

@@ -7,7 +7,7 @@
 > conserva, para no repetir errores ya pagados.
 >
 > Estados: `Aceptada` · `Reemplazada` · `En pausa` · `Propuesta`.
-> _Última actualización: 2026-10-26._
+> _Última actualización: 2026-10-28._
 
 Índice rápido:
 
@@ -46,6 +46,7 @@
 | 031 | La meta 003 cierra con el tracker en paquetes, sin ventana a ~90 fps y el techo de Slicer explicado | Aceptada |
 | 032 | El mapa de `ARCHITECTURE.md` §9.1 se exporta con `mermaid-cli`, fuera de `requirements.txt`, y una prueba lo ata al código y al Mermaid | Aceptada |
 | 033 | La meta 004 cierra con la cadena explicada en `ARCHITECTURE.md` §9 y atada al código por pruebas | Aceptada |
+| 034 | Los compañeros envían peticiones: commit y push solo de archivos nuevos en `peticiones/`, y lo hacen ellos | Aceptada |
 
 ---
 
@@ -666,3 +667,16 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 4. **Dos fases añadidas por el autor**, fuera de la cadena: 2b, «Verificar IDs» pone el semáforo «Cámara» en verde y se quita «Probar cámara» (B29 cerrado); 2c, «Comprobar escala con regla» ya no se congela (vista previa de ~250 a ~1.7 ms por frame). La prueba en vivo con la regla de la 2c no se hizo: se retoma si el problema vuelve.
 
 **Consecuencias.** Si se cambia la cadena, la suite obliga a poner §9 al día. La cadena no cambió desde `63bbdd8`: suite 618 de 618, replay 0.0 mm / 0.0°. Quedan abiertos B58 (media; «Calibrar con tablero» tiene la misma vista previa lenta) y B59 (baja; comentarios viejos en los perfiles). La siguiente meta es la 005 · Grafo de factores óptico-inercial, decidida por el autor el 2026-10-26 (`memory.md`); instrumento y punta (ADR-025) sigue pendiente.
+
+## ADR-034 — Los compañeros envían peticiones: commit y push solo de archivos nuevos en `peticiones/`, y lo hacen ellos
+**Fecha:** 2026-10-28 · **Estado:** Aceptada · **Enmienda:** principio 1 de `docs/constitution.md`; matiza ADR-020
+
+**Contexto.** La meta 005 · Agente de consulta para el equipo y buzón de peticiones (`specs/005-equipo-consulta/`, plan autorizado el 2026-10-28) da a Kike, Armando y el doctor Milton, los tres del equipo médico, un agente propio, `consulta`, que responde en llano y convierte sus propuestas en peticiones. Hasta hoy el principio 1 decía que el autor hace todos los commits y los push. El autor quiere que los compañeros tengan libertad en su máquina, incluso para abrir otros agentes, y que su seguro sean reglas del proyecto, no permisos de GitHub que haya que revocar después (`clarify.md` P9–P16, 2026-10-27 y 2026-10-28).
+
+**Decisión.**
+1. Los compañeros hacen commit y push solo de archivos nuevos en `peticiones/`. Ejecutan ellos los comandos de `peticiones/README.md` («Cómo se envía»), que les da uno por uno la skill `peticion` de `consulta`, en una terminal aparte o con `!` en la conversación (P15). Una petición enviada no se edita; su bloque «Decisión del autor» lo llena `direccion`.
+2. Ningún agente ejecuta `git commit` ni `git push`, tampoco `consulta`. La negación de `.claude/settings.json` no cambia y no hay script de envío (P11, P14).
+3. El único seguro son los hooks versionados `pre-commit` y `pre-push`, que se activan en las máquinas de los compañeros con `core.hooksPath` y cambian con las reglas del proyecto. En su máquina, Claude Code no se les restringe (P9). En GitHub, solo un ruleset que bloquea el force-push y el borrado de `main` (P5).
+4. Todo lo demás (código, docs, specs, configuración) sigue siendo del autor.
+
+**Consecuencias.** Los hooks se pueden saltar (`--no-verify`, quitar `core.hooksPath`, empujar con otra herramienta) y GitHub no filtra por ruta en un repo personal y público: queda como riesgo en el BACKLOG (P12). El clon completo pone el DICOM en las máquinas de los compañeros; encaja con ADR-019 porque los tres son del equipo médico (P1, P6), y el repo público con más personas con escritura va al BACKLOG con prioridad alta (P4). El autor hace `git pull --rebase` antes de sus push, porque `main` recibe commits de otros.

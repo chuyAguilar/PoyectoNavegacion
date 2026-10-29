@@ -2,13 +2,14 @@
 
 Lo que no se negocia. No crea reglas: junta las que ya existen, cada una con su fuente. Cambiar un principio exige un ADR. Si un spec, un prompt o un comando choca con este archivo, gana este archivo y se avisa al autor.
 
-Aprobada por el autor el 2026-10-19 (ADR-020).
+Aprobada por el autor el 2026-10-19 (ADR-020). Principio 1 enmendado el 2026-10-28 (ADR-034).
 
 1. **Cada quien su papel.**
    - **El autor** decide, autoriza cada plan y hace todos los commits y los push: títulos cortos, en español, sin coautor.
    - **Los agentes** hacen solo lo de su papel y dejan los cambios en el árbol de trabajo. Ninguno ejecuta `git commit` ni `git push`.
+   - **Los compañeros del equipo** hacen commit y push solo de archivos nuevos en `peticiones/`, ejecutando ellos los comandos de `peticiones/README.md` que les da, uno por uno, la skill `peticion` de `consulta`; una petición enviada no se edita. Ningún agente ejecuta `git commit` ni `git push`, tampoco `consulta` (ADR-034).
 
-   *Fuente: ADR-020; `.claude/settings.json`.*
+   *Fuente: ADR-020; ADR-034; `.claude/settings.json`.*
 
 2. **Plan antes de código, fase por fase.**
    - Sin un plan autorizado por el autor no se implementa nada.
