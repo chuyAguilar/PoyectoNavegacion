@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-10-28 (§5: meta 005 · Agente de consulta para el equipo y buzón de peticiones, fase 1 · El buzón `peticiones/` y los hooks: los compañeros envían peticiones nuevas, ADR-034). Antes, 2026-10-26 (§6: meta 004 · Cómo funciona el tracker, fase 4 · Lectura con el autor y cierre de la meta: la meta pasa a «Hecho»; la suite, 618 pruebas). Antes, 2026-10-25 (§6: meta 003 · Arquitectura y optimización del tracker, fase 8c · Cierre de la meta: la meta pasa a «Hecho», con los números en vivo de las fases 7, 7b, 8a y 8b). Antes, 2026-10-25 (§6: meta 003, fase 8a · Un botón por modo en el panel, hecha sin cámara). Antes, 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Las actualizaciones anteriores, en el historial de git._
+> _Última actualización: 2026-10-29 (§6: la meta 007 · El tracker en la Jetson Orin Nano entra en la vía activa, fase 1). Antes, 2026-10-28 (§5: meta 005 · Agente de consulta para el equipo y buzón de peticiones, fase 1 · El buzón `peticiones/` y los hooks: los compañeros envían peticiones nuevas, ADR-034). Antes, 2026-10-26 (§6: meta 004 · Cómo funciona el tracker, fase 4 · Lectura con el autor y cierre de la meta: la meta pasa a «Hecho»; la suite, 618 pruebas). Antes, 2026-10-25 (§6: meta 003 · Arquitectura y optimización del tracker, fase 8c · Cierre de la meta: la meta pasa a «Hecho», con los números en vivo de las fases 7, 7b, 8a y 8b). Antes, 2026-10-25 (§6: meta 003, fase 8a · Un botón por modo en el panel, hecha sin cámara). Antes, 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Las actualizaciones anteriores, en el historial de git._
 
 ---
 
@@ -196,6 +196,8 @@ Desde el 2026-10-28 (ADR-034, meta 005 · Agente de consulta para el equipo y bu
 ### Vía activa
 
 - **Rumbo (2026-10-20; ADR-025):** se rescata solo el tracking; punta, registro, navegación en Slicer y runbooks se rehacen mejorados sobre gs1/gs2. Solo valen los perfiles `profiles\tracker_config_gs1.yaml` y `_gs2.yaml`. Los contextos viejos (Femto `tracker_config.yaml`, «doctor» `tracker_config_doctor.yaml` + `globalshutter.yml`; ADR-014/015/016) están archivados en `codigo\historico\iter4\femto\` y `old_profiles\` como referencia.
+
+- **Meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC** (`specs/007-jetson/`, desde el 2026-10-29): la fase 1 · El escaneo de la Jetson, solo lectura (`codigo\linux\`), hecha el 2026-10-29 con el escaneo del autor; sigue la fase 2. Ningún agente se conecta a la Jetson hasta la fase 2 · La barrera de seguridad para los agentes.
 
 ### En pausa (se conserva, se puede retomar)
 

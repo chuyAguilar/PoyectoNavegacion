@@ -6,7 +6,7 @@ La primera línea dice si el plan está autorizado. Cuando el autor lo autoriza,
 Una casilla por fase; el criterio es el del plan (`plan.md`, «Fases») y aquí no se repite, para que el arranque pese poco. `/fase <n>` la marca con el número obtenido y la fecha; el commit lo añade `/cerrar-fase` o la fase siguiente, cuando ya está en git.
 Ningún agente usa `ssh nav-jetson` hasta que la fase 2 esté cumplida y el autor haya aplicado las reglas de `settings.json` (plan, § «La barrera»).
 
-- [ ] **Fase 1 · El escaneo de la Jetson, solo lectura** (ligera). Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
+- [x] **Fase 1 · El escaneo de la Jetson, solo lectura** (ligera). Criterio: el del plan. Número obtenido: P-1 con 12 de 12 secciones en 11 s (tope 180), 78 órdenes, 0 cortadas por tope, 7 fallidas y explicadas (ninguna es un fallo del escaneo), `find` vacío y los 9 puntos del criterio 3 reportados; `escanear.ps1` corregido (la variable `topes` pisaba `[int]$TopeS`) con 3 casos nuevos, 25 de 25. Fecha: 2026-10-29. Commit: —.
 - [ ] **Fase 2 · La barrera de seguridad para los agentes** (pesada). Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
 - [ ] **Fase 3 · El entorno en la Jetson** (ligera). Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
 - [ ] **Fase 4 · La suite corre en Linux** (ligera). Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.

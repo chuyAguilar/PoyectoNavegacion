@@ -125,3 +125,9 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Fecha:** 2026-10-29
 
 (La pregunta del método de Python 3.11 no se abre ahora: se abre al cerrar la fase 1, con los datos del escaneo, por P6.)
+
+## P21 · Cómo se pone Python 3.11 en la Jetson (abierta tras el escaneo de la fase 1)
+
+- **Opciones:** (a) uv, un CPython 3.11 propio de la cuenta del proyecto, sin sudo ni tocar el del sistema; (b) miniforge (ya en la cuenta `jetson`; más pesado, con ~21 GB libres); (c) deadsnakes por apt, con sudo; (d) el 3.10.12 del sistema. El escaneo: Python 3.10.12, glibc 2.35, sin ningún 3.11; uv y miniforge3 solo en la cuenta `jetson`.
+- **Respuesta del autor:** (a) uv.
+- **Fecha:** 2026-10-29

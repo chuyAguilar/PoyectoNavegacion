@@ -19,6 +19,10 @@
 # Hooks de git del equipo (sh de Git for Windows): LF, o fallan en Git Bash
 equipo/hooks/* text eol=lf
 
+# Scripts de bash para la Jetson (meta 007): LF tambien en el arbol de Windows,
+# porque escanear.ps1 los manda tal cual a bash por ssh
+*.sh    text eol=lf
+
 # Binarios: nunca tocar
 *.stl       binary
 *.3mf       binary
