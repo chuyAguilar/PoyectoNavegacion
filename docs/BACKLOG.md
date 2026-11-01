@@ -54,6 +54,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B64 | Las pruebas de `equipo/` corren fuera de la suite | Baja | — |
 | B65 | El guion de `consulta` cuesta dinero en cada corrida | Baja | — |
 | B71 | Lo que escucha en la red de la Jetson, sin cortafuegos | Media | — |
+| B69 | La barrera del PC para los agentes es blanda | Media | — |
+| B70 | Cuota de disco real para la cuenta `navagente` | Baja | — |
+| B72 | `test_probar_barrera.py` añade ~24 s a la suite | Baja | — |
 
 ## Abiertos
 
@@ -408,6 +411,27 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** plan de la meta 007 (`specs/007-jetson/plan.md`, «Lo que va al BACKLOG»), con lo que vio el escaneo de la fase 1 · El escaneo de la Jetson, solo lectura.
 - **Qué haría falta:** que el autor revise qué necesita cada servicio en la red (en particular si JupyterLab y el gateway piden clave o token) y decida un cortafuegos o ligarlos a 127.0.0.1 o a Tailscale. Se cruza con B68 (el 18944 abierto en la red), propuesto en el mismo plan y aún sin escribir aquí.
 - **Prioridad:** media (puede haber algo sin autenticación; sin confirmar).
+
+### B69 · La barrera del PC para los agentes es blanda
+- **Qué:** los agentes corren como el usuario de Windows del autor. Lo que ese usuario alcanza (su clave personal de `~/.ssh/`, un `subprocess` desde un Python permitido), un agente lo alcanza rodeando las reglas de `.claude/settings.json`. La barrera dura es la cuenta `navagente` y su guardián en la Jetson (`codigo/linux/guardian.py`): acota el daño solo si el acceso va por ella.
+- **Por qué queda:** el rodeo no se cierra desde el repo; lo mitiga el autor (clave personal con frase de paso y `sudo` de la Jetson con contraseña: P20, contestada en «a»).
+- **De dónde:** hallazgo 7 del plan de la meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC (`specs/007-jetson/plan.md`), fase 2 · La barrera de seguridad para los agentes.
+- **Qué haría falta:** un usuario de Windows aparte para los agentes, sin acceso al `~/.ssh/` del autor. Si la clave personal dejara de llevar frase de paso, la prioridad sube a alta.
+- **Prioridad:** media.
+
+### B70 · Cuota de disco real para la cuenta `navagente`
+- **Qué:** el guardián se niega a lanzar lo pesado con menos de 5 GB libres en `/`, pero una sola orden puede llenar el disco por dentro (el límite por archivo es de 2 GiB, el total no tiene).
+- **Por qué queda:** el chequeo previo cubre el uso normal; la cuota de ext4 pide sudo y cambios de montaje.
+- **De dónde:** plan de la meta 007 (`specs/007-jetson/plan.md`, «Lo que va al BACKLOG»), fase 2.
+- **Qué haría falta:** cuotas de ext4 para `navagente`, que aplica el autor con sudo.
+- **Prioridad:** baja.
+
+### B72 · `test_probar_barrera.py` añade ~24 s a la suite
+- **Qué:** las dos corridas completas de `probar_barrera.ps1` con el guardián falso (los casos `prueba-tope` duermen 3 s) suben la suite de ~46 s a ~70 s (805 pruebas).
+- **Por qué queda:** vale la pena mientras la barrera sea nueva; no estorba hoy.
+- **De dónde:** fase 2 · La barrera de seguridad para los agentes, de la meta 007 (medido en «verifica», 2026-10-29).
+- **Qué haría falta:** acortar el tope falso de las pruebas, o marcar esas dos pruebas como lentas y correrlas solo al tocar `codigo/linux/`.
+- **Prioridad:** baja.
 
 ## Cerrados
 

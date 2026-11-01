@@ -197,7 +197,7 @@ Desde el 2026-10-28 (ADR-034, meta 005 · Agente de consulta para el equipo y bu
 
 - **Rumbo (2026-10-20; ADR-025):** se rescata solo el tracking; punta, registro, navegación en Slicer y runbooks se rehacen mejorados sobre gs1/gs2. Solo valen los perfiles `profiles\tracker_config_gs1.yaml` y `_gs2.yaml`. Los contextos viejos (Femto `tracker_config.yaml`, «doctor» `tracker_config_doctor.yaml` + `globalshutter.yml`; ADR-014/015/016) están archivados en `codigo\historico\iter4\femto\` y `old_profiles\` como referencia.
 
-- **Meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC** (`specs/007-jetson/`, desde el 2026-10-29): la fase 1 · El escaneo de la Jetson, solo lectura (`codigo\linux\`), hecha el 2026-10-29 con el escaneo del autor; sigue la fase 2. Ningún agente se conecta a la Jetson hasta la fase 2 · La barrera de seguridad para los agentes.
+- **Meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC** (`specs/007-jetson/`, desde el 2026-10-29): la fase 1 · El escaneo de la Jetson, solo lectura (`codigo\linux\`), hecha el 2026-10-29 con el escaneo del autor. La fase 2 · La barrera de seguridad para los agentes (`guardian.py`, `sonda_privilegios.py`, `instalar_guardian.sh`, `probar_barrera.ps1`): hecha en el PC (suite 805 pasan y 2 saltadas «solo Linux», 30 de 30 casos con un guardián falso) y a la espera del P-2 en la Jetson. Ningún agente se conecta a la Jetson hasta que el autor dé por buena esa barrera.
 
 ### En pausa (se conserva, se puede retomar)
 
