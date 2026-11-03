@@ -452,7 +452,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 
 ### B75 · `probar_barrera.ps1` no prueba ninguna orden pesada ni `info temperatura`
 - **Qué:** los 30 casos de la barrera son negados, ligeros, de `sshd`, de tope y de corte. Ninguno pasa por `precondiciones` de una orden pesada ni lee las zonas térmicas. Por eso el guardián 2 dio 30 de 30 en la Jetson y, aun así, `info temperatura` y todas las pesadas (`entorno`, `suite`, `py`, `camara`, `medir`) salían con 125 y `TypeError: can't concat NoneType to bytes`: las zonas cv0, cv1 y cv2 dan EAGAIN al leer `temp` y `read_text` no lo soportaba. El guardián 3 (fase 3 · El entorno en la Jetson, 2026-11-02) lo arregla con `_leer_sysfs` y una prueba en `test_guardian.py`.
-- **Por qué queda:** añadir casos cambia `probar_barrera.ps1` y su prueba, de la fase 2, y el arreglo ya está; no hace falta para la fase 3.
+- **Por qué queda:** añadir casos cambia `probar_barrera.ps1` y su prueba, de la fase 2, y el arreglo ya está; no hace falta para la fase 3. Al día (2026-11-02, segunda vuelta de la fase 3): con el guardián 3 instalado, a mano, `info temperatura` sale con 0 y 6 zonas (sin cv0–cv2), `medir tegrastats 1` con 0, y `entorno instalar` y `suite` pasan `precondiciones`; `probar_barrera.ps1` sigue en 30 de 30 sin esos casos.
 - **De dónde:** fase 3 · El entorno en la Jetson, de la meta 007 (2026-11-02, al lanzar `entorno instalar`).
 - **Qué haría falta:** dos casos permitidos más en `probar_barrera.ps1` y en `test_probar_barrera.py`: `info temperatura` con 0 y al menos una zona, y `medir tegrastats 1` con 0 (pasa por `precondiciones` de una pesada sin abrir la cámara).
 - **Prioridad:** media.
