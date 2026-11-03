@@ -19,7 +19,10 @@ Una capa por sistema los aplica y los lee de vuelta:
     convierte a log2 de segundos (3.906 ms -> -8) y para si el valor no es
     representable. `exposure_manual` no es un valor que se escriba: se cumple
     al escribir `exposure` (lo que la fase 2a mide en AMCap).
-  - Linux (V4L2): sitio sin escribir (B23).
+  - Linux (CapaLinuxV4L2, en camera/v4l2.py; meta 007, fase 5): `v4l2-ctl` en un
+    subproceso con tope, por el nombre by-path del puerto (`usb_port_linux`).
+    Mismo formato de `controls`; la exposicion va en unidades de 100 us y
+    `exposure_manual` si se escribe (`auto_exposure`).
 
 Context7 (2026-10-21): OpenCV 4.13 `VideoCapture.set/get` (CAP_PROP_EXPOSURE,
 GAIN, AUTO_WB, ... "only for those cameras that support"; set True no asegura
@@ -305,9 +308,10 @@ class CapaWindowsDShow:
 
 
 def capa_para_plataforma(plataforma: str = sys.platform) -> CapaAjustes:
-    """La capa del sistema: win32 -> CapaWindowsDShow; linux -> V4L2, sin escribir (B23)."""
+    """La capa del sistema: win32 -> CapaWindowsDShow; linux -> CapaLinuxV4L2 (meta 007, fase 5)."""
     if plataforma == "win32":
         return CapaWindowsDShow()
     if plataforma.startswith("linux"):
-        raise NotImplementedError("capa V4L2 sin escribir (B23, Explorar el tracker en una Jetson)")
+        from camera.v4l2 import CapaLinuxV4L2    # aqui: camera.v4l2 importa este modulo
+        return CapaLinuxV4L2()
     raise NotImplementedError(f"sin capa de ajustes para {plataforma!r}")

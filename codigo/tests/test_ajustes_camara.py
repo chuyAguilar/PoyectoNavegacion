@@ -276,9 +276,11 @@ def test_leer_rechaza_nombres_que_no_se_leen() -> None:
 
 
 def test_capa_para_plataforma() -> None:
+    from camera import v4l2 as cv4l2
     assert isinstance(ac.capa_para_plataforma("win32"), ac.CapaWindowsDShow)
-    with pytest.raises(NotImplementedError, match="V4L2"):
-        ac.capa_para_plataforma("linux")
+    # Meta 007, fase 5 · La capa V4L2 y cada camara en la Jetson: linux ya tiene capa.
+    assert isinstance(ac.capa_para_plataforma("linux"), cv4l2.CapaLinuxV4L2)
+    assert isinstance(ac.capa_para_plataforma("linux2"), cv4l2.CapaLinuxV4L2)
     with pytest.raises(NotImplementedError):
         ac.capa_para_plataforma("darwin")
 

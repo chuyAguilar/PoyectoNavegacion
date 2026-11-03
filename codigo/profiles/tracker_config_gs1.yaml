@@ -25,6 +25,15 @@ camera:
   # enumerando el backend al abrir (camaras_uvc.resolver_indice).
   usb_port_windows: PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)
 
+  # ===== Identidad en Linux (meta 007, fase 5; ADR J1, P11): el nombre del
+  # enlace bajo /dev/v4l/by-path, que fija el puerto USB fisico (by-id no
+  # sirve: las dos SVPRO tienen la misma serie). Medido en el escaneo de la
+  # fase 1 (2026-10-29) en la Jetson: el puerto 1 del hub USB 2.0 (usb-0:2.1)
+  # tiene la camara con focus 500. Fuera de Windows el backend es siempre
+  # V4L2 (el `backend` de abajo no se usa) y los controles van por v4l2-ctl.
+  # Si cambia el hub o el puerto: python -m camera.v4l2 --listar en la Jetson.
+  usb_port_linux: platform-3610000.usb-usb-0:2.1:1.0-video-index0
+
   # ===== Marca de la unidad (P13): un control que no cambia la imagen y
   # persiste en la camara. El backend lo lee antes de escribir nada y para
   # si no es este valor (las camaras se intercambiaron de puerto). Medido

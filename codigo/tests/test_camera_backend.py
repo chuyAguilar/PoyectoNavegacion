@@ -5,8 +5,14 @@ orden que antes; create_backend con los perfiles del repo; puerto con 0, 1 y 2
 coincidencias; puerto y source que no coinciden; controls o marca sin puerto;
 capa que para; marca que coincide y que no (y que no se escribe nada); tamano
 igual y distinto del pedido y del .yml; .yml sin tamano; sin frame en el warmup.
+
+Meta 007, fase 5 · La capa V4L2 y cada camara en la Jetson: todo lo de aqui es la
+rama de Windows, asi que el backend se construye con `plataforma="win32"` explicito
+(la suite corre tambien en la Jetson). La rama de Linux esta en test_v4l2.py.
 """
 from __future__ import annotations
+
+import functools
 
 import cv2
 import numpy as np
@@ -25,6 +31,8 @@ CONTROLS = {"exposure_manual": True, "exposure_ms": 3.906, "gain": 11,
             "auto_white_balance": False, "brightness": 0, "contrast": 0,
             "saturation": 56, "sharpness": 0, "gamma": 110, "backlight": 54}
 FOURCC_MJPG = cv2.VideoWriter_fourcc(*"MJPG")
+# El backend como lo construye Windows (meta 007, fase 5: la plataforma va explicita).
+WebcamWindows = functools.partial(cb.WebcamBackend, plataforma="win32")
 
 
 # ----------------------------------------------------------------------------
@@ -89,7 +97,7 @@ class Escenario:
     """Un backend con todo falso; `orden` junta las llamadas en el orden real."""
 
     def __init__(self, cap: CapFalso | None = None, puertos=(PUERTO_1, PUERTO_2),
-                 lecturas=None, falla_aplicar=None, **kw):
+                 lecturas=None, falla_aplicar=None, plataforma="win32", **kw):
         self.cap = cap if cap is not None else CapFalso()
         self.orden: list = []
         self.capa = CapaFalsa(lecturas, falla_aplicar)
@@ -111,7 +119,8 @@ class Escenario:
         def abrir(i, b):
             self.orden.append(("abrir", i, b))
             return self.cap
-        self.backend = cb.WebcamBackend(abrir=abrir, listar=listar, capa=self.capa, **kw)
+        self.backend = cb.WebcamBackend(abrir=abrir, listar=listar, capa=self.capa,
+                                        plataforma=plataforma, **kw)
 
 
 # ----------------------------------------------------------------------------
@@ -153,7 +162,7 @@ def test_msmf_dice_en_una_linea_si_la_aceleracion_esta_apagada(capsys) -> None:
 
 def test_sin_source_ni_puerto_para_al_construir() -> None:
     with pytest.raises(ValueError, match="ni usb_port_windows ni source"):
-        cb.WebcamBackend()
+        WebcamWindows()
 
 
 def test_no_abre_para_y_libera() -> None:
@@ -200,6 +209,9 @@ def test_create_backend_gs(nombre: str, puerto: str, focus: float, yml: str | No
     b = cb.create_backend(_camera(nombre))
     assert isinstance(b, cb.WebcamBackend)
     assert b.source is None and b.usb_port_windows == puerto
+    # Meta 007, fase 5: la identidad de Linux viaja en el mismo perfil (P11); un solo index0.
+    assert b.usb_port_linux.startswith("platform-3610000.usb-usb-0:2.") \
+        and b.usb_port_linux.endswith(":1.0-video-index0")
     assert b.marca == {"focus": focus}
     # Fase 3: exposicion 0.977 ms (P15) y 1280x960 MJPG 90 fps (P16), las mismas en los dos.
     assert b.controls == ac.validar_controles({**CONTROLS, "exposure_ms": 0.977})
@@ -217,6 +229,7 @@ def test_perfiles_gs1_gs2_contrato() -> None:
             perfiles[nombre] = yaml.safe_load(f)
     g1, g2 = perfiles.values()
     assert g1["camera"]["usb_port_windows"] != g2["camera"]["usb_port_windows"]
+    assert g1["camera"]["usb_port_linux"] != g2["camera"]["usb_port_linux"]      # meta 007, fase 5
     assert g1["camera"]["marca"]["focus"] != g2["camera"]["marca"]["focus"]
     for cfg in (g1, g2):
         cam = cfg["camera"]
@@ -268,7 +281,7 @@ def test_puerto_y_source_que_no_coinciden_para() -> None:
 
 def test_puerto_con_backend_any_para_al_construir() -> None:
     with pytest.raises(ValueError, match="MSMF o DSHOW"):
-        cb.WebcamBackend(usb_port_windows=PUERTO_1, backend="ANY")
+        WebcamWindows(usb_port_windows=PUERTO_1, backend="ANY")
 
 
 # ----------------------------------------------------------------------------
@@ -277,12 +290,12 @@ def test_puerto_con_backend_any_para_al_construir() -> None:
 
 def test_controls_sin_puerto_para_al_construir() -> None:
     with pytest.raises(ValueError, match="controls exige usb_port_windows"):
-        cb.WebcamBackend(source=0, controls=CONTROLS)
+        WebcamWindows(source=0, controls=CONTROLS)
 
 
 def test_controls_invalidos_paran_al_construir() -> None:
     with pytest.raises(ValueError, match="'auto_exposure' no se admite"):
-        cb.WebcamBackend(usb_port_windows=PUERTO_1, controls={"auto_exposure": 0})
+        WebcamWindows(usb_port_windows=PUERTO_1, controls={"auto_exposure": 0})
 
 
 def test_controls_se_aplican_antes_de_abrir_y_quedan_leidos() -> None:
@@ -305,16 +318,16 @@ def test_capa_que_para_no_abre_el_video() -> None:
 
 def test_marca_sin_puerto_y_marca_invalida_paran_al_construir() -> None:
     with pytest.raises(ValueError, match="marca exige usb_port_windows"):
-        cb.WebcamBackend(source=0, marca={"focus": 500})
+        WebcamWindows(source=0, marca={"focus": 500})
     with pytest.raises(ValueError, match="'exposure_ms' no sirve de marca"):
-        cb.WebcamBackend(usb_port_windows=PUERTO_1, marca={"exposure_ms": 3.906})
+        WebcamWindows(usb_port_windows=PUERTO_1, marca={"exposure_ms": 3.906})
     with pytest.raises(ValueError, match="'iso' no sirve de marca"):
-        cb.WebcamBackend(usb_port_windows=PUERTO_1, marca={"iso": 1})
+        WebcamWindows(usb_port_windows=PUERTO_1, marca={"iso": 1})
     with pytest.raises(ValueError, match="tiene que ser un numero"):
-        cb.WebcamBackend(usb_port_windows=PUERTO_1, marca={"focus": True})
+        WebcamWindows(usb_port_windows=PUERTO_1, marca={"focus": True})
     with pytest.raises(ValueError, match="esta en controls y en marca"):
-        cb.WebcamBackend(usb_port_windows=PUERTO_1, marca={"focus": 500},
-                         controls={**CONTROLS, "focus": 500})
+        WebcamWindows(usb_port_windows=PUERTO_1, marca={"focus": 500},
+                      controls={**CONTROLS, "focus": 500})
 
 
 def test_marca_que_coincide_se_lee_antes_de_aplicar() -> None:

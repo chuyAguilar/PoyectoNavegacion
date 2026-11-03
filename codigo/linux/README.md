@@ -2,7 +2,7 @@
 
 Lo de esta carpeta es para la meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC (`specs/007-jetson/`). Se completa fase por fase; al cerrar la meta, en la fase 9 · Cómo se trabaja con la Jetson y cierre de la meta, dirá cómo llega el código, cómo se corren la suite y el tracker, cómo se paran y cómo se corta el acceso.
 
-Hoy hay el escaneo (fase 1 · El escaneo de la Jetson, solo lectura), la barrera de los agentes (fase 2 · La barrera de seguridad para los agentes) y el entorno de Python del tracker (fase 3 · El entorno en la Jetson). Ningún agente se conecta a la Jetson hasta que la barrera esté instalada por el autor, probada con `probar_barrera.ps1` (30 de 30) y las reglas de `settings.json` aplicadas; entonces los agentes usan solo `ssh nav-jetson <verbo>`.
+Hoy hay el escaneo (fase 1 · El escaneo de la Jetson, solo lectura), la barrera de los agentes (fase 2 · La barrera de seguridad para los agentes), el entorno de Python del tracker (fase 3 · El entorno en la Jetson), la suite en Linux (fase 4) y la capa V4L2 de la cámara (fase 5 · La capa V4L2 y cada cámara en la Jetson; abajo). Ningún agente se conecta a la Jetson hasta que la barrera esté instalada por el autor, probada con `probar_barrera.ps1` (30 de 30) y las reglas de `settings.json` aplicadas; entonces los agentes usan solo `ssh nav-jetson <verbo>`.
 
 ## Qué hay
 
@@ -112,3 +112,21 @@ Después: `ssh nav-jetson py wip linux.sonda_privilegios` (0 privilegios) y `ssh
 En Windows no se salta ninguna de estas: si falta `docs/` o PySide6, fallan.
 
 **El guardián 3 (2026-11-02).** Con el guardián 2, `info temperatura` y toda orden pesada salían con 125 (`TypeError: can't concat NoneType to bytes`): las zonas cv0, cv1 y cv2 de la Jetson dan EAGAIN al leer `temp` y `read_text` no lo soportaba. El 3 lee las zonas con `os.read` y salta las que no responden (B75). Se instala como dice arriba («Solo el guardián»); `ssh nav-jetson ayuda` dice «nav-guardian 3 (2026-11-02)».
+
+## La cámara por V4L2 (fase 5)
+
+El tracker es el mismo (`python -m tracker --config profiles/tracker_config_gs1.yaml …`); lo que cambia fuera de Windows está en `codigo/camera/` (ADR J1 del plan; `clarify.md` P11 y P12):
+- **La identidad** es `camera.usb_port_linux` de los mismos perfiles gs1 y gs2: el nombre del enlace bajo `/dev/v4l/by-path/` (`platform-3610000.usb-usb-0:2.1:1.0-video-index0` es gs1, focus 500; `…0:2.2…` es gs2, focus 332; medidos en el escaneo). Lo fija el puerto USB físico: el `/dev/videoN` cambia con el orden de arranque (en el escaneo gs1 era `video2`; el 2026-11-02, `video0`) y `by-id` no distingue las dos (misma serie). `camera/v4l2.py` lista los enlaces (`listar_camaras_v4l2`) y resuelve el dispositivo (`resolver_dispositivo`, igualdad exacta: 0 o 2 coincidencias paran).
+- **Los controles** van por `v4l2-ctl` en un subproceso con tope de 5 s (`CapaLinuxV4L2`; `capa_para_plataforma("linux")` la devuelve): se leen todos con `--list-ctrls-menus`, se escribe solo lo que difiere con `--set-ctrl=<control>=<valor>` (uno por llamada, `auto_exposure` antes que `exposure_time_absolute`), se relee y se compara en las unidades de la cámara; un valor fuera del rango que declara la cámara para antes de escribir. La exposición va en unidades de 100 µs: los 0.977 ms del perfil son `exposure_time_absolute=10` (lo que la cámara ya tenía) y se releen como 1.0 ms. `exposure_manual: true` es `auto_exposure=1` (Manual Mode).
+- **El video** se abre con `cv2.VideoCapture("/dev/videoN", cv2.CAP_V4L2)` tras la marca y los ajustes, con las mismas llamadas de FOURCC MJPG, 1280×960, 90 fps y warmup que en Windows; el `backend: MSMF` del perfil se ignora y el log lo dice. En Windows nada cambia (`plataforma` es `sys.platform`).
+
+Desde el PC, sin abrir ningún flujo de video (lo puede correr un agente): `ssh nav-jetson py wip camera.v4l2 --listar` y `ssh nav-jetson py wip camera.v4l2 --leer --puerto <by-path>`. `--aplicar --config profiles/tracker_config_gs1.yaml [--forzar]` escribe en la cámara: lo teclea el autor (P19), igual que el tracker. Las pruebas: `tests/test_v4l2.py`, sobre las salidas reales de `v4l2-ctl` en `tests/data/linux/`; el fixture B34 niega `listar_camaras_v4l2` y `ejecutar_v4l2ctl`.
+
+**Protocolo P-5 (el autor, en vivo; la caja de luz al máximo, Marker0 de 80 mm quieto a ~37 cm).** Por cámara, con `<gs>` = `gs1` o `gs2` y `<bp>` su by-path; el cliente es `igtl_rate` en la misma Jetson, sin red:
+1. En una consola: `ssh nav-jetson py wip diagnostics.igtl_rate listen --host 127.0.0.1 --port 18944 --seconds 75` (arranca antes que el tracker: el tracker lo espera hasta 30 s y, si no llega, aborta con código 3).
+2. En otra: `ssh nav-jetson py wip tracker --config profiles/tracker_config_<gs>.yaml --no-window --duration 60 --record ~/nav-salidas/p5_<gs>_a.npz --timing ~/nav-salidas/p5_<gs>_a.json` (corrida a). Se anotan `[Webcam] Puerto … -> /dev/videoN`, «Marca comprobada», «Ajustes aplicados», «Tamano real 1280x960», las líneas `[FPS]` y la final `[Captura]` (fps de cámara y de bucle) y los Hz del listener.
+3. Corrida b, con ventana: igual sin `--no-window`, solo si hay un escritorio en la Jetson con `DISPLAY`; si no, «sin medir».
+4. Corrida c: el perfil de la otra cámara sobre este puerto (`--config profiles/tracker_config_<otra>.yaml` no sirve porque cada perfil lleva su propio puerto; se usa un perfil temporal fuera del repo con el `usb_port_linux` de esta cámara y la `marca` de la otra, p. ej. `~/nav-salidas/perfiles/<gs>_marca_cruzada.yaml`): tiene que parar con «no es la del perfil … focus: declarado …, leido …» sin escribir ni abrir.
+5. Corrida d: el tracker sin el listener: abortar con código 3 («Slicer no se conecto al puerto 18944 en 30 s») sin abrir la cámara.
+6. Tras cada corrida: `ssh nav-jetson info camara-libre <bp>` (sin salida = libre) y `ssh nav-jetson info puerto-libre 18944` (solo la cabecera = libre).
+7. La sd z en reposo y el % de frames con pose salen del `.npz` con `ssh nav-jetson traer p5_<gs>_a.npz > "Claude outputs/fases/007/p5_<gs>_a.npz"` y `python -m diagnostics.pose_log --stats` en el PC (o el script que use el reporte de la fase).

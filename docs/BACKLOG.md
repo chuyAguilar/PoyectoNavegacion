@@ -60,6 +60,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B73 | La cita de argumentos para `Start-Process` vive solo en `probar_barrera.ps1` | Baja | — |
 | B75 | `probar_barrera.ps1` no prueba ninguna orden pesada ni `info temperatura` | Media | — |
 | B76 | `suite` del guardián: con dos rutas corre solo la última, sin aviso, y no deja ver por qué se salta cada prueba | Baja | — |
+| B67 | Las herramientas de cámara (sonda, modos, calibración, «Verificar IDs») solo abren por Windows | Baja | — |
 
 ## Abiertos
 
@@ -456,6 +457,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** fase 4 · La suite corre en Linux, de la meta 007 (2026-11-02, al medir el replay en la Jetson); la sugerencia de `-rs` venía de la fase 3.
 - **Qué haría falta:** en `decidir`, negar una segunda ruta (o aceptar varias) y admitir `-rs`, con sus casos en `test_guardian.py`; el autor instala el guardián 4.
 - **Prioridad:** baja.
+
+### B67 · Las herramientas de cámara (sonda, modos, calibración, «Verificar IDs») solo abren por Windows
+- **Qué:** la fase 5 · La capa V4L2 y cada cámara en la Jetson (meta 007, 2026-11-02) lleva a Linux solo lo que usa el tracker: `camera.backend.WebcamBackend` (por `plataforma`), `camera.controls.capa_para_plataforma` y el nuevo `camera/v4l2.py`. Siguen leyendo `usb_port_windows` a secas, o construyendo `CapaWindowsDShow` o enumerando por MSMF/DSHOW: `diagnostics/probe_camera.py` (`--puertos`, `--leer`, `--fijar`), `diagnostics/measure_modes.py`, `diagnostics/identify_ids.py`, `calibration/calibrate_camera.py`, `calibration/check_scale.py`, `gui/camera_probe.py`, `gui/calibration_window.py` y `gui/panel.py`. En la Jetson, dar de alta la marca de una cámara nueva (`--fijar focus=N --forzar`) o medir modos no se puede desde el código; `python -m camera.v4l2 --listar|--leer|--aplicar` cubre solo listar, leer y aplicar el perfil.
+- **Por qué queda:** la meta 007 lleva el tracker a la Jetson, no las herramientas (plan, «Lo que va al BACKLOG»); se calibra en el PC y el panel corre en el PC (P16).
+- **De dónde:** plan de la meta 007 (`specs/007-jetson/plan.md`), concretado al escribir la fase 5.
+- **Qué haría falta:** que esos módulos pidan la identidad de la plataforma (`usb_port_linux` fuera de Windows) y la capa por `capa_para_plataforma`, con `--fijar` sobre `CapaLinuxV4L2` (que ya admite `forzar`), y «Verificar IDs» por SSH si algún día hace falta desde el panel.
+- **Prioridad:** baja mientras se calibre y se den de alta las cámaras en el PC.
 
 ## Cerrados
 

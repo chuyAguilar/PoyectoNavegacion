@@ -11,6 +11,7 @@ import pytest
 
 from camera import backend as cb
 from camera import uvc as cu
+from camera import v4l2 as cv4l2
 import profiles
 import tracker
 
@@ -29,6 +30,17 @@ def test_enumerar_camaras_negado() -> None:
         cu.listar_camaras_msmf()
     with pytest.raises(RealHardwareForbidden):
         cu.listar_camaras_dshow()
+
+
+def test_v4l2_negado() -> None:
+    """Meta 007, fase 5: ni la lista de /dev/v4l/by-path ni v4l2-ctl (la capa los resuelve al llamar)."""
+    with pytest.raises(RealHardwareForbidden, match="listar_camaras_v4l2"):
+        cv4l2.listar_camaras_v4l2()
+    with pytest.raises(RealHardwareForbidden, match="ejecutar_v4l2ctl"):
+        cv4l2.ejecutar_v4l2ctl(["--list-devices"])
+    capa = cv4l2.CapaLinuxV4L2()
+    with pytest.raises(RealHardwareForbidden):
+        capa.leer("platform-3610000.usb-usb-0:2.1:1.0-video-index0", ["focus"])
 
 
 @pytest.mark.parametrize("nombre", ["tracker_config_gs1.yaml", "tracker_config_gs2.yaml"])

@@ -227,6 +227,21 @@ def _lf(text: str) -> str:
     return text.replace("\r\n", "\n").replace("\r", "\n")
 
 
+# Meta 007, fase 5 (hallado al correr `suite repo` en la Jetson tras la fase 4): el bloque
+# imprime residuos frente a la referencia con `:.1e` (p. ej. «la misma rotación (2.0e-14°)»)
+# que en ARM salen con otro ruido (2.1e-13°). Fuera de Windows, los numeros en notacion
+# cientifica menores que la tolerancia de Linux (clarify P22, 1e-3) se comparan como «ruido»;
+# en Windows el texto se compara tal cual.
+_RE_CIENTIFICA = re.compile(r"\d\.\d+e[-+]\d\d")
+RUIDO_MAX_LINUX = 1e-3
+
+
+def _sin_ruido_numerico(text: str) -> str:
+    if sys.platform == "win32":
+        return text
+    return _RE_CIENTIFICA.sub(lambda m: "<ruido>" if abs(float(m.group(0))) < RUIDO_MAX_LINUX else m.group(0), text)
+
+
 def _example_result() -> dict:
     return explain_pose.explain_frame(TESTS_DATA_DIR / "marker0_gs1.npz",
                                       TESTS_DATA_DIR / "marker0_gs1_frames", 480,
@@ -237,8 +252,9 @@ def _example_result() -> dict:
 def test_el_bloque_del_ejemplo_es_la_salida_del_script():
     block = _lf(example_block(_doc_text())).strip("\n")
     want = _lf(explain_pose.format_markdown(_example_result())).strip("\n")
-    assert block == want, ("el bloque de §9.3 no es la salida de diagnostics/explain_pose.py sobre gs1, frame 480: "
-                           "regenerarlo con python -m diagnostics.explain_pose (ver su docstring)")
+    assert _sin_ruido_numerico(block) == _sin_ruido_numerico(want), (
+        "el bloque de §9.3 no es la salida de diagnostics/explain_pose.py sobre gs1, frame 480: "
+        "regenerarlo con python -m diagnostics.explain_pose (ver su docstring)")
     assert block in section_text(_doc_text())                     # dentro de §9, con sus referencias
 
 

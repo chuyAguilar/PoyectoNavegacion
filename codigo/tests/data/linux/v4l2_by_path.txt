@@ -1,0 +1,5 @@
+total 0
+lrwxrwxrwx 1 root root 12 Oct 30 06:34 platform-3610000.usb-usb-0:2.1:1.0-video-index0 -> ../../video2
+lrwxrwxrwx 1 root root 12 Oct 30 06:34 platform-3610000.usb-usb-0:2.1:1.0-video-index1 -> ../../video3
+lrwxrwxrwx 1 root root 12 Oct 30 06:33 platform-3610000.usb-usb-0:2.2:1.0-video-index0 -> ../../video0
+lrwxrwxrwx 1 root root 12 Oct 30 06:33 platform-3610000.usb-usb-0:2.2:1.0-video-index1 -> ../../video1

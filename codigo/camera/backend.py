@@ -38,8 +38,19 @@ puso antes de cargarse (CRT estatico, ver camaras_uvc), asi que los scripts que
 importan cv2 antes que este modulo la ponen ellos (import camaras_uvc antes de
 cv2) o la heredan del entorno (el panel la pone a sus procesos). open() dice en
 una linea si esta apagada o encendida.
+
+Linux (meta 007 · El tracker en la Jetson Orin Nano, fase 5 · La capa V4L2 y cada
+camara en la Jetson; ADR J1): `WebcamBackend(..., usb_port_linux=..., plataforma=...)`.
+Fuera de Windows la identidad es `usb_port_linux` (el nombre bajo /dev/v4l/by-path),
+la camara se lista y se resuelve con `camera.v4l2`, la marca y los `controls` van por
+`CapaLinuxV4L2` (v4l2-ctl) y el video se abre con `cv2.VideoCapture(<dispositivo>,
+cv2.CAP_V4L2)`, sea lo que diga `backend` en el perfil (MSMF solo existe en Windows).
+Lo demas (FOURCC, tamano, fps, warmup, tamano real contra el perfil y el .yml, la
+calibracion) son las mismas llamadas a cv2. En Windows nada cambia: `plataforma` es
+`sys.platform` y `usb_port_linux` se ignora.
 """
 from abc import ABC, abstractmethod
+import sys
 import time
 
 from camera import uvc as camaras_uvc   # primero: apaga la aceleracion HW de MSMF antes de que se cargue cv2
@@ -126,14 +137,18 @@ class WebcamBackend(CameraBackend):
     antes de abrir el video; `marca` ({control: valor}) se lee antes de
     escribir nada y para si no es la declarada. `abrir`, `listar` y `capa`
     son inyectables para las pruebas sin camara: abrir(indice, backend_cv2)
-    da un VideoCapture; listar() da las camaras (camaras_uvc.CamaraUVC);
-    capa es un ajustes_camara.CapaAjustes.
+    da un VideoCapture; listar() da las camaras (camaras_uvc.CamaraUVC, o
+    camera.v4l2.CamaraV4L2 en Linux); capa es un ajustes_camara.CapaAjustes.
+
+    Meta 007, fase 5: `usb_port_linux` (nombre by-path) es la identidad fuera de
+    Windows y `plataforma` (por defecto `sys.platform`) elige la rama; `puerto` y
+    `clave_puerto` son la identidad de la plataforma en uso.
     """
 
     def __init__(self, source=None, width=640, height=480, fps=30,
                  backend="MSMF", fourcc="MJPG", calibration_file=None,
-                 controls=None, usb_port_windows=None, marca=None,
-                 *, abrir=None, listar=None, capa=None):
+                 controls=None, usb_port_windows=None, marca=None, usb_port_linux=None,
+                 *, plataforma=sys.platform, abrir=None, listar=None, capa=None):
         self.source = source
         self.width = width
         self.height = height
@@ -141,22 +156,28 @@ class WebcamBackend(CameraBackend):
         self.backend_name = backend
         self.fourcc = fourcc
         self.calibration_file = calibration_file
+        self.plataforma = str(plataforma)
+        self.linux = self.plataforma.startswith("linux")
         self.usb_port_windows = str(usb_port_windows).strip() if usb_port_windows else None
+        self.usb_port_linux = str(usb_port_linux).strip() if usb_port_linux else None
+        # La identidad de esta plataforma (fase 5 de la meta 007): en Linux, by-path.
+        self.clave_puerto = "usb_port_linux" if self.linux else "usb_port_windows"
+        self.puerto = self.usb_port_linux if self.linux else self.usb_port_windows
         self.controls = self._validar_controles(controls)
         self.marca = self._validar_marca(marca)
         self._abrir = abrir
         self._listar = listar
         self._capa = capa
         self.cap = None
-        self.indice = None            # indice resuelto al abrir
+        self.indice = None            # indice resuelto al abrir (en Linux, el /dev/videoN)
         self.ajustes_leidos = None    # lo que la capa leyo de la camara (fase 2b)
         self.tamano_real = None       # (w, h) del frame tras el warmup
         self._K = None
         self._dist = None
-        if self.source is None and self.usb_port_windows is None:
-            raise ValueError("[Webcam] el perfil no trae ni usb_port_windows ni source: "
-                             "no se sabe que camara abrir")
-        if self.usb_port_windows and self.backend_name.upper() not in ("MSMF", "DSHOW"):
+        if self.source is None and self.puerto is None:
+            raise ValueError(f"[Webcam] el perfil no trae ni {self.clave_puerto} ni source: "
+                             f"no se sabe que camara abrir")
+        if self.puerto and not self.linux and self.backend_name.upper() not in ("MSMF", "DSHOW"):
             raise ValueError(f"[Webcam] con usb_port_windows el backend tiene que ser MSMF "
                              f"o DSHOW (el indice se resuelve por su enumeracion), "
                              f"no {self.backend_name!r}")
@@ -168,9 +189,9 @@ class WebcamBackend(CameraBackend):
             return None
         from camera.controls import validar_controles
         validos = validar_controles(controls)
-        if not self.usb_port_windows:
-            raise ValueError("[Webcam] camera.controls exige usb_port_windows: la capa de "
-                             "ajustes abre la camara por su puerto")
+        if not self.puerto:
+            raise ValueError(f"[Webcam] camera.controls exige {self.clave_puerto}: la capa de "
+                             f"ajustes abre la camara por su puerto")
         return validos
 
     def _validar_marca(self, marca):
@@ -195,9 +216,9 @@ class WebcamBackend(CameraBackend):
                 salida[nombre] = float(valor)
         if problemas:
             raise ValueError("[Webcam] camera.marca: " + "; ".join(problemas))
-        if not self.usb_port_windows:
-            raise ValueError("[Webcam] camera.marca exige usb_port_windows: se lee por el "
-                             "puerto antes de abrir el video")
+        if not self.puerto:
+            raise ValueError(f"[Webcam] camera.marca exige {self.clave_puerto}: se lee por el "
+                             f"puerto antes de abrir el video")
         return salida
 
     # ---- identidad, ajustes y tamano -------------------------------------
@@ -205,31 +226,44 @@ class WebcamBackend(CameraBackend):
     def _listar_camaras(self):
         if self._listar is not None:
             return self._listar()
+        if self.linux:
+            from camera import v4l2
+            return v4l2.listar_camaras_v4l2()
         from camera import uvc as camaras_uvc
         if self.backend_name.upper() == "DSHOW":
             return camaras_uvc.listar_camaras_dshow()
         return camaras_uvc.listar_camaras_msmf()
 
     def _resolver_source(self):
-        """El indice a abrir: por la ruta del puerto si el perfil la trae; si no, source."""
-        if self.usb_port_windows is None:
+        """Lo que se abre: por el puerto si el perfil lo trae (en Windows el indice MSMF o
+        DSHOW; en Linux el /dev/videoN del enlace by-path); si no, source."""
+        if self.puerto is None:
             return int(self.source)
-        from camera import uvc as camaras_uvc
         t0 = time.time()
         camaras = self._listar_camaras()
-        indice = camaras_uvc.resolver_indice(self.usb_port_windows, camaras)
-        print(f"[Webcam] Puerto {self.usb_port_windows} -> indice {self.backend_name} "
+        if self.linux:
+            from camera import v4l2
+            dispositivo = v4l2.resolver_dispositivo(self.puerto, camaras)
+            print(f"[Webcam] Puerto {self.puerto} -> {dispositivo} (V4L2, {time.time()-t0:.2f}s)")
+            if self.source is not None and str(self.source) not in (dispositivo, dispositivo[len("/dev/video"):]):
+                raise RuntimeError(f"[Webcam] el perfil dice source={self.source} pero la camara "
+                                   f"del puerto {self.puerto} es {dispositivo}: quita source del "
+                                   f"perfil o corrigelo")
+            return dispositivo
+        from camera import uvc as camaras_uvc
+        indice = camaras_uvc.resolver_indice(self.puerto, camaras)
+        print(f"[Webcam] Puerto {self.puerto} -> indice {self.backend_name} "
               f"{indice} ({time.time()-t0:.2f}s)")
         if self.source is not None and int(self.source) != indice:
             raise RuntimeError(f"[Webcam] el perfil dice source={self.source} pero la camara "
-                               f"del puerto {self.usb_port_windows} es el indice {indice}: "
+                               f"del puerto {self.puerto} es el indice {indice}: "
                                f"quita source del perfil o corrigelo")
         return indice
 
     def _capa_ajustes(self):
         if self._capa is None:
             from camera.controls import capa_para_plataforma
-            self._capa = capa_para_plataforma()
+            self._capa = capa_para_plataforma(self.plataforma)
         return self._capa
 
     def _comprobar_marca(self):
@@ -237,11 +271,11 @@ class WebcamBackend(CameraBackend):
         if not self.marca:
             return
         t0 = time.time()
-        leidos = self._capa_ajustes().leer(self.usb_port_windows, list(self.marca))
+        leidos = self._capa_ajustes().leer(self.puerto, list(self.marca))
         difs = [f"{n}: declarado {v:g}, leido {leidos.get(n)}" for n, v in self.marca.items()
                 if leidos.get(n) is None or abs(float(leidos[n]) - v) > 1e-3]
         if difs:
-            raise RuntimeError(f"[Webcam] la camara del puerto {self.usb_port_windows} no es "
+            raise RuntimeError(f"[Webcam] la camara del puerto {self.puerto} no es "
                                f"la del perfil ({'; '.join(difs)}): se intercambiaron las "
                                f"camaras de puerto? No se escribe ningun ajuste.")
         print(f"[Webcam] Marca comprobada ({', '.join(f'{n}={v:g}' for n, v in self.marca.items())}) "
@@ -252,7 +286,7 @@ class WebcamBackend(CameraBackend):
         if not self.controls:
             return None
         t0 = time.time()
-        r = self._capa_ajustes().aplicar(self.usb_port_windows, self.controls)
+        r = self._capa_ajustes().aplicar(self.puerto, self.controls)
         self.ajustes_leidos = r["leidos"]
         print(f"[Webcam] Ajustes aplicados en {time.time()-t0:.2f}s "
               f"(escritos: {r.get('escritos') or 'ninguno'}): {self.ajustes_leidos}")
@@ -285,18 +319,24 @@ class WebcamBackend(CameraBackend):
     def open(self):
         import cv2
         backends = {"DSHOW": cv2.CAP_DSHOW, "MSMF": cv2.CAP_MSMF, "ANY": cv2.CAP_ANY}
-        backend = backends.get(self.backend_name.upper(), cv2.CAP_MSMF)
+        # Linux (meta 007, fase 5): siempre V4L2, diga lo que diga el perfil (ADR J1).
+        backend = cv2.CAP_V4L2 if self.linux else backends.get(self.backend_name.upper(), cv2.CAP_MSMF)
+        nombre_backend = "V4L2" if self.linux else self.backend_name
         abrir = self._abrir if self._abrir is not None else \
-            (lambda i, b: cv2.VideoCapture(int(i), b))
+            (lambda i, b: cv2.VideoCapture(i if isinstance(i, str) else int(i), b))
 
         # Fase 2b: identidad, marca y ajustes ANTES de abrir el video por MSMF.
         self.indice = self._resolver_source()
         self._comprobar_marca()
         self._aplicar_controles()
 
-        if self.backend_name.upper() in ("MSMF", "ANY"):
+        if self.linux:
+            if self.backend_name.upper() != "V4L2":
+                print(f"[Webcam] Linux: backend V4L2 (el perfil dice {self.backend_name}, "
+                      f"que solo existe en Windows)")
+        elif self.backend_name.upper() in ("MSMF", "ANY"):
             print(f"[Webcam] {camaras_uvc.describir_aceleracion_msmf()}")
-        print(f"[Webcam] Abriendo source={self.indice} backend={self.backend_name}...")
+        print(f"[Webcam] Abriendo source={self.indice} backend={nombre_backend}...")
         t0 = time.time()
         self.cap = abrir(self.indice, backend)
         try:
@@ -370,6 +410,7 @@ def create_backend(cfg_camera):
     if camera_type == "webcam":
         # Fase 2b: `source` es opcional si el perfil trae `usb_port_windows`;
         # `controls` y `marca` solo cuando estan (el backend valida al construir).
+        # Meta 007, fase 5: `usb_port_linux` es la identidad fuera de Windows.
         return WebcamBackend(
             source=cfg_camera.get("source"),
             width=cfg_camera["width"],
@@ -381,6 +422,7 @@ def create_backend(cfg_camera):
             controls=cfg_camera.get("controls"),
             usb_port_windows=cfg_camera.get("usb_port_windows"),
             marca=cfg_camera.get("marca"),
+            usb_port_linux=cfg_camera.get("usb_port_linux"),
         )
     elif camera_type == "femtobolt":
         # Meta 003, fase 3 (ADR-025, ADR-027): solo valen las SVPRO gs1 y gs2.
