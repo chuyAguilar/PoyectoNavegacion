@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-11-02 (meta 007 · El tracker en la Jetson Orin Nano: fases 1 y 2 commiteadas; fase 3 · El entorno en la Jetson, parcial, solo faltan las ráfagas del autor; la meta 006 · Grafo de factores óptico-inercial queda en espera, y la 005 en pausa)._
+_Actualizado: 2026-11-02 (meta 007 · El tracker en la Jetson Orin Nano: fases 1 y 2 commiteadas, fase 3 · El entorno en la Jetson hecha; la meta 006 · Grafo de factores óptico-inercial en espera, y la 005 en pausa)._
 
 Spec activo: `specs/007-jetson/`
 
@@ -56,13 +56,13 @@ Peticiones pendientes: 0
 - Lo que dijo el escaneo, para las fases siguientes: Ubuntu 22.04.5, L4T 36.4.3 (JetPack 6.2; el metapaquete `nvidia-jetpack` no está), MAXN_SUPER sin root; Python del sistema 3.10.12 (glibc 2.35, `tarfile.data_filter` sí), sin 3.11 (el venv trae el suyo, por uv). `v4l2-ctl` 1.22.1 instalado. Cámaras por `by-path`: puerto `usb-0:2.1` con `focus` 500 (gs1) y `usb-0:2.2` con 332 (gs2), las dos en el mismo hub USB 2.0 (480 Mbps); `by-id` choca (misma serie). 1280×960 MJPG a 90 fps y los 11 controles del perfil; la exposición se lee 10 (unidades de 100 µs; la conversión es de la fase 5). 19 GB libres en disco; 18944 libre; `ufw` inactivo (B71).
 - **La regla de la Jetson ya vale** (2026-11-02): los agentes entran solo por `ssh nav-jetson <verbo>` (`settings.json` y `desarrollo.md`/`pruebas.md`); un 126 es el guardián y no se rodea. P19 y P20 en (a): el autor teclea lo que abre la cámara; su clave lleva frase de paso y su `sudo` pide contraseña.
 - **Fase 2 · La barrera de seguridad para los agentes: hecha** (2026-11-02; `d2f3632` y `107a89e`; números en `tasks.md`).
-- **Fase 3 · El entorno en la Jetson: parcial, solo faltan las ráfagas del autor** (2026-11-02; P21 = uv; primera vuelta en `24b046f`). En la Jetson está el guardián 3. Por `nav-jetson`: `~/.venvs/navegacion` con CPython 3.11.9 y las versiones del PC (cv2 4.11.0.86 con `ArucoDetector`, pyigtl 0.3.1, scipy 1.17.1), 110 s; gtsam 4.3.0 instala (venv aparte, `~/.venvs/prueba-gtsam`); 529 MB, 17 365 MB libres. Clon disperso sin datos de paciente (`107a89e`, 172 MiB). WIP: 122 miembros, sha256 igual. Sonda por `py` 0 en 28. `probar_barrera` 30 de 30. Detalle en `Claude outputs/fases/007/fase-3.md`.
+- **Fase 3 · El entorno en la Jetson: hecha** (2026-11-02; P21 = uv; `24b046f`, `efbd138`). Ráfagas del autor (P-3b, 900 frames): gs1 y gs2 estables a 88.5 fps (≥ 85). En la Jetson está el guardián 3. Por `nav-jetson`: `~/.venvs/navegacion` con CPython 3.11.9 y las versiones del PC (cv2 4.11.0.86 con `ArucoDetector`, pyigtl 0.3.1, scipy 1.17.1), 110 s; gtsam 4.3.0 instala (venv aparte, `~/.venvs/prueba-gtsam`); 529 MB, 17 365 MB libres. Clon disperso sin datos de paciente (`107a89e`, 172 MiB). WIP: 122 miembros, sha256 igual. Sonda por `py` 0 en 28. `probar_barrera` 30 de 30. Detalle en `Claude outputs/fases/007/fase-3.md`.
 - **Inventario para la fase 4 · La suite corre en Linux** (`suite wip`, 840: 760 pasan, 35 fallan, 45 saltadas, 36.0 s). Fallan: 9 por `gui/recipes.py` (`codigo/.venv/Scripts/python.exe`); 8 porque la copia WIP no lleva `docs/` ni `.gitattributes`; 10 por la aritmética de ARM (detección 6.1e-05 px, matriz filtrada 1.1e-05 mm; las de pose del replay pasan; decide el autor, P14); 1 por B74; 3 «solo Linux» de `test_guardian.py` porque la prueba da un `BytesIO` a `Popen(stdout=…)` (el guardián real va bien); 2 sin PySide6; 2 por `subprocess.CREATE_NEW_PROCESS_GROUP` en `gui/processes.py`.
-- Lo siguiente: el autor teclea las dos ráfagas (P-3b, en el reporte) y con sus fps se marca la casilla; luego, la fase 4.
+- **Lo siguiente: fase 4 · La suite corre en Linux**, con la decisión pendiente del autor sobre la tolerancia de la aritmética de ARM (P14: 6.1e-05 px y 1.1e-05 mm frente a 1e-6 px).
 
 ## Pendientes del autor
 
-- **Meta 007:** en la sesión en vivo, las dos ráfagas (P-3b, en `Claude outputs/fases/007/fase-3.md`). `codigo/data/intrinsecos_gs1_1280x960.yml` sigue en LF: `test_como_funciona` y `test_explain_pose[gs1]` fallan hasta pasarlo a CRLF, como gs2, o hacer el sha insensible al fin de línea (B74).
+- **Meta 007:** decidir la tolerancia de ARM (P14) al llegar a la fase 4. `codigo/data/intrinsecos_gs1_1280x960.yml` sigue en LF: `test_como_funciona` y `test_explain_pose[gs1]` fallan hasta pasarlo a CRLF, como gs2, o hacer el sha insensible al fin de línea (B74).
 
 - Meta 005 (aplazado por el autor hasta compartirlo con sus compañeros, 2026-10-28): la prueba en vivo de la fase 1 (7 casos), la de la fase 2 (2 envíos con `consulta`), la lectura de `docs/EQUIPO.md` de la fase 3 (10 pasos, ~20 min) y el circuito de la fase 4 (una petición de prueba a `origin`, ~10 min), con sus protocolos en `Claude outputs/fases/005/`.
 - Instalar el GitHub MCP (lo configura el autor) antes de planear la meta 006 · Grafo de factores óptico-inercial.

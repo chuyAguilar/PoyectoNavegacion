@@ -131,3 +131,10 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** (a) uv, un CPython 3.11 propio de la cuenta del proyecto, sin sudo ni tocar el del sistema; (b) miniforge (ya en la cuenta `jetson`; más pesado, con ~21 GB libres); (c) deadsnakes por apt, con sudo; (d) el 3.10.12 del sistema. El escaneo: Python 3.10.12, glibc 2.35, sin ningún 3.11; uv y miniforge3 solo en la cuenta `jetson`.
 - **Respuesta del autor:** (a) uv.
 - **Fecha:** 2026-10-29
+
+## P22 · La tolerancia del replay en Linux, con la diferencia de ARM medida (abierta tras la fase 3, por P14)
+
+- **Lo medido (fase 3, `suite wip` en la Jetson):** la detección difiere del PC en 6.1e-05 px y la matriz filtrada en 1.1e-05 mm; el ruido con Marker0 quieto es ~0.03 mm. La tolerancia de hoy (1e-9 mm, 1e-9°, 1e-6 px) no lo admite.
+- **Opciones:** (a) en Linux, 1e-3 mm, 1e-3° y 1e-3 px; en Windows, la de hoy; (b) en Linux, 1e-4; (c) la de hoy en todos lados, y en Linux el replay solo informa la diferencia máxima.
+- **Respuesta del autor:** (a) 1e-3 mm, 1e-3° y 1e-3 px en Linux; en Windows sigue la de hoy.
+- **Fecha:** 2026-11-02
