@@ -53,6 +53,13 @@ MIN_REFS = 15
 MAX_IMG_BYTES = 200 * 1024
 MAX_LINE_CHARS = 2000
 
+# Meta 007, fase 4 · La suite corre en Linux: la copia WIP de la Jetson (`enviar_wip.ps1`) solo
+# lleva codigo/, sin docs/. Ahi se saltan las pruebas que leen docs/; con `suite repo` (el clon
+# tiene docs/) corren. En Windows nunca se saltan: si falta docs/, fallan.
+requiere_docs = pytest.mark.skipif(
+    sys.platform != "win32" and not ARCH.is_file(),
+    reason="sin docs/ (la copia WIP de la Jetson solo lleva codigo/; con `suite repo` corren)")
+
 # `<ruta>.py[:Símbolo]` o `<ruta>.yaml|yml`, con o sin comillas invertidas; la ruta
 # empieza en una palabra (no a mitad de otra ruta) y la extensión no sigue en otra palabra.
 _REF_RE = re.compile(
@@ -136,6 +143,7 @@ def mermaid_nodes(text: str) -> list[str]:
 
 # ---------------------------------------------------------------- fidelidad de §9
 
+@requiere_docs
 def test_las_referencias_de_la_seccion_existen():
     refs = find_code_refs(section_text(_doc_text()))
     missing = sorted({f"{r}:{s}" if s else r for r, s in refs if not ref_exists(r, s)})
@@ -143,6 +151,7 @@ def test_las_referencias_de_la_seccion_existen():
     assert len(refs) >= MIN_REFS, f"§9 tiene {len(refs)} referencias; se esperan al menos {MIN_REFS}"
 
 
+@requiere_docs
 def test_cada_caja_del_mapa_tiene_su_referencia():
     labels = mermaid_nodes(_doc_text())
     assert len(labels) >= 15, f"el mapa tiene {len(labels)} cajas"
@@ -169,6 +178,7 @@ def test_el_verificador_falla_con_un_nombre_inventado():
 
 # ---------------------------------------------------------------- la imagen del mapa
 
+@requiere_docs
 def test_el_sha_del_mapa_es_el_de_la_imagen_exportada():
     source = export_map.extract_mermaid(_doc_text())
     assert MAP_SHA.is_file(), (f"falta {MAP_SHA.relative_to(ROOT)}: exporta el mapa con "
@@ -197,6 +207,7 @@ def test_el_sha_ignora_crlf_y_cambia_con_una_etiqueta():
     assert export_map.mermaid_sha256(src.replace("dos", "tres")) != sha
 
 
+@requiere_docs
 def test_las_imagenes_pesan_menos_de_200_kb():
     total = sum(p.stat().st_size for p in IMG_DIR.glob("*") if p.is_file()) if IMG_DIR.is_dir() else 0
     assert total < MAX_IMG_BYTES, f"docs/img/004/ pesa {total} bytes"
@@ -222,6 +233,7 @@ def _example_result() -> dict:
                                       PROFILES_DIR / "tracker_config_gs1.yaml", alt_size_mm=98.6)
 
 
+@requiere_docs
 def test_el_bloque_del_ejemplo_es_la_salida_del_script():
     block = _lf(example_block(_doc_text())).strip("\n")
     want = _lf(explain_pose.format_markdown(_example_result())).strip("\n")
@@ -230,6 +242,7 @@ def test_el_bloque_del_ejemplo_es_la_salida_del_script():
     assert block in section_text(_doc_text())                     # dentro de §9, con sus referencias
 
 
+@requiere_docs
 def test_la_figura_del_ejemplo_existe_y_es_el_recorte():
     assert EXAMPLE_PNG.is_file(), (f"falta {EXAMPLE_PNG.relative_to(ROOT)}: python -m diagnostics.explain_pose "
                                    f"... --output-image (docs/ARCHITECTURE.md §9.3)")
@@ -246,6 +259,7 @@ def test_la_figura_del_ejemplo_existe_y_es_el_recorte():
 
 # ---------------------------------------------------------------- el documento
 
+@requiere_docs
 def test_el_indice_nombra_la_seccion_9():
     text = _doc_text()
     i = text.find("## Índice")
@@ -258,6 +272,7 @@ def test_el_indice_nombra_la_seccion_9():
         assert f"§{n} " in indice, f"§{n}"
 
 
+@requiere_docs
 def test_ninguna_linea_pasa_de_2000_caracteres():
     largas = [(n, len(ln)) for n, ln in enumerate(_doc_text().splitlines(), 1) if len(ln) > MAX_LINE_CHARS]
     assert largas == [], f"líneas de más de {MAX_LINE_CHARS} caracteres (línea, largo): {largas}"

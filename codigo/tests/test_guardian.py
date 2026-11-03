@@ -613,34 +613,42 @@ def test_parar_grupo_de_verdad_no_espera_la_gracia() -> None:
     assert p.wait(timeout=5) == -signal.SIGTERM
 
 
+# La salida de `_externa` va a `Popen(stdout=...)`, que pide un descriptor de archivo (`fileno()`):
+# en la Jetson es la salida de sshd. Un `io.BytesIO` no lo tiene, asi que estas pruebas usan un
+# archivo de verdad (meta 007, fase 4: con BytesIO salian con 125, «no se pudo lanzar sleep: fileno»).
+
 @pytest.mark.skipif(not EN_LINUX, reason="solo Linux: grupo de procesos, setsid y killpg")
-def test_externa_tope_de_prueba_tope_corta_sin_gracia(home: Path, registro: g.Registro) -> None:
+def test_externa_tope_de_prueba_tope_corta_sin_gracia(home: Path, registro: g.Registro, tmp_path: Path) -> None:
     """Como el caso 24 del P-2, con un tope de 1 s: antes del arreglo duraba 1 + 5 s."""
     o = g.Orden("prueba", ["sleep", "30"], "", 1.0, False, False, str(home))
-    t0 = time.monotonic()
-    rc = g.ejecutar(o, registro, io.BytesIO(), io.BytesIO())
-    assert rc == g.CODIGO_TOPE and time.monotonic() - t0 < 2.5
+    with open(tmp_path / "salida.bin", "wb") as salida:
+        t0 = time.monotonic()
+        rc = g.ejecutar(o, registro, io.BytesIO(), salida)
+        dt = time.monotonic() - t0
+    assert rc == g.CODIGO_TOPE and dt < 2.5, (rc, dt)
 
 
 @pytest.mark.skipif(not EN_LINUX, reason="solo Linux: grupo de procesos, setsid y killpg")
-def test_externa_tope_para_el_grupo(home: Path, registro: g.Registro) -> None:
-    import time
+def test_externa_tope_para_el_grupo(home: Path, registro: g.Registro, tmp_path: Path) -> None:
     o = g.Orden("prueba", ["sh", "-c", "sleep 30 & sleep 30"], "", 1.0, False, False, str(home))
-    t0 = time.monotonic()
-    rc = g.ejecutar(o, registro, io.BytesIO(), io.BytesIO())
-    assert rc == g.CODIGO_TOPE and time.monotonic() - t0 < 8
+    with open(tmp_path / "salida.bin", "wb") as salida:
+        t0 = time.monotonic()
+        rc = g.ejecutar(o, registro, io.BytesIO(), salida)
+        dt = time.monotonic() - t0
+    assert rc == g.CODIGO_TOPE and dt < 8, (rc, dt)
     assert not list(g.ruta_activas(home).glob("*.json"))
 
 
 @pytest.mark.skipif(not EN_LINUX, reason="solo Linux: limites del hijo")
-def test_externa_limites_y_entorno(home: Path, registro: g.Registro) -> None:
-    salida = io.BytesIO()
+def test_externa_limites_y_entorno(home: Path, registro: g.Registro, tmp_path: Path) -> None:
     o = g.Orden("prueba", ["/usr/bin/python3", "-I", "-c",
                            "import os, resource; print(resource.getrlimit(resource.RLIMIT_CORE)); "
                            "print(sorted(k for k in os.environ if k.startswith('LD_') or k == 'PYTHONPATH'))"],
                 "", 10.0, False, False, str(home))
-    assert g.ejecutar(o, registro, io.BytesIO(), salida) == 0
-    assert salida.getvalue().decode().splitlines() == ["(0, 0)", "[]"]
+    ruta = tmp_path / "salida.bin"
+    with open(ruta, "wb") as salida:
+        assert g.ejecutar(o, registro, io.BytesIO(), salida) == 0
+    assert ruta.read_bytes().decode().splitlines() == ["(0, 0)", "[]"]
 
 
 # ---------------------------------------------------------------- los scripts del autor

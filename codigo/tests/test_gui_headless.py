@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import os
 import re
 import subprocess
@@ -24,8 +25,21 @@ import pytest
 
 from .conftest import CODIGO_DIR, GUI_DIR
 
-MODULOS_GUI = sorted(f"gui.{p.stem}" for p in GUI_DIR.glob("*.py") if p.stem != "__init__")
 TOPE_SELFTEST_S = 60
+
+# Meta 007, fase 4 · La suite corre en Linux. El panel corre en el PC (clarify P16 de la meta 007):
+# PySide6 no esta en requirements-jetson.txt y el lanzador usa CREATE_NEW_PROCESS_GROUP, que solo
+# existe en Windows. Fuera de Windows esas pruebas se saltan; en Windows nunca.
+EN_WINDOWS = sys.platform == "win32"
+HAY_PYSIDE6 = importlib.util.find_spec("PySide6") is not None
+requiere_pyside6 = pytest.mark.skipif(
+    not EN_WINDOWS and not HAY_PYSIDE6,
+    reason="sin PySide6 (no esta en requirements-jetson.txt; el panel corre en el PC, P16)")
+solo_windows_lanzador = pytest.mark.skipif(
+    not EN_WINDOWS,
+    reason="gui/processes.py usa subprocess.CREATE_NEW_PROCESS_GROUP, solo de Windows (el panel corre en el PC, P16)")
+MODULOS_GUI = [pytest.param(m, marks=requiere_pyside6) if m == "gui.panel" else m
+               for m in sorted(f"gui.{p.stem}" for p in GUI_DIR.glob("*.py") if p.stem != "__init__")]
 
 
 @pytest.mark.parametrize("modulo", MODULOS_GUI)
@@ -33,6 +47,7 @@ def test_importan_modulos_gui(modulo: str) -> None:
     importlib.import_module(modulo)
 
 
+@requiere_pyside6
 def test_panel_selftest() -> None:
     entorno = dict(os.environ)
     entorno["QT_QPA_PLATFORM"] = "offscreen"
@@ -206,6 +221,7 @@ def _lanzar_hijo(codigo: str):
     return lz, lineas, fin, rcs
 
 
+@solo_windows_lanzador
 def test_lanzador_detiene_por_la_entrada_estandar() -> None:
     lz, lineas, fin, rcs = _lanzar_hijo(_HIJO_LIMPIO)
     t0 = time.monotonic()
@@ -217,6 +233,7 @@ def test_lanzador_detiene_por_la_entrada_estandar() -> None:
     assert "[hijo] leyo 'q'" in lineas and "[Salida limpia]" in lineas
 
 
+@solo_windows_lanzador
 def test_lanzador_sin_respuesta_cae_en_terminate(monkeypatch) -> None:
     from gui import processes
     monkeypatch.setattr(processes, "ESPERA_STDIN_S", 0.5)

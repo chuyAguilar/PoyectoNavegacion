@@ -7,7 +7,7 @@ mismo codigo que corre el tracker, y deja cada numero a la vista:
 1. detecta en el PNG con el detector del perfil (`vision.detection`) y compara
    las esquinas con las que el tracker grabo en vivo (px);
 2. toma K y dist de la grabacion y dice si son los del `.yml` del perfil
-   (sha256 del archivo y valores);
+   (sha256 del archivo, con LF o CRLF, B74; y valores);
 3. la pose cruda con IPPE_SQUARE (`vision.pose.estimate_single_pose`), su
    rotacion 3x3, la reproyeccion de las 4 esquinas (`cv2.projectPoints`, px por
    esquina) y la proyeccion pinhole del centro, con y sin distorsion;
@@ -62,12 +62,30 @@ DEFAULT_CROP_PX = 320
 MARKER_NAME = "Marker0"
 
 
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for block in iter(lambda: f.read(1 << 20), b""):
-            h.update(block)
-    return h.hexdigest()
+def sha256_fin_de_linea(path: Path) -> dict:
+    """sha256 del archivo tal cual ("bytes") y del mismo texto con LF ("lf") y con CRLF ("crlf").
+
+    B74 (meta 007, fase 4): la grabacion guardo el sha del `.yml` con el fin de linea que tenia
+    el arbol del PC (CRLF); git lo guarda en LF y la Jetson lo tiene en LF. El contenido es el
+    mismo, asi que el sha se compara en las dos formas."""
+    datos = Path(path).read_bytes()
+    lf = datos.replace(b"\r\n", b"\n")
+    crlf = lf.replace(b"\n", b"\r\n")
+    return {"bytes": hashlib.sha256(datos).hexdigest(), "lf": hashlib.sha256(lf).hexdigest(),
+            "crlf": hashlib.sha256(crlf).hexdigest()}
+
+
+def comparar_sha_grabado(path: Path, grabado: str) -> dict:
+    """El sha del `.yml` frente al que guardo la grabacion, sin depender del fin de linea (B74).
+
+    `yml_sha256` es el de la forma que coincide con la grabacion (o el de los bytes, si ninguna
+    coincide); `yml_sha256_bytes`, el de los bytes tal cual; `sha_eol`, la forma que coincidio
+    ("bytes", "lf", "crlf" o None)."""
+    formas = sha256_fin_de_linea(path)
+    grabado = str(grabado)
+    eol = next((n for n in ("bytes", "lf", "crlf") if formas[n] == grabado), None)
+    return {"yml_sha256": formas[eol] if eol else formas["bytes"], "yml_sha256_bytes": formas["bytes"],
+            "sha_matches": eol is not None, "sha_eol": eol}
 
 
 def _angle_deg(Ra: np.ndarray, Rb: np.ndarray) -> float:
@@ -141,7 +159,7 @@ def explain_frame(dataset: Path, frames_dir: Path, frame: int, profile: Path,
     K, dist = np.asarray(rec["K"], dtype=np.float64), np.asarray(rec["dist"], dtype=np.float64).flatten()
     yml = Path(cfg["camera"]["calibration_file"])
     K_yml, dist_yml = _read_yml_intrinsics(yml)
-    yml_sha = _sha256(yml)
+    sha_k = comparar_sha_grabado(yml, rec["metadata"].get("calibration_sha256"))
 
     # 3. Pose cruda y su reproyeccion.
     pose = estimate_single_pose(c_det, size_mm, K, dist)
@@ -197,9 +215,8 @@ def explain_frame(dataset: Path, frames_dir: Path, frame: int, profile: Path,
                       "centroid_px": centroid.tolist()},
         "intrinsics": {"K": K.tolist(), "dist": dist.tolist(),
                        "fx": float(K[0, 0]), "fy": float(K[1, 1]), "cx": float(K[0, 2]), "cy": float(K[1, 2]),
-                       "calibration_file": yml.name, "yml_sha256": yml_sha,
+                       "calibration_file": yml.name, **sha_k,
                        "recording_sha256": str(rec["metadata"].get("calibration_sha256")),
-                       "sha_matches": yml_sha == str(rec["metadata"].get("calibration_sha256")),
                        "max_diff_K_vs_yml": float(np.max(np.abs(K - K_yml))),
                        "max_diff_dist_vs_yml": float(np.max(np.abs(dist - dist_yml)))},
         "raw_pose": {"object_points_mm": obj.astype(np.float64).tolist(),

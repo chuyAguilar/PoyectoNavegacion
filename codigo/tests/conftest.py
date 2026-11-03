@@ -14,9 +14,16 @@ puerto 18944 aunque cambie un perfil. `no_real_camera` niega a toda la suite
 `pyigtl.OpenIGTLinkServer`. Las pruebas que quieren un falso lo ponen ellas con
 `monkeypatch` (pisa a este, que se deshace al final). `test_no_real_camera.py`
 comprueba que un perfil real no abre nada.
+
+Linux (meta 007, fase 4 · La suite corre en Linux): `no_real_camera` vale igual en la
+Jetson, porque niega `cv2.VideoCapture` sea cual sea el backend (V4L2 incluido). Ademas,
+fuera de Windows, `python_del_venv_fuera_de_windows` hace que las recetas del panel
+(`gui.recipes`) usen el python que corre la suite: el panel corre en el PC (P16) y en la
+Jetson el venv esta en `~/.venvs/navegacion`, no en `codigo/.venv/Scripts/python.exe`.
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -66,4 +73,14 @@ def no_real_camera(monkeypatch):
                 "WebcamBackend.open sin `abrir` falso: la suite no abre camaras reales (B34)")
         return real_open(self)
     monkeypatch.setattr(cb.WebcamBackend, "open", guarded_open)
+    yield
+
+
+@pytest.fixture(autouse=True)
+def python_del_venv_fuera_de_windows(monkeypatch):
+    """Fuera de Windows, `gui.recipes.VENV_PY` es el python de la suite (meta 007, fase 4).
+    En Windows no toca nada: las recetas siguen exigiendo `codigo/.venv/Scripts/python.exe`."""
+    if sys.platform != "win32":
+        from gui import recipes
+        monkeypatch.setattr(recipes, "VENV_PY", Path(sys.executable))
     yield

@@ -11,7 +11,7 @@ Hoy hay el escaneo (fase 1 · El escaneo de la Jetson, solo lectura), la barrera
 - `guardian.py`: el guardián de la cuenta `navagente` (abajo). `sonda_privilegios.py`: lo que haría un código del agente que intentara salirse. `tars_malos.py`: los tar que `wip recibir` niega, para la suite y `probar_barrera.ps1`.
 - `instalar_guardian.sh` y `desinstalar_guardian.sh`: para el autor, con sudo y `--simular`. `probar_barrera.ps1`: los 30 casos de la barrera, desde el PC.
 - `enviar_wip.ps1` y `instalar_entorno.sh` (fase 3 · El entorno en la Jetson): la copia sin commit de `codigo/` a la Jetson y el venv del tracker allí (abajo). Las versiones, en `codigo/requirements-jetson.txt`.
-- Las pruebas, en `codigo/tests/`: `test_escaneo_jetson.py` (el escaneo), `test_guardian.py`, `test_sonda_privilegios.py` y `test_probar_barrera.py` (la barrera, sin Jetson: con un `ssh.exe` falso compilado con `Add-Type`), `test_entorno_jetson.py` (el entorno; `enviar_wip.ps1` con otro `ssh.exe` falso que calcula el sha256). Las de tope y grupo de procesos del guardián solo corren en Linux (en la Jetson, fase 4).
+- Las pruebas, en `codigo/tests/`: `test_escaneo_jetson.py` (el escaneo), `test_guardian.py`, `test_sonda_privilegios.py` y `test_probar_barrera.py` (la barrera, sin Jetson: con un `ssh.exe` falso compilado con `Add-Type`), `test_entorno_jetson.py` (el entorno; `enviar_wip.ps1` con otro `ssh.exe` falso que calcula el sha256). Las de tope y grupo de procesos del guardián solo corren en Linux: en la Jetson pasan desde la fase 4 (abajo, «La suite en Linux»).
 
 `.gitattributes` deja los `*.sh` en LF también en el árbol de Windows: `escanear.ps1` manda el archivo tal cual y bash no correría un CRLF. Todo lo que va a la Jetson es ASCII.
 
@@ -99,5 +99,16 @@ El venv, con `ssh nav-jetson entorno instalar <repo|wip> [--gtsam]`, que corre `
 6. Los MB de cada parte y lo libre en `/`. Las líneas `ENTORNO_…` son el resumen; sale con 0, 2 (entrada) o 3 (un paso falló).
 
 Después: `ssh nav-jetson py wip linux.sonda_privilegios` (0 privilegios) y `ssh nav-jetson suite wip -q`.
+
+## La suite en Linux (fase 4)
+
+`ssh nav-jetson suite wip` (o `suite repo`) corre la misma suite que el PC, con 0 fallos. Lo que cambia fuera de Windows, cada salto con su motivo en la prueba:
+- **El replay de Marker0** (`tests/test_replay_marker0.py`, y `test_explain_pose.py`, que importa sus `TOL_*`): en Windows, 1e-9 mm, 1e-9° y 1e-6 px, como siempre; en Linux, 1e-3 mm, 1e-3° y 1e-3 px (clarify P22, 2026-11-02). En la Jetson (ARM) la pose sobre las esquinas grabadas da lo mismo que en el PC (2.3e-13 mm, 4.4e-13°), pero detectar sobre los PNG da esquinas que difieren hasta en 6.1e-05 px, y la 4×4 del ejemplo (que usa esas esquinas) hasta 3.3e-05 mm y 1.1e-04°.
+- **El sha de la calibración** (B74): `diagnostics/explain_pose.py` compara el sha grabado con el del `.yml` con LF y con CRLF, porque la grabación es del árbol del PC (CRLF) y git y la Jetson lo tienen en LF.
+- **La copia WIP solo lleva `codigo/`**: las 8 pruebas de `test_como_funciona.py` que leen `docs/` y la de `.gitattributes` de `test_escaneo_jetson.py` se saltan si no están; con `suite repo` corren.
+- **El panel corre en el PC (P16)**: sin PySide6 se saltan `import gui.panel` y el `--selftest`; las dos del lanzador (`CREATE_NEW_PROCESS_GROUP`) se saltan fuera de Windows. Las recetas sí corren: fuera de Windows, `tests/conftest.py` les da el python de la suite en vez de `codigo/.venv/Scripts/python.exe`.
+- **El guardián**: las cuatro «solo Linux» corren; su salida es un archivo de verdad (`Popen` pide `fileno()`).
+
+En Windows no se salta ninguna de estas: si falta `docs/` o PySide6, fallan.
 
 **El guardián 3 (2026-11-02).** Con el guardián 2, `info temperatura` y toda orden pesada salían con 125 (`TypeError: can't concat NoneType to bytes`): las zonas cv0, cv1 y cv2 de la Jetson dan EAGAIN al leer `temp` y `read_text` no lo soportaba. El 3 lee las zonas con `os.read` y salta las que no responden (B75). Se instala como dice arriba («Solo el guardián»); `ssh nav-jetson ayuda` dice «nav-guardian 3 (2026-11-02)».

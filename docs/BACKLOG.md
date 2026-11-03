@@ -58,8 +58,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B70 | Cuota de disco real para la cuenta `navagente` | Baja | — |
 | B72 | `test_probar_barrera.py` añade ~35 s a la suite | Baja | — |
 | B73 | La cita de argumentos para `Start-Process` vive solo en `probar_barrera.ps1` | Baja | — |
-| B74 | Las pruebas del sha de la calibración dependen del fin de línea del `.yml` | Baja | — |
 | B75 | `probar_barrera.ps1` no prueba ninguna orden pesada ni `info temperatura` | Media | — |
+| B76 | `suite` del guardián: con dos rutas corre solo la última, sin aviso, y no deja ver por qué se salta cada prueba | Baja | — |
 
 ## Abiertos
 
@@ -443,13 +443,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** cuando se escriba `enviar_wip.ps1` (o cualquier `.ps1` que lance un programa con una ruta), sacar la función a un archivo común de `codigo/linux/` y usarla en los dos, con una prueba de ruta con espacio.
 - **Prioridad:** baja.
 
-### B74 · Las pruebas del sha de la calibración dependen del fin de línea del `.yml`
-- **Qué:** `test_como_funciona` y `test_explain_pose[gs1]` comparan el sha256 de los bytes de `codigo/data/intrinsecos_gs1_1280x960.yml` con el que guardó la grabación. Ese sha es el del archivo con CRLF (`0b4250e5…`), el que tenía el árbol del autor; git guarda LF (`0da9280e…`, `.gitattributes`: `*.yml eol=lf`). Tras un `git checkout` del archivo (2026-11-02) quedó en LF y las dos pruebas fallan sin que cambie ningún valor. gs2 sigue en CRLF en el árbol y pasa.
-- **Por qué queda:** el contenido es el mismo; se arregla en el árbol del autor (pasar el archivo a CRLF) y no hace falta tocar las pruebas hoy.
-- **De dónde:** cierre de la fase 2 · La barrera de seguridad para los agentes, de la meta 007 (2026-11-02).
-- **Qué haría falta:** que `replay_util.sha256` normalice `\r\n` a `\n` (y regenerar el sha de las grabaciones), para que las pruebas no dependan de cómo hizo el checkout cada máquina; eso importa en la Jetson (fase 4 · La suite corre en Linux), donde el árbol es LF.
-- **Prioridad:** baja.
-
 ### B75 · `probar_barrera.ps1` no prueba ninguna orden pesada ni `info temperatura`
 - **Qué:** los 30 casos de la barrera son negados, ligeros, de `sshd`, de tope y de corte. Ninguno pasa por `precondiciones` de una orden pesada ni lee las zonas térmicas. Por eso el guardián 2 dio 30 de 30 en la Jetson y, aun así, `info temperatura` y todas las pesadas (`entorno`, `suite`, `py`, `camara`, `medir`) salían con 125 y `TypeError: can't concat NoneType to bytes`: las zonas cv0, cv1 y cv2 dan EAGAIN al leer `temp` y `read_text` no lo soportaba. El guardián 3 (fase 3 · El entorno en la Jetson, 2026-11-02) lo arregla con `_leer_sysfs` y una prueba en `test_guardian.py`.
 - **Por qué queda:** añadir casos cambia `probar_barrera.ps1` y su prueba, de la fase 2, y el arreglo ya está; no hace falta para la fase 3. Al día (2026-11-02, segunda vuelta de la fase 3): con el guardián 3 instalado, a mano, `info temperatura` sale con 0 y 6 zonas (sin cv0–cv2), `medir tegrastats 1` con 0, y `entorno instalar` y `suite` pasan `precondiciones`; `probar_barrera.ps1` sigue en 30 de 30 sin esos casos.
@@ -457,7 +450,18 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** dos casos permitidos más en `probar_barrera.ps1` y en `test_probar_barrera.py`: `info temperatura` con 0 y al menos una zona, y `medir tegrastats 1` con 0 (pasa por `precondiciones` de una pesada sin abrir la cámara).
 - **Prioridad:** media.
 
+### B76 · `suite` del guardián: con dos rutas corre solo la última, sin aviso, y no deja ver por qué se salta cada prueba
+- **Qué:** `ssh nav-jetson suite wip -q tests/a.py tests/b.py` corre solo `tests/b.py` (en `decidir`, cada ruta pisa a la anterior) y sale con el código de esa sola. Además el verbo no acepta `-rs`, así que el motivo de cada prueba saltada no se ve en la Jetson. Un `-k` con espacios sí llega si va citado dentro de la orden remota (`ssh nav-jetson "suite wip -k 'a or b'"`), no como argumentos sueltos.
+- **Por qué queda:** con una ruta por orden basta; los saltos de la fase 4 se cuentan (45 + 13 = 58) y su motivo está en cada prueba. Cambiar el guardián pide que el autor lo reinstale con sudo.
+- **De dónde:** fase 4 · La suite corre en Linux, de la meta 007 (2026-11-02, al medir el replay en la Jetson); la sugerencia de `-rs` venía de la fase 3.
+- **Qué haría falta:** en `decidir`, negar una segunda ruta (o aceptar varias) y admitir `-rs`, con sus casos en `test_guardian.py`; el autor instala el guardián 4.
+- **Prioridad:** baja.
+
 ## Cerrados
+
+### B74 · Las pruebas del sha de la calibración dependen del fin de línea del `.yml`
+- **Qué era:** `test_como_funciona` y `test_explain_pose[gs1]` comparaban el sha256 de los bytes de `codigo/data/intrinsecos_gs1_1280x960.yml` con el que guardó la grabación, que es el del archivo con CRLF (`0b4250e5…`); git y la Jetson lo tienen en LF (`0da9280e…`), y las dos fallaban sin que cambiara ningún valor.
+- **Cerrado:** 2026-11-02, por la fase 4 · La suite corre en Linux (meta 007 · El tracker en la Jetson Orin Nano): `diagnostics/explain_pose.py:comparar_sha_grabado` compara el sha grabado con el del `.yml` tal cual, con LF y con CRLF, y dice cuál coincidió (`sha_eol`); la prueba exige además que K y dist sean iguales. No se regeneraron las grabaciones ni sus referencias. Pasa en el PC (gs1 en LF) y en la Jetson.
 
 ### B29 · «Probar cámara» del panel no comprueba la marca ni aplica los ajustes
 - **Qué era:** `gui/camera_probe.py` (era `gui/sonda_camara.py`), detrás de «Probar cámara», resolvía el índice por el puerto, abría por MSMF y leía un frame, pero no leía la marca ni aplicaba `controls`: con las cámaras intercambiadas de puerto daba «OK» y ponía el semáforo «Cámara» en verde (sesión en vivo de la fase 2b de la meta 002, punto 3, 2026-10-22).

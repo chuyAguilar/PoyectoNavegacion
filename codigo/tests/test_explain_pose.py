@@ -12,7 +12,11 @@
   calibración, 0.167 y 0.154 px);
 - con 98.6 mm, la misma rotación (≤ 1e-6°) y una t 98.6/80 veces la de 80 (error
   relativo ≤ 1e-6): la propiedad que hace invisible B55;
-- el sha256 de la K de la grabación es el del `.yml` del perfil, y K y dist coinciden.
+- el sha256 de la K de la grabación es el del `.yml` del perfil, con LF o con CRLF (B74,
+  meta 007, fase 4), y K y dist coinciden.
+
+Las tolerancias `TOL_*` dependen de la plataforma (`test_replay_marker0.py`; P22 de la
+meta 007).
 
 Además, `format_markdown` es determinista, `draw_example` recorta al tamaño pedido
 y la CLI falla fuerte (frame sin PNG, salida que ya existe, perfil sin el marker).
@@ -116,9 +120,29 @@ def test_otro_tamano_escala_la_traslacion_y_no_gira(results, cam: str, frame: in
 def test_la_k_de_la_grabacion_es_la_del_yml_del_perfil(results, cam: str) -> None:
     k = results[(cam, 480)]["intrinsics"]
     assert k["sha_matches"], (k["yml_sha256"], k["recording_sha256"])
-    assert k["yml_sha256"] == replay_util.sha256(PROFILES_DIR.parent / "data" / k["calibration_file"])
+    yml = PROFILES_DIR.parent / "data" / k["calibration_file"]
+    assert k["yml_sha256_bytes"] == replay_util.sha256(yml)
+    # B74 (meta 007, fase 4): coincide con LF o con CRLF, pero es la misma K; ver abajo.
+    assert k["yml_sha256"] == k["recording_sha256"] and k["sha_eol"] in ("bytes", "lf", "crlf")
     assert k["max_diff_K_vs_yml"] == 0.0 and k["max_diff_dist_vs_yml"] == 0.0
     assert len(k["dist"]) == 5 and k["fx"] > 0 and k["fy"] > 0
+
+
+def test_el_sha_grabado_no_depende_del_fin_de_linea(tmp_path) -> None:
+    """B74: el mismo texto con LF o CRLF coincide con el sha grabado; otro texto, no."""
+    import hashlib
+    crlf, lf = b"a: 1\r\nb: 2\r\n", b"a: 1\nb: 2\n"
+    sha_crlf, sha_lf = hashlib.sha256(crlf).hexdigest(), hashlib.sha256(lf).hexdigest()
+    p = tmp_path / "k.yml"
+    p.write_bytes(lf)
+    c = explain_pose.comparar_sha_grabado(p, sha_crlf)
+    assert c == {"yml_sha256": sha_crlf, "yml_sha256_bytes": sha_lf, "sha_matches": True, "sha_eol": "crlf"}
+    p.write_bytes(crlf)
+    assert explain_pose.comparar_sha_grabado(p, sha_lf)["sha_eol"] == "lf"
+    assert explain_pose.comparar_sha_grabado(p, sha_crlf)["sha_eol"] == "bytes"
+    otro = explain_pose.comparar_sha_grabado(p, hashlib.sha256(b"a: 1\nb: 3\n").hexdigest())
+    assert otro == {"yml_sha256": sha_crlf, "yml_sha256_bytes": sha_crlf, "sha_matches": False, "sha_eol": None}
+    assert not explain_pose.comparar_sha_grabado(p, None)["sha_matches"]
 
 
 def test_la_distancia_a_mano_se_parece_a_la_de_la_pose(results) -> None:

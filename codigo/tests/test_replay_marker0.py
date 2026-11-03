@@ -9,10 +9,19 @@ sobre 3 frames guardados tiene que dar las esquinas grabadas.
 Si faltan los datos, falla: no se generan solos. Se graban en la sesion en
 vivo (`Claude outputs/fases/003/fase-1-en-vivo-protocolo.md`) y la referencia
 se genera a mano con `replay_util.py reference-marker0`.
+
+La tolerancia depende de la plataforma (meta 007, fase 4 · La suite corre en Linux):
+en Windows, la de siempre (clarify P14 de la meta 007: 1e-9 mm, 1e-9°, 1e-6 px); en
+Linux, la que decidio el autor tras medir la Jetson (P22, 2026-11-02: 1e-3 mm, 1e-3° y
+1e-3 px). Medido en la Jetson (ARM, 2026-11-02): la pose sobre las esquinas grabadas da
+2.3e-13 mm y 4.4e-13°; la deteccion sobre los PNG difiere de lo grabado en el PC en
+6.1e-05 px como mucho, y la 4x4 del ejemplo de `test_explain_pose.py` (con esas esquinas) en
+3.3e-05 mm y 1.1e-04°. El ruido con Marker0 quieto es ~0.03 mm.
 """
 from __future__ import annotations
 
 import json
+import sys
 
 import pytest
 
@@ -20,9 +29,10 @@ from . import replay_util
 from .conftest import PROFILES_DIR, TESTS_DATA_DIR
 
 CAMERAS = ("gs1", "gs2")
-TOL_MM = 1e-9
-TOL_DEG = 1e-9
-TOL_PX = 1e-6
+EN_LINUX = sys.platform.startswith("linux")
+TOL_MM = 1e-3 if EN_LINUX else 1e-9
+TOL_DEG = 1e-3 if EN_LINUX else 1e-9
+TOL_PX = 1e-3 if EN_LINUX else 1e-6
 
 
 def _paths(cam: str) -> dict:

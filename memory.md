@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-11-02 (meta 007 · El tracker en la Jetson Orin Nano: fases 1 y 2 commiteadas, fase 3 · El entorno en la Jetson hecha; la meta 006 · Grafo de factores óptico-inercial en espera, y la 005 en pausa)._
+_Actualizado: 2026-11-02 (meta 007 · El tracker en la Jetson Orin Nano: fases 1 a 3 commiteadas, fase 4 · La suite corre en Linux hecha, pendiente del commit; la meta 006 · Grafo de factores óptico-inercial en espera, y la 005 en pausa)._
 
 Spec activo: `specs/007-jetson/`
 
@@ -27,7 +27,7 @@ Peticiones pendientes: 0
 
 ## La suite
 
-- `codigo/tests/`: **840: 835 pasan y 5 saltadas** (4 «solo Linux»: tope, grupo de procesos y `_parar_grupo`; 1 solo en la Jetson: el clon sin datos de paciente); 85.7–91.7 s de pytest (2026-11-02, fase 3 de la meta 007; `test_probar_barrera.py` añade ~35 s, B72). En la Jetson, el inventario de abajo. Con el `intrinsecos_gs1` en LF, 2 de las 835 fallan (B74). Antes, 820 en 79.6 s (fase 2) y 641 en 44.0 s al cerrar la meta 004. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
+- `codigo/tests/`: **841: 836 pasan y 5 saltadas** (4 «solo Linux»: tope, grupo de procesos y `_parar_grupo`; 1 solo en la Jetson: el clon sin datos de paciente); 82.6–83.4 s de pytest (2026-11-02, fase 4 de la meta 007; `test_probar_barrera.py` añade ~35 s, B72). **En la Jetson** (`ssh nav-jetson suite wip`): 841: 783 pasan, 0 fallan, 58 saltadas, 39.8 s; en Linux el replay admite 1e-3 mm/°/px (P22) y lo que solo vale en Windows o necesita `docs/` se salta con su motivo (`codigo/linux/README.md`, «La suite en Linux»). Antes, 840 en 85.7–91.7 s (fase 3) y 641 en 44.0 s al cerrar la meta 004. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm / 0.0°, detección 0.0 px) + `python -m gui.panel --selftest` (con `PYTHONIOENCODING=utf-8`, B49). Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -57,12 +57,12 @@ Peticiones pendientes: 0
 - **La regla de la Jetson ya vale** (2026-11-02): los agentes entran solo por `ssh nav-jetson <verbo>` (`settings.json` y `desarrollo.md`/`pruebas.md`); un 126 es el guardián y no se rodea. P19 y P20 en (a): el autor teclea lo que abre la cámara; su clave lleva frase de paso y su `sudo` pide contraseña.
 - **Fase 2 · La barrera de seguridad para los agentes: hecha** (2026-11-02; `d2f3632` y `107a89e`; números en `tasks.md`).
 - **Fase 3 · El entorno en la Jetson: hecha** (2026-11-02; P21 = uv; `24b046f`, `efbd138`). Ráfagas del autor (P-3b, 900 frames): gs1 y gs2 estables a 88.5 fps (≥ 85). En la Jetson está el guardián 3. Por `nav-jetson`: `~/.venvs/navegacion` con CPython 3.11.9 y las versiones del PC (cv2 4.11.0.86 con `ArucoDetector`, pyigtl 0.3.1, scipy 1.17.1), 110 s; gtsam 4.3.0 instala (venv aparte, `~/.venvs/prueba-gtsam`); 529 MB, 17 365 MB libres. Clon disperso sin datos de paciente (`107a89e`, 172 MiB). WIP: 122 miembros, sha256 igual. Sonda por `py` 0 en 28. `probar_barrera` 30 de 30. Detalle en `Claude outputs/fases/007/fase-3.md`.
-- **Inventario para la fase 4 · La suite corre en Linux** (`suite wip`, 840: 760 pasan, 35 fallan, 45 saltadas, 36.0 s). Fallan: 9 por `gui/recipes.py` (`codigo/.venv/Scripts/python.exe`); 8 porque la copia WIP no lleva `docs/` ni `.gitattributes`; 10 por la aritmética de ARM (detección 6.1e-05 px, matriz filtrada 1.1e-05 mm; las de pose del replay pasan; decide el autor, P14); 1 por B74; 3 «solo Linux» de `test_guardian.py` porque la prueba da un `BytesIO` a `Popen(stdout=…)` (el guardián real va bien); 2 sin PySide6; 2 por `subprocess.CREATE_NEW_PROCESS_GROUP` en `gui/processes.py`.
-- **Lo siguiente: fase 4 · La suite corre en Linux**, con la decisión pendiente del autor sobre la tolerancia de la aritmética de ARM (P14: 6.1e-05 px y 1.1e-05 mm frente a 1e-6 px).
+- **Fase 4 · La suite corre en Linux: hecha** (2026-11-02, pendiente del commit; P22 = 1e-3 en Linux). En la Jetson, de 35 fallos a 0 (841: 783 pasan, 58 saltadas, 39.8 s); en el PC, 836 pasan y 5 saltadas, como antes más una prueba nueva. Medido en ARM: pose del replay 2.3e-13 mm, detección 6.1e-05 px, 4×4 del ejemplo 3.3e-05 mm y 1.1e-04°. Solo cambió código de pruebas y `diagnostics/explain_pose.py` (B74, cerrada); la cadena no. B76 (baja) nueva. Detalle en `Claude outputs/fases/007/fase-4.md`.
+- **Lo siguiente: fase 5 · La capa V4L2 y cada cámara en la Jetson** (pesada). Tras el commit, `ssh nav-jetson repo actualizar` y `suite repo` deberían dar 0 fallos con las pruebas de `docs/` corriendo (no se probó: el clon sigue en `107a89e`).
 
 ## Pendientes del autor
 
-- **Meta 007:** decidir la tolerancia de ARM (P14) al llegar a la fase 4. `codigo/data/intrinsecos_gs1_1280x960.yml` sigue en LF: `test_como_funciona` y `test_explain_pose[gs1]` fallan hasta pasarlo a CRLF, como gs2, o hacer el sha insensible al fin de línea (B74).
+- **Meta 007:** el commit de la fase 4 · La suite corre en Linux (título y `git add` en su reporte).
 
 - Meta 005 (aplazado por el autor hasta compartirlo con sus compañeros, 2026-10-28): la prueba en vivo de la fase 1 (7 casos), la de la fase 2 (2 envíos con `consulta`), la lectura de `docs/EQUIPO.md` de la fase 3 (10 pasos, ~20 min) y el circuito de la fase 4 (una petición de prueba a `origin`, ~10 min), con sus protocolos en `Claude outputs/fases/005/`.
 - Instalar el GitHub MCP (lo configura el autor) antes de planear la meta 006 · Grafo de factores óptico-inercial.

@@ -138,6 +138,8 @@ def test_el_script_es_ascii_y_lf() -> None:
     assert datos.endswith(b"\n")
 
 
+@pytest.mark.skipif(sys.platform != "win32" and not (REPO_DIR / ".gitattributes").is_file(),
+                    reason="sin .gitattributes (la copia WIP de la Jetson solo lleva codigo/; con `suite repo` corre)")
 def test_gitattributes_deja_los_sh_en_lf() -> None:
     """Con core.autocrlf=true, sin esta regla el arbol de Windows tendria CRLF y bash fallaria."""
     reglas = (REPO_DIR / ".gitattributes").read_text(encoding="utf-8").splitlines()
