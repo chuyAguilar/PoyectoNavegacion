@@ -1,0 +1,29 @@
+# Dependencias del tracker en la Jetson Orin Nano (meta 007, fase 3 - El entorno en la Jetson).
+#
+# Lo instala codigo/linux/instalar_entorno.sh en ~/.venvs/navegacion, con el CPython 3.11.9 que
+# baja uv (clarify P21; el mismo 3.11.9 del PC, .python-version). Sin sudo.
+# Las versiones son las del venv del PC (codigo/.venv, 2026-11-02), fijadas con == para que los
+# dos sistemas corran lo mismo. Si cambia una version en el PC, cambia aqui tambien.
+#
+# Lo que NO va, porque el tracker de la Jetson no lo usa:
+#   pyorbbecsdk2 (Femto archivada), open3d (femto_pruebas), matplotlib (diagnostico opcional)
+#   y pyside6 (el panel se queda en el PC: no hay rueda para la glibc 2.35 de la Jetson; P16).
+
+# ===== Vision y matematica =====
+opencv-python==4.11.0.86   # ArUco (cv2.aruco.ArucoDetector) + solvePnP. Rueda manylinux2014_aarch64.
+numpy==1.26.4
+scipy==1.17.1
+
+# ===== Configuracion =====
+pyyaml==6.0.3
+
+# ===== OpenIGTLink (a Slicer, en el PC) =====
+pyigtl==0.3.1              # trae crcmod 1.7 (sin rueda: se construye en la Jetson).
+
+# ===== Pruebas =====
+pytest==9.0.3
+
+# ===== Meta 006 (Grafo de factores), solo para probar que instala =====
+# No entra en el venv del tracker: `instalar_entorno.sh --gtsam` lo prueba en un venv aparte,
+# ~/.venvs/prueba-gtsam, con estas mismas versiones mas:
+# gtsam==4.3.0             # rueda cp311 manylinux2014_aarch64 en PyPI (2026-11-02)

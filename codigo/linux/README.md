@@ -2,7 +2,7 @@
 
 Lo de esta carpeta es para la meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC (`specs/007-jetson/`). Se completa fase por fase; al cerrar la meta, en la fase 9 · Cómo se trabaja con la Jetson y cierre de la meta, dirá cómo llega el código, cómo se corren la suite y el tracker, cómo se paran y cómo se corta el acceso.
 
-Hoy hay el escaneo (fase 1 · El escaneo de la Jetson, solo lectura) y la barrera de los agentes (fase 2 · La barrera de seguridad para los agentes). Ningún agente se conecta a la Jetson hasta que la barrera esté instalada por el autor, probada con `probar_barrera.ps1` (30 de 30) y las reglas de `settings.json` aplicadas; entonces los agentes usan solo `ssh nav-jetson <verbo>`.
+Hoy hay el escaneo (fase 1 · El escaneo de la Jetson, solo lectura), la barrera de los agentes (fase 2 · La barrera de seguridad para los agentes) y el entorno de Python del tracker (fase 3 · El entorno en la Jetson). Ningún agente se conecta a la Jetson hasta que la barrera esté instalada por el autor, probada con `probar_barrera.ps1` (30 de 30) y las reglas de `settings.json` aplicadas; entonces los agentes usan solo `ssh nav-jetson <verbo>`.
 
 ## Qué hay
 
@@ -10,7 +10,8 @@ Hoy hay el escaneo (fase 1 · El escaneo de la Jetson, solo lectura) y la barrer
 - `escanear.ps1`: lo lanza desde el PC. Manda el script por la entrada estándar de `ssh <alias> timeout -k 5 120 bash --norc --noprofile -s` con `Start-Process` (una tubería de PowerShell 5.1 cambiaría los fines de línea), guarda lo que llega en un archivo que no pisa y espera con tope.
 - `guardian.py`: el guardián de la cuenta `navagente` (abajo). `sonda_privilegios.py`: lo que haría un código del agente que intentara salirse. `tars_malos.py`: los tar que `wip recibir` niega, para la suite y `probar_barrera.ps1`.
 - `instalar_guardian.sh` y `desinstalar_guardian.sh`: para el autor, con sudo y `--simular`. `probar_barrera.ps1`: los 30 casos de la barrera, desde el PC.
-- Las pruebas, en `codigo/tests/`: `test_escaneo_jetson.py` (el escaneo), `test_guardian.py`, `test_sonda_privilegios.py` y `test_probar_barrera.py` (la barrera, sin Jetson: con un `ssh.exe` falso compilado con `Add-Type`). Las de tope y grupo de procesos del guardián solo corren en Linux (en la Jetson, fase 4).
+- `enviar_wip.ps1` y `instalar_entorno.sh` (fase 3 · El entorno en la Jetson): la copia sin commit de `codigo/` a la Jetson y el venv del tracker allí (abajo). Las versiones, en `codigo/requirements-jetson.txt`.
+- Las pruebas, en `codigo/tests/`: `test_escaneo_jetson.py` (el escaneo), `test_guardian.py`, `test_sonda_privilegios.py` y `test_probar_barrera.py` (la barrera, sin Jetson: con un `ssh.exe` falso compilado con `Add-Type`), `test_entorno_jetson.py` (el entorno; `enviar_wip.ps1` con otro `ssh.exe` falso que calcula el sha256). Las de tope y grupo de procesos del guardián solo corren en Linux (en la Jetson, fase 4).
 
 `.gitattributes` deja los `*.sh` en LF también en el árbol de Windows: `escanear.ps1` manda el archivo tal cual y bash no correría un CRLF. Todo lo que va a la Jetson es ASCII.
 
@@ -78,3 +79,25 @@ powershell -NoProfile -ExecutionPolicy Bypass -File codigo/linux/probar_barrera.
 Los 30 casos: 1–16 negados por el guardián (126), 17–20 cuatro tar malos sin que cambie `wip estado`, 21–23 negados por `sshd` (reenvío `-L` sin saludo SSH por el 9999, `-tt` sin pty, `sftp` que no conecta), 24 `prueba-tope` con 124 y ≤ 4 s en el registro, 25 el cliente matado al 1 s sin dejar ningún `sleep`, 26–30 permitidos con 0. La tabla queda en `-Salida` (puede llevar espacios: cada argumento se cita) y el script sale con 0 solo con 30 de 30. Después: la sonda (`sudo -u navagente /usr/bin/python3 -I /tmp/nav-instalar/sonda_privilegios.py`, 0 privilegios en 28 comprobaciones; un grupo suplementario que no sea `video` cuenta como privilegio), el escaneo repetido como `despues.txt` y el simulacro de corte.
 
 **Para cortar el acceso de golpe:** `sudo mv /etc/ssh/authorized_keys/navagente /etc/ssh/authorized_keys/navagente.off && sudo pkill -u navagente`; se deshace moviéndolo de vuelta. **Para deshacerlo todo:** `sudo bash desinstalar_guardian.sh` (quita el drop-in, la clave y el guardián y recarga ssh; con `--borrar-cuenta` borra también la cuenta con su carpeta).
+
+## El entorno en la Jetson (fase 3)
+
+El código llega de dos maneras. **El clon** (`ssh nav-jetson repo clonar`, una vez; luego `repo actualizar`): `~/nav/repo`, disperso y parcial, sin `herramientas/`, `documentos/`, `*.nrrd` ni `*.dcm`; trae lo commiteado. **La copia WIP**, lo que aún no tiene commit, desde la raíz del repo en el PC:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File codigo/linux/enviar_wip.ps1 -Alias nav-jetson -TopeS 180
+```
+
+Hace un tar de `codigo/` con el `tar.exe` de Windows sin `.venv`, `__pycache__`, `.pytest_cache`, `historico/`, `*.nrrd` ni `*.dcm`; lo comprueba con la regla del guardián antes de mandarlo (si algo no vale, sale con 2 sin conectar); lo manda por `wip recibir` con `Start-Process -RedirectStandardInput` y compara su sha256 con el que devuelve el guardián (0 si coinciden; 3 si no, si ssh falla o si el guardián niega; 124 si pasa el tope). En la Jetson queda en `~/nav-wip/codigo`, con `historico/` enlazado al del clon.
+
+El venv, con `ssh nav-jetson entorno instalar <repo|wip> [--gtsam]`, que corre `linux/instalar_entorno.sh` de ese árbol como `navagente`, sin sudo:
+1. uv 0.13.6 en `~/.local/share/nav-uv/0.13.6/uv`, bajado de GitHub Releases y comprobado contra el sha256 escrito en el script (clarify P21). No toca el PATH ni los perfiles.
+2. `~/.venvs/navegacion` con el CPython 3.11.9 que baja uv (`--managed-python`; el 3.10 del sistema no se toca). Si ya está con ese Python, se reutiliza; si hay otro, se aparta como `navegacion.anterior-<fecha>`.
+3. `requirements-jetson.txt` (las versiones del PC, con `==`; sin PySide6, open3d, pyorbbecsdk2 ni matplotlib).
+4. La comprobación: cada paquete con su versión y un `ArucoDetector` que encuentra un marcador sintético.
+5. Con `--gtsam`, gtsam 4.3.0 en un venv aparte, `~/.venvs/prueba-gtsam`, con un grafo de prueba: solo para saber si instala (meta 006); el del tracker no lo lleva.
+6. Los MB de cada parte y lo libre en `/`. Las líneas `ENTORNO_…` son el resumen; sale con 0, 2 (entrada) o 3 (un paso falló).
+
+Después: `ssh nav-jetson py wip linux.sonda_privilegios` (0 privilegios) y `ssh nav-jetson suite wip -q`.
+
+**El guardián 3 (2026-11-02).** Con el guardián 2, `info temperatura` y toda orden pesada salían con 125 (`TypeError: can't concat NoneType to bytes`): las zonas cv0, cv1 y cv2 de la Jetson dan EAGAIN al leer `temp` y `read_text` no lo soportaba. El 3 lee las zonas con `os.read` y salta las que no responden (B75). Se instala como dice arriba («Solo el guardián»); `ssh nav-jetson ayuda` dice «nav-guardian 3 (2026-11-02)».

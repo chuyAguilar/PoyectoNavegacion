@@ -334,6 +334,26 @@ def test_precondiciones_niegan_disco_temperatura_y_pesadas(home: Path) -> None:
                      pesadas=lambda: 9)
 
 
+def test_leer_temperaturas_salta_las_zonas_que_dan_eagain(tmp_path: Path) -> None:
+    """Meta 007, fase 3: en la Jetson cv0, cv1 y cv2 dan EAGAIN al leer `temp`. Con `read_text`
+    el guardian moria con TypeError en `info temperatura` y en toda orden pesada."""
+    base = tmp_path / "thermal"
+    for i, (tipo, temp) in enumerate([("cpu-thermal", "52937"), ("cv0-thermal", None), ("gpu-thermal", "52000"),
+                                      ("raro", "no-es-un-numero")]):
+        zona = base / f"thermal_zone{i}"
+        zona.mkdir(parents=True)
+        (zona / "type").write_text(tipo + "\n", encoding="ascii")
+        (zona / "temp").write_text((temp or "") + "\n", encoding="ascii")
+
+    def leer(ruta: Path) -> str:
+        if ruta.parent.name == "thermal_zone1" and ruta.name == "temp":
+            raise BlockingIOError(11, "Resource temporarily unavailable")
+        return g._leer_sysfs(ruta)
+
+    assert g.leer_temperaturas(base, leer) == {"cpu-thermal": 52.937, "gpu-thermal": 52.0}
+    assert g.leer_temperaturas(tmp_path / "no-existe") == {}
+
+
 def test_precondiciones_exigen_arbol_venv_y_clon(home: Path) -> None:
     shutil.rmtree(g.ruta_arbol(home, "wip"))
     with pytest.raises(g.Negado, match="no existe el arbol"):

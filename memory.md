@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-11-02 (meta 007 · El tracker en la Jetson Orin Nano: fase 1 · El escaneo de la Jetson, solo lectura, commiteada; fase 2 · La barrera de seguridad para los agentes, hecha con los números en vivo; la meta 006 · Grafo de factores óptico-inercial queda en espera, y la 005 en pausa)._
+_Actualizado: 2026-11-02 (meta 007 · El tracker en la Jetson Orin Nano: fases 1 y 2 commiteadas; fase 3 · El entorno en la Jetson, parcial, esperando el guardián 3; la meta 006 · Grafo de factores óptico-inercial queda en espera, y la 005 en pausa)._
 
 Spec activo: `specs/007-jetson/`
 
@@ -27,7 +27,7 @@ Peticiones pendientes: 0
 
 ## La suite
 
-- `codigo/tests/`: **820: 816 pasan y 4 saltadas** («solo Linux»: tope, grupo de procesos y `_parar_grupo`, que corren en la Jetson); 79.6 s de pytest (2026-11-02, cierre de la fase 2 de la meta 007; `test_probar_barrera.py` añade ~35 s, B72). Con el `intrinsecos_gs1` en LF, 2 de las 816 fallan (ver «Pendientes»). Antes, 805 en 68.5–71.4 s (2026-10-29) y 641 en 44.0 s al cerrar la meta 004. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
+- `codigo/tests/`: **840: 835 pasan y 5 saltadas** (4 «solo Linux»: tope, grupo de procesos y `_parar_grupo`; 1 solo en la Jetson: el clon sin datos de paciente); 85.7 s de pytest (2026-11-02, fase 3 de la meta 007; `test_probar_barrera.py` añade ~35 s, B72). Con el `intrinsecos_gs1` en LF, 2 de las 835 fallan (B74). Antes, 820 en 79.6 s (fase 2) y 641 en 44.0 s al cerrar la meta 004. Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm / 0.0°, detección 0.0 px) + `python -m gui.panel --selftest` (con `PYTHONIOENCODING=utf-8`, B49). Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -52,15 +52,16 @@ Peticiones pendientes: 0
 
 ## Meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC (activa; plan autorizado el 2026-10-29)
 
-- **Fase 1 · El escaneo de la Jetson, solo lectura: hecha** (2026-10-29, commit `e71dea4`): `codigo/linux/escanear_jetson.sh` y `escanear.ps1`. El P-1 del autor (`Claude outputs/fases/007/escaneo/antes.txt`, fuera de git: trae IPs y procesos): 12 de 12 secciones en 11 s, `find` vacío. No hace falta repetirlo.
+- **Fase 1 · El escaneo de la Jetson, solo lectura: hecha** (2026-10-29, commit `e71dea4`): `codigo/linux/escanear_jetson.sh` y `escanear.ps1`. El P-1 del autor (`Claude outputs/fases/007/escaneo/antes.txt`, fuera de git: trae IPs y procesos): 12 de 12 secciones en 11 s, `find` vacío.
 - Lo que dijo el escaneo, para las fases siguientes: Ubuntu 22.04.5, L4T 36.4.3 (JetPack 6.2; el metapaquete `nvidia-jetpack` no está), MAXN_SUPER sin root; Python del sistema 3.10.12 (glibc 2.35, `tarfile.data_filter` sí), sin 3.11; hay uv en `~/.local/bin` y `~/miniforge3` (ninguno en el PATH de un shell sin perfil). `v4l2-ctl` 1.22.1 instalado. Cámaras por `by-path`: puerto `usb-0:2.1` con `focus` 500 (gs1) y `usb-0:2.2` con 332 (gs2), las dos en el mismo hub USB 2.0 (480 Mbps); `by-id` choca (misma serie). 1280×960 MJPG a 90 fps y los 11 controles del perfil; la exposición se lee 10 (unidades de 100 µs; la conversión es de la fase 5). 19 GB libres en disco; 18944 libre; `ufw` inactivo (B71).
 - **La regla de la Jetson ya vale** (2026-11-02): los agentes entran solo por `ssh nav-jetson <verbo>` (`settings.json` y `desarrollo.md`/`pruebas.md`); un 126 es el guardián y no se rodea. P19 y P20 en (a): el autor teclea lo que abre la cámara; su clave lleva frase de paso y su `sudo` pide contraseña.
-- **Fase 2 · La barrera de seguridad para los agentes: hecha** (2026-11-02; `d2f3632` y el cierre; `codigo/linux/`). En la Jetson, guardián 2: 30 de 30 casos (el 24, `prueba-tope`, en 3.51 s; antes 8 s), sonda 0 en 28, `registro` 122 líneas = `journalctl` 122, escaneo 12 de 12, corte bien. Los arreglos del P-2: grupos de `navagente` exactos {navagente, video}, la cita de argumentos de `probar_barrera.ps1` (B73) y `_parar_grupo` con `poll()`. Detalle en `Claude outputs/fases/007/fase-2.md`.
-- Lo siguiente: la dirección abre la pregunta del método de Python 3.11 (uv y miniforge ya están) y lanza la fase 3 · El entorno en la Jetson.
+- **Fase 2 · La barrera de seguridad para los agentes: hecha** (2026-11-02; `d2f3632` y `107a89e`; `codigo/linux/`). En la Jetson, guardián 2: 30 de 30 casos, sonda 0 en 28, `registro` = `journalctl` (122), escaneo 12 de 12, corte bien. Detalle en `Claude outputs/fases/007/fase-2.md`.
+- **Fase 3 · El entorno en la Jetson: parcial** (2026-11-02; P21 = uv). Hecho: `requirements-jetson.txt`, `linux/instalar_entorno.sh`, `linux/enviar_wip.ps1`, `tests/test_entorno_jetson.py`; por `nav-jetson`, `repo clonar` (162 s, pack 172 MiB, sparse sin `herramientas/` ni `documentos/`, en `107a89e`) y `enviar_wip.ps1` (121 miembros, 3.27 MB, sha256 igual en los dos lados). **Bloqueo:** el guardián 2 sale con 125 (`TypeError: can't concat NoneType to bytes`) en `info temperatura` y en toda orden pesada (`entorno`, `suite`, `py`, `camara`, `medir`): las zonas cv0–cv2 dan EAGAIN y `read_text` no lo aguanta. Arreglado en el guardián 3 (`_leer_sysfs`, con prueba; B75). Detalle en `Claude outputs/fases/007/fase-3.md`.
+- Lo siguiente: el autor instala el guardián 3; luego `desarrollo` sigue la fase 3 (otra vez `enviar_wip.ps1`, `entorno instalar wip --gtsam`, `py wip linux.sonda_privilegios`, `suite wip -q`, y `probar_barrera.ps1` con el 3) y el autor teclea las dos ráfagas (protocolo en el reporte).
 
 ## Pendientes del autor
 
-- **Meta 007:** el commit del cierre de la fase 2 · La barrera de seguridad para los agentes (con `settings.json`, `desarrollo.md` y `pruebas.md`) y contestar la pregunta del método de Python 3.11. `codigo/data/intrinsecos_gs1_1280x960.yml` ya es el de git, pero con fin de línea LF (el `git checkout` lo dejó así; gs2 tiene CRLF): su sha sale `0da9280e…` y la grabación guardó el CRLF `0b4250e5…`, así que `test_como_funciona` y `test_explain_pose[gs1]` siguen fallando. Para que pasen: pasar ese archivo a CRLF, como gs2 (git no lo ve como cambio), o hacer el sha de la prueba insensible al fin de línea.
+- **Meta 007:** instalar el guardián 3 en la Jetson (comandos en `Claude outputs/fases/007/fase-3.md`, P-3a) y, en la sesión en vivo, las dos ráfagas (P-3b). `codigo/data/intrinsecos_gs1_1280x960.yml` sigue en LF: `test_como_funciona` y `test_explain_pose[gs1]` fallan hasta pasarlo a CRLF, como gs2, o hacer el sha insensible al fin de línea (B74).
 
 - Meta 005 (aplazado por el autor hasta compartirlo con sus compañeros, 2026-10-28): la prueba en vivo de la fase 1 (7 casos), la de la fase 2 (2 envíos con `consulta`), la lectura de `docs/EQUIPO.md` de la fase 3 (10 pasos, ~20 min) y el circuito de la fase 4 (una petición de prueba a `origin`, ~10 min), con sus protocolos en `Claude outputs/fases/005/`.
 - Instalar el GitHub MCP (lo configura el autor) antes de planear la meta 006 · Grafo de factores óptico-inercial.

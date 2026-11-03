@@ -37,7 +37,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-VERSION = "2 (2026-11-02)"
+VERSION = "3 (2026-11-02)"
 CUENTA = "navagente"
 CODIGO_NEGADO = 126
 CODIGO_TOPE = 124
@@ -450,16 +450,33 @@ def decidir(argv: list, home) -> Orden:
 
 # ------------------------------------------------------------------ precondiciones
 
-def leer_temperaturas() -> dict:
-    """Las zonas termicas de /sys que se pueden leer, en grados C (las que no responden, fuera)."""
+def _leer_sysfs(ruta) -> str:
+    """Lee un archivo corto de /sys con `os.read`.
+
+    En la Jetson, las zonas cv0, cv1 y cv2 dan EAGAIN al leer su `temp` (el escaneo de la fase 1:
+    'Resource temporarily unavailable'). Con `read_text`, `io` recibia None en vez de bytes y el
+    decodificador lanzaba `TypeError: can't concat NoneType to bytes`, que tumbaba `info
+    temperatura` y todas las ordenes pesadas (meta 007, fase 3). `os.read` lanza
+    `BlockingIOError`, que es un `OSError`, y la zona se salta."""
+    fd = os.open(str(ruta), os.O_RDONLY)
+    try:
+        return os.read(fd, 256).decode("ascii", "replace")
+    finally:
+        os.close(fd)
+
+
+def leer_temperaturas(base=None, leer=None) -> dict:
+    """Las zonas termicas de /sys que se pueden leer, en grados C (las que no responden, fuera).
+    `base` y `leer` son para probarlo sin Linux."""
+    leer = leer or _leer_sysfs
     zonas = {}
-    base = Path("/sys/class/thermal")
+    base = Path(base or "/sys/class/thermal")
     if not base.is_dir():
         return zonas
     for zona in sorted(base.glob("thermal_zone*")):
         try:
-            tipo = (zona / "type").read_text().strip()
-            temp = int((zona / "temp").read_text().strip()) / 1000.0
+            tipo = leer(zona / "type").strip()
+            temp = int(leer(zona / "temp").strip()) / 1000.0
         except (OSError, ValueError):
             continue
         zonas[tipo] = temp

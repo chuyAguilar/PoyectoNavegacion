@@ -59,6 +59,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B72 | `test_probar_barrera.py` añade ~35 s a la suite | Baja | — |
 | B73 | La cita de argumentos para `Start-Process` vive solo en `probar_barrera.ps1` | Baja | — |
 | B74 | Las pruebas del sha de la calibración dependen del fin de línea del `.yml` | Baja | — |
+| B75 | `probar_barrera.ps1` no prueba ninguna orden pesada ni `info temperatura` | Media | — |
 
 ## Abiertos
 
@@ -437,7 +438,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 
 ### B73 · La cita de argumentos para `Start-Process` vive solo en `probar_barrera.ps1`
 - **Qué:** `Start-Process` de PowerShell 5.1 junta `-ArgumentList` con espacios sin citar nada; en el P-2 (2026-11-02) eso partió la ruta de `-Salida` y paró la fabricación de los tar. `probar_barrera.ps1` tiene ahora `ConvertTo-LineaArgumentos` (las reglas de `CommandLineToArgvW`). `escanear.ps1` no la usa y hoy no la necesita: sus rutas van por `-RedirectStandardInput`/`-RedirectStandardOutput` y su único argumento con espacios es la orden remota, que `ssh` vuelve a juntar con espacios igual.
-- **Por qué queda:** no hay un segundo script que la necesite: `enviar_wip.ps1` aún no existe (es de la fase 3 · El entorno en la Jetson o posterior).
+- **Por qué queda:** no hay un segundo script que la necesite: `enviar_wip.ps1` aún no existe (es de la fase 3 · El entorno en la Jetson o posterior). Al día (2026-11-02, fase 3 · El entorno en la Jetson): `enviar_wip.ps1` ya existe y lleva una copia de la función (su prueba pasa la carpeta `codigo` por una ruta con espacio); hay dos copias iguales. No se sacó a un archivo común en esa fase para no tocar `probar_barrera.ps1`, probado en vivo.
 - **De dónde:** fase 2 · La barrera de seguridad para los agentes, de la meta 007 (arreglos tras el P-2, 2026-11-02).
 - **Qué haría falta:** cuando se escriba `enviar_wip.ps1` (o cualquier `.ps1` que lance un programa con una ruta), sacar la función a un archivo común de `codigo/linux/` y usarla en los dos, con una prueba de ruta con espacio.
 - **Prioridad:** baja.
@@ -448,6 +449,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** cierre de la fase 2 · La barrera de seguridad para los agentes, de la meta 007 (2026-11-02).
 - **Qué haría falta:** que `replay_util.sha256` normalice `\r\n` a `\n` (y regenerar el sha de las grabaciones), para que las pruebas no dependan de cómo hizo el checkout cada máquina; eso importa en la Jetson (fase 4 · La suite corre en Linux), donde el árbol es LF.
 - **Prioridad:** baja.
+
+### B75 · `probar_barrera.ps1` no prueba ninguna orden pesada ni `info temperatura`
+- **Qué:** los 30 casos de la barrera son negados, ligeros, de `sshd`, de tope y de corte. Ninguno pasa por `precondiciones` de una orden pesada ni lee las zonas térmicas. Por eso el guardián 2 dio 30 de 30 en la Jetson y, aun así, `info temperatura` y todas las pesadas (`entorno`, `suite`, `py`, `camara`, `medir`) salían con 125 y `TypeError: can't concat NoneType to bytes`: las zonas cv0, cv1 y cv2 dan EAGAIN al leer `temp` y `read_text` no lo soportaba. El guardián 3 (fase 3 · El entorno en la Jetson, 2026-11-02) lo arregla con `_leer_sysfs` y una prueba en `test_guardian.py`.
+- **Por qué queda:** añadir casos cambia `probar_barrera.ps1` y su prueba, de la fase 2, y el arreglo ya está; no hace falta para la fase 3.
+- **De dónde:** fase 3 · El entorno en la Jetson, de la meta 007 (2026-11-02, al lanzar `entorno instalar`).
+- **Qué haría falta:** dos casos permitidos más en `probar_barrera.ps1` y en `test_probar_barrera.py`: `info temperatura` con 0 y al menos una zona, y `medir tegrastats 1` con 0 (pasa por `precondiciones` de una pesada sin abrir la cámara).
+- **Prioridad:** media.
 
 ## Cerrados
 
