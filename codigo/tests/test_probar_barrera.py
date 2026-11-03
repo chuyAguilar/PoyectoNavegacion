@@ -34,7 +34,7 @@ public static class BarreraFalso {
         int i = Array.IndexOf(args, alias);
         string orden = i >= 0 ? string.Join(" ", args, i + 1, args.Length - i - 1) : "";
         File.AppendAllText(Environment.GetEnvironmentVariable("BARRERA_LLAMADAS"),
-            Path.GetFileName(Environment.GetCommandLineArgs()[0]) + "\t" + todo + "\n");
+            Path.GetFileName(Environment.GetCommandLineArgs()[0]) + "\t" + todo + "\t" + args.Length + "\n");
         int codigo = 126; int ms = 0; string salida = ""; string error = "NEGADO: por defecto del falso\n";
         foreach (string linea in File.ReadAllLines(Environment.GetEnvironmentVariable("BARRERA_REGLAS"))) {
             if (linea.Trim().Length == 0) continue;
@@ -127,12 +127,12 @@ def test_los_30_casos_dan_lo_esperado_con_el_guardian_falso(falsos: Path, tmp_pa
     assert len(filas) == 30 and all(l.endswith("| si |") for l in filas)
     assert sorted(p.name for p in (tmp_path / "salida" / "casos").glob("[0-9][0-9].txt")) == [f"{n:02d}.txt" for n in range(1, 31)]
     llamadas = (tmp_path / "llamadas.txt").read_text(encoding="utf-8").splitlines()
-    ordenes = [l.split("\t", 1)[1] for l in llamadas]
-    # los 16 negados, con sus argumentos exactos (el 12 llega partido por ssh: info red; id)
+    ordenes = [l.split("\t")[1] for l in llamadas]
+    # los 16 negados, con sus argumentos exactos (el 12 llega entero, con sus comillas)
     for esperada in ("nav-jetson", "nav-jetson sudo true", "nav-jetson apt-get install x", "nav-jetson reboot",
                      "nav-jetson systemctl stop ollama", "nav-jetson nvpmodel -m 0", "nav-jetson jetson_clocks",
                      "nav-jetson bash -c id", "nav-jetson py wip os", "nav-jetson py wip tracker --record /etc/x",
-                     "nav-jetson traer ../../etc/passwd", "nav-jetson info red; id", "nav-jetson docker ps",
+                     "nav-jetson traer ../../etc/passwd", 'nav-jetson info "red; id"', "nav-jetson docker ps",
                      "nav-jetson ollama list", "nav-jetson crontab -l", "nav-jetson git push",
                      "-o ClearAllForwardings=no -L 9999:127.0.0.1:22 nav-jetson prueba-tope", "-tt nav-jetson ayuda",
                      "nav-jetson prueba-tope", "nav-jetson registro 1", "nav-jetson procesos", "nav-jetson ayuda",
@@ -140,8 +140,23 @@ def test_los_30_casos_dan_lo_esperado_con_el_guardian_falso(falsos: Path, tmp_pa
         assert esperada in ordenes, esperada
     assert ordenes.count("nav-jetson wip recibir") == 4 and ordenes.count("nav-jetson wip estado") == 5
     assert ordenes.count("nav-jetson prueba-tope") == 2                  # casos 24 y 25 (el 21 lleva -L)
-    assert any(l.startswith("sftp.exe\t-b ") and l.endswith(" nav-jetson") for l in llamadas)
+    assert any(l.startswith("sftp.exe\t-b ") and l.endswith(" nav-jetson\t3") for l in llamadas)
+    # cada orden llega a ssh como un solo argumento detras del alias: "sudo true" no se parte
+    assert "ssh.exe\tnav-jetson sudo true\t2" in llamadas and 'ssh.exe\tnav-jetson info "red; id"\t2' in llamadas
     assert (tmp_path / "salida" / "casos" / "tars" / "nrrd.tar").is_file()
+
+
+def test_una_salida_con_espacio_llega_entera(falsos: Path, tmp_path: Path) -> None:
+    """P-2, 2026-11-02: con -Salida "Claude outputs/...", Start-Process partia la ruta y tars_malos paraba."""
+    r = _lanzar(falsos, tmp_path, _reglas(), "-Alias", "nav-jetson", "-Salida", "con espacio/sal ida", "-TopeS", "20")
+    salida = r.stdout.decode("ascii", errors="replace")
+    assert r.returncode == 0, salida + r.stderr.decode("ascii", errors="replace")
+    assert "Casos: 30 de 30" in salida
+    casos = tmp_path / "con espacio" / "sal ida" / "casos"
+    assert all((casos / "tars" / f"{n}.tar").is_file() for n in ("padre", "absoluta", "enlace", "nrrd"))
+    llamadas = (tmp_path / "llamadas.txt").read_text(encoding="utf-8").splitlines()
+    lote = str(casos / "sftp_lote.txt")
+    assert f"sftp.exe\t-b {lote} nav-jetson\t3" in llamadas, [l for l in llamadas if l.startswith("sftp")]
 
 
 def test_un_caso_que_no_da_lo_esperado_sale_con_1(falsos: Path, tmp_path: Path) -> None:

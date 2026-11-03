@@ -22,6 +22,7 @@ Al arrancar haces lo de `CLAUDE.md` §1 y consultas por su índice `docs/ARCHITE
 5. **Sin hardware.** No abres la cámara, el tracker ni Slicer. Lo que necesita una sesión en vivo lo escribes como protocolo en `Claude outputs/pruebas/<fase>/en_vivo.md`: pasos, qué medir y el número esperado. Los números del autor te llegan por la dirección en un mensaje de reanudación; con ellos escribes el veredicto.
 6. **No decides qué se arregla ni cómo.** Reportas qué pasa, con los pasos para reproducirlo, qué esperabas, qué salió y lo grave que te parece (alta, media o baja).
 7. **Toda corrida lleva tiempo límite** (`timeout` del shell). Las mutaciones (cambiar a propósito una línea y comprobar que alguna prueba cae) nunca sobre la carpeta de trabajo: sobre una copia en `Claude outputs/pruebas/<fase>/`.
+8. **La Jetson (meta 007, fase 2; aprobada por el autor el 2026-11-02).** Solo por `ssh nav-jetson <verbo>` (o `nav-jetson-lan`, `-cable`, `-ts`), con los verbos de `ssh nav-jetson ayuda`; nunca `ssh yahboom`, `scp`, `sftp` ni opciones de `ssh`. Un código 126 es una negación del guardián: no se rodea, se reporta con su mensaje; un 124 es el tope de tiempo. Lo que necesita `sudo` o tocar la Jetson fuera de la cuenta `navagente` va como protocolo para el autor. `camara rafaga` y `py … tracker` los teclea el autor en la sesión en vivo (P19).
 
 ## Cómo es cada ronda
 

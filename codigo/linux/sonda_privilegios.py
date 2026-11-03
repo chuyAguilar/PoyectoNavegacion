@@ -3,7 +3,9 @@
 Se lanza como la cuenta `navagente` en la Jetson (la primera vez el autor, con
 `sudo -u navagente python3 -I sonda_privilegios.py`; desde la fase 3, `py wip linux.sonda_privilegios`)
 y comprueba, con acciones inofensivas, que la cuenta no tiene ningun privilegio: `sudo -n true`
-falla, no esta en los grupos que equivalen a root, no puede escribir fuera de su carpeta, un
+falla, no esta en los grupos que equivalen a root ni en ningun grupo suplementario que no sea
+`video` (el adduser de la Jetson Yahboom anade audio, gdm, gpio, i2c, render... con
+ADD_EXTRA_GROUPS: P-2, 2026-11-02), no puede escribir fuera de su carpeta, un
 `touch` en /etc falla (si no falla, lo borra y lo marca como fallo), `crontab -l` esta negado por
 cron.deny, no tiene linger de systemd y `systemctl restart` de un servicio se le niega.
 
@@ -20,6 +22,7 @@ import sys
 from pathlib import Path
 
 GRUPOS_PROHIBIDOS = ("sudo", "admin", "docker", "lxd", "adm", "disk")
+GRUPOS_SUPLEMENTARIOS_PERMITIDOS = ("video",)
 RUTAS_SIN_ESCRITURA = ("/etc", "/usr", "/usr/local/bin", "/boot", "/opt", "/var/lib/nvpmodel",
                        "/etc/systemd/system", "/var/run/docker.sock", "/dev/nvme0n1", "/dev/mmcblk0",
                        "/etc/ssh/authorized_keys/navagente", "/usr/local/lib/nav-guardian/guardian")
@@ -53,8 +56,20 @@ def _grupos() -> list:
         return []
 
 
+def _grupo_primario() -> str:
+    """El nombre del grupo primario (`id -gn`); vacio si no se puede saber."""
+    codigo, texto = _ejecutar(["id", "-gn"])
+    if codigo == 0 and texto:
+        return texto.split()[0]
+    try:
+        import grp
+        return grp.getgrgid(os.getgid()).gr_name
+    except Exception:  # noqa: BLE001 - sin id ni grp no hay grupo primario
+        return ""
+
+
 def comprobar(ejecutar=_ejecutar, acceso=os.access, grupos=None, uid=None, etc=None,
-              usuario=None, abrir=open, rutas=None) -> list:
+              usuario=None, abrir=open, rutas=None, primario=None) -> list:
     """Cada comprobacion como {nombre, esperado, obtenido, pasa}. Los parametros son para probarla
     sin Jetson; por defecto mira el sistema real."""
     etc = Path(etc) if etc is not None else ETC
@@ -62,6 +77,7 @@ def comprobar(ejecutar=_ejecutar, acceso=os.access, grupos=None, uid=None, etc=N
     uid = os.getuid() if uid is None and hasattr(os, "getuid") else (uid if uid is not None else -1)
     usuario = usuario or os.environ.get("USER") or os.environ.get("LOGNAME") or "?"
     grupos = sorted(grupos) if grupos is not None else _grupos()
+    primario = primario if primario is not None else (_grupo_primario() or usuario)
     r = []
 
     def anota(nombre: str, esperado: str, obtenido: str, pasa: bool) -> None:
@@ -75,6 +91,13 @@ def comprobar(ejecutar=_ejecutar, acceso=os.access, grupos=None, uid=None, etc=N
     for g in GRUPOS_PROHIBIDOS:
         anota(f"no esta en el grupo {g}", f"{g} fuera de los grupos", ", ".join(grupos) or "(ninguno)",
               g not in grupos)
+
+    # Cualquier grupo suplementario que no sea video es un privilegio (gpio, i2c, render... dan
+    # acceso a hardware que la cuenta no necesita).
+    sobran = [g for g in grupos if g != primario and g not in GRUPOS_SUPLEMENTARIOS_PERMITIDOS]
+    anota("grupos suplementarios: solo video", f"{primario} (primario) y video, ninguno mas",
+          f"sobran: {', '.join(sobran)}" if sobran else f"ninguno de mas ({', '.join(grupos) or 'ninguno'})",
+          not sobran)
 
     for ruta in rutas:
         if not os.path.exists(ruta):

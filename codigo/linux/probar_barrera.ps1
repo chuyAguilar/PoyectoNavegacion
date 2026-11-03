@@ -85,6 +85,29 @@ Write-Output "Probando la barrera por '$Alias' (tope $TopeS s por caso) con $($s
 Write-Output "  salida: $Salida"
 
 # 2. Lanzar un programa con tope y recoger su salida.
+# Start-Process de PowerShell 5.1 junta -ArgumentList con espacios y no cita nada: una ruta con un
+# espacio llega partida (P-2, 2026-11-02: con -Salida "Claude outputs/...", tars_malos recibio
+# 'outputs\fases\...' suelto y paro). Cada argumento se cita con las reglas de CommandLineToArgvW
+# y se pasa una sola cadena, como recomienda la ayuda de Start-Process.
+function ConvertTo-LineaArgumentos([string[]]$Argumentos) {
+    $partes = foreach ($a in $Argumentos) {
+        if ($a -ne '' -and $a -notmatch '[\s"]') { $a; continue }
+        $sb = New-Object System.Text.StringBuilder
+        [void]$sb.Append('"')
+        $barras = 0
+        foreach ($c in $a.ToCharArray()) {
+            if ($c -eq [char]'\') { $barras += 1; continue }
+            if ($c -eq [char]'"') { [void]$sb.Append('\' * (2 * $barras + 1)) } else { [void]$sb.Append('\' * $barras) }
+            [void]$sb.Append($c)
+            $barras = 0
+        }
+        [void]$sb.Append('\' * (2 * $barras))
+        [void]$sb.Append('"')
+        $sb.ToString()
+    }
+    return ($partes -join ' ')
+}
+
 function Invoke-Proceso {
     param(
         [string]$Exe,
@@ -99,7 +122,7 @@ function Invoke-Proceso {
     if ($Entrada -eq '') { $Entrada = $vacio }
     if ($Carpeta -eq '') { $Carpeta = (Get-Location).ProviderPath }
     $reloj = [System.Diagnostics.Stopwatch]::StartNew()
-    $p = Start-Process -FilePath $Exe -ArgumentList $Argumentos -RedirectStandardInput $Entrada `
+    $p = Start-Process -FilePath $Exe -ArgumentList (ConvertTo-LineaArgumentos $Argumentos) -RedirectStandardInput $Entrada `
         -RedirectStandardOutput $out -RedirectStandardError $err -WorkingDirectory $Carpeta -NoNewWindow -PassThru
     $null = $p.Handle   # PowerShell 5.1: sin tomar el handle, ExitCode queda vacio
     $matado = $false
@@ -173,7 +196,7 @@ foreach ($nombre in @('padre', 'absoluta', 'enlace', 'nrrd')) {
 }
 
 # 21: reenvio -L: aunque el cliente abra el 9999, por el no llega el saludo del sshd de la Jetson.
-$pL = Start-Process -FilePath $ssh.Source -ArgumentList @('-o', 'ClearAllForwardings=no', '-L', '9999:127.0.0.1:22', $Alias, 'prueba-tope') `
+$pL = Start-Process -FilePath $ssh.Source -ArgumentList (ConvertTo-LineaArgumentos @('-o', 'ClearAllForwardings=no', '-L', '9999:127.0.0.1:22', $Alias, 'prueba-tope')) `
     -RedirectStandardInput $vacio -RedirectStandardOutput (Join-Path $carpetaCasos 'tmp_out.txt') `
     -RedirectStandardError (Join-Path $carpetaCasos 'tmp_err.txt') -NoNewWindow -PassThru
 $null = $pL.Handle

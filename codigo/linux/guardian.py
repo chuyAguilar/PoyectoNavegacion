@@ -37,7 +37,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-VERSION = "1 (2026-10-29)"
+VERSION = "2 (2026-11-02)"
 CUENTA = "navagente"
 CODIGO_NEGADO = 126
 CODIGO_TOPE = 124
@@ -601,23 +601,32 @@ class Registro:
 
 # ------------------------------------------------------------------ ejecutar
 
-def _parar_grupo(pgid: int, gracia_s: float = GRACIA_S) -> None:
-    """SIGTERM al grupo; si a los `gracia_s` sigue alguien, SIGKILL."""
+def _parar_grupo(pgid: int, gracia_s: float = GRACIA_S, proceso=None, killpg=None) -> None:
+    """SIGTERM al grupo; si a los `gracia_s` sigue alguien, SIGKILL.
+
+    `proceso` es el Popen del lider del grupo, cuando lo lanzo este guardian. Un lider que muere
+    queda zombi hasta que su padre lo recoge, y un zombi sigue en el grupo: `killpg(pgid, 0)` da
+    exito y se esperaba la gracia entera (P-2, caso 24: 8 s con un tope de 3). Por eso se recoge
+    con `poll()` en cada vuelta; si quedan otros del grupo, `killpg` los sigue viendo y reciben el
+    SIGKILL. `killpg` es para probarlo sin Linux."""
+    killpg = killpg or os.killpg
     try:
-        os.killpg(pgid, signal.SIGTERM)
+        killpg(pgid, signal.SIGTERM)
     except ProcessLookupError:
         return
     except PermissionError:
         return
     fin = time.monotonic() + gracia_s
     while time.monotonic() < fin:
+        if proceso is not None:
+            proceso.poll()
         try:
-            os.killpg(pgid, 0)
+            killpg(pgid, 0)
         except ProcessLookupError:
             return
         time.sleep(0.1)
     try:
-        os.killpg(pgid, signal.SIGKILL)
+        killpg(pgid, getattr(signal, "SIGKILL", 9))
     except ProcessLookupError:
         pass
 
@@ -658,7 +667,7 @@ def _externa(orden: Orden, entrada=None, salida=None) -> int:
     def parar(*_args):
         if not estado["corte"]:
             estado["corte"] = "senal"
-        _parar_grupo(p.pid)
+        _parar_grupo(p.pid, proceso=p)
 
     anteriores = {}
     for s in (signal.SIGHUP, signal.SIGTERM, signal.SIGINT):
@@ -674,12 +683,12 @@ def _externa(orden: Orden, entrada=None, salida=None) -> int:
                 pass
             if time.monotonic() >= fin:
                 estado["corte"] = estado["corte"] or "tope"
-                _parar_grupo(p.pid)
+                _parar_grupo(p.pid, proceso=p)
                 rc = p.wait()
                 break
             if os.getppid() != ppid0:
                 estado["corte"] = estado["corte"] or "desconexion"
-                _parar_grupo(p.pid)
+                _parar_grupo(p.pid, proceso=p)
                 rc = p.wait()
                 break
     finally:

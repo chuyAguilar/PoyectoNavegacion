@@ -60,7 +60,7 @@ def _comprobar(etc: Path, acceso=None, grupos=None, uid=1001, respuestas=None, t
         acceso = lambda ruta, modo: False  # noqa: E731
     r = s.comprobar(ejecutar=ejecutar, acceso=acceso, grupos=GRUPOS_LIMPIOS if grupos is None else grupos,
                     uid=uid, etc=etc, usuario="navagente", abrir=_abrir_sin_permiso if touch_falla else open,
-                    rutas=rutas)
+                    rutas=rutas, primario="navagente")
     return r, ejecutar
 
 
@@ -78,7 +78,8 @@ def test_cada_privilegio_se_ve(etc: Path) -> None:
     r, _ = _comprobar(etc, uid=0)
     assert [c["nombre"] for c in r if not c["pasa"]] == ["uid no es 0"]
     r, _ = _comprobar(etc, grupos=["navagente", "video", "docker", "sudo"])
-    assert sorted(c["nombre"] for c in r if not c["pasa"]) == ["no esta en el grupo docker", "no esta en el grupo sudo"]
+    assert sorted(c["nombre"] for c in r if not c["pasa"]) == ["grupos suplementarios: solo video",
+                                                               "no esta en el grupo docker", "no esta en el grupo sudo"]
     # rutas que existen (el etc falso y su padre): W_OK verdadero en una de ellas es un privilegio
     r, _ = _comprobar(etc, acceso=lambda ruta, modo: ruta == str(etc), rutas=(str(etc), str(etc.parent)))
     assert [c["nombre"] for c in r if not c["pasa"]] == [f"sin escritura en {etc}"]
@@ -90,6 +91,26 @@ def test_cada_privilegio_se_ve(etc: Path) -> None:
     r, _ = _comprobar(etc, respuestas=con_sudo)
     assert sorted(c["nombre"] for c in r if not c["pasa"]) == ["crontab -l negado", "docker ps negado",
                                                                "sin linger de systemd", "sudo -n true falla"]
+
+
+def test_un_grupo_suplementario_que_no_sea_video_es_privilegio(etc: Path) -> None:
+    """P-2, 2026-11-02: el adduser de la Jetson Yahboom metio a navagente en siete grupos extra y
+    ninguna comprobacion lo vio (no son de la lista de los que equivalen a root)."""
+    yahboom = ["audio", "gdm", "gpio", "i2c", "navagente", "render", "video", "weston-launch"]
+    r, _ = _comprobar(etc, grupos=yahboom)
+    fallos = [c for c in r if not c["pasa"]]
+    assert [c["nombre"] for c in fallos] == ["grupos suplementarios: solo video"]
+    assert fallos[0]["obtenido"] == "sobran: audio, gdm, gpio, i2c, render, weston-launch"
+    # lo que dejo el autor a mano (usermod -G video), y sin video: ninguno de mas
+    for grupos in (["navagente", "video"], ["navagente"]):
+        r, _ = _comprobar(etc, grupos=grupos)
+        assert all(c["pasa"] for c in r), grupos
+    # el grupo primario no cuenta como suplementario, se llame como se llame
+    r = s.comprobar(ejecutar=_ejecutar_falso(SIN_PRIVILEGIOS), acceso=lambda ruta, modo: False,
+                    grupos=["agentes", "video"], uid=1001, etc=etc, usuario="navagente",
+                    abrir=_abrir_sin_permiso, primario="agentes")
+    assert all(c["pasa"] for c in r)
+    assert len(r) == 28                     # 27 de la fase 2 y la de los grupos suplementarios
 
 
 def test_el_touch_que_si_se_crea_se_borra_y_es_fallo(etc: Path) -> None:

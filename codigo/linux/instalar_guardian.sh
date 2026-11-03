@@ -11,8 +11,9 @@
 #
 # Hace, en este orden (plan de la meta 007, seccion 'Lo que el autor aplica'):
 #   1. sshd -T -C user=<autor>,host=<pc>,addr=<pc> a un archivo (la configuracion efectiva del autor).
-#   2. Crea la cuenta navagente (sin contrasena, /bin/bash, HOME 0750, solo en video), la saca de
-#      sudo/admin/docker/lxd/adm/disk si estuviera, la pone en cron.deny y at.deny, le quita el
+#   2. Crea la cuenta navagente (sin contrasena, /bin/bash, HOME 0750), deja sus grupos
+#      suplementarios exactamente en video (usermod -G video: el adduser de la Jetson Yahboom
+#      tiene ADD_EXTRA_GROUPS) y para si no son {navagente, video}, la pone en cron.deny y at.deny, le quita el
 #      linger, instala el guardian en /usr/local/lib/nav-guardian/guardian (root, 0755), escribe
 #      /etc/ssh/authorized_keys/navagente (root, 0644, restrict,from=...) y el drop-in
 #      /etc/ssh/sshd_config.d/60-nav-guardian.conf.
@@ -31,7 +32,7 @@ GUARDIAN=$GUARDIAN_DIR/guardian
 CLAVES_DIR=/etc/ssh/authorized_keys
 CLAVE_DESTINO=$CLAVES_DIR/$CUENTA
 DROPIN=/etc/ssh/sshd_config.d/60-nav-guardian.conf
-GRUPOS_PROHIBIDOS="sudo admin docker lxd adm disk"
+GRUPO_SUPLEMENTARIO=video
 
 SIMULAR=0
 CLAVE=""
@@ -41,7 +42,7 @@ PC=""
 ORIGEN="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 uso() {
-    sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -60,6 +61,30 @@ done
 fallo() {
     echo "ERROR: $*" >&2
     exit 1
+}
+
+# grupos_exactos <cuenta>: 0 si los grupos de la cuenta (id -nG) son exactamente <cuenta> y video;
+# si no, dice cuales sobran y cuales faltan, y devuelve 1. Lo prueba test_guardian.py.
+grupos_exactos() {
+    local cuenta=$1 g sobran="" faltan="" grupos
+    grupos=" $(id -nG "$cuenta" 2>/dev/null || true) "
+    for g in $grupos; do
+        case "$g" in
+            "$cuenta"|"$GRUPO_SUPLEMENTARIO") ;;
+            *) sobran="$sobran $g" ;;
+        esac
+    done
+    for g in "$cuenta" "$GRUPO_SUPLEMENTARIO"; do
+        case "$grupos" in
+            *" $g "*) ;;
+            *) faltan="$faltan $g" ;;
+        esac
+    done
+    if [ -n "$sobran$faltan" ]; then
+        echo "los grupos de $cuenta tienen que ser exactamente {$cuenta, $GRUPO_SUPLEMENTARIO}; sobran:${sobran:- ninguno}; faltan:${faltan:- ninguno}"
+        return 1
+    fi
+    echo "grupos de $cuenta: exactamente {$cuenta, $GRUPO_SUPLEMENTARIO}"
 }
 
 # Las entradas, antes de tocar nada (principio 7).
@@ -123,12 +148,15 @@ if getent passwd "$CUENTA" >/dev/null; then
 else
     hacer adduser --disabled-password --gecos "nav-agente (meta 007)" --shell /bin/bash "$CUENTA"
 fi
-for g in $GRUPOS_PROHIBIDOS; do
-    if getent group "$g" >/dev/null && id -nG "$CUENTA" 2>/dev/null | tr ' ' '\n' | grep -qx "$g"; then
-        hacer deluser "$CUENTA" "$g"
-    fi
-done
-hacer usermod -aG video "$CUENTA"
+# Los grupos suplementarios, exactamente video: -G (sin -a) sustituye la lista entera, asi que quita
+# lo que haya metido adduser (audio, gdm, gpio, i2c, render, weston-launch en la Jetson Yahboom) y
+# cualquier sudo/docker/adm que tuviera una cuenta ya existente.
+hacer usermod -G "$GRUPO_SUPLEMENTARIO" "$CUENTA"
+if [ "$SIMULAR" -eq 0 ]; then
+    grupos_exactos "$CUENTA" || fallo "no se pudieron dejar los grupos de $CUENTA (arriba): no se instala nada mas"
+else
+    echo "(en la simulacion los grupos se comprueban en la corrida real)"
+fi
 hacer chmod 0750 "/home/$CUENTA"
 for d in nav nav-wip nav-salidas nav-registro .venvs; do
     hacer install -d -o "$CUENTA" -g "$CUENTA" -m 0750 "/home/$CUENTA/$d"
@@ -216,5 +244,5 @@ echo "=== Resumen ==="
 id "$CUENTA"
 ls -l "$GUARDIAN" "$CLAVE_DESTINO" "$DROPIN"
 ls -ld "/home/$CUENTA"
-echo "grupos prohibidos presentes: $(id -nG "$CUENTA" | tr ' ' '\n' | grep -xE "$(echo "$GRUPOS_PROHIBIDOS" | tr ' ' '|')" | tr '\n' ' ')(ninguno es lo esperado)"
+grupos_exactos "$CUENTA" || fallo "los grupos de $CUENTA cambiaron durante la instalacion"
 echo "Listo. En el PC: ssh nav-jetson ayuda; y despues probar_barrera.ps1."

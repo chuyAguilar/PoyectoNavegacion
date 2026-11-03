@@ -43,7 +43,11 @@
       "Bash(grep *)",
       "Bash(rg *)",
       "Bash(find *)",
-      "PowerShell(git mv:*)"
+      "PowerShell(git mv:*)",
+      "Bash(ssh nav-jetson *)",
+      "PowerShell(ssh nav-jetson *)",
+      "PowerShell(powershell -NoProfile -ExecutionPolicy Bypass -File codigo/linux/enviar_wip.ps1 *)",
+      "PowerShell(powershell -NoProfile -ExecutionPolicy Bypass -File codigo/linux/probar_barrera.ps1 *)"
     ],
     "deny": [
       "Bash(git commit *)",
@@ -61,7 +65,19 @@
       "Read(**/*.dcm)",
       "Edit(**/*.dcm)",
       "Read(documentos/VERONICA/**)",
-      "Edit(documentos/VERONICA/**)"
+      "Edit(documentos/VERONICA/**)",
+      "Bash(ssh yahboom*)",
+      "PowerShell(ssh yahboom*)",
+      "Bash(ssh -*)",
+      "PowerShell(ssh -*)",
+      "Bash(ssh *@*)",
+      "PowerShell(ssh *@*)",
+      "Bash(scp *)",
+      "PowerShell(scp *)",
+      "Bash(sftp *)",
+      "PowerShell(sftp *)",
+      "Read(~/.ssh/**)",
+      "Edit(~/.ssh/**)"
     ]
   }
 }

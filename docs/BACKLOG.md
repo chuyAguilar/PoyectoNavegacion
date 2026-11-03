@@ -56,7 +56,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B71 | Lo que escucha en la red de la Jetson, sin cortafuegos | Media | — |
 | B69 | La barrera del PC para los agentes es blanda | Media | — |
 | B70 | Cuota de disco real para la cuenta `navagente` | Baja | — |
-| B72 | `test_probar_barrera.py` añade ~24 s a la suite | Baja | — |
+| B72 | `test_probar_barrera.py` añade ~35 s a la suite | Baja | — |
+| B73 | La cita de argumentos para `Start-Process` vive solo en `probar_barrera.ps1` | Baja | — |
+| B74 | Las pruebas del sha de la calibración dependen del fin de línea del `.yml` | Baja | — |
 
 ## Abiertos
 
@@ -426,11 +428,25 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** cuotas de ext4 para `navagente`, que aplica el autor con sudo.
 - **Prioridad:** baja.
 
-### B72 · `test_probar_barrera.py` añade ~24 s a la suite
-- **Qué:** las dos corridas completas de `probar_barrera.ps1` con el guardián falso (los casos `prueba-tope` duermen 3 s) suben la suite de ~46 s a ~70 s (805 pruebas).
+### B72 · `test_probar_barrera.py` añade ~35 s a la suite
+- **Qué:** las corridas completas de `probar_barrera.ps1` con el guardián falso (los casos `prueba-tope` duermen 3 s) suben la suite de ~46 s a ~70 s (805 pruebas, 2026-10-29). Desde el 2026-11-02 son tres (la nueva, con una `-Salida` que lleva un espacio), de ~11.5 s cada una: ~35 s.
 - **Por qué queda:** vale la pena mientras la barrera sea nueva; no estorba hoy.
-- **De dónde:** fase 2 · La barrera de seguridad para los agentes, de la meta 007 (medido en «verifica», 2026-10-29).
-- **Qué haría falta:** acortar el tope falso de las pruebas, o marcar esas dos pruebas como lentas y correrlas solo al tocar `codigo/linux/`.
+- **De dónde:** fase 2 · La barrera de seguridad para los agentes, de la meta 007 (medido en «verifica», 2026-10-29, y en los arreglos tras el P-2, 2026-11-02).
+- **Qué haría falta:** acortar el tope falso de las pruebas, o marcar esas tres pruebas como lentas y correrlas solo al tocar `codigo/linux/`.
+- **Prioridad:** baja.
+
+### B73 · La cita de argumentos para `Start-Process` vive solo en `probar_barrera.ps1`
+- **Qué:** `Start-Process` de PowerShell 5.1 junta `-ArgumentList` con espacios sin citar nada; en el P-2 (2026-11-02) eso partió la ruta de `-Salida` y paró la fabricación de los tar. `probar_barrera.ps1` tiene ahora `ConvertTo-LineaArgumentos` (las reglas de `CommandLineToArgvW`). `escanear.ps1` no la usa y hoy no la necesita: sus rutas van por `-RedirectStandardInput`/`-RedirectStandardOutput` y su único argumento con espacios es la orden remota, que `ssh` vuelve a juntar con espacios igual.
+- **Por qué queda:** no hay un segundo script que la necesite: `enviar_wip.ps1` aún no existe (es de la fase 3 · El entorno en la Jetson o posterior).
+- **De dónde:** fase 2 · La barrera de seguridad para los agentes, de la meta 007 (arreglos tras el P-2, 2026-11-02).
+- **Qué haría falta:** cuando se escriba `enviar_wip.ps1` (o cualquier `.ps1` que lance un programa con una ruta), sacar la función a un archivo común de `codigo/linux/` y usarla en los dos, con una prueba de ruta con espacio.
+- **Prioridad:** baja.
+
+### B74 · Las pruebas del sha de la calibración dependen del fin de línea del `.yml`
+- **Qué:** `test_como_funciona` y `test_explain_pose[gs1]` comparan el sha256 de los bytes de `codigo/data/intrinsecos_gs1_1280x960.yml` con el que guardó la grabación. Ese sha es el del archivo con CRLF (`0b4250e5…`), el que tenía el árbol del autor; git guarda LF (`0da9280e…`, `.gitattributes`: `*.yml eol=lf`). Tras un `git checkout` del archivo (2026-11-02) quedó en LF y las dos pruebas fallan sin que cambie ningún valor. gs2 sigue en CRLF en el árbol y pasa.
+- **Por qué queda:** el contenido es el mismo; se arregla en el árbol del autor (pasar el archivo a CRLF) y no hace falta tocar las pruebas hoy.
+- **De dónde:** cierre de la fase 2 · La barrera de seguridad para los agentes, de la meta 007 (2026-11-02).
+- **Qué haría falta:** que `replay_util.sha256` normalice `\r\n` a `\n` (y regenerar el sha de las grabaciones), para que las pruebas no dependan de cómo hizo el checkout cada máquina; eso importa en la Jetson (fase 4 · La suite corre en Linux), donde el árbol es LF.
 - **Prioridad:** baja.
 
 ## Cerrados

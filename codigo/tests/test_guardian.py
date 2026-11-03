@@ -18,9 +18,11 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tarfile
+import time
 from pathlib import Path
 
 import pytest
@@ -519,7 +521,86 @@ def test_main_autocomprobar(monkeypatch, capsys) -> None:
     assert f"nav-guardian {g.VERSION}" in capsys.readouterr().out
 
 
+# ---------------------------------------------------------------- _parar_grupo, con un killpg falso
+
+class _GrupoFalso:
+    """Un grupo cuyo lider muere con el SIGTERM y queda zombi hasta que alguien lo recoge (`poll`).
+    Como en Linux: mientras el zombi no se recoja, killpg(pgid, 0) da exito. `terco` es otro del
+    grupo que ignora el SIGTERM y solo cae con el SIGKILL."""
+
+    def __init__(self, terco: bool = False) -> None:
+        self.muerto = False
+        self.recogido = False
+        self.terco = terco
+        self.senales = []
+
+    def poll(self):
+        if self.muerto:
+            self.recogido = True
+            return -15
+        return None
+
+    def killpg(self, pgid: int, senal: int) -> None:
+        self.senales.append(senal)
+        if senal == signal.SIGTERM:
+            self.muerto = True
+        elif senal == 0:
+            if self.recogido and not self.terco:
+                raise ProcessLookupError(pgid)
+        else:
+            self.terco = False
+            self.muerto = True
+
+
+SIGKILL = getattr(signal, "SIGKILL", 9)
+
+
+def test_parar_grupo_recoge_al_lider_y_no_espera_la_gracia() -> None:
+    """P-2, caso 24: prueba-tope duro 8 s con un tope de 3. El lider (sleep) moria con el SIGTERM pero
+    quedaba zombi sin recoger, killpg(pgid, 0) seguia dando exito y se esperaban los 5 s de gracia."""
+    grupo = _GrupoFalso()
+    t0 = time.monotonic()
+    g._parar_grupo(4242, 5.0, proceso=grupo, killpg=grupo.killpg)
+    assert time.monotonic() - t0 < 1.0
+    assert grupo.recogido and SIGKILL not in grupo.senales
+
+
+def test_parar_grupo_sin_recoger_al_lider_espera_la_gracia_entera() -> None:
+    """La hipotesis del caso 24, reproducida: sin `proceso`, el zombi hace esperar toda la gracia."""
+    grupo = _GrupoFalso()
+    t0 = time.monotonic()
+    g._parar_grupo(4242, 0.4, killpg=grupo.killpg)
+    assert time.monotonic() - t0 >= 0.4
+    assert grupo.senales[-1] == SIGKILL
+
+
+def test_parar_grupo_sigue_mandando_sigkill_a_los_que_quedan() -> None:
+    grupo = _GrupoFalso(terco=True)
+    t0 = time.monotonic()
+    g._parar_grupo(4242, 0.4, proceso=grupo, killpg=grupo.killpg)
+    assert time.monotonic() - t0 >= 0.4
+    assert grupo.recogido and grupo.senales[0] == signal.SIGTERM and grupo.senales[-1] == SIGKILL
+
+
 # ---------------------------------------------------------------- solo Linux (en la Jetson, fase 4)
+
+@pytest.mark.skipif(not EN_LINUX, reason="solo Linux: grupo de procesos, setsid y killpg")
+def test_parar_grupo_de_verdad_no_espera_la_gracia() -> None:
+    p = subprocess.Popen(["sleep", "30"], start_new_session=True)
+    t0 = time.monotonic()
+    g._parar_grupo(p.pid, 5.0, proceso=p)
+    assert time.monotonic() - t0 < 1.5
+    assert p.wait(timeout=5) == -signal.SIGTERM
+
+
+@pytest.mark.skipif(not EN_LINUX, reason="solo Linux: grupo de procesos, setsid y killpg")
+def test_externa_tope_de_prueba_tope_corta_sin_gracia(home: Path, registro: g.Registro) -> None:
+    """Como el caso 24 del P-2, con un tope de 1 s: antes del arreglo duraba 1 + 5 s."""
+    o = g.Orden("prueba", ["sleep", "30"], "", 1.0, False, False, str(home))
+    t0 = time.monotonic()
+    rc = g.ejecutar(o, registro, io.BytesIO(), io.BytesIO())
+    assert rc == g.CODIGO_TOPE and time.monotonic() - t0 < 2.5
+
 
 @pytest.mark.skipif(not EN_LINUX, reason="solo Linux: grupo de procesos, setsid y killpg")
 def test_externa_tope_para_el_grupo(home: Path, registro: g.Registro) -> None:
@@ -582,10 +663,16 @@ def test_el_instalador_escribe_el_dropin_exacto_y_comprueba_antes_de_recargar() 
     assert texto.count("hacer systemctl reload ssh") == 1
     assert 'restrict,from="$DESDE"' in texto
     assert "set -euo pipefail" in texto
-    for grupo in ("sudo", "docker", "lxd", "adm", "disk", "admin"):
-        assert grupo in texto.split("GRUPOS_PROHIBIDOS=")[1].split("\n")[0]
+    # los grupos suplementarios, exactamente video (P-2: adduser con ADD_EXTRA_GROUPS), comprobados
+    # antes de instalar la clave y el drop-in, y otra vez en el resumen
+    assert "GRUPO_SUPLEMENTARIO=video\n" in texto
+    assert 'hacer usermod -G "$GRUPO_SUPLEMENTARIO" "$CUENTA"' in texto
+    assert "usermod -aG" not in texto and "GRUPOS_PROHIBIDOS" not in texto
+    assert texto.index("hacer adduser") < texto.index("hacer usermod -G") \
+        < texto.index('grupos_exactos "$CUENTA" ||') < texto.index('escribir "$CLAVE_DESTINO"')
+    assert texto.count('grupos_exactos "$CUENTA" ||') == 2
     assert "cron.deny" in texto and "at.deny" in texto and "disable-linger" in texto
-    assert "chmod 0750" in texto and "usermod -aG video" in texto
+    assert "chmod 0750" in texto
     assert "0755" in texto.split("install -o root -g root -m")[1].split("\n")[0]
     assert "rm -f \"$DROPIN\"" in texto                     # al fallar sshd -t o la comparacion
     assert "systemctl restart" not in texto and "reboot" not in texto.lower().replace("# ", "")
@@ -630,6 +717,35 @@ def test_los_scripts_del_autor_compilan_y_paran_antes_de_root(script: Path, tmp_
                             "--pc", "10.0.0.2"], capture_output=True, timeout=30, env=entorno)
         assert r.returncode == 1 and b"sudo" in r.stderr                 # para en el id -u, sin tocar nada
     assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize("grupos, codigo, texto", [
+    ("navagente video", 0, "grupos de navagente: exactamente {navagente, video}"),
+    ("video navagente", 0, "exactamente {navagente, video}"),
+    # lo que dejo el adduser de la Jetson Yahboom en el P-2 (2026-11-02)
+    ("navagente adm audio gdm gpio i2c render video weston-launch", 1,
+     "sobran: adm audio gdm gpio i2c render weston-launch; faltan: ninguno"),
+    ("navagente sudo video", 1, "sobran: sudo; faltan: ninguno"),
+    ("navagente", 1, "sobran: ninguno; faltan: video"),
+    ("", 1, "sobran: ninguno; faltan: navagente video"),
+])
+def test_el_instalador_exige_los_grupos_exactos(grupos: str, codigo: int, texto: str) -> None:
+    """La funcion `grupos_exactos` del instalador, sacada tal cual y corrida con un `id` falso."""
+    bash = _bash()
+    if bash is None:
+        pytest.skip("sin bash de Git for Windows ni de Linux")
+    fuente = INSTALAR.read_text(encoding="ascii")
+    inicio = fuente.index("grupos_exactos() {")
+    funcion = fuente[inicio:fuente.index("\n}\n", inicio) + 3]
+    guion = ("set -euo pipefail\nGRUPO_SUPLEMENTARIO=video\n" + funcion
+             + 'id() { echo "$GRUPOS_FALSOS"; }\ngrupos_exactos navagente\n')
+    entorno = {"PATH": str(Path(bash).parent), "GRUPOS_FALSOS": grupos}
+    if sys.platform == "win32":
+        entorno["SYSTEMROOT"] = os.environ.get("SYSTEMROOT", r"C:\Windows")
+    r = subprocess.run([bash, "-c", guion], capture_output=True, timeout=30, env=entorno)
+    salida = r.stdout.decode("ascii").strip()
+    assert r.returncode == codigo, salida + r.stderr.decode("ascii", errors="replace")
+    assert texto in salida, salida
 
 
 def test_el_guardian_no_importa_nada_fuera_de_la_biblioteca_estandar() -> None:
