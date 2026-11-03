@@ -138,3 +138,23 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** (a) en Linux, 1e-3 mm, 1e-3° y 1e-3 px; en Windows, la de hoy; (b) en Linux, 1e-4; (c) la de hoy en todos lados, y en Linux el replay solo informa la diferencia máxima.
 - **Respuesta del autor:** (a) 1e-3 mm, 1e-3° y 1e-3 px en Linux; en Windows sigue la de hoy.
 - **Fecha:** 2026-11-02
+
+## P23 · La confirmación de los mínimos de P13 y cuándo se mira B77 (tras la fase 5)
+
+- **Lo medido (fase 5, P-5 del 2026-11-03):** una cámara sin ventana en la Jetson, 87.5 fps de bucle (gs1) y 87.8 (gs2); sd z en reposo 0.074 mm (gs1) y 0.040 mm (gs2); la misma gs1 en la misma posición por MSMF en el PC, 0.032–0.043 mm (B77).
+- **Opciones (mínimos):** confirmarlos tal cual / subir el de una cámara a ≥ 80 fps / añadir uno de precisión (sd z ≤ 0.050 mm).
+- **Respuesta del autor (mínimos):** confirmados tal cual: una cámara sin ventana ≥ 60 fps; dos a la vez ≥ 45 fps cada una; Slicer por LAN ≥ 55 Hz; latencia añadida p95 ≤ 10 ms por LAN y ≤ 30 ms por Tailscale; con ventana, solo se reporta.
+- **Opciones (B77):** después, desde el BACKLOG / antes de la fase 6, en una fase nueva.
+- **Respuesta del autor (B77):** antes de la fase 6, en una fase nueva y corta de `tasks.md`, que el autor autoriza.
+- **Fecha:** 2026-11-03
+## P24 · Hasta dónde corrige la fase 5b si sale una causa clara de B77
+
+- **Opciones:** (a) solo dentro de la rama Linux de `camera/v4l2.py`: un control que el perfil no nombra, fijo para las dos cámaras (ADR J6); si la causa está en código compartido con Windows (`grabber`, el 1-Euro, `tracker.py`, `vision/`) o pide una clave nueva del perfil, la fase cierra con el diagnóstico y la corrección se replanea con su ADR, recomendada / (b) también en código compartido, dentro de la fase, con su ADR y la verificación de la cadena en las dos máquinas (más rápida si la causa es el filtro, pero la fase deja de ser corta y cambia Windows).
+- **Respuesta del autor:** (a) solo un control de Linux en `camera/v4l2.py`; lo compartido o una clave nueva del perfil se replanea con su ADR.
+- **Fecha:** 2026-11-03
+
+## P25 · Adelantar `linux.perfil_temporal` a la fase 5b, con `--poner` para el puerto y la exposición
+
+- **Opciones:** (a) sí: permite J4 (gs1 en el puerto del hub de gs2, una sola variable) y la prueba de la exposición sin tocar los perfiles del repo; cierra B81 y la fase 7 lo usa tal cual; pide intercambiar los cables de las dos cámaras en la Jetson durante J4, recomendada / (b) no: J4 y la prueba de la exposición no se hacen, el puerto y la exposición quedan como hipótesis sin medir y `perfil_temporal` sigue en la fase 7.
+- **Respuesta del autor:** (a) sí, se adelanta a la 5b (con J4 y el intercambio de cables en la Jetson).
+- **Fecha:** 2026-11-03

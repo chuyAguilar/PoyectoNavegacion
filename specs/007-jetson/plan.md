@@ -2,7 +2,35 @@
 
 Lo escribe el agente de planificación con `/planear`, sin código. Lo que el autor autoriza es este archivo.
 
-## Cambios de esta versión (2026-10-29, con P6–P18 contestadas)
+## Cambios de esta versión (2026-11-03, con P23: B77 antes de la fase 6)
+
+- Entra la **fase 5b · El ruido de gs1 por V4L2 (B77)**, entre la 5 y la 6, sin renumerar las demás. Diagnostica primero, sin cámara, sobre las tres grabaciones del P-5, y después en una sesión en vivo con el autor (P-5b). Corrige solo si sale una causa clara y cae dentro de lo que dice P24.
+- Los mínimos de P13 quedan confirmados tal cual (P23). Las fases 1 a 5 no cambian.
+- Si P25 queda en (a), `linux/perfil_temporal.py` se adelanta de la fase 7 a la 5b, con una opción más (`--poner`), y la fase 7 solo lo usa. Cierra B81.
+- Archivos nuevos: `diagnostics/ruido_pose.py` y su prueba. ADR propuesto, solo si hay corrección: J6. Preguntas nuevas: P24 y P25.
+
+### Lo leído para esta versión
+
+- HEAD: `76117f3 Cierra la fase 5 de la meta 007 con el P-5: bucle de 87.5 fps en la Jetson y 67.6 Hz en Slicer`. Árbol con `specs/007-jetson/clarify.md` modificado (P23) y el PDF de la meta 006 sin seguir.
+- El encargo (`Claude outputs/fases/007/replan-b77-encargo.md`), `clarify.md` (P1–P23), `tasks.md`, `Claude outputs/fases/007/fase-5.md` y los resúmenes `p5_gs1_a_resumen.json`, `p5_pc_gs1_a_resumen.json` y `p5_gs1_a.json` (`--timing`). `docs/BACKLOG.md` B77; `docs/CONTEXT.md` §4 (trampas 3, 18, 19 y 20); `docs/PRUEBAS.md`, índice (P01–P05; nada de la meta 007).
+- Las grabaciones, solo sus tablas y formas (sin medir nada): `p5_gs1_a.npz` 5249 frames, 5234 esquinas y envíos; `p5_gs2_a.npz` 5269 y 5243; `p5_pc_gs1_a.npz` 6203 y 6079. Las tres llevan `timestamps`, `frame_offsets`, `corners_2d`, `K`, `dist`, `sent_M` y `metadata_json` (filtro, detector, tamaño del marker y `capture`), y **ninguna lleva frames** (`frames_saved` vacío). El perfil, la calibración y el detector son los mismos en las dos máquinas (mismos sha256 en `metadata_json`).
+- Código: `camera/v4l2.py` (los 11 controles del perfil y nada más), `camera/backend.py` (`open()`: la rama Linux), `camera/controls.py`, `camera/grabber.py` (la hora de captura por `perf_counter` en el hilo), `vision/pose.py` (`estimate_single_pose`, IPPE_SQUARE), `vision/filtering.py` (`OneEuroFilter`: `dt` con mínimo de 1 ms y el corte que sube con `beta·|dx|`), `vision/tracking.py` (`process_corners`), `diagnostics/pose_log.py` (`PoseLog`, `summarize`, `--save-frames`/`--frames-every`), `diagnostics/probe_camera.py` (`--leer --puerto`, por DSHOW), `tracker.py` (las opciones de grabación) y `linux/guardian.py` (`MODULOS`, `_args_py`: las rutas dentro del árbol o de `~/nav-salidas/`, y `linux.perfil_temporal` ya en la lista).
+- Las salidas reales de `v4l2-ctl` del escaneo (`tests/data/linux/v4l2_list_ctrls_gs1.txt` y `_gs2.txt`).
+
+### Hallazgos de esta versión (sin medir: son lo que la fase 5b mide)
+
+10. **El ruido es de escala, no de posición lateral.** En gs1 por V4L2, sd x 0.010 mm y sd y 0.008 mm frente a sd z 0.074 mm. La z de un marker sale de su tamaño aparente: lo que la mueve es que las cuatro esquinas se abran o se cierren a la vez (umbral, brillo, desenfoque, compresión), más que el ruido independiente de cada esquina. La fase lo separa con el lado aparente en píxeles por frame.
+11. **Lo grabado es lo filtrado.** `sent_M` sale del 1-Euro (`min_cutoff` 2.0, `beta` 0.05). En `OneEuroFilter`, un `dt` muy corto (frames que llegan en ráfaga) da una derivada grande, sube el corte y deja pasar más ruido. Recalcular la pose cruda desde `corners_2d` y volver a filtrarla con tiempos uniformes separa el detector del filtro sin cámara.
+12. **Los controles que el perfil no nombra.** El perfil fija 11 controles. En Linux, `v4l2-ctl` lista además `hue`, `power_line_frequency` (60 Hz), `white_balance_temperature`, `focus_automatic_continuous` (por defecto 1; en el escaneo, 0), `pan`, `tilt` y `zoom`, que la capa V4L2 ni lee ni escribe. En Windows nadie los escribe tampoco: valen lo que la cámara tenga guardado. Si alguno difiere entre las dos cámaras o entre antes y después de una corrida, es candidato.
+13. **La exposición seguramente es la misma.** El perfil pide 0.977 ms (el −10 de DSHOW, 2^−10 s); V4L2 la escribe y la lee en unidades de 100 µs, y la cámara da 10 (1.0 ms). El valor que la cámara guarda por Windows no se puede leer en esas unidades desde DSHOW. La fase lo trata como hipótesis, no como diferencia probada.
+14. **gs2 por V4L2 está bien (0.040 mm).** Lo que le pase a gs1 no es de V4L2 en general: es de gs1 en la Jetson (su puerto del hub, sus controles, su escena) o de una interacción. Falta gs2 por MSMF en el PC para saber si V4L2 también la empeora algo.
+
+### Context7 (2026-11-03; solo API, sin rutas ni datos)
+
+- **SciPy** (`/scipy/scipy`): `scipy.signal.welch(x, fs, nperseg=…)` devuelve las frecuencias y la densidad espectral; `nperseg` por defecto 256 y, si es mayor que la serie, se recorta con aviso; `detrend` por defecto quita la media. Es lo que usa `espectro` en `ruido_pose`. `scipy` ya está en `requirements.txt` y en `requirements-jetson.txt`.
+- **OpenCV** (`/websites/opencv`, `/opencv/opencv`; 4.13/5.0, instalado 4.11.0.86): `CAP_PROP_POS_MSEC` está documentada como la posición de un archivo de vídeo; la documentación no dice que con `CAP_V4L2` dé la hora del búfer del driver. `CAP_PROP_CONVERT_RGB` está documentada para DSHOW; para V4L2 con MJPG no se encontró que devuelva el JPEG sin decodificar. Por eso el plan **no** usa ninguna de las dos: la hora sigue siendo la del hilo de captura y el tamaño de cada JPEG queda fuera (va al BACKLOG si hace falta). `solvePnP` con `SOLVEPNP_IPPE_SQUARE` se reusa tal cual desde `vision/pose.py`, sin cambiar.
+
+## Cambios de la versión del 2026-10-29 (con P6–P18 contestadas)
 
 - **P8 lo cambia casi todo:** los agentes trabajan en la Jetson por SSH. Entra una fase nueva, la 2 · La barrera de seguridad para los agentes, con su diseño completo (§ «La barrera»), antes de que ningún agente toque la Jetson.
 - **P6:** la fase 1 es ahora el escaneo del equipo, solo lectura, que corre el autor con su cuenta. El método de Python 3.11 se pregunta al cerrarla, con los datos; uv ya no se da por hecho.
@@ -224,6 +252,9 @@ Crear:
 - `codigo/linux/perfil_temporal.py` (fase 7, P18): copia un perfil y cambia solo `transforms_port` (18945–18950), con la salida en `~/nav-salidas/perfiles/`.
 - `codigo/linux/README.md`: cómo se trabaja con la Jetson (los verbos, la copia WIP, el clon, la suite, el tracker, cómo se para, cómo se comprueba que la cámara y el puerto quedan libres, el corte de acceso). Empieza en la fase 1 y se completa en la 9.
 - `codigo/camera/v4l2.py` (fase 5), `codigo/diagnostics/clock_offset.py` (fase 6), `codigo/diagnostics/tegrastats_log.py` (fase 7) y `codigo/profiles/jetson.yaml` (fase 8), como en la versión anterior. `jetson.yaml` lleva el alias `nav-jetson`, el árbol (`repo`) y la interfaz; ni IP ni secretos.
+- `codigo/diagnostics/ruido_pose.py` (fase 5b): el análisis del ruido en reposo de una o varias grabaciones de `tracker --record`, sin cámara y en cualquier máquina. Lee solo el `.npz` (y los PNG de `--save-frames`, si los hay); escribe un JSON y un Markdown que no pisan nada.
+- `codigo/tests/test_ruido_pose.py` (fase 5b): sobre series sintéticas (una normal, una de dos valores, una con un seno de frecuencia conocida, tiempos uniformes y en ráfaga) y sobre el dataset del replay de Marker0, donde `refiltrar` con los tiempos grabados tiene que reproducir `sent_M` (≤ 1e-9 mm en Windows, ≤ 1e-3 mm en Linux, P22).
+- Si P25 queda en (a): `codigo/linux/perfil_temporal.py` y `codigo/tests/test_perfil_temporal.py` se adelantan de la fase 7 a la 5b (firma en «Funciones y clases»).
 - Pruebas: `test_escaneo_jetson.py` (fase 1), `test_guardian.py` y `test_sonda_privilegios.py` (fase 2), `test_v4l2.py` (fase 5), `test_clock_offset.py` (fase 6), `test_tegrastats_log.py` y `test_perfil_temporal.py` (fase 7) y `test_receta_jetson.py` (fase 8). Además, los casos nuevos de `test_transport.py`, `test_camera_backend.py` y `test_ajustes_camara.py`. Las salidas reales de `v4l2-ctl` y `tegrastats` van en `codigo/tests/data/linux/` (texto del escaneo, sin datos de paciente).
 
 Modificar: los mismos que en la versión anterior.
@@ -232,6 +263,10 @@ Modificar: los mismos que en la versión anterior.
 - `tests/conftest.py`: también niega `camera.v4l2.listar_camaras_v4l2` y `ejecutar_v4l2ctl`.
 - El `skipif` de las pruebas que solo valen en Windows.
 - `codigo/readme.md`, `docs/ARCHITECTURE.md` (§3.1, §3.5, §3.7 y §6) y `docs/CONTEXT.md` (§3, §4 y §6).
+
+En la fase 5b, además:
+- `codigo/linux/README.md`: § «El ruido en reposo (B77)», con el protocolo P-5b y cómo se traen los PNG.
+- Solo si sale una causa que P24 deja corregir en la fase: `camera/v4l2.py` (los controles fijos de Linux, J6), sus pruebas en `test_v4l2.py` y, si hace falta, el caso nuevo en `test_camera_backend.py` de que en Windows `open()` sigue haciendo las mismas llamadas. Nada más de `camera/`, ni `grabber.py`, `tracker.py`, `vision/` o `transport/`.
 
 Lo que aplica el autor o la dirección, no `desarrollo`: `.claude/settings.json`, `~/.ssh/config`, los agentes `desarrollo.md` y `pruebas.md`, `CLAUDE.md` §4 y §5 (el texto, en el reporte de la fase 9) y todo lo de la Jetson que pide sudo. Nada se mueve. `slicer/receive_marker0.py` no cambia: `run(host=…)` ya existe.
 
@@ -255,7 +290,25 @@ Lo que aplica el autor o la dirección, no `desarrollo`: `.claude/settings.json`
 
 `linux/sonda_privilegios.py`: `comprobar() -> list[dict]`, donde cada elemento es `{nombre, esperado, obtenido, pasa}`, y `main(argv=None) -> int`, que sale con 0 solo si ninguna comprobación encuentra un privilegio.
 
-`linux/perfil_temporal.py`: `crear(base: Path, puerto: int, salida: Path) -> Path` y `main(argv=None) -> int`. No pisa un archivo que ya exista.
+`linux/perfil_temporal.py` (cambia si P25 queda en (a); si no, la de antes):
+- `CLAVES: dict[str, type]`: las únicas que se pueden cambiar, con su tipo: `transforms_port` (int, 18945–18950), `camera.usb_port_linux` (str, con el patrón `RE_BYPATH` de `camera.v4l2`) y `camera.controls.exposure_ms` (float, 0.1–10.0).
+- `crear(base: Path, salida: Path, cambios: dict[str, object]) -> Path`: copia el perfil y cambia solo esas claves. Niega una clave fuera de `CLAVES`, una que no exista en el perfil base o un valor del tipo o rango equivocado. No pisa un archivo que ya exista.
+- `main(argv=None) -> int`: `--base`, `--salida`, `--puerto N` (atajo de `transforms_port`, para la fase 7) y `--poner CLAVE=VALOR`, que se repite.
+
+`diagnostics/ruido_pose.py` (nuevo, fase 5b). Solo numpy, scipy, cv2 y `vision/`; no abre cámara ni red:
+- `serie_pose(rec: dict, nombre: str = "Marker0") -> dict[str, np.ndarray]`: de lo que da `pose_log.load_recording`, los frames con exactamente una detección del id del marker: `t`, `esquinas` (N, 4, 2), `xyz_crudo` (la pose de `vision.pose.estimate_single_pose` sin filtro, con el `K`, el `dist` y el `size_mm` grabados) y `xyz_enviado` (de `sent_M`).
+- `refiltrar(t: np.ndarray, xyz: np.ndarray, min_cutoff: float, beta: float) -> np.ndarray`: el `PositionFilter` de `vision/filtering.py` sobre esa serie, con los tiempos que se le den.
+- `intervalos(t: np.ndarray) -> dict`: los `dt` en ms (p1, p50, p99, máx), la fracción con `dt` < 2 ms y la fracción con `dt` > 1.5 veces la mediana.
+- `ruido_esquinas(esquinas: np.ndarray) -> dict`: la sd en px de cada esquina en x e y, la del centroide, la del lado medio aparente y la correlación entre el lado aparente y la z cruda.
+- `bimodalidad(x: np.ndarray, paso: float) -> dict`: el coeficiente de Sarle, el histograma con ese paso, la partición en dos grupos (k-medias en 1D: centros, fracción, separación entre centros dividida por la sd dentro del grupo) y la longitud media de las rachas en cada grupo (si alterna frame a frame o por bloques).
+- `espectro(x: np.ndarray, fs: float, n: int = 3) -> dict`: `scipy.signal.welch`, con las `n` frecuencias de más potencia y la fracción de la potencia total de cada una.
+- `ruido_imagen(pngs: list[Path], esquinas: list[np.ndarray]) -> dict`: con el marker quieto, la sd temporal por píxel en una zona blanca fuera del marker y en una negra dentro del borde (máscaras desde las esquinas), el contraste medio blanco − negro, el ancho de borde del 10 al 90 % y el cociente de gradiente en las fronteras de bloques de 8 px frente al de dentro (bloqueo de JPEG).
+- `analizar(npz: Path, frames_dir: Path | None = None, nombre: str = "Marker0") -> dict`: todo lo anterior para una grabación: sd z enviada, sd z cruda, sd z refiltrada con los tiempos grabados (tiene que dar la enviada) y refiltrada con tiempos uniformes a la fps media, más los bloques de arriba.
+- `comparar(resultados: dict[str, dict], referencia: str) -> dict`: cada número frente al de la referencia, en cociente.
+- `formato_markdown(comparacion: dict) -> str`.
+- `main(argv=None) -> int`: `--input ETIQUETA=RUTA.npz` (se repite), `--frames ETIQUETA=CARPETA` (opcional, por grabación), `--referencia ETIQUETA`, `--output JSON` y `--output-markdown MD`; los dos últimos no se pisan.
+
+`camera/v4l2.py`, solo si hay corrección (J6, P24): `CONTROLES_FIJOS_LINUX: dict[str, int]` (los controles que el perfil no nombra y que la capa deja siempre en un valor, p. ej. `focus_automatic_continuous: 0`) y `CapaLinuxV4L2.aplicar(..., fijos: dict[str, int] | None = None)`, que los escribe después de los del perfil con la misma relectura. Qué controles y qué valores lo dice el P-5b; el plan no los fija de antemano.
 
 `camera/v4l2.py`, `camera/controls.py`, `camera/backend.py`, `transport/igtl.py`, `tracker.py`, `diagnostics/clock_offset.py`, `diagnostics/igtl_rate.py` y `diagnostics/tegrastats_log.py`: las firmas de la versión anterior, sin cambio. Las principales:
 - `CamaraV4L2(ruta_puerto, dispositivo)`, `listar_camaras_v4l2`, `resolver_dispositivo`, `ejecutar_v4l2ctl(args, timeout_s=5.0)`, `parsear_list_ctrls`, `exposicion_ms_a_v4l2` y `class CapaLinuxV4L2` con `leer` y `aplicar`.
@@ -407,6 +460,56 @@ Reglas para todas:
   Con estos números la dirección le propone al autor confirmar los mínimos de P13 antes de la fase 6.
 - **Cadena:** `camera/` cambia solo en la rama Linux. Lo comprueban la prueba de que en Windows `open()` hace las mismas llamadas a cv2, el replay en los dos sistemas y la corrida con Slicer en el PC.
 
+### Fase 5b · El ruido de gs1 por V4L2 (B77) (pesada)
+
+Pesada porque puede tocar `camera/` (la cadena del principio 6). Si cierra solo con el diagnóstico, no toca la cadena. Primero se diagnostica y solo después, si hay causa clara, se corrige (P23).
+
+- **Parte A · Sin cámara (el agente).** Entrega `diagnostics/ruido_pose.py`, `test_ruido_pose.py` y, si P25 queda en (a), `linux/perfil_temporal.py` con su prueba. Corre `ruido_pose` en el PC sobre `p5_gs1_a`, `p5_gs2_a` y `p5_pc_gs1_a` (referencia: `p5_pc_gs1_a`; los saltos de esa corrida perturbada se cuentan aparte, como en el P-5). Lo que tiene que decir, por grabación:
+  - la sd z enviada, cruda y refiltrada (con los tiempos grabados y con tiempos uniformes);
+  - los `dt` (p1, p50, p99, < 2 ms);
+  - la sd de las esquinas, la del lado aparente y su correlación con z;
+  - la bimodalidad de la z cruda y del lado aparente, con la longitud de las rachas;
+  - las tres frecuencias de más potencia de la z cruda.
+
+  Con eso, una lectura en tres casos, que decide qué se mira en vivo:
+  - (i) **El filtro:** la z cruda de gs1 en la Jetson tiene la misma sd que la del PC y lo que sube es la filtrada, con `dt` en ráfaga. La causa está en código compartido (`grabber`, el 1-Euro): se para la corrección por P24.
+  - (ii) **La imagen, de escala:** la z cruda ya es el doble, el lado aparente lleva el ruido y la correlación con z es alta. Hay que ver la imagen (P-5b).
+  - (iii) **Otra cosa:** se dice con los números y el P-5b se corre igual.
+- **Parte B · Protocolo P-5b (en vivo, el autor; caja de luz al máximo, Marker0 de 80 mm en la misma posición que en el P-5 para gs1, ~361 mm, y sin mover el soporte entre la Jetson y el PC).** Lo que abre una cámara lo teclea el autor (P19); los `info` y los `traer` los puede correr el agente. Cada corrida: 60 s sin ventana, con su listener (`igtl_rate listen`) lanzado antes como en el P-5, y `--record`, `--timing` y `--save-frames <carpeta> --frames-every 600` (unos 9 PNG por corrida), todo bajo `~/nav-salidas/b77/` en la Jetson y bajo `Claude outputs/fases/007/b77/` en el PC.
+  - 0. Antes y después de la sesión: `ssh nav-jetson info v4l2 <gs1>` e `info v4l2 <gs2>` a un archivo, y en el PC `python -m diagnostics.probe_camera --leer --puerto <usb_port_windows> --salida … --timeout 60` de cada cámara cuando está en el PC. Son la lista completa de controles de cada lado (hallazgo 12).
+  - J1 y J2: gs1 en la Jetson, dos corridas seguidas. Repetibilidad: ¿sigue en ~0.074?
+  - J3: gs2 en la Jetson, en su posición del P-5 (~326 mm).
+  - J4 (solo si P25 queda en (a)): gs1 en el puerto del hub de gs2 (se intercambian los dos cables; gs2 queda en el de gs1, sin abrirse), con un perfil temporal hecho con `py wip linux.perfil_temporal --base profiles/tracker_config_gs1.yaml --poner camera.usb_port_linux=<by-path de 2.2> --salida ~/nav-salidas/perfiles/gs1_puerto22.yaml`. Una sola variable: el puerto. La marca de focus sigue protegiendo de la cámara equivocada.
+  - W1: gs1 en el PC (su puerto de Windows), con `igtl_rate listen` local en vez de Slicer, para no tener la perturbación de la corrida extra del P-5.
+  - W2: gs2 en el PC, igual, en su posición (~326 mm). Responde al hallazgo 14.
+  - Tras cada corrida en la Jetson, `info camara-libre` e `info puerto-libre 18944`.
+  - El agente trae los `.npz`, los `.json` y los PNG con `traer` (uno por archivo, con `Start-Process -RedirectStandardOutput`, como en el P-5) y corre `ruido_pose` sobre las grabaciones de la sesión, con W1 de referencia y los PNG de cada una.
+- **La puerta.** Con A y B, una causa es clara si cumple las dos cosas:
+  - una sola variable (un control, el puerto, la exposición) separa las corridas de ruido alto de las de ruido normal;
+  - y explica la diferencia de `ruido_imagen` o del lado aparente entre J1–J2 y W1.
+
+  Si no hay una causa así, la fase cierra aquí con los números (P23) y el autor decide.
+- **Parte C · La corrección, solo si la puerta la da y P24 la deja dentro de la fase.**
+  - Si es un control que el perfil no nombra: `CONTROLES_FIJOS_LINUX` en `camera/v4l2.py` (J6), con sus pruebas sobre las salidas del escaneo.
+  - Si es la exposición: una sesión más con un perfil temporal de `exposure_ms` 0.9 (la cámara da 9) para ver la sensibilidad, y el autor decide con ese número si se cambia el perfil.
+  - Si es el puerto o el hub: no hay corrección de código. Se dice qué puerto usar y lo decide el autor.
+  - Si es del filtro, del hilo de captura o de la cámara (el sensor, el JPEG): no se corrige en esta fase.
+
+  La verificación de una corrección es una segunda sesión corta, P-5b2: J5 y J6, gs1 en la Jetson, dos corridas, con la WIP corregida (y los `info v4l2` de antes y después).
+- **Criterio:**
+  1. A: los números de las tres grabaciones del P-5 en `b77/analisis_p5.md`, y la lectura (i), (ii) o (iii) con los números que la sostienen. `refiltrar` con los tiempos grabados reproduce `sent_M` (≤ 1e-9 mm en Windows, ≤ 1e-3 mm en Linux).
+  2. B: la sd z de J1, J2, J3, W1, W2 (y J4) con su % con pose y su fps de bucle (≥ 60, P13; se esperan ~87), y `ruido_imagen` de cada una frente a W1. La lista de controles que difieren entre la Jetson y el PC, o entre gs1 y gs2, o «ninguno».
+  3. Una causa, con la variable y su número, o «sin causa clara» con lo que se descartó.
+  4. Si hubo corrección: gs1 por V4L2 en reposo da una sd z de 0.030–0.050 mm en J5 y en J6; gs2 por V4L2 no sube de 0.050; la cámara a ≥ 85 fps.
+  5. Si no la hubo: la fase cierra con los números de 1–3, B77 queda al día con ellos y el autor decide (P23).
+  6. En el PC, siempre: la suite, el replay en 0.0 y `gui.panel --selftest` sin cambio; en la Jetson, `suite wip` con 0 fallos.
+- **Cadena:** las partes A y B no la tocan: `ruido_pose` y `perfil_temporal` no los importa el tracker, y el P-5b usa el código de la fase 5 sin cambios. Si hay parte C, cambia solo `camera/v4l2.py`, que solo carga la rama Linux. Lo comprueban:
+  - la prueba de que en Windows `open()` hace las mismas llamadas a cv2 (con y sin `usb_port_linux`);
+  - el replay en el PC (0.0 mm / 0.0° / 0.0 px) y en la Jetson (P22);
+  - una corrida de gs1 en el PC con Slicer, de 64 a 68 Hz, como el criterio 5 de la fase 5.
+
+  Nombres, puerto, mensajes y jerarquía de OpenIGTLink no cambian.
+
 ### Fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes (pesada)
 
 - **Entrega:** `IgtlSender(port, iface)`, `tracker --igtl-iface`, `diagnostics/clock_offset.py`, `igtl_rate listen --clock-offset-ms` y sus pruebas con el servidor falso (B34).
@@ -428,7 +531,7 @@ Reglas para todas:
 
 ### Fase 7 · Las dos cámaras a la vez en la Jetson (ligera)
 
-- **Entrega:** `diagnostics/tegrastats_log.py` con su prueba sobre el log real del escaneo, `linux/perfil_temporal.py` con su prueba, y el protocolo P-7.
+- **Entrega:** `diagnostics/tegrastats_log.py` con su prueba sobre el log real del escaneo, `linux/perfil_temporal.py` con su prueba (si la fase 5b ya lo hizo, P25, aquí solo se usa con `--puerto`), y el protocolo P-7.
 - **Protocolo P-7:**
   - `py wip linux.perfil_temporal --base profiles/tracker_config_gs2.yaml --puerto 18946 --salida ~/nav-salidas/perfiles/gs2_18946.yaml` (P18).
   - gs1 y gs2 sin ventana en dos procesos, cada uno con su listener local, y `medir tegrastats`.
@@ -490,6 +593,12 @@ Números propuestos; los fija la dirección.
 - **Al día en B50:** si el escaneo ve `exposure_dynamic_framerate` en `--list-ctrls`, es la candidata a explicar la bajada de fps con poca luz. Se anota y no se toca.
 - **Al día en B53:** con el tracker remoto, la parada mientras espera a Slicer tarda hasta 30 s. Se ve en la fase 8.
 - **B23 pasa a Cerrados** al cerrar la meta, con lo que la cerró.
+- **De la fase 5b:**
+  - **B77** pasa a Cerrados si la parte C deja gs1 en 0.030–0.050 mm en J5 y J6. Si no, queda al día con los números de A y B, la causa o lo descartado, y la prioridad que diga el autor (media si no hay causa; alta si la causa puede dar un resultado equivocado en uso).
+  - **B81** pasa a Cerrados si P25 queda en (a): `linux.perfil_temporal` existe.
+  - **Nueva, solo si la lectura es (i):** el 1-Euro con `dt` en ráfaga en Linux. La corrección toca `grabber` o el filtro, compartidos con Windows, y pide su ADR. Prioridad media.
+  - **Nueva, solo si la imagen apunta a la compresión:** el tamaño del JPEG por frame en Linux no se puede medir con lo que hay (Context7 no confirma `CAP_PROP_CONVERT_RGB` con V4L2 y MJPG; el guardián no tiene un verbo que guarde la ráfaga). Haría falta un modo de `camera.v4l2` o de `camara rafaga` que guarde los JPEG. Prioridad baja; media si la lectura (ii) no tiene otra causa.
+  - **Nueva, solo si hace falta el brillo por frame:** `PoseLog` no guarda el brillo medio del marker por frame, que diría si el lado aparente se mueve con la luz. Toca la grabación del tracker. Prioridad baja.
 
 ## ADR que se proponen
 
@@ -513,11 +622,12 @@ Números por fijar: el plan sin autorizar de la meta 006 propone ADR-035 a ADR-0
   - Contenido: § «La barrera».
   - Cambia `CLAUDE.md` §4 y §5 y las reglas de `desarrollo` y `pruebas`; no cambia la constitución (lo cumple el principio 9).
   - Alternativas descartadas: solo patrones de `settings.json` (blandos, hallazgo 7); la orden forzada en `authorized_keys` de la propia cuenta (la cuenta podría editarla, hallazgo 8); un contenedor (complica cámaras y red, y `docker` es root); que el autor corra todo (P8 lo descarta).
+- **J6 (solo si hay parte C con un control) · En Linux, la capa V4L2 deja además en un valor fijo los controles que el perfil no nombra**, de una lista cerrada en `camera/v4l2.py` (`CONTROLES_FIJOS_LINUX`), con la misma relectura que los del perfil. El perfil no cambia y Windows tampoco. Alternativas: una clave nueva del perfil (`controls_linux`), que haría falta si el valor cambia de una cámara a otra; escribirlos también por DSHOW en Windows, que cambia la cadena que hoy funciona. Lo decide P24.
 - **J5 (al cerrar) · La meta 007 cierra con los números de la Jetson** y la decisión del autor sobre dónde queda el tracker, como ADR-031 y ADR-033.
 
 ## Preguntas abiertas
 
-P6–P18 están contestadas (2026-10-29). Las nuevas van también al final de `clarify.md`. La pregunta del método de Python 3.11 no se abre ahora: se abre al cerrar la fase 1, con el escaneo (P6).
+P6–P23 están contestadas (P19–P20 el 2026-10-29, P21 el 2026-10-29, P22 el 2026-11-02 y P23 el 2026-11-03). Abiertas: P24 y P25, de la fase 5b. Las nuevas van también al final de `clarify.md`. La pregunta del método de Python 3.11 no se abre ahora: se abre al cerrar la fase 1, con el escaneo (P6).
 
 - **P19 · Quién teclea lo que abre la cámara en la Jetson** (`camara rafaga` y `py … tracker`):
   - (a) El autor, en la sesión en vivo, con los comandos que le da el protocolo, por el mismo alias y el mismo guardián (recomendada). Mantiene la regla de `desarrollo` y `pruebas` («No abres la cámara, el tracker ni Slicer») y el autor está delante de la cámara y de Slicer de todos modos.
@@ -526,8 +636,16 @@ P6–P18 están contestadas (2026-10-29). Las nuevas van también al final de `c
   - (a) Con frase de paso, sin dejarla cargada en el agente de claves de Windows, y el `sudo` de su cuenta con contraseña (recomendada). Cierra el rodeo del hallazgo 7: aunque un agente intentara usarla, `BatchMode` falla sin la frase.
   - (b) Como esté hoy. Entonces B69 sube a alta.
 
+- **P24 · Hasta dónde corrige la fase 5b** si sale una causa clara:
+  - (a) Solo dentro de la rama Linux de `camera/v4l2.py`: un control que el perfil no nombra, fijo para las dos cámaras (J6). Si la causa está en código compartido con Windows (`grabber`, el 1-Euro, `tracker.py`, `vision/`) o pide una clave nueva del perfil, la fase cierra con el diagnóstico y la corrección se replanea con su ADR (recomendada). Mantiene corta la fase y no toca la cadena de Windows, que hoy da 0.032–0.043 mm.
+  - (b) También en código compartido, dentro de la fase, con su ADR y la verificación de la cadena en las dos máquinas. Más rápida si la causa es el filtro, pero la fase deja de ser corta y cambia Windows.
+- **P25 · Adelantar `linux.perfil_temporal` a la fase 5b**, con `--poner` para el puerto y la exposición:
+  - (a) Sí (recomendada). Permite J4 (una sola variable: el puerto del hub) y la prueba de la exposición sin tocar los perfiles del repo. Cierra B81 (el módulo está en la lista del guardián y no existe), y la fase 7 lo usa tal cual. Pide intercambiar los cables de las dos cámaras en la Jetson durante J4.
+  - (b) No. J4 y la prueba de la exposición no se hacen, y la exposición y el puerto quedan como hipótesis sin medir. `perfil_temporal` sigue en la fase 7.
+
 ## Títulos de commit
 
+- Fase 5b: «Diagnostica el ruido de gs1 por V4L2 (meta 007, fase 5b, B77)». Si hay parte C, el de cierre: «Fija los controles de Linux que bajan el ruido de gs1 (meta 007, fase 5b)».
 - Fase 1: «Escanea la Jetson en solo lectura (meta 007, fase 1)»
 - Fase 2: «Pone la barrera de los agentes en la Jetson (meta 007, fase 2)»
 - Fase 3: «Prepara el entorno de la Jetson (meta 007, fase 3)»
