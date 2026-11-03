@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-11-02 (meta 007 · El tracker en la Jetson Orin Nano: fases 1 a 4 commiteadas, fase 5 · La capa V4L2 y cada cámara en la Jetson con el código y la suite hechos, pendiente del commit y de la prueba en vivo P-5 del autor; la meta 006 · Grafo de factores óptico-inercial en espera, y la 005 en pausa)._
+_Actualizado: 2026-11-03 (meta 007 · El tracker en la Jetson Orin Nano: fases 1 a 4 commiteadas, fase 5 · La capa V4L2 y cada cámara en la Jetson hecha con el P-5 del autor, pendiente del commit del cierre; la meta 006 · Grafo de factores óptico-inercial en espera, y la 005 en pausa)._
 
 Spec activo: `specs/007-jetson/`
 
@@ -58,13 +58,14 @@ Peticiones pendientes: 0
 - **Fase 2 · La barrera de seguridad para los agentes: hecha** (2026-11-02; `d2f3632` y `107a89e`; números en `tasks.md`).
 - **Fase 3 · El entorno en la Jetson: hecha** (2026-11-02; P21 = uv; `24b046f`, `efbd138`). Ráfagas del autor (P-3b): gs1 y gs2 estables a 88.5 fps (≥ 85). Guardián 3 en la Jetson; `~/.venvs/navegacion` con CPython 3.11.9 y las versiones del PC; gtsam 4.3.0 instala (venv aparte); clon disperso sin datos de paciente (172 MiB). Detalle en `Claude outputs/fases/007/fase-3.md`.
 - **Fase 4 · La suite corre en Linux: hecha** (2026-11-02, `34d5941`; P22 = 1e-3 en Linux). En la Jetson, de 35 fallos a 0. En ARM: pose del replay 2.3e-13 mm, detección 6.1e-05 px. B74 cerrada; B76 (baja) nueva. Detalle en `Claude outputs/fases/007/fase-4.md`.
-- **Fase 4:** commit `34d5941`; `repo actualizar` dejó el clon en él y `suite repo` dio 1 fallo (la salida de §9.3 en ARM, ruido de 2e-13°), arreglado en la prueba (fase 5).
-- **Fase 5 · La capa V4L2 y cada cámara en la Jetson: código y suite hechos, pendiente del commit y de P-5** (2026-11-02; casilla sin marcar). `camera/v4l2.py` (`CamaraV4L2`, `CapaLinuxV4L2` con `v4l2-ctl`; CLI `--listar|--leer|--aplicar`), `WebcamBackend` en Linux abre `/dev/videoN` con `CAP_V4L2` por el by-path (`usb_port_linux` en los perfiles; gs1 `…0:2.1…`, gs2 `…0:2.2…`); Windows hace las mismas llamadas. Sin abrir cámara, en la Jetson `--leer` da los 11 controles del perfil y la marca (focus 500 y 332). Suite PC 885: 880 pasan, 5 saltadas (dos corridas); replay y `explain_pose` 39 de 39, `gui.panel --selftest` «cerrando OK»; Jetson (`suite wip`) 885: 827 / 0 / 58, 37.4 s. Detalle en `Claude outputs/fases/007/fase-5.md`.
-- **Lo siguiente:** el autor corre el protocolo P-5 (`codigo/linux/README.md`, § «La cámara por V4L2»; fps de cámara y de bucle, sd z, % con pose, marca cruzada, código 3, Windows con Slicer 64–67 Hz) y, con sus números, se marca la fase 5. Tras el commit, `ssh nav-jetson repo actualizar` y `suite repo` deben dar 0 fallos (la prueba de §9.3 con ruido numérico fuera de Windows; no probado en la Jetson). Luego la fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes; confirmar antes los mínimos de P13.
+- **Fase 4:** commit `34d5941`; su 1 fallo en ARM (§9.3, ruido de 2e-13°) se arregló en la fase 5.
+- **Fase 5 · La capa V4L2 y cada cámara en la Jetson: hecha** (2026-11-03; código `89712d6`, cierre pendiente del commit). `camera/v4l2.py` (`CamaraV4L2`, `CapaLinuxV4L2` con `v4l2-ctl`; CLI `--listar|--leer|--aplicar`); `WebcamBackend` en Linux abre `/dev/videoN` con `CAP_V4L2` por el by-path (`usb_port_linux` en los perfiles); Windows hace las mismas llamadas. **P-5 del autor** (sin ventana, caja de luz al máximo): bucle 87.5 fps (gs1) y 87.8 (gs2), cámara 88.5; sd z 0.074 y 0.040 mm; pose en el 99.7 y el 99.5 %; marca cruzada para con código 1; sin cliente, código 3 a los 10 s; PC con Slicer 67.6 Hz. Con ventana, sin medir (B80). La sd z de gs1 duplica la de MSMF (0.032–0.043): B77. Sus 8 hallazgos: B77 a B84. Detalle en `Claude outputs/fases/007/fase-5.md`.
+- **Lo lanzado tras el P-5:** `ssh nav-jetson repo actualizar` dejó el clon en `89712d6`; `suite repo -q` lo negó el clasificador de permisos al agente y lo corrió el autor (2026-11-03): código 0, 0 fallos, 39.4 s (`-q` no da el recuento).
+- **Lo siguiente:** la dirección le propone al autor confirmar los mínimos de P13 (con 87.5 fps de bucle y 99.5 % de pose, el ≥ 60 se cumple) y decidir si mira B77 antes de la fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes.
 
 ## Pendientes del autor
 
-- **Meta 007:** el commit de la fase 5 (título y `git add` en su reporte) y la prueba en vivo P-5 de las dos cámaras en la Jetson (ssh con tu frase de paso; ~20 min; el protocolo está en `codigo/linux/README.md`).
+- **Meta 007:** nada en vivo pendiente (el P-5 se corrió el 2026-11-03). Confirmar los mínimos de P13 y decidir B77 antes de la fase 6.
 
 - Meta 005 (aplazado por el autor hasta compartirlo con sus compañeros, 2026-10-28): la prueba en vivo de la fase 1 (7 casos), la de la fase 2 (2 envíos con `consulta`), la lectura de `docs/EQUIPO.md` de la fase 3 (10 pasos, ~20 min) y el circuito de la fase 4 (una petición de prueba a `origin`, ~10 min), con sus protocolos en `Claude outputs/fases/005/`.
 - Instalar el GitHub MCP (lo configura el autor) antes de planear la meta 006 · Grafo de factores óptico-inercial.

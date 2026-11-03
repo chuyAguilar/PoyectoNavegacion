@@ -61,6 +61,14 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B75 | `probar_barrera.ps1` no prueba ninguna orden pesada ni `info temperatura` | Media | — |
 | B76 | `suite` del guardián: con dos rutas corre solo la última, sin aviso, y no deja ver por qué se salta cada prueba | Baja | — |
 | B67 | Las herramientas de cámara (sonda, modos, calibración, «Verificar IDs») solo abren por Windows | Baja | — |
+| B77 | La sd z de gs1 por V4L2 es casi el doble que por MSMF | Media | — |
+| B78 | Un `ssh` cortado mata el tracker antes de guardar el `.npz` y el `--timing` | Media | — |
+| B79 | `igtl_rate listen` se para a los 5 s sin datos | Baja | — |
+| B80 | El guardián no pasa `DISPLAY`: no hay corrida con ventana por `ssh nav-jetson` | Baja | — |
+| B81 | `linux.perfil_temporal` está en la lista blanca del guardián y no existe | Baja | — |
+| B82 | No hay verbo para el tamaño o el sha256 de un archivo de `~/nav-salidas/` | Baja | — |
+| B83 | `--timing=~/…` con `=` no expande `~` | Baja | — |
+| B84 | El tracker escribe «[Salida limpia]» antes de la traza de un error | Baja | — |
 
 ## Abiertos
 
@@ -464,6 +472,62 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** plan de la meta 007 (`specs/007-jetson/plan.md`), concretado al escribir la fase 5.
 - **Qué haría falta:** que esos módulos pidan la identidad de la plataforma (`usb_port_linux` fuera de Windows) y la capa por `capa_para_plataforma`, con `--fijar` sobre `CapaLinuxV4L2` (que ya admite `forzar`), y «Verificar IDs» por SSH si algún día hace falta desde el panel.
 - **Prioridad:** baja mientras se calibre y se den de alta las cámaras en el PC.
+
+### B77 · La sd z de gs1 por V4L2 es casi el doble que por MSMF
+- **Qué:** en el P-5 (2026-11-03), gs1 en reposo con Marker0 a 361 mm dio por V4L2 en la Jetson una sd z de 0.0737 mm (MAD×1.4826 0.0847, 0 saltos > 1 mm); la misma gs1, en la misma posición, por MSMF en el PC dio 0.032–0.043 mm (0.0425 sin los saltos de una corrida perturbada; MAD×1.4826 0.0323). gs2 por V4L2 dio 0.0399 mm a 326 mm, dentro de la banda de la meta 003 (0.030–0.043). Que la MAD sea mayor que la sd sugiere una distribución con dos valores.
+- **Por qué queda:** el criterio del plan (fps, % con pose, marca, código 3) se cumple; la precisión de gs1 sigue siendo de décimas de milímetro. Hay dos corridas por cámara y una sola posición, y no hay causa medida.
+- **De dónde:** P-5 de la fase 5 · La capa V4L2 y cada cámara en la Jetson, de la meta 007 (`Claude outputs/fases/007/fase-5.md`, «P-5 en vivo»).
+- **Qué haría falta:** repetir gs1 y gs2 por V4L2 en la misma posición, mirar el histograma de z, y comparar una variable por vez: la exposición real (1.0 ms en Linux frente a 0.9766 en Windows), el formato o la decodificación MJPEG de V4L2, el hub USB 2.0. Antes de fijar los mínimos de P13 y de la fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes.
+- **Prioridad:** media.
+
+### B78 · Un `ssh` cortado mata el tracker antes de guardar el `.npz` y el `--timing`
+- **Qué:** en el P-5, el `ssh` de la consola 2 se cortó a los 54 s; el guardián registró `124 · se corto la salida (BrokenPipe)` y cortó el grupo de procesos. El tracker no guardó el `.npz` de `--record` ni el `.json` de `--timing`, y la corrida se perdió.
+- **Por qué queda:** el corte fue un accidente de la sesión y el guardián hizo lo que debe (no deja procesos huérfanos).
+- **De dónde:** incidente del P-5 de la fase 5 (meta 007), 2026-11-03.
+- **Qué haría falta:** que el tracker guarde al recibir SIGTERM o SIGPIPE (en Linux), o que el guardián le dé unos segundos tras el corte antes de matar el grupo; con su prueba.
+- **Prioridad:** media.
+
+### B79 · `igtl_rate listen` se para a los 5 s sin datos
+- **Qué:** si Marker0 no se ve al arrancar el tracker, `diagnostics.igtl_rate listen` se rinde a los 5 s sin mensajes y la corrida no mide nada aunque el tracker siga vivo (segunda corrida a de gs1 en el P-5).
+- **Por qué queda:** se arregla repitiendo la corrida con Marker0 a la vista.
+- **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
+- **Qué haría falta:** una opción `--idle` (segundos a esperar sin datos) o esperar al primer mensaje antes de contar.
+- **Prioridad:** baja.
+
+### B80 · El guardián no pasa `DISPLAY`: no hay corrida con ventana por `ssh nav-jetson`
+- **Qué:** la corrida b) del P-5 (con ventana) no se pudo medir: la Jetson no tiene escritorio abierto y el guardián no pasa `DISPLAY` a lo que lanza.
+- **Por qué queda:** el tracker en la Jetson se usa sin ventana (el panel del PC lo lanza así, fase 8).
+- **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
+- **Qué haría falta:** si algún día se quiere la ventana en la Jetson, un `DISPLAY` fijo en el entorno del guardián (lo instala el autor con sudo) o reenvío X11.
+- **Prioridad:** baja.
+
+### B81 · `linux.perfil_temporal` está en la lista blanca del guardián y no existe
+- **Qué:** la lista blanca de módulos de `py` en `codigo/linux/guardian.py` nombra `linux.perfil_temporal`, y ese módulo no está en `codigo/linux/`.
+- **Por qué queda:** no hace daño: un módulo que no existe solo falla al importar.
+- **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
+- **Qué haría falta:** quitarlo de la lista o escribir el módulo; cambiar el guardián pide que el autor lo reinstale con sudo, mejor junto a B76.
+- **Prioridad:** baja.
+
+### B82 · No hay verbo para el tamaño o el sha256 de un archivo de `~/nav-salidas/`
+- **Qué:** para traer un `.npz` de la Jetson al PC y comprobarlo no hay forma de preguntar su tamaño ni su sha256 por `ssh nav-jetson`; en el P-5 se comprobó con `zipfile.testzip()` en el PC.
+- **Por qué queda:** `testzip()` basta para saber que no llegó roto.
+- **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
+- **Qué haría falta:** un verbo de solo lectura en el guardián (por ejemplo `info archivo <nombre>`), con sus casos en `test_guardian.py`.
+- **Prioridad:** baja.
+
+### B83 · `--timing=~/…` con `=` no expande `~`
+- **Qué:** `--timing=~/nav-salidas/x.json` (con `=`) llega al tracker con la tilde sin expandir; con un espacio, sí. No se sabe si lo hace el guardián o el tracker.
+- **Por qué queda:** se sortea escribiendo la opción con espacio.
+- **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
+- **Qué haría falta:** mirar dónde se expande `~` en `_args_py` del guardián y en el tracker, y hacer que `--opcion=~/…` valga igual; con su prueba.
+- **Prioridad:** baja.
+
+### B84 · El tracker escribe «[Salida limpia]» antes de la traza de un error
+- **Qué:** en la corrida c) del P-5 (marca cruzada) el tracker imprimió «[Salida limpia]» y después la traza del error; el mensaje engaña sobre cómo terminó (código 1).
+- **Por qué queda:** el código de salida es el correcto, y `gui/status.py` (`_motivo_del_fallo`) ya ignora esa línea al buscar el motivo de un fallo.
+- **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
+- **Qué haría falta:** que `tracker.py` (línea 390) escriba «[Salida limpia]» solo si no hay una excepción en curso; toca `tracker.py` (principio 6: replay y suite) y las pruebas que esperan esa línea.
+- **Prioridad:** baja.
 
 ## Cerrados
 
