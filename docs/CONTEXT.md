@@ -201,6 +201,8 @@ Desde el 2026-10-28 (ADR-034, meta 005 · Agente de consulta para el equipo y bu
 
 - **Meta 007, fase 5 · La capa V4L2 y cada cámara en la Jetson** (hecha el 2026-11-03 con el P-5 del autor): `camera/v4l2.py` y la rama Linux de `WebcamBackend` abren cada cámara por su enlace by-path (`usb_port_linux` en los perfiles) con `cv2.VideoCapture("/dev/videoN", CAP_V4L2)`, tras comprobar la marca `focus` y aplicar los controles con `v4l2-ctl` (la exposición se compara en unidades nativas, 100 µs). En la Jetson, sin abrir la cámara, se leen los 11 controles del perfil y la marca (500 y 332); la suite allí, 885: 827 pasan, 0 fallan, 58 saltadas. En Windows las llamadas son las mismas. P-5 en vivo (sin ventana): bucle de 87.5 fps (gs1) y 87.8 (gs2), con la cámara a 88.5; sd z 0.074 mm (gs1) y 0.040 (gs2); pose en el 99.7 y el 99.5 % de los frames; marca cruzada y código 3 bien; en el PC, 67.6 Hz en Slicer. La sd z de gs1 por V4L2 duplica la de MSMF (B77).
 
+- **Meta 007, fase 5b · El ruido de gs1 por V4L2 (B77)** (en curso, parte A hecha el 2026-11-03; la parte B, en vivo, la corre el autor): `diagnostics/ruido_pose.py` analiza sin cámara las grabaciones `--record` y `linux/perfil_temporal.py` hace perfiles temporales con una clave cambiada. Sobre las tres grabaciones del P-5, la sd z de gs1 (0.074 mm) es casi toda lenta (deriva monótona de −3.9 µm/s), no del filtro ni de dos valores: apunta a calor, mecánica o luz. Falta el P-5b (`Claude outputs/fases/007/p5b.md`).
+
 ### En pausa (se conserva, se puede retomar)
 
 - **Femto *depth* / nube de puntos / registro por superficie** (`femto_pruebas/`): 1.76 mm, con brazo de palanca del Marker0 (ADR-013) y ambigüedad en la columna repetitiva; plan: banco rígido con cubo distintivo (`stl/BaseMarcador/`).

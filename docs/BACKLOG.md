@@ -65,7 +65,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B78 | Un `ssh` cortado mata el tracker antes de guardar el `.npz` y el `--timing` | Media | — |
 | B79 | `igtl_rate listen` se para a los 5 s sin datos | Baja | — |
 | B80 | El guardián no pasa `DISPLAY`: no hay corrida con ventana por `ssh nav-jetson` | Baja | — |
-| B81 | `linux.perfil_temporal` está en la lista blanca del guardián y no existe | Baja | — |
 | B82 | No hay verbo para el tamaño o el sha256 de un archivo de `~/nav-salidas/` | Baja | — |
 | B83 | `--timing=~/…` con `=` no expande `~` | Baja | — |
 | B84 | El tracker escribe «[Salida limpia]» antes de la traza de un error | Baja | — |
@@ -479,6 +478,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** P-5 de la fase 5 · La capa V4L2 y cada cámara en la Jetson, de la meta 007 (`Claude outputs/fases/007/fase-5.md`, «P-5 en vivo»).
 - **Qué haría falta:** repetir gs1 y gs2 por V4L2 en la misma posición, mirar el histograma de z, y comparar una variable por vez: la exposición real (1.0 ms en Linux frente a 0.9766 en Windows), el formato o la decodificación MJPEG de V4L2, el hub USB 2.0. Antes de fijar los mínimos de P13 y de la fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes.
 - **Prioridad:** media.
+- **Parte A de la fase 5b (2026-11-03, sin cámara; `diagnostics/ruido_pose.py` sobre las tres grabaciones del P-5):** la sd z de gs1 (0.0737) es casi toda lenta: sd de las medias por segundo 0.0707, pendiente −3.9 µm/s (0.23 mm en 60 s, monótona), residuo rápido 0.022 mm. gs2: pendiente −1.0 µm/s. Descartado: el filtro (0 % de dt < 2 ms; refiltrada con tiempos uniformes 0.0733) y la bimodalidad (Sarle 0.38 y 0.34; la «MAD > sd» es una media que se desliza). Apunta a calor, mecánica o luz, no a un control. Falta la parte B (P-5b en vivo, `Claude outputs/fases/007/p5b.md`).
 
 ### B78 · Un `ssh` cortado mata el tracker antes de guardar el `.npz` y el `--timing`
 - **Qué:** en el P-5, el `ssh` de la consola 2 se cortó a los 54 s; el guardián registró `124 · se corto la salida (BrokenPipe)` y cortó el grupo de procesos. El tracker no guardó el `.npz` de `--record` ni el `.json` de `--timing`, y la corrida se perdió.
@@ -499,13 +499,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** el tracker en la Jetson se usa sin ventana (el panel del PC lo lanza así, fase 8).
 - **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
 - **Qué haría falta:** si algún día se quiere la ventana en la Jetson, un `DISPLAY` fijo en el entorno del guardián (lo instala el autor con sudo) o reenvío X11.
-- **Prioridad:** baja.
-
-### B81 · `linux.perfil_temporal` está en la lista blanca del guardián y no existe
-- **Qué:** la lista blanca de módulos de `py` en `codigo/linux/guardian.py` nombra `linux.perfil_temporal`, y ese módulo no está en `codigo/linux/`.
-- **Por qué queda:** no hace daño: un módulo que no existe solo falla al importar.
-- **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
-- **Qué haría falta:** quitarlo de la lista o escribir el módulo; cambiar el guardián pide que el autor lo reinstale con sudo, mejor junto a B76.
 - **Prioridad:** baja.
 
 ### B82 · No hay verbo para el tamaño o el sha256 de un archivo de `~/nav-salidas/`
@@ -530,6 +523,10 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** baja.
 
 ## Cerrados
+
+### B81 · `linux.perfil_temporal` está en la lista blanca del guardián y no existe
+- **Qué era:** la lista blanca de módulos de `py` en `codigo/linux/guardian.py` nombra `linux.perfil_temporal`, y ese módulo no estaba en `codigo/linux/`.
+- **Cerrado:** 2026-11-03, por la fase 5b · El ruido de gs1 por V4L2 (meta 007; P25 = (a)): `codigo/linux/perfil_temporal.py` (`--base`, `--salida`, `--puerto`, `--poner`) con `tests/test_perfil_temporal.py`. El guardián no cambió.
 
 ### B74 · Las pruebas del sha de la calibración dependen del fin de línea del `.yml`
 - **Qué era:** `test_como_funciona` y `test_explain_pose[gs1]` comparaban el sha256 de los bytes de `codigo/data/intrinsecos_gs1_1280x960.yml` con el que guardó la grabación, que es el del archivo con CRLF (`0b4250e5…`); git y la Jetson lo tienen en LF (`0da9280e…`), y las dos fallaban sin que cambiara ningún valor.
