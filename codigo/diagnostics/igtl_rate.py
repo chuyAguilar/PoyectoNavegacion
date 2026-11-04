@@ -28,10 +28,20 @@ Lo que no toca: `tracker.py`, `transport/`, `camera/` y `vision/`. No importa
 `cv2` ni `camera`. El nombre del dispositivo del banco es otro a proposito
 (`RateProbeToTracker`), nunca `Marker0ToTracker`.
 
+Meta 007, fase 6 · Slicer en el PC recibe de la Jetson: con el tracker en otra
+maquina, `t_wall - timestamp` resta dos relojes. `listen --clock-offset-ms X`
+suma X (reloj del emisor menos reloj de aqui, en ms, lo que da
+`diagnostics.clock_offset measure`) a cada latencia; sin la opcion, 0 como
+antes. La hora de llegada `t_wall` va ahora por `clock_offset.wall_s` (en
+Windows `GetSystemTimePreciseAsFileTime`, < 1 us; `time.time()` aqui tiene
+15.6 ms de resolucion), asi que la latencia ya no viene cuantizada por el
+receptor; el `timestamp` del emisor sigue siendo su `time.time()`.
+
 Desde codigo\\, con el venv y los argumentos explicitos (principio 7), con tope
 (principio 9):
 
     python -m diagnostics.igtl_rate listen --port 18944 --seconds 30 --timeout 60 --device Marker0ToTracker
+    python -m diagnostics.igtl_rate listen --host <IP de la Jetson> --port 18944 --seconds 30 --timeout 60 --device Marker0ToTracker --clock-offset-ms <desfase>
     python -m diagnostics.igtl_rate bench --port 18950 --hz 90 --seconds 20 --device RateProbeToTracker --timeout 10
     python -m diagnostics.igtl_rate bench --port 18944 --hz 90 --seconds 30 --device RateProbeToTracker --timeout 60 --external --timer-1ms
 
@@ -64,6 +74,7 @@ from typing import Callable
 import numpy as np
 import pyigtl
 
+from diagnostics.clock_offset import WALL_CLOCK, wall_s
 from transport.igtl import IgtlSender
 
 TAG = "[igtl_rate]"
@@ -138,7 +149,7 @@ def listen(host: str, port: int, seconds: float, connect_timeout: float,
            device: str | None = None, stop: threading.Event | None = None,
            done: threading.Event | None = None, hold: threading.Event | None = None,
            clock: Callable[[], float] = time.perf_counter,
-           wall: Callable[[], float] = time.time, log: Callable[[str], None] = _log) -> list[IgtlArrival]:
+           wall: Callable[[], float] = wall_s, log: Callable[[str], None] = _log) -> list[IgtlArrival]:
     """Se conecta como cliente a `host:port` y anota cada mensaje durante `seconds` s.
 
     La ventana de `seconds` empieza con el primer mensaje. Sin conexion en
@@ -216,10 +227,15 @@ def _rate(count: int, span_s: float) -> float | None:
     return (count - 1) / span_s if count >= 2 and span_s > 0 else None
 
 
-def summarize(arrivals: list[IgtlArrival], gap_ms: float = DEFAULT_GAP_MS) -> dict:
-    """Mensajes/s, timestamps distintos/s, recv con mensaje/s, rafagas/s y sus intervalos."""
+def summarize(arrivals: list[IgtlArrival], gap_ms: float = DEFAULT_GAP_MS,
+              clock_offset_ms: float = 0.0) -> dict:
+    """Mensajes/s, timestamps distintos/s, recv con mensaje/s, rafagas/s y sus intervalos.
+
+    `clock_offset_ms` (reloj del emisor menos reloj de aqui) se suma a cada latencia
+    `t_wall - timestamp`: con el emisor en otra maquina, lo da `diagnostics.clock_offset`."""
     n = len(arrivals)
-    res: dict = {"messages": n, "gap_ms": float(gap_ms), "duration_s": None,
+    res: dict = {"messages": n, "gap_ms": float(gap_ms), "clock_offset_ms": float(clock_offset_ms),
+                 "duration_s": None,
                  "messages_per_s": None, "distinct_timestamps": 0, "distinct_timestamps_per_s": None,
                  "reads_with_messages": 0, "reads_per_s": None,
                  "bursts": 0, "bursts_per_s": None, "messages_per_burst_mean": None,
@@ -254,7 +270,7 @@ def summarize(arrivals: list[IgtlArrival], gap_ms: float = DEFAULT_GAP_MS) -> di
         res["burst_interval_ms_p50"] = _pct(iv, 50)
         res["burst_interval_ms_p95"] = _pct(iv, 95)
         res["burst_interval_ms_max"] = float(iv.max())
-    lat = [(a.t_wall - a.timestamp) * 1000.0 for a in arrivals]
+    lat = [(a.t_wall - a.timestamp) * 1000.0 + float(clock_offset_ms) for a in arrivals]
     res["latency_ms_p50"] = _pct(lat, 50)
     res["latency_ms_p95"] = _pct(lat, 95)
     return res
@@ -277,8 +293,9 @@ def format_summary(res: dict) -> str:
         f"mensajes por rafaga media {_f(res['messages_per_burst_mean'], 2)} max {res['messages_per_burst_max']}; "
         f"intervalo entre rafagas (ms) p50 {_f(res['burst_interval_ms_p50'], 2)} "
         f"p95 {_f(res['burst_interval_ms_p95'], 2)} max {_f(res['burst_interval_ms_max'], 2)}",
-        f"{TAG} latencia t_wall - timestamp (ms): p50 {_f(res['latency_ms_p50'], 2)} "
-        f"p95 {_f(res['latency_ms_p95'], 2)} (time.get_clock_info('time').resolution = "
+        f"{TAG} latencia t_wall - timestamp + desfase (ms): p50 {_f(res['latency_ms_p50'], 2)} "
+        f"p95 {_f(res['latency_ms_p95'], 2)} (desfase {res.get('clock_offset_ms', 0.0):+.3f} ms; "
+        f"t_wall por {WALL_CLOCK}; time.get_clock_info('time').resolution = "
         f"{time.get_clock_info('time').resolution * 1000:.3f} ms)",
     ]
     return "\n".join(lines)
@@ -459,6 +476,9 @@ def main(argv: list[str] | None = None) -> int:
     pl.add_argument("--timeout", required=True, type=float, help="tope de la espera de la conexion, s")
     pl.add_argument("--device", default=None, help="solo este dispositivo (p. ej. Marker0ToTracker)")
     pl.add_argument("--gap-ms", type=float, default=DEFAULT_GAP_MS)
+    pl.add_argument("--clock-offset-ms", type=float, default=0.0,
+                    help="reloj del emisor menos reloj de aqui, ms (de diagnostics.clock_offset measure); "
+                         "se suma a la latencia. Sin el, 0: emisor y receptor en la misma maquina")
     pl.add_argument("--csv", type=Path, default=None, help="guarda cada llegada (no se pisa)")
     pb = sub.add_parser("bench", help="emisor real en este proceso, sin camara")
     pb.add_argument("--port", required=True, type=int, help="18950 en E1; 18944 solo con Slicer y el tracker parado")
@@ -486,7 +506,7 @@ def main(argv: list[str] | None = None) -> int:
         except ConnectionError as e:
             print(e)
             return EXIT_NO_CONNECTION
-        print(format_summary(summarize(arrivals, args.gap_ms)))
+        print(format_summary(summarize(arrivals, args.gap_ms, args.clock_offset_ms)))
         if args.csv is not None and arrivals:
             write_csv(arrivals, args.csv)
             _log(f"guardado {args.csv}")

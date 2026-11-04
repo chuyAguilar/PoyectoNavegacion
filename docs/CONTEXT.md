@@ -203,6 +203,8 @@ Desde el 2026-10-28 (ADR-034, meta 005 · Agente de consulta para el equipo y bu
 
 - **Meta 007, fase 5b · El ruido de gs1 por V4L2 (B77)** (hecha el 2026-11-03 con la parte A; el autor decidió no correr el P-5b, P26): `diagnostics/ruido_pose.py` analiza sin cámara las grabaciones `--record` y `linux/perfil_temporal.py` hace perfiles temporales con una clave cambiada. Sobre las tres grabaciones del P-5, la sd z de gs1 (0.074 mm) es casi toda lenta (deriva monótona de −3.9 µm/s; sin ella, 0.029 mm), no del filtro ni de dos valores: apunta a calor, mecánica o luz. B77 queda abierta con prioridad baja; el P-5b (`Claude outputs/fases/007/p5b.md`) se corre solo si la deriva afecta de verdad.
 
+- **Meta 007, fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes** (código hecho y verificado en el PC el 2026-11-03; el P-6 en vivo, pendiente del autor): `tracker --igtl-iface <interfaz>` (Linux) liga el 18944 a la IPv4 de esa interfaz y aborta con código 2 si cae a loopback; sin la opción, 127.0.0.1 como siempre. `diagnostics/clock_offset.py` mide el desfase de reloj Jetson − PC por un eco UDP (puerto 18960) y `igtl_rate listen --clock-offset-ms` lo usa. Suite del PC 960: 960 pasan, 5 saltadas. B68 (el 18944 sin autenticación en la red) anotada.
+
 ### En pausa (se conserva, se puede retomar)
 
 - **Femto *depth* / nube de puntos / registro por superficie** (`femto_pruebas/`): 1.76 mm, con brazo de palanca del Marker0 (ADR-013) y ambigüedad en la columna repetitiva; plan: banco rígido con cubo distintivo (`stl/BaseMarcador/`).

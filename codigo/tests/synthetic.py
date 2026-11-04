@@ -94,14 +94,25 @@ class FakeCamera:
 class FakeSender:
     """Un `transport.igtl.IgtlSender` falso: guarda (nombre, matriz float32), como pyigtl.
     `connected` (True por defecto) es lo que responde `wait_for_client`; con False el
-    tracker aborta por falta de Slicer."""
+    tracker aborta por falta de Slicer. `iface` y `host` como el real (meta 007, fase 6):
+    sin interfaz, 127.0.0.1; con una que este en `ifaces`, su IP; con otra,
+    `IgtlInterfaceError` (lo que el real hace cuando pyigtl cae a loopback)."""
     instances: list["FakeSender"] = []
     connected: bool = True
+    ifaces: dict[str, str] = {}
 
-    def __init__(self, port: int) -> None:
+    def __init__(self, port: int, iface: str | None = None) -> None:
+        from transport.igtl import IgtlInterfaceError
         self.port, self.sent, self.closed = int(port), [], False
         self.waited: list[float] = []
         self.dropped = 0
+        self.iface = iface
+        if iface is None:
+            self.host = "127.0.0.1"
+        elif iface in FakeSender.ifaces:
+            self.host = FakeSender.ifaces[iface]
+        else:
+            raise IgtlInterfaceError(f"[OpenIGTLink] la interfaz {iface!r} no existe o no tiene IPv4")
         FakeSender.instances.append(self)
 
     def wait_for_client(self, timeout_s: float) -> bool:

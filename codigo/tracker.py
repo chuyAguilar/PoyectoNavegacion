@@ -41,6 +41,14 @@ tracker»); sin la opcion no se lee la entrada estandar.
 
 B28: `import camera` va antes que `import cv2`, asi la aceleracion HW de MSMF
 queda apagada tambien lanzado a mano (camera/__init__.py importa camera.uvc).
+
+Meta 007, fase 6 · Slicer en el PC recibe de la Jetson (ADR J2; clarify P10):
+`--igtl-iface <interfaz>` (solo Linux) hace que el servidor OpenIGTLink escuche
+en la IPv4 de esa interfaz de la Jetson en vez de en 127.0.0.1, para que Slicer
+se conecte desde el PC a `<IP de la Jetson>:18944`. Sin la opcion, 127.0.0.1
+como siempre, y el log lo dice. Si la interfaz no existe o no tiene IPv4 (pyigtl
+caeria en silencio a loopback), o no es Linux, el tracker aborta con codigo 2 y
+su mensaje sin abrir la camara. El nombre, el puerto y los mensajes no cambian.
 """
 
 import argparse
@@ -59,7 +67,7 @@ from camera import uvc as camaras_uvc
 from camera.backend import create_backend
 from camera.grabber import FrameGrabber, SyncGrabber
 import profiles
-from transport.igtl import IgtlSender
+from transport.igtl import IgtlInterfaceError, IgtlSender
 from vision.tracking import MarkerPose, MarkerTracker
 
 # El panel manda 'q' a la ventana por su titulo exacto (gui/recipes.VENTANAS["tracker"]).
@@ -68,6 +76,7 @@ MAX_READ_FAILURES = 300
 READ_TIMEOUT_S = 1.0            # espera maxima por un frame nuevo en cada vuelta del bucle
 STALL_TIMEOUT_S = 10.0          # sin ningun frame en este tiempo, el tracker sale (principio 9)
 DEFAULT_SLICER_TIMEOUT_S = 30.0
+EXIT_BAD_CONFIG = 2             # el perfil o una opcion no valen (send_video, --igtl-iface)
 EXIT_NO_SLICER = 3
 
 
@@ -122,6 +131,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--stop-stdin", action="store_true",
                         help="Sale limpio al leer 'q' o el fin de la entrada estandar; lo usa el "
                              "panel con el tracker sin ventana.")
+    # La interfaz de escucha (meta 007, fase 6; P10). Sin ella, 127.0.0.1 como siempre.
+    parser.add_argument("--igtl-iface", default=None, metavar="INTERFAZ",
+                        help="Solo Linux: interfaz de red en la que escucha el servidor OpenIGTLink "
+                             "(p. ej. la de la LAN o tailscale0), para que Slicer se conecte desde "
+                             "otra maquina; sin ella, 127.0.0.1.")
     args = parser.parse_args(argv)
     if args.save_frames and not args.record:
         parser.error("--save-frames necesita --record")
@@ -133,6 +147,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         parser.error("--timing tiene que terminar en .json")
     if args.slicer_timeout <= 0:
         parser.error("--slicer-timeout tiene que ser > 0")
+    if args.igtl_iface is not None and not args.igtl_iface.strip():
+        parser.error("--igtl-iface necesita el nombre de una interfaz (p. ej. el de `ip -br addr`)")
     return args
 
 
@@ -218,7 +234,7 @@ def main(argv: list[str] | None = None) -> int:
         # P7 (meta 003): el video por OpenIGTLink satura el pipeline (CONTEXT.md 4.4) y nadie lo usa.
         print(f"[ERROR] {Path(args.config).name}: igtlink.send_video es true y el tracker ya no "
               f"envia video por OpenIGTLink (meta 003, P7); ponlo en false.", file=sys.stderr)
-        return 2
+        return EXIT_BAD_CONFIG
 
     # Grabacion: se crea antes de abrir la camara para fallar pronto si la salida ya existe.
     log = None
@@ -237,8 +253,15 @@ def main(argv: list[str] | None = None) -> int:
     cam = create_backend(cfg["camera"])
     tracker = MarkerTracker(cfg["markers"], cfg.get("filtering"))
     port = int(cfg_igtl["transforms_port"])
-    sender = IgtlSender(port)
-    print(f"[Esperando] Conecta Slicer como cliente a ese puerto (tope {args.slicer_timeout:.0f} s).")
+    try:
+        # Fase 6 (meta 007): con --igtl-iface escucha en esa interfaz (solo Linux); si no sirve,
+        # aborta aqui, antes de esperar a Slicer y de abrir la camara (principio 7).
+        sender = IgtlSender(port, iface=args.igtl_iface)
+    except IgtlInterfaceError as e:
+        print(f"[ERROR] {e}", file=sys.stderr)
+        return EXIT_BAD_CONFIG
+    print(f"[Esperando] Conecta Slicer como cliente a {sender.host}:{port} "
+          f"(tope {args.slicer_timeout:.0f} s).")
     print("Presiona 'q' en la ventana para salir."
           + (" Sin ventana: q + Enter por la entrada estandar (en el panel, 'Detener tracker')."
              if args.stop_stdin else ""))
@@ -261,7 +284,7 @@ def main(argv: list[str] | None = None) -> int:
         if not sender.wait_for_client(args.slicer_timeout):
             raise SlicerNotConnected(
                 f"Slicer no se conecto al puerto {port} en {args.slicer_timeout:.0f} s: abre su "
-                f"conector OpenIGTLink (cliente, localhost:{port}) y vuelve a lanzar el tracker")
+                f"conector OpenIGTLink (cliente, {sender.host}:{port}) y vuelve a lanzar el tracker")
         print(f"[OpenIGTLink] Cliente conectado ({clock() - t_wait:.1f} s)")
 
         cam.open()          # el warmup va dentro de open()

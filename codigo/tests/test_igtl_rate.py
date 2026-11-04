@@ -130,6 +130,49 @@ def test_summarize_llegadas_sueltas_dan_90_y_90() -> None:
     assert res["latency_ms_p50"] == pytest.approx(0.0, abs=1e-3)
 
 
+def test_summarize_suma_el_desfase_a_la_latencia() -> None:
+    """Meta 007, fase 6: con el emisor en otra maquina, `clock_offset_ms` (reloj del emisor
+    menos reloj de aqui) se suma a `t_wall - timestamp`; sin el, la latencia es la de antes."""
+    # t_wall = t + 1e9 y timestamp = ts + 1e9: con ts = t - 0.004 la latencia local es 4 ms.
+    arrivals = [_arrival(i / 90.0, i / 90.0 - 0.004, i + 1) for i in range(90)]
+    sin = igtl_rate.summarize(arrivals, gap_ms=1.0)
+    # 1e-3 ms: los t_wall de ~1.7e9 s en float64 tienen ~1e-7 s de paso.
+    assert sin["clock_offset_ms"] == 0.0 and sin["latency_ms_p50"] == pytest.approx(4.0, abs=1e-3)
+    # El emisor va 37.5 ms por delante: la latencia aparente es 4 - 37.5; el desfase la repone.
+    con = igtl_rate.summarize([_arrival(a.t_arrival, a.timestamp - 1e9 + 0.0375, a.read_index) for a in arrivals],
+                              gap_ms=1.0, clock_offset_ms=37.5)
+    assert con["clock_offset_ms"] == 37.5
+    assert con["latency_ms_p50"] == pytest.approx(4.0, abs=1e-3) and con["latency_ms_p95"] == pytest.approx(4.0, abs=1e-3)
+    assert con["messages_per_s"] == sin["messages_per_s"]            # lo demas no cambia
+    texto = igtl_rate.format_summary(con)
+    assert "desfase +37.500 ms" in texto and igtl_rate.WALL_CLOCK in texto
+    assert "desfase +0.000 ms" in igtl_rate.format_summary(sin)
+
+
+def test_listen_usa_el_reloj_fino_para_t_wall(server: LocalServer) -> None:
+    """`t_wall` sale de `clock_offset.wall_s` (sub-ms), no de `time.time()` (15.6 ms en Windows)."""
+    packed = _packed(12)
+    server.serve([p for p, _ in packed], gap_s=0.002, close_after=False)
+    arrivals = igtl_rate.listen("127.0.0.1", server.port, seconds=0.3, connect_timeout=2.0, log=lambda m: None)
+    assert len(arrivals) == 12
+    # Un t_wall por recv, y recv distintos (a ~2 ms) con t_wall distintos: el reloj no los junta.
+    assert len({a.t_wall for a in arrivals}) == len({a.read_index for a in arrivals})
+    assert all(abs(a.t_wall - time.time()) < 5 for a in arrivals)
+    import inspect
+    from diagnostics import clock_offset
+    assert inspect.signature(igtl_rate.listen).parameters["wall"].default is clock_offset.wall_s
+    assert igtl_rate.WALL_CLOCK == clock_offset.WALL_CLOCK
+
+
+def test_main_listen_acepta_clock_offset_ms(server: LocalServer, capsys) -> None:
+    packed = _packed(4)
+    server.serve([p for p, _ in packed], gap_s=0.0, close_after=False)
+    rc = igtl_rate.main(["listen", "--port", str(server.port), "--seconds", "0.3", "--timeout", "2",
+                         "--clock-offset-ms", "-12.25"])
+    out = capsys.readouterr().out
+    assert rc == 0 and "[igtl_rate] 4 mensajes" in out and "desfase -12.250 ms" in out
+
+
 def test_summarize_sin_mensajes_y_con_uno() -> None:
     vacio = igtl_rate.summarize([])
     assert vacio["messages"] == 0 and vacio["messages_per_s"] is None and vacio["bursts"] == 0

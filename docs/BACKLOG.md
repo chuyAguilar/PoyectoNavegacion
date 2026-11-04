@@ -68,6 +68,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B82 | No hay verbo para el tamaño o el sha256 de un archivo de `~/nav-salidas/` | Baja | — |
 | B83 | `--timing=~/…` con `=` no expande `~` | Baja | — |
 | B84 | El tracker escribe «[Salida limpia]» antes de la traza de un error | Baja | — |
+| B68 | El 18944 abierto en la red sin autenticación (con `--igtl-iface`) | Media | — |
 
 ## Abiertos
 
@@ -420,8 +421,15 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** el escaneo de la fase 1 (2026-10-29) ve varios servicios escuchando en todas las interfaces (0.0.0.0 o `*`): entre ellos un JupyterLab que corre como root, un gateway de openclaw, el escritorio remoto (VNC y RDP), CUPS y rpcbind; `ufw` está inactivo y sin su archivo de configuración. Ollama y n8n escuchan solo en 127.0.0.1. El detalle (puertos y procesos) está en el escaneo, fuera de git; aquí no va porque el repo es público (B60).
 - **Por qué queda:** no es de la meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC, y tocarlo pide sudo y al autor. El escaneo no dice si cada servicio pide autenticación.
 - **De dónde:** plan de la meta 007 (`specs/007-jetson/plan.md`, «Lo que va al BACKLOG»), con lo que vio el escaneo de la fase 1 · El escaneo de la Jetson, solo lectura.
-- **Qué haría falta:** que el autor revise qué necesita cada servicio en la red (en particular si JupyterLab y el gateway piden clave o token) y decida un cortafuegos o ligarlos a 127.0.0.1 o a Tailscale. Se cruza con B68 (el 18944 abierto en la red), propuesto en el mismo plan y aún sin escribir aquí.
+- **Qué haría falta:** que el autor revise qué necesita cada servicio en la red (en particular si JupyterLab y el gateway piden clave o token) y decida un cortafuegos o ligarlos a 127.0.0.1 o a Tailscale. Se cruza con B68 (el 18944 abierto en la red), escrita en la fase 6.
 - **Prioridad:** media (puede haber algo sin autenticación; sin confirmar).
+
+### B68 · El 18944 abierto en la red sin autenticación (con `--igtl-iface`)
+- **Qué:** OpenIGTLink no autentica. Con `tracker --igtl-iface <interfaz>` (meta 007, fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes; ADR J2) el servidor de `pyigtl` escucha en la IPv4 de esa interfaz de la Jetson, así que cualquier equipo de esa red puede conectarse al 18944 antes que Slicer y dejarlo fuera (el servidor atiende a un solo cliente), o leer las transforms. Sin la opción, el servidor sigue en 127.0.0.1.
+- **Por qué queda:** es la consecuencia aceptada de J2 (P10: la opción, y sin ella loopback). Cerrarlo pide una regla de cortafuegos en la Jetson (sudo y el autor) o quedarse solo con Tailscale, que ya cifra y autentica a los dos extremos: la fase 6 mide las tres redes y el autor decide con los números.
+- **De dónde:** plan de la meta 007 (`specs/007-jetson/plan.md`, «Lo que va al BACKLOG» y ADR J2), escrito al implementar la fase 6 (2026-11-03).
+- **Qué haría falta:** si el tracker se queda en la Jetson por LAN o cable, una regla que admita en el 18944/tcp solo la IP del PC (`ufw` está inactivo y sin configurar en la Jetson, B71), o usar solo `--igtl-iface tailscale0`. Se cruza con B71.
+- **Prioridad:** media.
 
 ### B69 · La barrera del PC para los agentes es blanda
 - **Qué:** los agentes corren como el usuario de Windows del autor. Lo que ese usuario alcanza (su clave personal de `~/.ssh/`, un `subprocess` desde un Python permitido), un agente lo alcanza rodeando las reglas de `.claude/settings.json`. La barrera dura es la cuenta `navagente` y su guardián en la Jetson (`codigo/linux/guardian.py`): acota el daño solo si el acceso va por ella.

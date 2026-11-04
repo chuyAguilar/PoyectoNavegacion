@@ -171,6 +171,37 @@ def test_config_obligatorio_y_aceleracion_en_el_log(fakes, frames_syn, profile_s
     assert "[Tracker] Aceleracion HW de MSMF" in out
     assert "[Whitelist] IDs aceptados: [0]" in out and "[Salida limpia]" in out
     assert "[OpenIGTLink] Cliente conectado" in out and "[Captura] Camara" in out
+    # Fase 6 (meta 007): sin --igtl-iface el emisor no lleva interfaz y el log dice 127.0.0.1:18944.
+    assert FakeSender.instances[0].iface is None
+    assert "[Esperando] Conecta Slicer como cliente a 127.0.0.1:18944" in out
+
+
+def test_igtl_iface_llega_al_emisor_y_el_log_dice_su_direccion(fakes, frames_syn, profile_syn, capsys) -> None:
+    """Meta 007, fase 6: `--igtl-iface` se pasa a `IgtlSender(port, iface=...)` y el bucle es el
+    mismo (mismos envios); el log dice la direccion en la que escucha."""
+    FakeSender.ifaces = {"ifaz0": "192.0.2.10"}
+    try:
+        rc, cam, sender, _ = fakes(frames_syn, profile_syn(), extra=["--no-window", "--igtl-iface", "ifaz0"])
+    finally:
+        FakeSender.ifaces = {}
+    assert rc == 0 and cam.opened and cam.closed and sender.closed
+    assert sender.iface == "ifaz0" and sender.host == "192.0.2.10"
+    assert [n for n, _ in sender.sent] == ["Marker0ToTracker"] * len(frames_syn)
+    out = capsys.readouterr().out
+    assert "[Esperando] Conecta Slicer como cliente a 192.0.2.10:18944" in out
+
+
+def test_igtl_iface_que_no_sirve_aborta_con_2_sin_abrir_la_camara(fakes, frames_syn, profile_syn, capsys) -> None:
+    """Protocolo P-6 e): una interfaz que no existe (pyigtl caeria a loopback) aborta con codigo 2,
+    sin esperar a Slicer ni abrir la camara (principio 7)."""
+    rc, cam, sender, est = fakes(frames_syn, profile_syn(), extra=["--no-window", "--igtl-iface", "noexiste0"])
+    assert rc == tracker.EXIT_BAD_CONFIG == 2
+    assert sender is None and not cam.opened and est["imshow"] == 0
+    cap = capsys.readouterr()
+    assert "[ERROR] [OpenIGTLink] la interfaz 'noexiste0' no existe o no tiene IPv4" in cap.err
+    assert "[Esperando]" not in cap.out and "[Webcam]" not in cap.out and "[Salida limpia]" not in cap.out
+    with pytest.raises(SystemExit):
+        tracker.main(["--config", str(profile_syn()), "--igtl-iface", "  "])
 
 
 @pytest.mark.parametrize("entrada, motivo", [("q\n", "q por la entrada estandar"),
