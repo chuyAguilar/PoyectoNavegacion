@@ -158,3 +158,10 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** (a) sí: permite J4 (gs1 en el puerto del hub de gs2, una sola variable) y la prueba de la exposición sin tocar los perfiles del repo; cierra B81 y la fase 7 lo usa tal cual; pide intercambiar los cables de las dos cámaras en la Jetson durante J4, recomendada / (b) no: J4 y la prueba de la exposición no se hacen, el puerto y la exposición quedan como hipótesis sin medir y `perfil_temporal` sigue en la fase 7.
 - **Respuesta del autor:** (a) sí, se adelanta a la 5b (con J4 y el intercambio de cables en la Jetson).
 - **Fecha:** 2026-11-03
+
+## P26 · El P-5b de la fase 5b (cambio de decisión del autor tras la parte A)
+
+- **Lo medido (parte A, `Claude outputs/fases/007/b77/analisis_p5.md`):** lo que sobra en gs1 por V4L2 es una deriva lenta de z (−3.9 µm/s, 0.23 mm en 60 s, ~0.1 px de lado aparente), no ruido: el residuo rápido es 0.029 mm, como gs2 (0.032) y gs1 por MSMF (0.032).
+- **Opciones:** correr el P-5b (J1–J4, W1–W2) / no correrlo: cerrar la 5b con la parte A y dejar B77 en el BACKLOG.
+- **Respuesta del autor:** no se corre el P-5b; la fase 5b cierra con la parte A y B77 queda en el BACKLOG, para tratarlo si afecta de verdad. Se sigue con la fase 6. Cambia la respuesta (B77) de P23.
+- **Fecha:** 2026-11-03

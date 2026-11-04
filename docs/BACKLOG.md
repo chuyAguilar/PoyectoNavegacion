@@ -61,7 +61,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B75 | `probar_barrera.ps1` no prueba ninguna orden pesada ni `info temperatura` | Media | — |
 | B76 | `suite` del guardián: con dos rutas corre solo la última, sin aviso, y no deja ver por qué se salta cada prueba | Baja | — |
 | B67 | Las herramientas de cámara (sonda, modos, calibración, «Verificar IDs») solo abren por Windows | Baja | — |
-| B77 | La sd z de gs1 por V4L2 es casi el doble que por MSMF | Media | — |
+| B77 | La sd z de gs1 por V4L2 es casi el doble que por MSMF (deriva lenta, no ruido) | Baja | — |
 | B78 | Un `ssh` cortado mata el tracker antes de guardar el `.npz` y el `--timing` | Media | — |
 | B79 | `igtl_rate listen` se para a los 5 s sin datos | Baja | — |
 | B80 | El guardián no pasa `DISPLAY`: no hay corrida con ventana por `ssh nav-jetson` | Baja | — |
@@ -477,8 +477,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** el criterio del plan (fps, % con pose, marca, código 3) se cumple; la precisión de gs1 sigue siendo de décimas de milímetro. Hay dos corridas por cámara y una sola posición, y no hay causa medida.
 - **De dónde:** P-5 de la fase 5 · La capa V4L2 y cada cámara en la Jetson, de la meta 007 (`Claude outputs/fases/007/fase-5.md`, «P-5 en vivo»).
 - **Qué haría falta:** repetir gs1 y gs2 por V4L2 en la misma posición, mirar el histograma de z, y comparar una variable por vez: la exposición real (1.0 ms en Linux frente a 0.9766 en Windows), el formato o la decodificación MJPEG de V4L2, el hub USB 2.0. Antes de fijar los mínimos de P13 y de la fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes.
-- **Prioridad:** media.
-- **Parte A de la fase 5b (2026-11-03, sin cámara; `diagnostics/ruido_pose.py` sobre las tres grabaciones del P-5):** la sd z de gs1 (0.0737) es casi toda lenta: sd de las medias por segundo 0.0707, pendiente −3.9 µm/s (0.23 mm en 60 s, monótona), residuo rápido 0.022 mm. gs2: pendiente −1.0 µm/s. Descartado: el filtro (0 % de dt < 2 ms; refiltrada con tiempos uniformes 0.0733) y la bimodalidad (Sarle 0.38 y 0.34; la «MAD > sd» es una media que se desliza). Apunta a calor, mecánica o luz, no a un control. Falta la parte B (P-5b en vivo, `Claude outputs/fases/007/p5b.md`).
+- **Prioridad:** baja (2026-11-03, decisión del autor, P26: espera datos, se trata solo si afecta de verdad; era media).
+- **Parte A de la fase 5b (2026-11-03, sin cámara; `diagnostics/ruido_pose.py` sobre las tres grabaciones del P-5):** la sd z de gs1 (0.0737) es casi toda lenta: sd de las medias por segundo 0.0707, pendiente −3.9 µm/s (0.23 mm en 60 s, monótona; en lado aparente, +2.3 mpx/s, del orden de 0.1 px). Sin la recta queda 0.029 mm, igual que gs2 (0.032) y gs1 por MSMF; es una deriva, no ruido. gs2: pendiente −1.0 µm/s. Descartado: el filtro (0 % de dt < 2 ms; refiltrada con tiempos uniformes 0.0733) y la bimodalidad (Sarle 0.38 y 0.34; la «MAD > sd» es una media que se desliza). Apunta a calor, mecánica o luz, no a un control.
+- **Estado (cierre de la fase 5b, 2026-11-03):** el autor decidió no correr el P-5b (P26); la fase cerró con la parte A. Lo que separaría las causas es el P-5b (`Claude outputs/fases/007/p5b.md`): J1 y J2 seguidas (calentamiento) frente a la continua, J4 con los cables intercambiados (puerto), W1 y W2 en el PC. La herramienta ya está: `diagnostics/ruido_pose.py` y `linux/perfil_temporal.py`. Se retoma si la deriva afecta de verdad al uso (la espera de calentamiento o la pendiente en `pose_log.summarize` serían lo primero).
 
 ### B78 · Un `ssh` cortado mata el tracker antes de guardar el `.npz` y el `--timing`
 - **Qué:** en el P-5, el `ssh` de la consola 2 se cortó a los 54 s; el guardián registró `124 · se corto la salida (BrokenPipe)` y cortó el grupo de procesos. El tracker no guardó el `.npz` de `--record` ni el `.json` de `--timing`, y la corrida se perdió.
