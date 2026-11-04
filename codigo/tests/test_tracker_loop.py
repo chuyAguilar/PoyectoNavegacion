@@ -12,10 +12,12 @@ camara ni un puerto (B34, fixture de conftest).
 from __future__ import annotations
 
 import io
+import sys
 from pathlib import Path
 
 import cv2
 import numpy as np
+import pyigtl
 import pytest
 import yaml
 
@@ -24,7 +26,8 @@ import tracker
 from vision.tracking import MarkerTracker
 
 from .conftest import PROFILES_DIR
-from .synthetic import DIST_SYN, K_SYN, FakeCamera, FakeSender, fake_time, render_marker
+from .synthetic import (DIST_SYN, K_SYN, FakeCamera, FakeSender, fake_time, render_marker,
+                        servidor_pyigtl_sin_puerto)
 
 GS1 = PROFILES_DIR / "tracker_config_gs1.yaml"
 
@@ -202,6 +205,24 @@ def test_igtl_iface_que_no_sirve_aborta_con_2_sin_abrir_la_camara(fakes, frames_
     assert "[Esperando]" not in cap.out and "[Webcam]" not in cap.out and "[Salida limpia]" not in cap.out
     with pytest.raises(SystemExit):
         tracker.main(["--config", str(profile_syn()), "--igtl-iface", "  "])
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"),
+                    reason="solo Linux: pyigtl resuelve la interfaz por ioctl(SIOCGIFADDR)")
+def test_igtl_iface_que_no_existe_con_el_pyigtl_real_sale_con_2(monkeypatch, frames_syn, profile_syn, capsys) -> None:
+    """El arreglo de `--igtl-iface` (P-6 del 2026-11-03): con el `IgtlSender` y el `__init__` de
+    pyigtl reales (sin puerto), `noexiste0` sale con 2 sin abrir la camara; antes del arreglo,
+    struct.error y codigo 1."""
+    cam = FakeCamera(frames_syn)
+    servidor = servidor_pyigtl_sin_puerto()
+    servidor.instances = []
+    monkeypatch.setattr(tracker, "create_backend", lambda cfg_cam: cam)
+    monkeypatch.setattr(pyigtl, "OpenIGTLinkServer", servidor)
+    rc = tracker.main(["--config", str(profile_syn()), "--no-window", "--igtl-iface", "noexiste0"])
+    assert rc == tracker.EXIT_BAD_CONFIG == 2 and not cam.opened and servidor.instances == []
+    cap = capsys.readouterr()
+    assert "[ERROR] [OpenIGTLink] la interfaz 'noexiste0' no existe o no tiene IPv4" in cap.err
+    assert "[Esperando]" not in cap.out
 
 
 @pytest.mark.parametrize("entrada, motivo", [("q\n", "q por la entrada estandar"),

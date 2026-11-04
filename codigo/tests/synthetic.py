@@ -128,3 +128,40 @@ class FakeSender:
 
     def close(self) -> None:
         self.closed = True
+
+
+def servidor_pyigtl_sin_puerto() -> type:
+    """El `OpenIGTLinkServer` real de pyigtl, con su `__init__` tal cual (la resolucion de
+    `iface` incluida), pero sin ligar ni escuchar ningun puerto ni arrancar sus hilos, y
+    devolviendo los manejadores de senal que pyigtl instala (meta 007, fase 6: el arreglo de
+    `--igtl-iface`). `server_address` queda en el `(host, port)` que pyigtl resolvio. Se usa
+    con `monkeypatch.setattr(pyigtl, "OpenIGTLinkServer", ...)`, que pisa al de `conftest`."""
+    import signal
+
+    from pyigtl import comm
+
+    class ServidorSinPuerto(comm.OpenIGTLinkServer):
+        instances: list = []
+
+        def __init__(self, *args, **kwargs) -> None:
+            self.stopped = 0
+            super().__init__(*args, **kwargs)
+            for signum, previo in self._previous_signal_handlers.items():
+                if previo is not None:
+                    signal.signal(signum, previo)
+            ServidorSinPuerto.instances.append(self)
+
+        def server_bind(self) -> None:          # sin bind: no se toma el puerto
+            pass
+
+        def server_activate(self) -> None:      # sin listen
+            pass
+
+        def start(self) -> None:                # sin serve_forever ni el hilo que imprime
+            pass
+
+        def stop(self) -> None:                 # sin shutdown(): no hay serve_forever que parar
+            self.server_close()
+            self.stopped += 1
+
+    return ServidorSinPuerto

@@ -165,3 +165,9 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** correr el P-5b (J1–J4, W1–W2) / no correrlo: cerrar la 5b con la parte A y dejar B77 en el BACKLOG.
 - **Respuesta del autor:** no se corre el P-5b; la fase 5b cierra con la parte A y B77 queda en el BACKLOG, para tratarlo si afecta de verdad. Se sigue con la fase 6. Cambia la respuesta (B77) de P23.
 - **Fecha:** 2026-11-03
+## P27 · El cable directo en el P-6
+
+- **Contexto:** el PC tiene un solo adaptador Ethernet físico; probar el cable directo PC–Jetson (opción B del P-6) deja al PC sin LAN, Internet ni Tailscale mientras dura.
+- **Opciones:** medir las tres redes ahora / medir LAN y Tailscale ahora y el cable más adelante.
+- **Respuesta del autor:** LAN y Tailscale ahora; el cable directo se mide más adelante, antes de compartir la Jetson o llevarla a otro sitio, posiblemente con un módem usado como switch. La fase 6 cierra con LAN y Tailscale y el cable queda en el BACKLOG.
+- **Fecha:** 2026-11-03

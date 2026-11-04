@@ -24,13 +24,23 @@ P10): `IgtlSender(port, iface=None)`. Sin `iface` el servidor escucha en
 de una interfaz de red de la maquina, p. ej. la de la LAN o `tailscale0`) se
 crea con `local_server=False, iface=...` y pyigtl resuelve la IPv4 de esa
 interfaz por `ioctl(SIOCGIFADDR)`; si la interfaz no existe o no tiene IPv4,
-pyigtl cae en silencio a 127.0.0.1. Por eso aqui se comprueba a que direccion
+pyigtl intenta caer en silencio a 127.0.0.1 (en 0.3.1 esa caida falla: ver el
+arreglo de abajo). Por eso aqui se comprueba a que direccion
 quedo ligado el socket (`server_address`, lo que el sistema dio al `bind`) y, si
 con `iface` sigue en loopback, se cierra y se lanza `IgtlInterfaceError`
 (principio 7: fallar fuerte). `host` es esa direccion y el log la dice. En
 Windows `iface` no vale (pyigtl ignoraria el nombre y usaria la IP del
 hostname): `IgtlInterfaceError` antes de crear nada. Nombres, puerto, mensajes
 y jerarquia no cambian (principio 6).
+
+El arreglo de `--igtl-iface` en Linux (meta 007, fase 6, P-6 del 2026-11-03): pyigtl
+empaqueta el nombre con `struct.pack('256s', iface[:15])`, que en Python 3 exige
+`bytes`; con un `str` fallaba con `struct.error` antes de ligar nada. Aqui se le
+pasa `os.fsencode(iface)`. Si la interfaz no existe o no tiene IPv4, el `ioctl` de
+pyigtl falla, su `except` reintenta con `'lo'`, que es `str`, y vuelve a lanzar
+`struct.error`: se captura (solo ese error, solo en esa llamada) y se convierte en
+`IgtlInterfaceError`, con la causa del sistema en el mensaje. Si un pyigtl futuro
+arregla su caida a `lo`, la comprobacion de loopback de abajo sigue cubriendolo.
 
 pyigtl 0.3.1 (leido del venv, 2026-10-24 y 2026-11-03; Context7 `/lassoan/pyigtl`
 documenta `send_message(message, wait=True)`, que con `wait=False` vuelve tras
@@ -46,6 +56,8 @@ con `getsockname()` (Python 3.11, Context7 `/python/cpython`).
 """
 from __future__ import annotations
 
+import os
+import struct
 import sys
 import threading
 import time
@@ -61,6 +73,13 @@ LOOPBACK_PREFIX = "127."
 
 class IgtlInterfaceError(RuntimeError):
     """`iface` no sirve: no es Linux, o la interfaz no existe o no tiene IPv4 (pyigtl cayo a loopback)."""
+
+
+def _interface_message(iface: str, detalle: str) -> str:
+    """El mensaje de una interfaz que no sirve (codigo 2 en el tracker, sin abrir la camara)."""
+    return (f"[OpenIGTLink] la interfaz {iface!r} no existe o no tiene IPv4: {detalle} y Slicer "
+            f"en otra maquina no podria conectarse; `ip -br addr` da los nombres validos. "
+            f"No se abre la camara.")
 
 
 def _bound_host(server, fallback: str) -> str:
@@ -93,14 +112,19 @@ class IgtlSender:
             raise IgtlInterfaceError(
                 f"[OpenIGTLink] --igtl-iface {iface!r} solo existe en Linux (aqui {plataforma}); "
                 f"en Windows el servidor escucha en 127.0.0.1:{self.port}, sin la opcion")
-        self._server = pyigtl.OpenIGTLinkServer(port=self.port, local_server=False, iface=iface)
+        try:
+            # pyigtl hace struct.pack('256s', iface[:15]): en Python 3 el nombre va en bytes.
+            self._server = pyigtl.OpenIGTLinkServer(port=self.port, local_server=False,
+                                                    iface=os.fsencode(iface))
+        except struct.error as e:
+            # La interfaz no dio IPv4 y pyigtl reintento con 'lo' como str: su struct.pack fallo.
+            causa = e.__context__ if e.__context__ is not None else e
+            raise IgtlInterfaceError(_interface_message(iface, f"el sistema no le da IPv4 ({causa})")) from e
         self.host = _bound_host(self._server, "")
         if not self.host or self.host.startswith(LOOPBACK_PREFIX):
             self.close()
-            raise IgtlInterfaceError(
-                f"[OpenIGTLink] la interfaz {iface!r} no existe o no tiene IPv4: pyigtl cayo a "
-                f"loopback ({self.host or 'sin direccion'}) y Slicer en otra maquina no podria "
-                f"conectarse; `ip -br addr` da los nombres validos. No se abre la camara.")
+            raise IgtlInterfaceError(_interface_message(
+                iface, f"pyigtl cayo a loopback ({self.host or 'sin direccion'})"))
         print(f"[OpenIGTLink] Transformadas en {self.host}:{self.port} (interfaz {iface})")
 
     def is_connected(self) -> bool:
