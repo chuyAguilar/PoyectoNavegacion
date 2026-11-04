@@ -63,12 +63,15 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B67 | Las herramientas de cámara (sonda, modos, calibración, «Verificar IDs») solo abren por Windows | Baja | — |
 | B77 | La sd z de gs1 por V4L2 es casi el doble que por MSMF (deriva lenta, no ruido) | Baja | — |
 | B78 | Un `ssh` cortado mata el tracker antes de guardar el `.npz` y el `--timing` | Media | — |
-| B79 | `igtl_rate listen` se para a los 5 s sin datos | Baja | — |
+| B79 | `igtl_rate listen` se para a los 5 s sin datos | Media | — |
 | B80 | El guardián no pasa `DISPLAY`: no hay corrida con ventana por `ssh nav-jetson` | Baja | — |
 | B82 | No hay verbo para el tamaño o el sha256 de un archivo de `~/nav-salidas/` | Baja | — |
 | B83 | `--timing=~/…` con `=` no expande `~` | Baja | — |
 | B84 | El tracker escribe «[Salida limpia]» antes de la traza de un error | Baja | — |
 | B68 | El 18944 abierto en la red sin autenticación (con `--igtl-iface`) | Media | — |
+| B85 | El cable directo Jetson ↔ PC quedó sin probar (P27) | Media | — |
+| B86 | El ahorro de energía de la Wi-Fi de la Jetson no persiste y hunde la LAN | Media | — |
+| B87 | El reloj de la Jetson deriva ~1.4 ms/min respecto al del PC | Baja | — |
 
 ## Abiertos
 
@@ -336,6 +339,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** con ~65 Hz la cadena llega y se mueve (criterio del spec), y los 65 Hz superan los fps con ventana (55–62). Subirlo no está en la meta; por P18 no hay fase 8b2.
 - **De dónde:** fase 8b, 2026-10-25 (`specs/003-*/resultados.md`; `Claude outputs/fases/003/fase-8b-en-vivo.md`).
 - **Qué haría falta:** si alguna vez hacen falta más de 65 Hz en Slicer: mirar en SlicerOpenIGTLink cómo y a qué ritmo importa los mensajes a la escena (hilo de importación, refresco del conector) y si hay un ajuste; repetir el banco (`python -m diagnostics.igtl_rate bench … --external`) tras cada cambio; explicar los 52.0 Hz con `--timer-1ms`. El remedio en el tracker (timer de 1 ms o hilo de envío propio) no sube nada mientras Slicer no cambie.
+- **Al día (2026-11-04, P-6 de la meta 007):** con el tracker en la Jetson, Slicer en el PC contó 84.0 Hz por LAN y 82.0 por Tailscale (intervalo p50 15 ms), y 65.7 con el tracker en el PC. Hipótesis, sin demostrar: Slicer cuenta dos actualizaciones dentro de un mismo tic de 15.6 ms de Windows. Para decidir si «el techo es de Slicer» (R2) sigue valiendo, habría que repetir el banco con el emisor en otra máquina.
 - **Prioridad:** baja.
 
 ### B55 · Con el Marker0 de 100 mm y el perfil en 80, todas las distancias salen a escala 0.81 sin aviso
@@ -429,6 +433,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** es la consecuencia aceptada de J2 (P10: la opción, y sin ella loopback). Cerrarlo pide una regla de cortafuegos en la Jetson (sudo y el autor) o quedarse solo con Tailscale, que ya cifra y autentica a los dos extremos: la fase 6 mide las tres redes y el autor decide con los números.
 - **De dónde:** plan de la meta 007 (`specs/007-jetson/plan.md`, «Lo que va al BACKLOG» y ADR J2), escrito al implementar la fase 6 (2026-11-03).
 - **Qué haría falta:** si el tracker se queda en la Jetson por LAN o cable, una regla que admita en el 18944/tcp solo la IP del PC (`ufw` está inactivo y sin configurar en la Jetson, B71), o usar solo `--igtl-iface tailscale0`. Se cruza con B71.
+- **Al día (2026-11-04, P-6):** por Tailscale (`direct`, por la misma Wi-Fi) Slicer recibió 82.0 Hz y la latencia añadida p95 fue 2.06 ms; por la LAN, 84.0 Hz y 7.62 ms. Tailscale no pierde nada frente a la LAN, así que quedarse solo con él no cuesta rendimiento; la decisión sigue siendo del autor.
 - **Prioridad:** media.
 
 ### B69 · La barrera del PC para los agentes es blanda
@@ -500,8 +505,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** si Marker0 no se ve al arrancar el tracker, `diagnostics.igtl_rate listen` se rinde a los 5 s sin mensajes y la corrida no mide nada aunque el tracker siga vivo (segunda corrida a de gs1 en el P-5).
 - **Por qué queda:** se arregla repitiendo la corrida con Marker0 a la vista.
 - **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
-- **Qué haría falta:** una opción `--idle` (segundos a esperar sin datos) o esperar al primer mensaje antes de contar.
-- **Prioridad:** baja.
+- **Qué haría falta:** una opción `--idle-s` en `igtl_rate listen` (segundos a esperar sin datos) o esperar al primer mensaje antes de contar.
+- **Prioridad:** media (2026-11-04; era baja). Ya no es solo un descuido de la corrida: en el P-6 (fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes) impidió medir la corrida d), el listener local en el PC. Abrir la cámara en el PC tardó ~8 s (la marca 6.11 s y los ajustes 1.41 s) y el listener se paró a los 5 s sin datos; el tracker corrió 60 s sin cliente, código 0. En la corrida del criterio 5 la misma marca tardó 1.26 s; del P-5 no hay medida de ese tiempo, y la variación (6.11 contra 1.26 s) no se ha explicado.
 
 ### B80 · El guardián no pasa `DISPLAY`: no hay corrida con ventana por `ssh nav-jetson`
 - **Qué:** la corrida b) del P-5 (con ventana) no se pudo medir: la Jetson no tiene escritorio abierto y el guardián no pasa `DISPLAY` a lo que lanza.
@@ -529,6 +534,27 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** el código de salida es el correcto, y `gui/status.py` (`_motivo_del_fallo`) ya ignora esa línea al buscar el motivo de un fallo.
 - **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
 - **Qué haría falta:** que `tracker.py` (línea 390) escriba «[Salida limpia]» solo si no hay una excepción en curso; toca `tracker.py` (principio 6: replay y suite) y las pruebas que esperan esa línea.
+- **Prioridad:** baja.
+
+### B85 · El cable directo Jetson ↔ PC quedó sin probar (P27)
+- **Qué:** el P-6 midió Slicer en el PC contra el tracker de la Jetson por la LAN y por Tailscale; la tercera red del plan, el cable Ethernet directo entre la Jetson y el PC, no se probó. No hay número de Hz ni de latencia para ella.
+- **Por qué queda:** el PC tiene un solo adaptador Ethernet físico y probar el cable lo deja sin LAN, Internet ni Tailscale mientras dura. Decisión del autor (P27, 2026-11-03, `specs/007-jetson/clarify.md`): LAN y Tailscale ahora, el cable más adelante.
+- **De dónde:** fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes, de la meta 007 (P-6, paso C, `Claude outputs/fases/007/p6.md`).
+- **Qué haría falta:** correr el paso C del P-6 con un módem usado como switch (así el PC conserva su red) o con un adaptador USB-Ethernet para el cable directo; el tracker con `--igtl-iface` de la interfaz del cable. Antes de llevar la Jetson a otro sitio o de compartirla (si no hay LAN conocida allí, el cable es la única red segura que queda).
+- **Prioridad:** media.
+
+### B86 · El ahorro de energía de la Wi-Fi de la Jetson no persiste y hunde la LAN
+- **Qué:** con el ahorro de energía de la Wi-Fi de la Jetson encendido (lo normal tras cada arranque), la radio hace pausas de hasta 400 ms y Slicer en el PC recibe ~20 Hz por la LAN aunque el tracker envíe 88. El P-6 se midió con `iw dev <interfaz> set power_save off` puesto a mano, que se pierde al reiniciar la Jetson. (Nagle era la otra causa del 20 Hz y está arreglada: `TCP_NODELAY`, `f34ed71`.)
+- **Por qué queda:** hacerlo persistente es una acción con `sudo` en la Jetson (del autor, no de los agentes). Tailscale `direct` va por la misma Wi-Fi y no lo evita; el cable sí (B85).
+- **De dónde:** P-6 de la fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes, de la meta 007 (2026-11-03 y 2026-11-04).
+- **Qué haría falta:** que el autor lo haga persistente (NetworkManager, `wifi.powersave = 2` en un archivo de `conf.d`), o que el tracker o el arranque de la Jetson avisen si la Wi-Fi tiene el ahorro encendido (un verbo de solo lectura en el guardián que lea `iw dev <interfaz> get power_save`).
+- **Prioridad:** media (sin esto la LAN pasa de 84 a 20 Hz tras cada reinicio, sin ningún aviso).
+
+### B87 · El reloj de la Jetson deriva ~1.4 ms/min respecto al del PC
+- **Qué:** la Jetson no está sincronizada: su reloj y el del PC derivan ~1.4 ms por minuto (20–30 ppm). Por Tailscale el desfase pasó de −143.282 a −129.548 ms en 606 s. La latencia del P-6 se corrigió interpolando el desfase medido antes y después de cada corrida (`diagnostics/clock_offset.py`), con ± 0.8 ms.
+- **Por qué queda:** con `clock_offset` antes y después basta para medir la latencia; sincronizar pide `sudo` en la Jetson.
+- **De dónde:** P-6 de la fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes, de la meta 007 (2026-11-04).
+- **Qué haría falta:** NTP o chrony en la Jetson (la latencia entonces se mediría sin el desfase antes y después), si la latencia tiene que medirse a menudo o si los sellos de tiempo de la Jetson se usan junto a los del PC (meta 006 · Grafo de factores óptico-inercial).
 - **Prioridad:** baja.
 
 ## Cerrados
