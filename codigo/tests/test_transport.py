@@ -60,7 +60,14 @@ class FakeServer:
         self.connected = True
         self.connect_after_calls = 0      # is_connected pasa a True tras N consultas
         self.calls = 0
+        self.started = 0                  # TCP_NODELAY: se crea con start_now=False y se arranca despues
         FakeServer.instances.append(self)
+
+    def verify_request(self, request, client_address) -> bool:   # el de socketserver.TCPServer
+        return True
+
+    def start(self) -> None:
+        self.started += 1
 
     def send_message(self, message, wait=True) -> bool:
         self.messages.append((message, wait))
@@ -91,6 +98,7 @@ def test_sender_crea_el_servidor_en_el_puerto_y_manda_transforms(fake_server, ca
     assert len(fake_server.instances) == 1 and fake_server.instances[0].port == 18944
     srv = fake_server.instances[0]
     assert srv.local_server is True and srv.iface is None          # sin iface: loopback, como siempre
+    assert srv.kw == {"start_now": False} and srv.started == 1     # TCP_NODELAY antes de arrancar
     assert s.host == "127.0.0.1" and s.iface is None
     assert "[OpenIGTLink] Transformadas en 127.0.0.1:18944" in capsys.readouterr().out
     M = np.eye(4)
@@ -171,6 +179,7 @@ def test_con_iface_en_linux_escucha_en_esa_interfaz_y_lo_dice(fake_server, capsy
     s = igtl.IgtlSender(18944, iface="ifaz0", plataforma="linux")
     srv, = fake_server.instances
     assert srv.port == 18944 and srv.local_server is False and srv.iface == b"ifaz0"   # bytes a pyigtl
+    assert srv.kw == {"start_now": False} and srv.started == 1
     assert s.host == DOC_IP and s.iface == "ifaz0"
     assert f"[OpenIGTLink] Transformadas en {DOC_IP}:18944 (interfaz ifaz0)" in capsys.readouterr().out
     assert s.send("Marker0ToTracker", np.eye(4)) is True           # el envio es el mismo
@@ -315,3 +324,137 @@ def test_pyigtl_real_con_una_interfaz_con_ipv4_se_liga_a_su_ip(servidor_real, ca
     assert f"Transformadas en {ip}:18944 (interfaz {nombre})" in capsys.readouterr().out
     s.close()
     assert srv.stopped == 1
+
+
+# ----------------------------------------------------------------------------
+# Nagle: TCP_NODELAY (meta 007, fase 6, P-6 por la LAN del 2026-11-03: Slicer a 20 Hz,
+# en rafagas de ~4 mensajes, con el bucle a 88 fps).
+# ----------------------------------------------------------------------------
+
+class SocketFalso:
+    def __init__(self, error: OSError | None = None) -> None:
+        self.opciones: list[tuple[int, int, int]] = []
+        self.error = error
+
+    def setsockopt(self, level, optname, value) -> None:
+        if self.error is not None:
+            raise self.error
+        self.opciones.append((level, optname, value))
+
+
+def test_activar_nodelay_pone_la_opcion_y_llama_al_verify_request_de_antes(capsys) -> None:
+    llamadas = []
+
+    class Srv:
+        def verify_request(self, request, client_address) -> bool:
+            llamadas.append((request, client_address))
+            return True
+
+    srv, sock = Srv(), SocketFalso()
+    igtl._activar_nodelay(srv)
+    assert srv.verify_request(sock, ("198.51.100.7", 5000)) is True
+    assert sock.opciones == [(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)]
+    assert llamadas == [(sock, ("198.51.100.7", 5000))]
+    assert "Cliente aceptado, con TCP_NODELAY" in capsys.readouterr().out
+
+
+def test_activar_nodelay_si_el_sistema_no_deja_lo_dice_y_la_conexion_sigue(capsys) -> None:
+    class Srv:
+        def verify_request(self, request, client_address) -> bool:
+            return True
+
+    srv = Srv()
+    igtl._activar_nodelay(srv)
+    assert srv.verify_request(SocketFalso(OSError(22, "Invalid argument")), ("x", 1)) is True
+    assert "AVISO: no se pudo activar TCP_NODELAY" in capsys.readouterr().out
+
+
+def test_activar_nodelay_sin_verify_request_lo_dice(capsys) -> None:
+    igtl._activar_nodelay(object())
+    assert "TCP_NODELAY sin activar" in capsys.readouterr().out
+
+
+@pytest.fixture
+def servidor_pyigtl_efimero(monkeypatch) -> type:
+    """El `OpenIGTLinkServer` real de pyigtl, entero (bind, listen y sus hilos), devolviendo los
+    manejadores de senal que instala. Con `IgtlSender(0)` escucha en 127.0.0.1 en un puerto
+    efimero: no toma el 18944 (B34)."""
+    import signal
+
+    from pyigtl import comm
+
+    class ServidorReal(comm.OpenIGTLinkServer):
+        instances: list = []
+
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+            for signum, previo in self._previous_signal_handlers.items():
+                if previo is not None:
+                    signal.signal(signum, previo)
+            ServidorReal.instances.append(self)
+
+    ServidorReal.instances = []
+    monkeypatch.setattr(igtl.pyigtl, "OpenIGTLinkServer", ServidorReal)
+    return ServidorReal
+
+
+def _nodelay_del_socket_aceptado(sender: igtl.IgtlSender, srv) -> tuple[int, pyigtl.MessageBase]:
+    """Conecta un cliente al servidor real, lee `TCP_NODELAY` del socket que acepto el servidor
+    y devuelve tambien el primer mensaje que llega al cliente tras un `send`."""
+    aceptados: list[int] = []
+    previo = srv.verify_request                     # el de `IgtlSender` (o el de TCPServer)
+
+    def espia(request, client_address) -> bool:
+        ok = previo(request, client_address)
+        aceptados.append(request.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
+        return ok
+
+    srv.verify_request = espia
+    port = srv.server_address[1]
+    with socket.create_connection(("127.0.0.1", port), timeout=5.0) as cliente:
+        assert sender.wait_for_client(5.0, poll_s=0.01), "el servidor no acepto al cliente en 5 s"
+        assert aceptados, "verify_request no se llamo"
+        M = np.eye(4)
+        M[:3, 3] = [1.5, -2.5, 450.25]
+        assert sender.send("Marker0ToTracker", M) is True
+        datos = b""
+        cabecera = pyigtl.MessageBase.IGTL_HEADER_SIZE
+        while len(datos) < cabecera:
+            datos += cliente.recv(cabecera - len(datos))
+        campos = pyigtl.MessageBase.parse_header(datos[:cabecera])
+        cuerpo = b""
+        while len(cuerpo) < campos["body_size"]:
+            cuerpo += cliente.recv(campos["body_size"] - len(cuerpo))
+        msg = pyigtl.MessageBase.create_message(campos["message_type"])
+        msg.unpack(campos, cuerpo)
+    return aceptados[0], msg
+
+
+def test_pyigtl_real_acepta_al_cliente_con_tcp_nodelay(servidor_pyigtl_efimero, capsys) -> None:
+    """El arreglo: el socket del lado del servidor tiene TCP_NODELAY; el mensaje es el mismo."""
+    s = igtl.IgtlSender(0)
+    srv, = servidor_pyigtl_efimero.instances
+    try:
+        assert srv.server_address[0] == "127.0.0.1" and srv.server_address[1] > 0
+        nodelay, msg = _nodelay_del_socket_aceptado(s, srv)
+    finally:
+        s.close()
+    assert nodelay != 0
+    assert msg.message_type == "TRANSFORM" and msg.device_name == "Marker0ToTracker"
+    M = np.eye(4)
+    M[:3, 3] = [1.5, -2.5, 450.25]
+    assert np.array_equal(np.asarray(msg.matrix, dtype=np.float32), M.astype(np.float32))
+    out = capsys.readouterr().out
+    assert "Cliente aceptado, con TCP_NODELAY" in out and "cerrado (1 envios)" in out
+
+
+def test_pyigtl_real_sin_el_arreglo_acepta_con_nagle(servidor_pyigtl_efimero, monkeypatch) -> None:
+    """La prueba de arriba distingue: sin `_activar_nodelay` el socket aceptado queda con Nagle (0)."""
+    monkeypatch.setattr(igtl, "_activar_nodelay", lambda server: None)
+    s = igtl.IgtlSender(0)
+    srv, = servidor_pyigtl_efimero.instances
+    try:
+        nodelay, msg = _nodelay_del_socket_aceptado(s, srv)
+    finally:
+        s.close()
+    assert nodelay == 0 and msg.device_name == "Marker0ToTracker"

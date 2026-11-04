@@ -42,6 +42,22 @@ pyigtl falla, su `except` reintenta con `'lo'`, que es `str`, y vuelve a lanzar
 `IgtlInterfaceError`, con la causa del sistema en el mensaje. Si un pyigtl futuro
 arregla su caida a `lo`, la comprobacion de loopback de abajo sigue cubriendolo.
 
+Nagle: `TCP_NODELAY` (meta 007, fase 6, P-6 por la LAN del 2026-11-03): pyigtl 0.3.1
+envia cada mensaje con `socket.sendall` y no toca las opciones del socket, asi que
+Nagle sigue activo. En loopback no se nota (1.01 mensajes por `recv`), pero por la
+red el emisor (Linux) retiene cada mensaje pequeno hasta el ACK, que el receptor
+(Windows) retrasa ~40-50 ms: Slicer recibia rafagas de ~4 mensajes a 20 Hz con el
+bucle a 88 fps. `_activar_nodelay(server)` pone `TCP_NODELAY` en el socket de cada
+cliente aceptado, en las dos plataformas (el codigo no se bifurca): sustituye en la
+instancia `verify_request(request, client_address)`, el gancho documentado de
+`socketserver.BaseServer` (Python 3.11, Context7 `/python/cpython`) que recibe el
+socket recien aceptado antes de `process_request`; `OpenIGTLinkServer` es un
+`socketserver.TCPServer`. No depende de `TCPRequestHandler` ni de otros internos de
+pyigtl. Para que ningun cliente se acepte antes de instalarlo (Slicer reintenta y
+puede estar esperando), el servidor se crea con `start_now=False` y se arranca con
+`start()` despues (las dos, API de pyigtl). Los bytes, el orden y los nombres de los
+mensajes no cambian: solo se envian sin esperar al ACK (principio 6).
+
 pyigtl 0.3.1 (leido del venv, 2026-10-24 y 2026-11-03; Context7 `/lassoan/pyigtl`
 documenta `send_message(message, wait=True)`, que con `wait=False` vuelve tras
 encolar, y el constructor `OpenIGTLinkServer(port=None, local_server=True,
@@ -57,6 +73,7 @@ con `getsockname()` (Python 3.11, Context7 `/python/cpython`).
 from __future__ import annotations
 
 import os
+import socket
 import struct
 import sys
 import threading
@@ -91,6 +108,38 @@ def _bound_host(server, fallback: str) -> str:
     return str(getattr(server, "host", fallback))
 
 
+def _activar_nodelay(server) -> None:
+    """Pone `TCP_NODELAY` en el socket de cada cliente que `server` acepte (Nagle fuera).
+
+    Sustituye en la instancia `verify_request`, que `socketserver` llama con el socket recien
+    aceptado; despues llama al de antes (el de `TCPServer` devuelve True). Si el sistema no deja
+    poner la opcion, lo dice y la conexion sigue (con Nagle). Se llama antes de `start()`."""
+    previo = getattr(server, "verify_request", None)
+    if previo is None:
+        print("[OpenIGTLink] AVISO: el servidor de pyigtl no tiene `verify_request` (ya no es un "
+              "socketserver): TCP_NODELAY sin activar; por la red Slicer recibira en rafagas")
+        return
+
+    def verify_request(request, client_address) -> bool:
+        try:
+            request.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            print("[OpenIGTLink] Cliente aceptado, con TCP_NODELAY")
+        except OSError as e:
+            print(f"[OpenIGTLink] AVISO: no se pudo activar TCP_NODELAY ({e}); por la red "
+                  f"Slicer recibira en rafagas")
+        return previo(request, client_address)
+
+    server.verify_request = verify_request
+
+
+def _crear_servidor(**kwargs):
+    """`pyigtl.OpenIGTLinkServer(**kwargs)` sin arrancar, con `TCP_NODELAY` instalado, y arrancado."""
+    server = pyigtl.OpenIGTLinkServer(start_now=False, **kwargs)
+    _activar_nodelay(server)
+    server.start()
+    return server
+
+
 class IgtlSender:
     """Un servidor OpenIGTLink en `port` que envia transforms 4x4 por nombre.
 
@@ -104,7 +153,7 @@ class IgtlSender:
         self.dropped = 0
         self._server = None
         if iface is None:
-            self._server = pyigtl.OpenIGTLinkServer(port=self.port)
+            self._server = _crear_servidor(port=self.port)
             self.host = _bound_host(self._server, "127.0.0.1")
             print(f"[OpenIGTLink] Transformadas en {self.host}:{self.port}")
             return
@@ -114,8 +163,8 @@ class IgtlSender:
                 f"en Windows el servidor escucha en 127.0.0.1:{self.port}, sin la opcion")
         try:
             # pyigtl hace struct.pack('256s', iface[:15]): en Python 3 el nombre va en bytes.
-            self._server = pyigtl.OpenIGTLinkServer(port=self.port, local_server=False,
-                                                    iface=os.fsencode(iface))
+            self._server = _crear_servidor(port=self.port, local_server=False,
+                                           iface=os.fsencode(iface))
         except struct.error as e:
             # La interfaz no dio IPv4 y pyigtl reintento con 'lo' como str: su struct.pack fallo.
             causa = e.__context__ if e.__context__ is not None else e
