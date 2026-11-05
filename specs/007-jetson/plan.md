@@ -2,6 +2,34 @@
 
 Lo escribe el agente de planificación con `/planear`, sin código. Lo que el autor autoriza es este archivo.
 
+## Cambios de esta versión (2026-11-04, con P28 y P29: la fase 7b)
+
+- Entra la **fase 7b · Las dos cámaras a la vez en Windows**, entre la 7 y la 8, sin renumerar las demás (P29: «fase 7b: arreglar y medir»). Diagnostica primero la causa en vivo (parte A), arregla la capa de ajustes de Windows (parte B) y mide el P-7w largo (parte C).
+- **La fase 7 cierra con la Jetson sola** (condición A, P28) y en su propio commit, antes de la 7b; el P-7w pasa a la 7b (propuesta de P31). La fase 7 no cambia de entrega.
+- **B79** se arregla en la 7b con `igtl_rate listen --idle-s`; **B88** no hace falta y queda en el BACKLOG tal cual. **B89** no entra (no hay razón para mezclarla: es de la calibración, no de abrir cámaras).
+- Archivos nuevos: `camera/dshow_props.py` y `tests/test_dshow_props.py`. Modificados: `camera/controls.py`, `diagnostics/probe_camera.py`, `diagnostics/igtl_rate.py`, `linux/perfil_temporal.py`, `tests/conftest.py` y sus pruebas. `camera/backend.py`, `tracker.py`, `vision/` y `transport/` no cambian.
+- ADR propuesto: J7. Preguntas nuevas: P30 (qué se hace si la parte A descarta la vía elegida), P31 (dónde cierra la fase 7) y P32 (un puerto trasero solo para el diagnóstico).
+
+### Lo leído para esta versión
+
+- HEAD: `b211e83 Añade tegrastats_log y el protocolo de las dos cámaras, y anota B89 (meta 007, fase 7, sin el P-7)`. Árbol con `specs/007-jetson/clarify.md` modificado (P28 y P29) y un PDF sin seguir en `documentos/tecnicos/`.
+- El encargo (`Claude outputs/fases/007/replan-7b-encargo.md`), `clarify.md` (P28, P29), `tasks.md`, `Claude outputs/fases/007/fase-7.md`, el protocolo `p7w.md`, el script `p7w/dos_camaras.ps1` (cabecera y lanzamiento) y las salidas `p7w/orden21_*`, `p7w/orden21b_*` y `p7w/corta_*` de los trackers.
+- `docs/BACKLOG.md` B79, B88 y B89 e índice; `docs/DECISIONS.md`, índice (el último es ADR-034); `docs/CONTEXT.md` §4 (trampas 3 y 18); `docs/PRUEBAS.md`, índice (P01–P05).
+- Código: `camera/controls.py` (`CapaWindowsDShow`: `indice`, `_abrir_cap`, `leer`, `aplicar`; `capa_para_plataforma`), `camera/backend.py` (`open()`: `_resolver_source`, `_comprobar_marca`, `_aplicar_controles`, y después el vídeo por MSMF), `camera/uvc.py` (`listar_camaras_dshow`, `_enumerar_dshow`, `_propiedades_moniker`: COM por ctypes sobre el moniker, con `BindToStorage`), `diagnostics/probe_camera.py` (`leer_controles`, `fijar`, `tras_msmf` y sus opciones), `diagnostics/igtl_rate.py` (`listen`, `NO_DATA_S = 5.0`, el CLI), `transport/igtl.py` (firmas), `linux/perfil_temporal.py` (`CLAVES`), `tests/conftest.py` (lo que niega) y quién usa `CapaWindowsDShow` (grep: `controls.py`, `probe_camera.py`, `test_ajustes_camara.py`, `test_sondear_camara.py`, `test_v4l2.py`).
+
+### Hallazgos de esta versión (sin medir: son lo que la parte A mide)
+
+15. **Falla la apertura corta por DSHOW, no la enumeración.** En `orden21b`, gs1 se resolvió bien (`-> indice MSMF 0`, y la capa pidió el índice DSHOW 0 por su puerto) y lo que falló fue `cv2.VideoCapture(0, CAP_DSHOW).isOpened()`, con el aviso de OpenCV `can't be used to capture by index`, que solo dice que el backend no abrió. La marca no llegó a leerse.
+16. **La apertura corta de DSHOW abre un flujo de vídeo.** `CapaWindowsDShow` no pone FOURCC, tamaño ni fps, así que OpenCV arranca el grafo con el formato por defecto de la cámara, que puede ser sin comprimir. Con la otra cámara transmitiendo MJPG 1280x960 a ~88 fps por el mismo concentrador (`…USB(11)`), la reserva de ancho de banda isócrono de ese flujo puede no caber. Es la hipótesis principal (H1); las otras son que DSHOW no abra un dispositivo mientras otro proceso usa MSMF (H2) o algo del orden de los índices con una cámara ocupada (H3). Solas, las dos abren bien.
+17. **La otra cámara bajó mientras tanto.** En `orden21b`, gs2 (la que sí abrió) dio 58 → 44 → 40 → 37 → 39 fps de cámara en 30 s, cuando sola da 88.7. No se sabe si es por el intento de gs1, por la luz o por la carga del PC; la parte A lo separa.
+18. **Leer y escribir los controles no necesita vídeo.** DirectShow expone los controles de una cámara UVC en el filtro de captura, por `IAMVideoProcAmp` (brillo, contraste, saturación, nitidez, gamma, balance de blancos, compensación de contraluz, ganancia) e `IAMCameraControl` (exposición y foco), con `Get`/`Set` y una bandera auto/manual. El filtro se obtiene del mismo moniker que ya recorre `camera/uvc.py`, con `BindToObject` en vez de `BindToStorage`, sin grafo ni flujo: no reserva ancho de banda. Es la vía que propone la parte B (J7), si la parte A confirma que funciona con la otra cámara transmitiendo.
+19. **B79 sigue mordiendo en el PC.** La marca tarda 1.3–2.7 s y abrir la cámara otros ~1–2 s (hasta ~8 s en el P-6); el listener se rinde a los 5 s, y el reintento del P-7 depende de B88 (el servidor no acepta el cliente nuevo hasta que falla un envío). Con el listener esperando lo suficiente en la primera conexión, B88 no interviene.
+
+### Context7 (2026-11-04; solo API, sin rutas ni datos)
+
+- **OpenCV** (`/opencv/opencv`, 5.x; instalado 4.11.0.86): `VideoCapture::open(index, apiPreference, params)` recorre los backends de captura por índice y, con `CAP_DSHOW`, devuelve `false` si `createCapture` no queda abierto, que es lo que produce el aviso de `orden21b`. En `cap_dshow.cpp`, poner `CAP_PROP_FOURCC` o `CAP_PROP_FPS` para el dispositivo y vuelve a montarlo (`stopDevice` + `setupDevice`): en DSHOW el formato se elige después de abrir, así que la apertura corta de hoy arranca con el formato por defecto. Que el constructor con `params` evite eso en DSHOW no está en lo consultado: por eso el plan no lo usa.
+- **No confirmado por Context7:** qué interfaz de DirectShow usa OpenCV para cada `CAP_PROP_*` por DSHOW (en particular `CAP_PROP_AUTO_WB` y las banderas), ni la documentación de `IAMVideoProcAmp`/`IAMCameraControl` (Context7 no tiene la de DirectShow de Microsoft; solo enlaces de terceros, Vortice y windows-rs). Los IID, los índices de la vtable y los valores de las enumeraciones salen de `strmif.h` del SDK de Windows, y la fase los ata con la prueba de equivalencia en vivo (parte B, criterio 2): la capa nueva tiene que leer lo mismo que `cv2` por DSHOW en los 10 controles de cada cámara.
+
 ## Cambios de esta versión (2026-11-03, con P23: B77 antes de la fase 6)
 
 - Entra la **fase 5b · El ruido de gs1 por V4L2 (B77)**, entre la 5 y la 6, sin renumerar las demás. Diagnostica primero, sin cámara, sobre las tres grabaciones del P-5, y después en una sesión en vivo con el autor (P-5b). Corrige solo si sale una causa clara y cae dentro de lo que dice P24.
@@ -268,6 +296,19 @@ En la fase 5b, además:
 - `codigo/linux/README.md`: § «El ruido en reposo (B77)», con el protocolo P-5b y cómo se traen los PNG.
 - Solo si sale una causa que P24 deja corregir en la fase: `camera/v4l2.py` (los controles fijos de Linux, J6), sus pruebas en `test_v4l2.py` y, si hace falta, el caso nuevo en `test_camera_backend.py` de que en Windows `open()` sigue haciendo las mismas llamadas. Nada más de `camera/`, ni `grabber.py`, `tracker.py`, `vision/` o `transport/`.
 
+En la fase 7b:
+- Crear `codigo/camera/dshow_props.py`: los controles de una cámara por COM sobre el filtro de captura de DirectShow (`IAMVideoProcAmp`, `IAMCameraControl`), por ctypes, sin dependencia nueva y sin abrir vídeo. La parte pura (la tabla de controles, las unidades, qué se escribe) se prueba sin cámara; la parte COM es fina y se comprueba en vivo.
+- Crear `codigo/tests/test_dshow_props.py`: la tabla, las conversiones, `CapaWindowsCOM` con un dispositivo falso (lee, escribe solo lo que difiere, relee, `AjustesNoAplicados`, la marca sin escribir nada) y que un puerto con 0 o más de 1 cámara para.
+- Modificar `codigo/camera/controls.py`: `capa_para_plataforma("win32")` devuelve `CapaWindowsCOM` (parte B, J7). `CapaWindowsDShow` se queda igual, para la sonda y la comparación. El docstring lo dice.
+- Modificar `codigo/diagnostics/probe_camera.py`: `--capa cv2|com` (obligatoria con `--leer`, `--fijar` y `--tras-msmf`; principio 7) y `--comparar-capas` (lee por las dos y dice cada diferencia). Es lo que usa la parte A.
+- Modificar `codigo/diagnostics/igtl_rate.py`: `--idle-s` en `listen` (B79). Sin la opción, los 5 s de hoy: el banco y las pruebas no cambian.
+- Modificar `codigo/linux/perfil_temporal.py`: `camera.usb_port_windows` en `CLAVES`, para la marca cruzada sin mover cables (criterio 3 de la parte B). El nombre del módulo no cambia aunque sirva también en Windows.
+- Modificar `codigo/tests/conftest.py`: niega también `camera.dshow_props.abrir_filtro` (la única función que toca COM de verdad).
+- Modificar las pruebas: `test_ajustes_camara.py` (`capa_para_plataforma("win32")` da `CapaWindowsCOM`), `test_v4l2.py` (la línea 494, lo mismo), `test_sondear_camara.py` (`--capa` y `--comparar-capas`), `test_igtl_rate.py` (`--idle-s`) y `test_perfil_temporal.py` (la clave nueva).
+- Fuera de git: `Claude outputs/fases/007/p7b.md` (el protocolo de las partes A y C) y `p7w.md` y `p7w/dos_camaras.ps1` al día: el listener con `--idle-s 60` y sin el bucle de reintento.
+- `docs/ARCHITECTURE.md` (§3.1 y el árbol), `docs/CONTEXT.md` §4 (la trampa nueva: la apertura corta por DSHOW no abre con la otra cámara transmitiendo por el mismo concentrador, si la parte A lo confirma) y §6, `codigo/readme.md` (la sonda) y `docs/BACKLOG.md` (B79 cerrada).
+- No cambian: `camera/backend.py`, `camera/grabber.py`, `camera/uvc.py` (se reusan sus funciones), `camera/v4l2.py`, `tracker.py`, `vision/`, `transport/`, los perfiles del repo y los scripts de Slicer.
+
 Lo que aplica el autor o la dirección, no `desarrollo`: `.claude/settings.json`, `~/.ssh/config`, los agentes `desarrollo.md` y `pruebas.md`, `CLAUDE.md` §4 y §5 (el texto, en el reporte de la fase 9) y todo lo de la Jetson que pide sudo. Nada se mueve. `slicer/receive_marker0.py` no cambia: `run(host=…)` ya existe.
 
 ## Funciones y clases
@@ -317,6 +358,24 @@ Lo que aplica el autor o la dirección, no `desarrollo`: `.claude/settings.json`
 - `--igtl-iface` en el tracker.
 - `estimate_offset(samples) -> dict`.
 - `summarize(arrivals, gap_ms, clock_offset_ms=0.0)`.
+
+`camera/dshow_props.py` (nuevo, fase 7b). Solo ctypes y `camera.uvc`; no importa cv2:
+- `IID_IBASE_FILTER`, `IID_IAM_VIDEO_PROC_AMP`, `IID_IAM_CAMERA_CONTROL` y los índices de la vtable (`GetRange`, `Set`, `Get`), de `strmif.h`.
+- `CONTROLES_COM: dict[str, tuple[str, int]]`: nombre del perfil → (`"procamp"` o `"camara"`, la propiedad). Los 10 de `controls.CONTROLES_CV2`: `exposure_ms` → (camara, Exposure), `focus` → (camara, Focus), `gain`, `brightness`, `contrast`, `saturation`, `sharpness`, `gamma`, `backlight` → procamp, y `auto_white_balance` → (procamp, WhiteBalance), que se lee y escribe por la bandera auto/manual.
+- `@dataclass class Lectura: valor: int; auto: bool`.
+- `a_perfil(nombre: str, lectura: Lectura) -> float | bool`: en las unidades del perfil, las mismas que `controls.de_nativos_dshow` (exposición en ms desde log2 de segundos; `auto_white_balance` desde la bandera).
+- `a_nativo(nombre: str, valor) -> tuple[int, bool]`: (valor, auto) para `Set`, con `controls.exposicion_ms_a_dshow`; todo lo demás manual.
+- `class Dispositivo(Protocol)`: `get(grupo: str, propiedad: int) -> Lectura`, `set(grupo: str, propiedad: int, valor: int, auto: bool) -> bool`, `close() -> None`.
+- `abrir_filtro(puerto: str, listar=None) -> Dispositivo`: el moniker de la única cámara DSHOW de ese puerto (`uvc.listar_camaras_dshow`, el mismo `resolver_indice`), `BindToObject(IBaseFilter)` y `QueryInterface` de las dos interfaces. ValueError si el puerto tiene 0 o más de 1; OSError si COM falla, con el HRESULT. No construye grafo ni abre vídeo.
+- `class CapaWindowsCOM` (cumple `controls.CapaAjustes`): `__init__(self, abrir: Callable[[str], Dispositivo] | None = None)`; `leer(self, puerto: str, nombres: list[str]) -> dict[str, float]`; `aplicar(self, puerto: str, controls: dict, *, forzar: bool = False) -> dict`. Mismo contrato que `CapaWindowsDShow`: escribe solo lo que difiere, relee siempre, lanza `controls.AjustesNoAplicados` y devuelve las mismas claves (`indice`, `antes`, `leidos`, `antes_nativos`, `leidos_nativos`, `escritos`, `set_false`, `diferencias`, `forzado`, `segundos`), para que `backend.py` no cambie.
+
+`camera/controls.py`: `capa_para_plataforma(plataforma)` igual de firma; en `win32` devuelve `dshow_props.CapaWindowsCOM()`.
+
+`diagnostics/probe_camera.py`: `leer_controles(puerto, capa=None)` y `fijar(puerto, controls, capa=None, forzar=False)` sin cambio de firma; nuevo `capa_por_nombre(nombre: str) -> CapaAjustes` (`"cv2"` o `"com"`) y `comparar_capas(puerto: str) -> dict` (lee los 10 por las dos y devuelve `{"cv2", "com", "diferencias"}`). CLI: `--capa {cv2,com}` y `--comparar-capas`.
+
+`diagnostics/igtl_rate.py`: `listen(..., idle_s: float = NO_DATA_S, ...)`, que sustituye a `NO_DATA_S` dentro del bucle y en el mensaje; `--idle-s` (positivo) en `listen`. `bench` no la pasa: sigue en 5 s.
+
+`linux/perfil_temporal.py`: `CLAVES` gana `camera.usb_port_windows` (str, con la forma `PCIROOT(…)#…`, la que da `uvc.datos_puerto`).
 
 `gui/recipes.py` (cambia respecto de la versión anterior: pasa por el guardián):
 - `SSH_OPCIONES: list[str]`: `-T`, `-o BatchMode=yes`, `-o IdentitiesOnly=yes`, `-o ConnectTimeout=10`, `-o ServerAliveInterval=5` y `-o ServerAliveCountMax=3`.
@@ -545,6 +604,39 @@ Pesada porque puede tocar `camera/` (la cadena del principio 6). Si cierra solo 
 
   Al parar, las dos cámaras y los dos puertos quedan libres.
 - **Cadena:** no cambia.
+- **Al día (2026-11-04, P28 y P29):** la fase cierra con la condición A sola (no hay B: el proyecto no usa Ollama). El P-7w del PC no es de esta fase: pasa a la 7b. Si P31 queda en (a), `desarrollo` la cierra con `/cerrar-fase` ya, con los números del P-7 en la Jetson (cámara 86.2 / 86.2 fps, bucle 63.2 / 63.2, CPU 95.5 % de media, GPU 0 %, 69.9 °C máx.), y el autor hace su commit antes de empezar la 7b.
+
+### Fase 7b · Las dos cámaras a la vez en Windows (pesada)
+
+Añadida el 2026-11-04 por P29. Pesada (ADR-022): toca cómo se comprueba la marca y se aplican los ajustes de toda cámara en Windows, que es la cadena del principio 6. En dos tiempos: `desarrollo` implementa la parte A y la B sin cámara; las sesiones en vivo son del autor. Tres partes, en orden; cada una cierra con su commit.
+
+**Parte A · El diagnóstico (en vivo, ~15 min).**
+- **Entrega, sin cámara:** `camera/dshow_props.py` solo de lectura (`abrir_filtro`, `CapaWindowsCOM.leer`), `probe_camera --capa` y `--comparar-capas`, `igtl_rate listen --idle-s`, sus pruebas, y el protocolo `Claude outputs/fases/007/p7b.md` (parte A). Hasta la parte B, el tracker sigue con `CapaWindowsDShow`: nada de la cadena cambia en esta parte.
+- **Protocolo P-7b-A** (montaje del P-7w: gs1 en `…USB(3)`, gs2 en `…USB(4)`, caja de luz al máximo; todo con tope y `--salida` en `Claude outputs/fases/007/p7b/`). Para tener una cámara transmitiendo se usa el tracker de siempre, sin ventana, con su listener (`--idle-s 60`), y se anota su fps de cámara antes, durante y después de cada paso (hallazgo 17):
+  - A0. Cada cámara sola: `probe_camera --puerto <p> --comparar-capas`. Lo esperado: 0 diferencias en los 10 controles de cada una (si hay alguna, la vía COM no está lista y se para aquí).
+  - A1. gs2 transmitiendo; `probe_camera --puerto <gs1> --leer --capa cv2` con `OPENCV_VIDEOIO_DEBUG=1` en esa consola. Lo esperado: reproduce el fallo, y el registro de OpenCV dice en qué paso (el formato, el grafo o el `Run`).
+  - A2. gs2 transmitiendo; `probe_camera --puerto <gs1> --leer --capa com`. Si lee la marca (focus 500) y los 10 controles, la vía de J7 vale. Es la medida que decide.
+  - A3. gs2 transmitiendo a poco ancho de banda (`probe_camera --source <gs2> --backend MSMF --modos 640x480:MJPG --fps 30 --segundos 60 --controles no`) y, mientras, A1 otra vez. Si así abre, la causa es el ancho de banda (H1).
+  - A4. Lo mismo con los papeles cambiados (gs1 transmitiendo, gs2 leída), A1 y A2.
+  - A5, solo si P32 queda en (a): gs2 en un puerto trasero (otro controlador), sin tocar los perfiles, y A1 otra vez. Al acabar, el cable vuelve a su puerto.
+- **Criterio de la parte A:** una tabla con A0–A4 (y A5 si se hace): abre o no, el mensaje, el fps de la cámara que transmite en cada paso, y una lectura de la causa (H1, H2, H3 u otra) con lo que la apoya. Y una decisión: si A0 da 0 diferencias y A2 lee, la parte B sigue con J7; si no, se aplica lo que diga P30 sin preguntar otra vez.
+
+**Parte B · El arreglo (sin cámara y luego en vivo, ~15 min).**
+- **Entrega:** `CapaWindowsCOM.aplicar`, `capa_para_plataforma("win32")` → `CapaWindowsCOM`, `perfil_temporal` con `camera.usb_port_windows`, las pruebas al día y `p7w.md` y `dos_camaras.ps1` al día (`--idle-s 60`, sin bucle). Linux no cambia: `capa_para_plataforma("linux")` sigue dando `CapaLinuxV4L2` y `camera/v4l2.py` no se toca.
+- **Criterio, sin cámara:** la suite del PC en verde con su tiempo; el replay de gs1 y gs2 a 0.0 mm / 0.0° / 0.0 px y `explain_pose` sin cambio; `gui.panel --selftest` bien; en la Jetson, `suite wip` con 0 fallos.
+- **Criterio, en vivo (P-7b-B):**
+  1. Cada cámara sola, `probe_camera --comparar-capas`: 0 diferencias en 10 de 10, después del cambio.
+  2. La escritura por COM: con una cámara sola, `probe_camera --puerto <p> --capa com --fijar gain=12` y relectura por `--capa cv2`: 12; y de vuelta a 11, también leído por las dos.
+  3. La marca cruzada: un perfil temporal de gs1 con el puerto de gs2 (`perfil_temporal --poner camera.usb_port_windows=…`); el tracker para con «declarado 500, leido 332», código 1, sin escribir ajustes y sin abrir el vídeo.
+  4. Una cámara sola en el PC con Slicer: `Marca comprobada (focus=500)`, `Ajustes aplicados … (escritos: ninguno)` con los mismos valores que en `corta_gs1_tracker.txt`, y 64–68 Hz en Slicer en 30 s, como en el P-6 (65.7).
+  5. Las dos a la vez, en los dos órdenes (gs1 → gs2 y gs2 → gs1), 30 s cada uno con `dos_camaras.ps1`: las dos con la marca comprobada, los ajustes aplicados y fps de cámara ≥ 45 (P13), código 0, y todo libre al parar.
+- **Cadena (principio 6):** cambia solo cómo se leen y escriben los controles antes del vídeo; el índice, el vídeo por MSMF, el modo, la calibración, la detección, el filtro y lo que se envía no cambian. Se verifica con la suite, el replay, el selftest, los criterios 1–4 y la `suite wip` de la Jetson.
+
+**Parte C · El P-7w largo (en vivo, ~20 min).**
+- **Entrega:** el P-7w de `p7w.md` tal como está (reposo de 60 s, gs1 y gs2 450 s, `typeperf` y `nvidia-smi` 390 s, resúmenes en 60–360 s), con los listeners de `--idle-s 60`; y la tabla Jetson frente a PC en el reporte.
+- **Criterio:** por cámara, el fps de cámara y de bucle frente a ≥ 45 (P13); la CPU media y máxima por hilo y total, la RAM p50 y mínima disponible, la GPU (uso, decodificador, memoria) y el reposo de antes restado o al lado; los mensajes por segundo de cada listener; todo libre al parar. Junto a la columna de la Jetson (P-7, condición A). Con eso el autor decide dónde corre el tracker (P4, P28).
+
+Si la parte A acaba en P30 (b) o (c), la parte B cambia de entrega según esa respuesta y la parte C no cambia.
 
 ### Fase 8 · El panel del PC lanza y para el tracker de la Jetson (pesada)
 
@@ -600,6 +692,14 @@ Números propuestos; los fija la dirección.
   - **Nueva, solo si la imagen apunta a la compresión:** el tamaño del JPEG por frame en Linux no se puede medir con lo que hay (Context7 no confirma `CAP_PROP_CONVERT_RGB` con V4L2 y MJPG; el guardián no tiene un verbo que guarde la ráfaga). Haría falta un modo de `camera.v4l2` o de `camara rafaga` que guarde los JPEG. Prioridad baja; media si la lectura (ii) no tiene otra causa.
   - **Nueva, solo si hace falta el brillo por frame:** `PoseLog` no guarda el brillo medio del marker por frame, que diría si el lado aparente se mueve con la luz. Toca la grabación del tracker. Prioridad baja.
 
+- **De la fase 7b:**
+  - **B79** pasa a Cerrados con `igtl_rate listen --idle-s` (parte A).
+  - **B88** queda tal cual (baja): con `--idle-s` el listener no se reconecta y el P-7w no la necesita. Se anota «Al día» con eso.
+  - **B89** no cambia: no es de esta fase.
+  - **Nueva, si la parte A confirma H1:** dos cámaras transmitiendo por el mismo concentrador del PC dejan poco margen de ancho de banda; con J7 la apertura corta ya no lo pide, pero un tercer dispositivo o un modo más pesado podría no caber. Haría falta medir con USBView el reparto por controlador y, si estorba, llevar una cámara a otro controlador (cambia su `usb_port_windows`, ADR-024). Prioridad baja; media si en la parte C alguna cámara queda por debajo de 45 fps.
+  - **Nueva, si el hallazgo 17 se confirma** (la cámara que transmite baja de fps cuando la otra intenta abrir): qué la baja y si pasa también con J7. Prioridad media: es una caída de fps en uso.
+  - **Nueva:** `CapaWindowsDShow` queda solo para la sonda; si en una meta posterior nada la usa, se archiva. Prioridad baja.
+
 ## ADR que se proponen
 
 Números por fijar: el plan sin autorizar de la meta 006 propone ADR-035 a ADR-039.
@@ -623,11 +723,12 @@ Números por fijar: el plan sin autorizar de la meta 006 propone ADR-035 a ADR-0
   - Cambia `CLAUDE.md` §4 y §5 y las reglas de `desarrollo` y `pruebas`; no cambia la constitución (lo cumple el principio 9).
   - Alternativas descartadas: solo patrones de `settings.json` (blandos, hallazgo 7); la orden forzada en `authorized_keys` de la propia cuenta (la cuenta podría editarla, hallazgo 8); un contenedor (complica cámaras y red, y `docker` es root); que el autor corra todo (P8 lo descarta).
 - **J6 (solo si hay parte C con un control) · En Linux, la capa V4L2 deja además en un valor fijo los controles que el perfil no nombra**, de una lista cerrada en `camera/v4l2.py` (`CONTROLES_FIJOS_LINUX`), con la misma relectura que los del perfil. El perfil no cambia y Windows tampoco. Alternativas: una clave nueva del perfil (`controls_linux`), que haría falta si el valor cambia de una cámara a otra; escribirlos también por DSHOW en Windows, que cambia la cadena que hoy funciona. Lo decide P24.
+- **J7 (fase 7b, si la parte A lo confirma) · En Windows, la marca y los ajustes se leen y se escriben por COM sobre el filtro de captura de DirectShow** (`IAMVideoProcAmp` e `IAMCameraControl`, `camera/dshow_props.py`), sin abrir vídeo, en lugar de la apertura corta de `cv2` por DSHOW. Corrige la parte de Windows de la fase 2b de la meta 002 (la apertura corta antes del vídeo por MSMF): mismo formato de `controls`, mismas unidades, misma relectura y la misma comprobación de la marca antes de escribir nada. La consecuencia: dos trackers abren gs1 y gs2 a la vez en el PC; la sonda guarda la vía de `cv2` para comparar. Alternativas: abrir con un modo ligero por `cv2` (no está documentado que DSHOW lo respete al abrir, Context7); ordenar las aperturas entre procesos (frágil y cambia cómo se lanzan); una cámara en otro controlador USB (un cambio de montaje, no de código, y solo vale si la causa es el ancho de banda); `pygrabber` u otra dependencia (no hace falta: ya hay COM por ctypes en `camera/uvc.py`). No cambia el orden de apertura de las cámaras.
 - **J5 (al cerrar) · La meta 007 cierra con los números de la Jetson** y la decisión del autor sobre dónde queda el tracker, como ADR-031 y ADR-033.
 
 ## Preguntas abiertas
 
-P6–P23 están contestadas (P19–P20 el 2026-10-29, P21 el 2026-10-29, P22 el 2026-11-02 y P23 el 2026-11-03). Abiertas: P24 y P25, de la fase 5b. Las nuevas van también al final de `clarify.md`. La pregunta del método de Python 3.11 no se abre ahora: se abre al cerrar la fase 1, con el escaneo (P6).
+P6–P29 están contestadas (P19–P21 el 2026-10-29, P22 el 2026-11-02, P23–P27 el 2026-11-03, P28 y P29 el 2026-11-04). Abiertas: P30, P31 y P32, de la fase 7b (al final de esta sección). Las nuevas van también al final de `clarify.md`. La pregunta del método de Python 3.11 no se abre ahora: se abre al cerrar la fase 1, con el escaneo (P6).
 
 - **P19 · Quién teclea lo que abre la cámara en la Jetson** (`camara rafaga` y `py … tracker`):
   - (a) El autor, en la sesión en vivo, con los comandos que le da el protocolo, por el mismo alias y el mismo guardián (recomendada). Mantiene la regla de `desarrollo` y `pruebas` («No abres la cámara, el tracker ni Slicer») y el autor está delante de la cámara y de Slicer de todos modos.
@@ -643,7 +744,23 @@ P6–P23 están contestadas (P19–P20 el 2026-10-29, P21 el 2026-10-29, P22 el 
   - (a) Sí (recomendada). Permite J4 (una sola variable: el puerto del hub) y la prueba de la exposición sin tocar los perfiles del repo. Cierra B81 (el módulo está en la lista del guardián y no existe), y la fase 7 lo usa tal cual. Pide intercambiar los cables de las dos cámaras en la Jetson durante J4.
   - (b) No. J4 y la prueba de la exposición no se hacen, y la exposición y el puerto quedan como hipótesis sin medir. `perfil_temporal` sigue en la fase 7.
 
+- **P30 · Si la parte A descarta la vía COM** (A0 con diferencias, o A2 tampoco lee con la otra cámara transmitiendo):
+  - (a) Si A3 o A5 dicen que es el ancho de banda: una cámara pasa a un puerto de otro controlador, con su `usb_port_windows` nuevo en el perfil (ADR-024; los intrínsecos no cambian, son de la cámara), y la parte B solo verifica (recomendada). Sin código en la cadena; la parte C igual.
+  - (b) Ordenar las aperturas: un paso previo que comprueba la marca y aplica los ajustes de las dos cámaras antes de que ninguna transmita, y los trackers que esperan a ese paso. Pide su ADR y cambia cómo se lanzan; la fase se alarga.
+  - (c) Parar la 7b con el diagnóstico, dejarlo en el BACKLOG con prioridad alta y medir el P-7w con una cámara sola.
+- **P31 · Dónde cierra la fase 7:**
+  - (a) Ya, con la Jetson (condición A), en su propio commit, y el P-7w pasa a la 7b (recomendada). La fase 7 cumplió su criterio en la Jetson y la 7b es otra máquina y otro arreglo.
+  - (b) Junto con la 7b, cuando esté el P-7w, en un solo cierre. Deja la casilla de la 7 abierta varios días.
+- **P32 · Un puerto trasero solo para el diagnóstico (A5):**
+  - (a) Sí: gs2 a un puerto trasero durante A5, sin tocar los perfiles, y de vuelta al acabar (recomendada). Separa el ancho de banda del concentrador de lo demás en un solo paso.
+  - (b) No: los cables no se mueven y la causa se lee solo con A1–A4.
+
 ## Títulos de commit
+
+- Fase 7 (cierre, si P31 queda en (a)): «Cierra la fase 7 de la meta 007 con el P-7 en la Jetson»
+- Fase 7b, parte A: «Añade la lectura de controles por COM y --idle-s al listener (meta 007, fase 7b)»
+- Fase 7b, parte B: «Lee y escribe los ajustes de Windows por COM, sin abrir vídeo (meta 007, fase 7b)»
+- Fase 7b, cierre con el P-7w: «Cierra la fase 7b de la meta 007 con las dos cámaras a la vez en el PC»
 
 - Fase 5b: «Diagnostica el ruido de gs1 por V4L2 (meta 007, fase 5b, B77)». Si hay parte C, el de cierre: «Fija los controles de Linux que bajan el ruido de gs1 (meta 007, fase 5b)».
 - Fase 1: «Escanea la Jetson en solo lectura (meta 007, fase 1)»

@@ -171,3 +171,38 @@ Las preguntas del plan y las respuestas del autor, en orden. Una pregunta por bl
 - **Opciones:** medir las tres redes ahora / medir LAN y Tailscale ahora y el cable más adelante.
 - **Respuesta del autor:** LAN y Tailscale ahora; el cable directo se mide más adelante, antes de compartir la Jetson o llevarla a otro sitio, posiblemente con un módem usado como switch. La fase 6 cierra con LAN y Tailscale y el cable queda en el BACKLOG.
 - **Fecha:** 2026-11-03
+
+## P28 · La condición B del P-7 (Ollama con un modelo cargado)
+
+- **Contexto:** en la condición A del P-7 (Ollama parado), gs1 y gs2 a la vez dieron 86.2 fps de cámara y 63.2 de bucle cada una, con la CPU al 95.5 % de media en los 6 núcleos y la GPU al 0 %. Quedaba la condición B de P15.
+- **Opciones:** llava-phi3:3.8b, recomendada / gemma3:4b / qwen3:8b / llama3.2:1b.
+- **Respuesta del autor:** no se carga ningún modelo: el proyecto no usa Ollama, y en la Jetson se libera todo lo que haga falta. La prioridad es el tracking de grado médico; si en la Jetson no se puede, se vuelve a Windows. La fase 7 cierra con la condición A. Cambia la respuesta de P15. El autor aceptó medir lo mismo en el PC con Windows (P-7w), con CPU y GPU, para decidir con números.
+- **Fecha:** 2026-11-04
+
+## P29 · Las dos cámaras a la vez en Windows no abren
+
+- **Contexto:** en el P-7w (2026-11-04), con las dos cámaras en los puertos frontales del PC, la que se abre segunda falla al leer su marca por DSHOW mientras la otra transmite por MSMF (`no abre el indice DSHOW n`), en los dos órdenes (gs1 → gs2 y gs2 → gs1); cada una sola abre bien. Con el código de hoy el PC no corre gs1 y gs2 a la vez, y la medida larga del P-7w no se puede hacer.
+- **Opciones:** una fase 7b en la meta 007 que lo arregla (`camera/`, con su prueba y la cadena sin cambios) y después el P-7w completo, recomendada / al BACKLOG con prioridad alta y la fase 7 cierra con la Jetson / una meta corta aparte.
+- **Respuesta del autor:** fase 7b: arreglar y medir.
+- **Fecha:** 2026-11-04
+
+## P30 · Si la parte A de la fase 7b descarta la vía COM
+
+- **Contexto:** la fase 7b propone leer la marca y escribir los ajustes en Windows por COM sobre el filtro de DirectShow, sin abrir vídeo (J7). Lo decide la parte A: tiene que leer lo mismo que `cv2` con cada cámara sola (A0) y leer la marca con la otra cámara transmitiendo (A2). Si no, hace falta otra vía, y la pregunta se contesta antes para que la fase no se pare.
+- **Opciones:** (a) si A3 o A5 dicen que es el ancho de banda, una cámara pasa a un puerto de otro controlador con su `usb_port_windows` nuevo (ADR-024), sin código en la cadena, recomendada / (b) un paso previo que comprueba la marca y aplica los ajustes de las dos antes de que ninguna transmita, con su ADR / (c) parar la 7b con el diagnóstico, al BACKLOG con prioridad alta, y el P-7w con una cámara sola.
+- **Respuesta del autor:** (a) otro puerto.
+- **Fecha:** 2026-11-04
+
+## P31 · Dónde cierra la fase 7
+
+- **Contexto:** la fase 7 cumplió su criterio en la Jetson (P-7, condición A; sin condición B por P28). El P-7w del PC no abre las dos cámaras a la vez (P29) y pasa a la fase 7b.
+- **Opciones:** (a) cerrar la fase 7 ya, con la Jetson, en su propio commit, y el P-7w en la 7b, recomendada / (b) cerrarla junto con la 7b, cuando esté el P-7w.
+- **Respuesta del autor:** (a) cerrarla ya, con la Jetson.
+- **Fecha:** 2026-11-04
+
+## P32 · Un puerto trasero solo para el diagnóstico de la fase 7b
+
+- **Contexto:** la hipótesis principal es que la apertura corta por DSHOW no cabe en el ancho de banda del concentrador frontal mientras la otra cámara transmite. Pasar gs2 un momento a un puerto trasero (otro controlador) lo separa en un solo paso (A5).
+- **Opciones:** (a) sí, durante A5, sin tocar los perfiles y con el cable de vuelta al acabar, recomendada / (b) no: los cables no se mueven y la causa se lee con A1–A4.
+- **Respuesta del autor:** (a) sí, solo durante A5.
+- **Fecha:** 2026-11-04

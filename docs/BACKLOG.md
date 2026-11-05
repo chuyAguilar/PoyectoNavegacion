@@ -74,6 +74,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B87 | El reloj de la Jetson deriva ~1.4 ms/min respecto al del PC | Baja | — |
 | B88 | `pyigtl` gira en vacío si el cliente se va y no hay nada que enviar | Baja | — |
 | B89 | Una calibración a medias pisa los intrínsecos que usa el tracker | Alta | — |
+| B90 | `info energia` del guardián no encuentra `nvpmodel` (fuera del PATH de `navagente`) | Baja | — |
+| B91 | Con dos cámaras la CPU de la Jetson va al 95.5 % y no deja margen para la meta 006 | Media | — |
 
 ## Abiertos
 
@@ -557,6 +559,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** la Jetson no está sincronizada: su reloj y el del PC derivan ~1.4 ms por minuto (20–30 ppm). Por Tailscale el desfase pasó de −143.282 a −129.548 ms en 606 s. La latencia del P-6 se corrigió interpolando el desfase medido antes y después de cada corrida (`diagnostics/clock_offset.py`), con ± 0.8 ms.
 - **Por qué queda:** con `clock_offset` antes y después basta para medir la latencia; sincronizar pide `sudo` en la Jetson.
 - **De dónde:** P-6 de la fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes, de la meta 007 (2026-11-04).
+- **Zona horaria (2026-11-04, P-7):** la Jetson está en UTC+8 (su log dijo 2026-11-05 10:02 cuando el PC decía 2026-11-04 20:02); las fechas tomadas de ella salen un día adelantadas. No cambia ninguna medida, que son relativas; la fecha de una fase es la del PC.
 - **Qué haría falta:** NTP o chrony en la Jetson (la latencia entonces se mediría sin el desfase antes y después), si la latencia tiene que medirse a menudo o si los sellos de tiempo de la Jetson se usan junto a los del PC (meta 006 · Grafo de factores óptico-inercial).
 - **Prioridad:** baja.
 
@@ -573,6 +576,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** el autor, al cerrar la fase 7 · Las dos cámaras a la vez en la Jetson (meta 007), 2026-11-04.
 - **Qué haría falta:** que la calibración escriba siempre a un archivo provisional (por ejemplo, en `Claude outputs/camaras/`), y que el `.yml` de `data/` solo se sustituya con un paso explícito de «aceptar», con el criterio cumplido, una copia de seguridad del anterior (como el ADR-018 con el perfil) y un aviso si la K cambia; con sus pruebas, y comprobando que el replay sigue igual.
 - **Prioridad:** alta (puede dar un resultado equivocado: el tracker trabajaría con una calibración no aceptada sin avisar).
+
+### B90 · `info energia` del guardián no encuentra `nvpmodel`
+- **Qué:** `ssh nav-jetson info energia` falló en el paso 0 del P-7 con «no se pudo lanzar nvpmodel: [Errno 2]» (código 125): `nvpmodel` vive en `/usr/sbin`, que no está en el PATH de la cuenta `navagente`. El modo de energía (`MAXN_SUPER`) lo leyó el autor a mano en su sesión.
+- **Por qué queda:** no cambia ninguna medida; el modo se puede leer por otro camino. Tocar el guardián pide reinstalarlo en la Jetson.
+- **De dónde:** P-7 de la fase 7 · Las dos cámaras a la vez en la Jetson, de la meta 007 (2026-11-04).
+- **Qué haría falta:** que `linux/guardian.py` lance `nvpmodel` por su ruta absoluta (`/usr/sbin/nvpmodel -q`), con su prueba en `probar_barrera.ps1`, y que el autor reinstale el guardián (`sudo`).
+- **Prioridad:** baja.
+
+### B91 · Con dos cámaras la CPU de la Jetson va al 95.5 % y no deja margen para la meta 006
+- **Qué:** en el P-7 (condición A, 450 s), con gs1 y gs2 a la vez cada una en su tracker, la CPU de la Jetson quedó al 95.5 % de media (núcleos 93–97 %, a 1728 MHz) con la GPU al 0 %. La cámara entrega 86.2 fps cada una, pero el bucle da 63.2 y cada tracker salta ~27 % de los frames. Cumple P13 (≥ 45 fps por cámara) y no deja CPU para el grafo de factores de la meta 006 · Grafo de factores óptico-inercial.
+- **Por qué queda:** cumple lo pedido hoy y no se ha decidido qué aliviar; las opciones piden medir antes y alguna toca la cadena (principio 6) o una dependencia nueva.
+- **De dónde:** P-7 de la fase 7 · Las dos cámaras a la vez en la Jetson, de la meta 007 (2026-11-04).
+- **Qué haría falta:** medir dónde se va la CPU (decodificar MJPEG, `ArucoDetector`, el hilo de captura) y probar, sin decidir: un solo proceso para las dos cámaras; decodificar el MJPEG por hardware (NVJPG, `nvjpegdec` de GStreamer) o directo a gris; detectar en una región alrededor de la última pose; el umbral adaptativo en la GPU (OpenCV con CUDA es una dependencia nueva, con su ADR); o dejar el grafo en el PC. Comparar con el P-7w del PC (fase 7b).
+- **Prioridad:** media (sin esto la meta 006 no cabe en la Jetson junto a los dos trackers).
 
 ## Cerrados
 
