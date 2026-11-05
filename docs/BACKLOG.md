@@ -72,6 +72,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B85 | El cable directo Jetson ↔ PC quedó sin probar (P27) | Media | — |
 | B86 | El ahorro de energía de la Wi-Fi de la Jetson no persiste y hunde la LAN | Media | — |
 | B87 | El reloj de la Jetson deriva ~1.4 ms/min respecto al del PC | Baja | — |
+| B88 | `pyigtl` gira en vacío si el cliente se va y no hay nada que enviar | Baja | — |
 
 ## Abiertos
 
@@ -507,6 +508,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
 - **Qué haría falta:** una opción `--idle-s` en `igtl_rate listen` (segundos a esperar sin datos) o esperar al primer mensaje antes de contar.
 - **Prioridad:** media (2026-11-04; era baja). Ya no es solo un descuido de la corrida: en el P-6 (fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes) impidió medir la corrida d), el listener local en el PC. Abrir la cámara en el PC tardó ~8 s (la marca 6.11 s y los ajustes 1.41 s) y el listener se paró a los 5 s sin datos; el tracker corrió 60 s sin cliente, código 0. En la corrida del criterio 5 la misma marca tardó 1.26 s; del P-5 no hay medida de ese tiempo, y la variación (6.11 contra 1.26 s) no se ha explicado.
+- **Al día (2026-11-04, fase 7 · Las dos cámaras a la vez en la Jetson):** sin cambiar `igtl_rate`, el P-7 lanza cada listener en un bucle de PowerShell que lo repite al momento si sale con código 1 (sin datos), hasta 6 veces; el tracker sigue vivo y acepta la conexión nueva cuando su primer envío falla en la vieja (B88). El arreglo de verdad sigue siendo `--idle-s` o esperar al primer mensaje.
 
 ### B80 · El guardián no pasa `DISPLAY`: no hay corrida con ventana por `ssh nav-jetson`
 - **Qué:** la corrida b) del P-5 (con ventana) no se pudo medir: la Jetson no tiene escritorio abierto y el guardián no pasa `DISPLAY` a lo que lanza.
@@ -555,6 +557,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** con `clock_offset` antes y después basta para medir la latencia; sincronizar pide `sudo` en la Jetson.
 - **De dónde:** P-6 de la fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes, de la meta 007 (2026-11-04).
 - **Qué haría falta:** NTP o chrony en la Jetson (la latencia entonces se mediría sin el desfase antes y después), si la latencia tiene que medirse a menudo o si los sellos de tiempo de la Jetson se usan junto a los del PC (meta 006 · Grafo de factores óptico-inercial).
+- **Prioridad:** baja.
+
+### B88 · `pyigtl` gira en vacío si el cliente se va y no hay nada que enviar
+- **Qué:** en `pyigtl` 0.3.1, el hilo del servidor (`TCPRequestHandler.handle`) solo nota que el cliente se fue cuando falla un envío: si el cliente cierra, `recv` devuelve `b''` al instante, `_receive_message_from_socket` lo toma como «no hay mensaje» y el bucle vuelve a llamar sin esperar. Mientras el tracker no envíe nada (la cámara aún abriéndose, B79, o Marker0 fuera de la vista), ese hilo ocupa un núcleo entero y el servidor no acepta otro cliente. Leído en el código de `pyigtl` del venv, sin medir.
+- **Por qué queda:** dura lo que tarda el siguiente envío (con Marker0 a la vista, milisegundos) y no cambia lo que se envía; arreglarlo toca `transport/igtl.py` (la cadena, principio 6) o `pyigtl`.
+- **De dónde:** fase 7 · Las dos cámaras a la vez en la Jetson, de la meta 007 (2026-11-04), al preparar el bucle de listeners del P-7 para B79.
+- **Qué haría falta:** medirlo (CPU del tracker con un cliente que se conecta y se va con Marker0 tapado); si se confirma y estorba, que `IgtlSender` detecte el cierre (p. ej. un `verify_request` que deje el socket con `SO_KEEPALIVE`, o un envío de prueba) o un parche a `pyigtl`, con su ADR y la verificación de la cadena.
 - **Prioridad:** baja.
 
 ## Cerrados
