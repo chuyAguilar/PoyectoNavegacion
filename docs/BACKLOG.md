@@ -73,6 +73,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B86 | El ahorro de energía de la Wi-Fi de la Jetson no persiste y hunde la LAN | Media | — |
 | B87 | El reloj de la Jetson deriva ~1.4 ms/min respecto al del PC | Baja | — |
 | B88 | `pyigtl` gira en vacío si el cliente se va y no hay nada que enviar | Baja | — |
+| B89 | Una calibración a medias pisa los intrínsecos que usa el tracker | Alta | — |
 
 ## Abiertos
 
@@ -565,6 +566,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** fase 7 · Las dos cámaras a la vez en la Jetson, de la meta 007 (2026-11-04), al preparar el bucle de listeners del P-7 para B79.
 - **Qué haría falta:** medirlo (CPU del tracker con un cliente que se conecta y se va con Marker0 tapado); si se confirma y estorba, que `IgtlSender` detecte el cierre (p. ej. un `verify_request` que deje el socket con `SO_KEEPALIVE`, o un envío de prueba) o un parche a `pyigtl`, con su ADR y la verificación de la cadena.
 - **Prioridad:** baja.
+
+### B89 · Una calibración a medias pisa los intrínsecos que usa el tracker
+- **Qué:** la ventana de calibración del panel (`gui/calibration_window.py`, `salidas_del_perfil`) le pasa a `calibration/calibrate_camera.py` como `--output` el mismo `data/intrinsecos_<cámara>_<modo>.yml` que lee el perfil, y el script lo escribe siempre, incluso si el criterio no se cumple (sale con código 1 y deja el `.yml` «con el veredicto dentro»). Una calibración de prueba, una demostración o una que alguien abre y abandona cambia la K y la distorsión con las que trabaja el tracker, sin que nadie la acepte.
+- **Por qué queda:** se vio el 2026-11-04, cuando dos pruebas de la suite fallaron por un `intrinsecos_gs1_1280x960.yml` cambiado así (fx 845.1 en vez de 849.9); el autor lo descartó y pidió que el cambio solo valga cuando la calibración se termina. No se arregla dentro de la meta 007 (la Jetson) sin replanearla.
+- **De dónde:** el autor, al cerrar la fase 7 · Las dos cámaras a la vez en la Jetson (meta 007), 2026-11-04.
+- **Qué haría falta:** que la calibración escriba siempre a un archivo provisional (por ejemplo, en `Claude outputs/camaras/`), y que el `.yml` de `data/` solo se sustituya con un paso explícito de «aceptar», con el criterio cumplido, una copia de seguridad del anterior (como el ADR-018 con el perfil) y un aviso si la K cambia; con sus pruebas, y comprobando que el replay sigue igual.
+- **Prioridad:** alta (puede dar un resultado equivocado: el tracker trabajaría con una calibración no aceptada sin avisar).
 
 ## Cerrados
 
