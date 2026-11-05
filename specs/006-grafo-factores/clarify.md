@@ -115,17 +115,60 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 ## P19 · Si pierde la arquitectura de dos trackers, qué pasa con `--feed`
 
 - **Opciones:** (a) recomendada: se retira en la fase 4b (`--feed`, el `timestamp` de `IgtlSender.send`, `fusion/feeds.py`, `collector.py` y `clockcheck.py`, con sus pruebas), y `tracker.py` y `transport/igtl.py` vuelven al texto de antes de la fase 3; sus números quedan en `resultados.md` y una entrada en el BACKLOG; coste: si algún día se vuelve a B (más cámaras, otra máquina), se rehace desde el commit de la fase 3. (b) Se deja como diagnóstico, apagado: no se pierde nada, pero el tracker carga una opción que nada usa y la suite la sigue probando.
-- **Respuesta del autor:** pendiente.
-- **Fecha:** —
+- **Respuesta del autor:** sin objeto (P28 a): con P22 ya no hay dos arquitecturas que comparar.
+- **Fecha:** 2026-11-05
 
 ## P20 · Con un nodo por medida, cómo cuenta el 30 % del criterio 2
 
 - **Opciones:** (a) recomendada: el 30 % se mide siempre como dice P14, por instante emparejado y sin factor de movimiento, frente a la mejor cámara cruda, gane el método de sincronía que gane; con un nodo por medida cada variable tiene un solo factor y sin factor de movimiento no hay fusión que medir, así que su sd publicada se reporta aparte, sin aprobado o suspenso. (b) Si gana el nodo por medida, el 30 % se mide sobre lo publicado, con su factor de movimiento: más cerca de lo que ve Slicer, pero mide también suavizado, que es lo que P14 quiso dejar fuera.
-- **Respuesta del autor:** pendiente.
-- **Fecha:** —
+- **Respuesta del autor:** (a), por P28.
+- **Fecha:** 2026-11-05
 
 ## P21 · El orden frente a la Jetson (pregunta de la dirección)
 
 - **Opciones:** (a) la Jetson primero (meta 007) y la 006 después, sobre la Jetson; (b) la 006 primero, en el PC, y mudar después; (c) las dos juntas en una meta.
 - **Respuesta del autor:** (a). La 006 queda en espera con este plan sin autorizar; al retomarla, `/planear 006-grafo-factores` lo rehace para la Jetson (P8 cambia: allí GTSAM se instala por pip).
 - **Fecha:** 2026-10-29
+
+## P22 · Dónde corre cada parte, al retomar la meta (pregunta de la dirección)
+
+- **Contexto:** en Windows las dos cámaras no caben en el mismo concentrador USB 2.0 del frente: la segunda no recibe vídeo, `0x800718CF`, «sin ancho de banda» (meta 007, fase 7b, P-7b-B, B5; `Claude outputs/fases/007/por-que-atorados-7b.md`). En la Jetson corren las dos a la vez, a 63.2 fps de bucle cada una, pero con la CPU al 95.5 % (meta 007, P-7; B91).
+- **Opciones:** (a) todo en el PC, con las dos cámaras en enlaces USB separados; (b) la Jetson detecta (las dos cámaras, ArUco y PnP) y el PC fusiona y habla con Slicer; (c) todo en la Jetson.
+- **Respuesta del autor:** (b): la Jetson detecta y el PC fusiona. La meta 007 se pausa y la 006 pasa a ser la activa. El plan se rehace para (b), y su primera fase es una grabación con las dos cámaras en la Jetson más un experimento fuera de línea en el PC, que muestre si la fusión con dos cámaras y un grafo reduce el jitter frente a cada cámara sola. Lo quiere ver ya.
+- **Fecha:** 2026-11-05
+
+## P23 · Grabar ya, antes del plan (pregunta de la dirección)
+
+- **Opciones:** grabar ya el dataset con lo que existe (los dos trackers en la Jetson con `--record`, sin código nuevo, con el `correr.ps1` de la regla de `CLAUDE.md` §4); o grabar cuando el plan esté autorizado, con el protocolo que fije.
+- **Respuesta del autor:** grabar ya, con lo que existe. El plan reutiliza esas grabaciones si cumplen lo que fije; si no, se graba otra vez.
+- **Fecha:** 2026-11-05
+
+## P24 · Qué viaja de la Jetson al PC, y por qué canal (replan del 2026-11-05)
+
+- **Opciones:** (a) recomendada: por UDP (biblioteca estándar, como `clock_offset.py`), un datagrama por cámara y por frame con las esquinas de Marker0, la pose cruda de IPPE con su error, la otra solución si la hay, la hora de captura y una secuencia; ~200 bytes, ~25 KB/s con las dos; deja usar factores de reproyección y ver cada pérdida; coste: una opción `--feed` en `tracker.py` (principio 6, ADR G3), un formato versionado y una regla de entrada en el cortafuegos del PC que pone el autor; su latencia se mide en la fase 3 frente a los 7.6 ms añadidos p95 de OpenIGTLink (meta 007, fase 6). (b) Solo la pose por OpenIGTLink, con lo que ya existe (`--igtl-iface`; el PC como cliente de los dos puertos): nada nuevo en la Jetson, pero sin esquinas ni la otra solución de IPPE, la matriz en float32, y el cliente de `pyigtl` guarda solo el último mensaje de cada nombre, así que pierde medidas en ráfaga. (c) MQTT: un broker (mosquitto) que instalar y mantener en una de las dos máquinas, `paho-mqtt` como dependencia en las dos, TCP y un salto más; da varios suscriptores, que hoy no hacen falta; latencia sin medir. La fase 1 dice si las esquinas cambian el número (factores de reproyección frente a los de pose) y cuántas medidas salva la otra solución de IPPE.
+- **Respuesta del autor:** (a): por UDP, un datagrama por cámara y por frame con las esquinas, la pose cruda, la otra solución de IPPE, la hora de captura y una secuencia.
+- **Fecha:** 2026-11-05
+
+## P25 · Dónde corre GTSAM para la fase 1 y para el fusionador (replan del 2026-11-05)
+
+- **Opciones:** (a) recomendada: un entorno de miniforge solo para la fusión, fuera del repo, con Python 3.11 y `gtsam 4.3.0` de conda-forge (comprobado el 2026-11-05: `win-64`, py311, numpy 2; PyPI sigue sin rueda para Windows), más numpy, scipy, opencv-python, pyyaml, pyigtl, matplotlib y pytest; `.venv` no cambia y sigue siendo el del tracker, el panel y la suite; el autor instala miniforge (por usuario; sin administrador, hipótesis) y `desarrollo` crea el entorno desde `codigo/fusion/environment.yml`; la parte A de la fase 1 no lo necesita. Es P8 (a) acotado a la fusión, sin mudar el proyecto. (b) En la Jetson, donde gtsam 4.3.0 ya está en `~/.venvs/prueba-gtsam`: el guardián solo lanza su lista blanca en el venv del tracker, así que hay que cambiarlo y reinstalarlo con sudo, y la CPU ya va al 95.5 % con los dos trackers (B91); sirve para lo fuera de línea, no para el fusionador en vivo, que va en el PC (P22). (c) La parte B sin gtsam, con una ventana deslizante sobre `scipy.optimize.least_squares`: sin entorno nuevo, pero se aparta de lo que propuso el autor y la meta del IMU tendría que escribir lo que GTSAM ya trae.
+- **Respuesta del autor:** (a): un entorno de miniforge solo para la fusión, fuera del repo, con gtsam 4.3.0 de conda-forge; `.venv` no cambia. Miniforge lo instala el autor.
+- **Fecha:** 2026-11-05
+
+## P26 · Con qué número se cuenta el 30 % del criterio 2 (replan del 2026-11-05)
+
+- **Opciones:** (a) recomendada: la sd 3D de la posición, √ (traza de su covarianza), en el frame de gs1, cruda (sin quitar la deriva), en el reposo (S1), fusionada por instante (P14) frente a la mejor cámara sola llevada al mismo frame; la √ traza no depende de cómo se giren los ejes, así que compara bien una cámara girada con la otra; aparte y sin veredicto, por eje y sin la media móvil de 1 s (lo que deja fuera la deriva de gs1 por V4L2, B77). (b) Solo la sd z de gs1, el eje débil: da el número más alto, pero depende del frame y castiga menos lo que la fusión empeore en x o y. (c) La sd sin deriva como criterio: mide el temblor puro, pero la deriva es error real de una cámara y la fusión también tendría que bajarla.
+- **Respuesta del autor:** (a): la sd 3D de la posición (√ traza), en el frame de gs1, cruda, en el reposo; la fusionada por instante frente a la mejor cámara sola. Por eje y sin deriva, aparte y sin veredicto.
+- **Fecha:** 2026-11-05
+
+## P27 · Los extrínsecos de la fase 1 y el criterio 1, sin tablero (replan del 2026-11-05)
+
+- **Opciones:** (a) recomendada: validación cruzada sobre las 5 posiciones de S2: en cada posición, los extrínsecos de las otras cuatro y la coincidencia en ella; cuenta la peor (P16); el tablero de la fase 2 da después unos extrínsecos que no dependen de Marker0 y el criterio 1 se repite con ellos. (b) Los extrínsecos de las 5 posiciones y la coincidencia en esas mismas 5: es circular (la media coincide casi por construcción) y da un número optimista. (c) Esperar al tablero antes de la fase 1: el número es independiente, pero retrasa «verlo» una sesión en vivo.
+- **Respuesta del autor:** (a): validación cruzada sobre las 5 posiciones (los extrínsecos de las otras cuatro, la coincidencia en la que queda fuera); cuenta la peor. El tablero de la fase 2 lo repite.
+- **Fecha:** 2026-11-05
+
+## P28 · Qué se hace con P17, P19 y P20 (replan del 2026-11-05)
+
+- **Opciones:** (a) recomendada: P17 (el hub USB de Windows) queda sin objeto, porque con P22 el PC no abre cámaras; si algún día vuelve, es B5 de la meta 007. P19 (retirar `--feed` si perdía la arquitectura de dos trackers) queda sin objeto: ya no hay dos arquitecturas que comparar, y el envío por UDP de la fase 3 es la vía. P20: (a), el 30 % se mide siempre por instante (P14), gane el método de sincronía que gane; la sd publicada con el factor de movimiento se da aparte, sin veredicto. (b) Dejarlas abiertas hasta el replan de la fase 3.
+- **Respuesta del autor:** (a), la recomendada: P17 y P19 quedan sin objeto; P20 se contesta con (a).
+- **Fecha:** 2026-11-05

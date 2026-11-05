@@ -6,6 +6,13 @@ Hoy cada cámara SVPRO (gs1, gs2) corre en su propio proceso y da su propia pose
 
 Fuentes que el autor pidió usar: Context7 (GTSAM, OpenCV), el GitHub MCP (implementaciones de referencia) y la monografía `documentos/tecnicos/Factor Graphs for robot perception.pdf`.
 
+**Al retomarla (2026-11-05, P22 y P23):** la meta 007 · El tracker en la Jetson Orin Nano queda en pausa. En Windows, las dos cámaras no caben en el mismo concentrador USB (B5 de la meta 007); en la Jetson corren las dos, pero con la CPU al 95.5 % (B91). El autor eligió la arquitectura **«la Jetson detecta, el PC fusiona»**:
+- La Jetson abre las dos cámaras y llega, por cámara, hasta las esquinas y el PnP.
+- La Jetson le manda al PC lo de cada cámara con su hora.
+- El PC fusiona y le publica a Slicer.
+
+La primera fase es **ver si sirve**: una grabación con las dos cámaras en la Jetson (con lo que ya existe, `--record`) y un experimento fuera de línea en el PC que compare el jitter fusionado con el de cada cámara sola. Lo de «en el tracker» de abajo (punto 4) se entiende como el fusionador del PC.
+
 ## Qué se construye
 
 1. **Las dos cámaras en un mismo sistema de coordenadas:** la calibración extrínseca de gs2 respecto a gs1, guardada como dato versionado junto a los intrínsecos, con su error medido. El autor diseña aparte una estructura rígida para las dos cámaras (barra con separación elegible y ángulo fijo); hasta que exista, se trabaja con el montaje actual (dos pinzas en la caja de luz) y la calibración se repite sobre la estructura cuando llegue.
