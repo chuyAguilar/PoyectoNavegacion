@@ -1,0 +1,260 @@
+{
+ "segmentos": {
+  "S1_reposo": {
+   "ok": true,
+   "frames": {
+    "gs1": 491,
+    "gs2": 528
+   },
+   "fraction_with_pose": {
+    "gs1": 0.9938900203665988,
+    "gs2": 1.0
+   }
+  },
+  "S2_pos1": {
+   "ok": true,
+   "frames": {
+    "gs1": 195,
+    "gs2": 197
+   },
+   "fraction_with_pose": {
+    "gs1": 1.0,
+    "gs2": 1.0
+   }
+  },
+  "S2_pos2": {
+   "ok": true,
+   "frames": {
+    "gs1": 192,
+    "gs2": 195
+   },
+   "fraction_with_pose": {
+    "gs1": 1.0,
+    "gs2": 1.0
+   }
+  },
+  "S2_pos3": {
+   "ok": true,
+   "frames": {
+    "gs1": 187,
+    "gs2": 202
+   },
+   "fraction_with_pose": {
+    "gs1": 1.0,
+    "gs2": 1.0
+   }
+  },
+  "S2_pos4": {
+   "ok": true,
+   "frames": {
+    "gs1": 183,
+    "gs2": 184
+   },
+   "fraction_with_pose": {
+    "gs1": 1.0,
+    "gs2": 1.0
+   }
+  },
+  "S2_pos5": {
+   "ok": true,
+   "frames": {
+    "gs1": 190,
+    "gs2": 188
+   },
+   "fraction_with_pose": {
+    "gs1": 1.0,
+    "gs2": 1.0
+   }
+  }
+ },
+ "extrinsecos": {
+  "T_ref_other": [
+   [
+    0.6620456631626866,
+    0.1195617116299103,
+    0.7398652154275159,
+    -182.8775939946598
+   ],
+   [
+    -0.01609331961990384,
+    0.9892334074872092,
+    -0.14545882776530453,
+    -0.959912042479304
+   ],
+   [
+    -0.74929069455792,
+    0.08439349870322403,
+    0.6568418321221166,
+    58.58817559696755
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "angle_deg": 48.94054459740941,
+  "spread_mm": 17.758376310049904
+ },
+ "criterio_1": {
+  "peor_mm": 19.495388312477964,
+  "peor_deg": 5.839404125299749
+ },
+ "consistencia": {
+  "bundle_rms_px": 5.580177101698453,
+  "distancias_max_diff_mm": 6.837118795479604
+ },
+ "sigma_px": {
+  "gs1": 0.0695100527417315,
+  "gs2": 0.05643282912724566
+ },
+ "criterio_2": {
+  "S1_reposo": {
+   "parejas": 386,
+   "camaras": {
+    "gs1": 0.13516731487056455,
+    "gs2": 0.09247569517814154
+   },
+   "predicha": 0.574540205808898,
+   "motores": {
+    "numpy_pose": {
+     "sd_3d_mm": 0.06930275568970704,
+     "reduction": 0.2505841069244742
+    },
+    "numpy_reproj": {
+     "sd_3d_mm": 0.03791923673893246,
+     "reduction": 0.5899545641058839
+    }
+   }
+  },
+  "S2_pos1": {
+   "parejas": 150,
+   "camaras": {
+    "gs1": 0.1409938660033281,
+    "gs2": 0.10699923442723355
+   },
+   "predicha": 0.5743968700264082,
+   "motores": {
+    "numpy_pose": {
+     "sd_3d_mm": 0.06885757250230577,
+     "reduction": 0.35646668061785614
+    },
+    "numpy_reproj": {
+     "sd_3d_mm": 0.035065659487247026,
+     "reduction": 0.6722812114034895
+    }
+   }
+  },
+  "S2_pos2": {
+   "parejas": 148,
+   "camaras": {
+    "gs1": 0.1346038115852049,
+    "gs2": 0.07308021664359586
+   },
+   "predicha": 0.450238095257797,
+   "motores": {
+    "numpy_pose": {
+     "sd_3d_mm": 0.04530723648130945,
+     "reduction": 0.3800341793967602
+    },
+    "numpy_reproj": {
+     "sd_3d_mm": 0.030888365694577896,
+     "reduction": 0.5773361504219803
+    }
+   }
+  },
+  "S2_pos3": {
+   "parejas": 151,
+   "camaras": {
+    "gs1": 0.11610085716308953,
+    "gs2": 0.13001899560065147
+   },
+   "predicha": 0.6285783757239739,
+   "motores": {
+    "numpy_pose": {
+     "sd_3d_mm": 0.05187040473537952,
+     "reduction": 0.5532297865594913
+    },
+    "numpy_reproj": {
+     "sd_3d_mm": 0.04673141569649775,
+     "reduction": 0.5974929312463813
+    }
+   }
+  },
+  "S2_pos4": {
+   "parejas": 143,
+   "camaras": {
+    "gs1": 0.2119723300156876,
+    "gs2": 0.12347105737166904
+   },
+   "predicha": 0.5861121513417002,
+   "motores": {
+    "numpy_pose": {
+     "sd_3d_mm": 0.10668752972068506,
+     "reduction": 0.13593086516188724
+    },
+    "numpy_reproj": {
+     "sd_3d_mm": 0.12087833315230692,
+     "reduction": 0.020998639475140912
+    }
+   }
+  },
+  "S2_pos5": {
+   "parejas": 140,
+   "camaras": {
+    "gs1": 0.06408337988878306,
+    "gs2": 0.05241659211691059
+   },
+   "predicha": 0.5709313481275223,
+   "motores": {
+    "numpy_pose": {
+     "sd_3d_mm": 0.016363030656283833,
+     "reduction": 0.6878272700409913
+    },
+    "numpy_reproj": {
+     "sd_3d_mm": 0.016165294872301405,
+     "reduction": 0.6915996592024498
+    }
+   }
+  }
+ },
+ "criterios": [
+  {
+   "id": "1",
+   "estado": "no cumple"
+  },
+  {
+   "id": "1b",
+   "estado": "no cumple"
+  },
+  {
+   "id": "rigidez",
+   "estado": "informativo"
+  },
+  {
+   "id": "2",
+   "estado": "no cumple"
+  },
+  {
+   "id": "2",
+   "estado": "cumple"
+  },
+  {
+   "id": "3",
+   "estado": "sin evaluar"
+  },
+  {
+   "id": "3",
+   "estado": "sin evaluar"
+  },
+  {
+   "id": "delta",
+   "estado": "sin evaluar"
+  },
+  {
+   "id": "IPPE",
+   "estado": "informativo"
+  }
+ ]
+}

@@ -41,7 +41,7 @@ HISTORICO_DIR = CODIGO_DIR / "historico"
 HISTORICO_ITER1_DIR = HISTORICO_DIR / "iter1" / "iter1_2026-05-16"
 DODECAHEDRON_DIR = HISTORICO_DIR / "iter4" / "dodecahedron"
 # Los paquetes del codigo vivo (los recorren test_compilan y test_aceleracion_msmf).
-PACKAGES = ("camera", "vision", "transport", "calibration", "diagnostics", "gui", "profiles", "linux")
+PACKAGES = ("camera", "vision", "transport", "calibration", "diagnostics", "gui", "profiles", "linux", "fusion")
 
 
 class RealHardwareForbidden(AssertionError):

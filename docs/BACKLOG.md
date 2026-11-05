@@ -77,6 +77,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B91 | Con dos cámaras la CPU de la Jetson va al 95.5 % y no deja margen para la meta 006 | Media | — |
 | B92 | Los fps de una cámara sola en el PC varían de una corrida a otra (caída tardía en A1, arranque lento en A4) | Media | — |
 | B93 | `CapaWindowsDShow` queda solo para la sonda; se archiva cuando nada la use | Baja | — |
+| B94 | La pose de Marker0 desde una cámara sola no coincide entre gs1 y gs2 (19.5 mm / 5.8° en la peor posición) y las 5 posiciones no caben en dos cámaras rígidas | Alta | — |
+| B95 | La pose cruda de IPPE_SQUARE es 1.2–1.5× más ruidosa que la de mínimos cuadrados sobre las mismas esquinas | Media | — |
+| B96 | El desfase δ entre cámaras (P13) no se distingue en S4: la curva es plana | Baja | — |
 
 ## Abiertos
 
@@ -597,6 +600,27 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** hoy sirve para comparar las dos capas (B1 del P-7b-B) y como rescate si COM dejara una cámara en otro valor (`--fijar … --capa cv2`); archivarla ahora quitaría esa comparación.
 - **De dónde:** el plan de la fase 7b (meta 007), «Lo que va al BACKLOG»; anotada el 2026-11-04 al implementar la parte B.
 - **Qué haría falta:** cuando una meta posterior deje de usarla también en la sonda, moverla a `codigo/historico/` con sus pruebas y dejar `--capa com` como única capa (la opción `--capa` podría irse con ella).
+- **Prioridad:** baja.
+
+### B94 · La pose de Marker0 desde una cámara sola no coincide entre gs1 y gs2 (19.5 mm / 5.8° en la peor posición) y las 5 posiciones no caben en dos cámaras rígidas
+- **Qué:** en el experimento fuera de línea de la fase 1 · Verlo (meta 006 · Grafo de factores óptico-inercial, parte A, `python -m fusion.experiment` sobre la grabación del 2026-11-05 en la Jetson), los extrínsecos T_gs1←gs2 por Marker0 (P12 b, media de `T_gs1←M · T_gs2←M⁻¹` por posición) cambian 17.7 mm / 2.7° (RMS) de una posición de S2 a otra, y el criterio 1 del spec (gs2 llevada a gs1 frente a gs1, validación cruzada, P27) da 19.5 mm / 5.8° en la peor posición frente a < 0.5 mm / < 0.2°. No es ruido (la sd dentro de cada posición es 0.05–0.25 mm, 0.1–0.6°): ajustando a la vez los extrínsecos y la pose del marker en las 5 posiciones (`fusion/bundle.py`, con las 32 combinaciones de la ambigüedad de IPPE) quedan 5.8 px RMS, cuando cada vista sola ajusta a 0.02–0.25 px (gs2 en S2_pos4, 1.25 px); y la distancia entre los centros del marker de dos posiciones, que no depende de los extrínsecos, difiere entre gs1 y gs2 hasta 6.8 mm (S2_pos1–S2_pos2: 62.5 frente a 55.7 mm). S1_reposo y S2_pos1 (el marker en el mismo sitio, grabados seguidos) sí coinciden a 0.4–0.5 mm; en S4 (movimiento), tras alinear rígidamente las dos trayectorias quedan 3.8 mm RMS de diferencia de forma.
+- **Por qué queda:** la fase 1 cierra con el número (el plan lo fija: los criterios del spec son el resultado, no el criterio de la fase) y la causa no se separa con esta grabación. Dos hipótesis: (a) una cámara (o las dos, en sus pinzas) se movió entre posiciones al recolocar el soporte del marker; (b) la pose de un marker planar desde una cámara sola tiene un error sistemático de grados en la inclinación que arrastra la profundidad (z·tan θ·δθ: a 30° y 3°, ~10 mm), por los intrínsecos en esa zona de la imagen (gs2, B36), por un marker no plano o no cuadrado, o por el sesgo de las esquinas. Si es (b), el tracker de hoy publica Marker0 con un error de posición de mm que cambia con la vista, y nadie lo ha medido: la meta 002 midió la escala en el plano y la 003 el jitter, no la exactitud en profundidad.
+- **De dónde:** fase 1 · Verlo, parte A, de la meta 006 (2026-11-05; informe en `Claude outputs/fases/006/fase-1/corrida-02/informe.html`).
+- **Qué haría falta:** (1) repetir S2 sin tocar las cámaras y grabando la posición 1 otra vez al final (si pos1-inicio y pos1-final coinciden a < 0.5 mm y las demás no, es (b); si no coinciden, es (a)); (2) los extrínsecos por tablero de la fase 2 (independientes de Marker0) y repetir el criterio 1 con ellos; (3) medir la exactitud en profundidad de una cámara sola: Marker0 a distancias y ángulos conocidos (un calibre o la regla de la meta 002) frente a lo que da IPPE; (4) mirar por qué gs2 ajusta a 1.25 px en S2_pos4 (recalibrar gs2 o comprobar la planitud del marker).
+- **Prioridad:** alta (si es (b), el resultado que publica el tracker está mal por mm según la vista; hasta separarlo, ningún número de fusión entre cámaras vale).
+
+### B95 · La pose cruda de IPPE_SQUARE es 1.2–1.5× más ruidosa que la de mínimos cuadrados sobre las mismas esquinas
+- **Qué:** con 2000 muestras sintéticas (ruido 0.1 px, `tests/test_fusion_geometry.py`), la sd de la pose de `cv2.solvePnP(IPPE_SQUARE)` es 1.47× la predicha por la jacobiana en la inclinación y 1.18× en la profundidad; la pose por mínimos cuadrados sobre las mismas 4 esquinas (`fusion.geometry.joint_pnp` con una cámara, Gauss-Newton desde la de IPPE) da 1.00 ± 0.02. En la grabación real, la fusión por reproyección (`numpy_reproj`, un PnP conjunto de las dos cámaras) baja la sd 3D en reposo un 63 % frente al 32 % de la media ponderada de las dos poses de IPPE (`numpy_pose`): buena parte de la diferencia es ese refinado, no la segunda cámara.
+- **Por qué queda:** toca `vision/pose.py` (la cadena, principio 6) y cambia la pose que publica el tracker con una cámara: pide su plan, su replay y una verificación en vivo; la meta 006 solo lo midió.
+- **De dónde:** fase 1 · Verlo, parte A, de la meta 006 (2026-11-05).
+- **Qué haría falta:** en el tracker, refinar la pose de IPPE con unas iteraciones de Gauss-Newton sobre la reproyección (o `SOLVEPNP_ITERATIVE` con `useExtrinsicGuess`), medir su coste por frame (~0.1 ms en el PC) y la sd z en reposo frente a la de hoy; con ADR, porque cambia lo que llega a Slicer.
+- **Prioridad:** media (bajaría el jitter de una cámara sola sin hardware nuevo; no da un resultado equivocado).
+
+### B96 · El desfase δ entre cámaras (P13) no se distingue en S4: la curva es plana
+- **Qué:** sobre S4_movimiento (el marker en la mano a 32 mm/s de media, gs2 con pose en el 71.6 % de los frames), el RMS entre la trayectoria de gs1 y la de gs2 llevada a gs1 (alineada rígidamente a cada δ, con los huecos sin pose fuera) baja solo 0.04 mm (de 3.83 a 3.79 mm) en toda la búsqueda de ±20 ms: el desfase no se separa de la diferencia de forma entre las dos trayectorias (B94). A 32 mm/s, 20 ms de desfase son 0.6 mm.
+- **Por qué queda:** el plan daba δ por S4 y S4 no cumplió la comprobación (pose < 90 % en gs2); con B94 abierta el número no se podría interpretar.
+- **De dónde:** fase 1 · Verlo, parte A, de la meta 006 (2026-11-05).
+- **Qué haría falta:** otro S4 con las dos cámaras viendo el marker todo el rato y movimiento más rápido (≥ 100 mm/s, un vaivén de ~10 cm a 1 Hz), después de resolver B94; o medir δ con la hora del buffer de V4L2 (fase 3 del plan).
 - **Prioridad:** baja.
 
 ## Cerrados
