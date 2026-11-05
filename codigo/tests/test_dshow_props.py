@@ -1,13 +1,16 @@
-"""`camera.dshow_props` sin camara (meta 007, fase 7b · Las dos camaras a la vez en Windows, parte A).
+"""`camera.dshow_props` sin camara (meta 007, fase 7b · Las dos camaras a la vez en Windows, partes A y B).
 
 La tabla `CONTROLES_COM` cubre los 10 de `controls.CONTROLES_CV2` en el mismo
 orden y con los grupos y propiedades de `strmif.h`; `a_perfil` da lo mismo que
 `controls.de_nativos_dshow` para los mismos valores crudos; `a_nativo` va y
 vuelve; `CapaWindowsCOM.leer` con un dispositivo falso lee en unidades del
-perfil, cierra siempre y no escribe nada; `aplicar` y `set` son la parte B
-(NotImplementedError); `abrir_filtro` para con 0 o mas de 1 camara en el puerto
-antes de tocar COM y fuera de Windows con OSError; y la suite niega
-`abrir_filtro` (B34, conftest).
+perfil, cierra siempre y no escribe nada; `CapaWindowsCOM.aplicar` (parte B, J7)
+escribe solo lo que difiere en valor o bandera, relee, devuelve las mismas claves
+que `CapaWindowsDShow.aplicar`, respeta `forzar`, cambia solo la bandera de
+`auto_white_balance`, anota `set_false` y lanza `AjustesNoAplicados`; desde la
+parte B `capa_para_plataforma("win32")` es `CapaWindowsCOM`; `abrir_filtro` para
+con 0 o mas de 1 camara en el puerto antes de tocar COM y fuera de Windows con
+OSError; y la suite niega `abrir_filtro` (B34, conftest).
 """
 from __future__ import annotations
 
@@ -41,14 +44,23 @@ LEIDOS_GS1 = {"exposure_ms": 0.9766, "gain": 11.0, "auto_white_balance": False, 
 
 
 class DispositivoFalso:
-    """Un `Dispositivo` que recuerda lo que le piden; `crudos` es lo que 'tiene la camara'."""
+    """Un `Dispositivo` que recuerda lo que le piden; `crudos` es lo que 'tiene la camara'.
 
-    def __init__(self, crudos: dict[str, tuple[int, int]], sin: set[str] = frozenset()) -> None:
+    `rechaza`: controles cuyo `Set` devuelve False y no cambia nada (el driver lo
+    rechaza); `ignora`: controles cuyo `Set` devuelve True pero la camara no lo
+    toma (la relectura lo delata, como en la fase 2a con la marca sin escribir).
+    """
+
+    def __init__(self, crudos: dict[str, tuple[int, int]], sin: set[str] = frozenset(),
+                 rechaza: set[str] = frozenset(), ignora: set[str] = frozenset()) -> None:
         self.valores = {dp.CONTROLES_COM[n]: v for n, v in crudos.items()}
         self.sin = {dp.CONTROLES_COM[n] for n in sin}
+        self.rechaza = {dp.CONTROLES_COM[n] for n in rechaza}
+        self.ignora = {dp.CONTROLES_COM[n] for n in ignora}
         self.gets: list[tuple[str, int]] = []
         self.sets: list[tuple] = []
         self.cerrado = 0
+        self.indice = 0
 
     def get(self, grupo: str, propiedad: int) -> dp.Lectura:
         self.gets.append((grupo, propiedad))
@@ -59,6 +71,10 @@ class DispositivoFalso:
 
     def set(self, grupo: str, propiedad: int, valor: int, auto: bool) -> bool:
         self.sets.append((grupo, propiedad, valor, auto))
+        if (grupo, propiedad) in self.rechaza:
+            return False
+        if (grupo, propiedad) not in self.ignora:
+            self.valores[(grupo, propiedad)] = (valor, dp.FLAG_AUTO if auto else dp.FLAG_MANUAL)
         return True
 
     def close(self) -> None:
@@ -186,14 +202,141 @@ def test_leer_rechaza_nombres_antes_de_abrir() -> None:
     assert abiertos == [] and d.cerrado == 0
 
 
-def test_aplicar_y_set_son_la_parte_b() -> None:
+# ----------------------------------------------------------------------------
+# CapaWindowsCOM.aplicar (parte B, J7): el contrato de CapaWindowsDShow.aplicar
+# ----------------------------------------------------------------------------
+
+# El perfil de gs1 (los controls y la marca), en unidades del perfil.
+CONTROLS_GS1 = {"exposure_manual": True, "exposure_ms": 0.977, "gain": 11, "auto_white_balance": False,
+                "brightness": 0, "contrast": 0, "saturation": 56, "sharpness": 0, "gamma": 110,
+                "backlight": 54}
+CLAVES_APLICAR = {"indice", "antes", "leidos", "antes_nativos", "leidos_nativos", "escritos",
+                  "set_false", "diferencias", "forzado", "segundos"}
+
+
+def test_aplicar_sin_diferencias_no_escribe_nada_y_relee() -> None:
+    """Lo del tracker en el PC con la camara ya puesta: `Ajustes aplicados (escritos: ninguno)`."""
     d = DispositivoFalso(CRUDOS_GS1)
     capa, abiertos = _capa(d)
-    with pytest.raises(NotImplementedError, match="parte B"):
-        capa.aplicar(PUERTO_1, {"gain": 12})
-    assert abiertos == []
-    with pytest.raises(NotImplementedError, match="parte B"):
-        dp._DispositivoCOM(0, None, None, None, None, False).set("procamp", 9, 12, False)
+    r = capa.aplicar(PUERTO_1, CONTROLS_GS1)
+    assert r["escritos"] == [] and r["set_false"] == [] and r["diferencias"] == []
+    assert d.sets == [] and abiertos == [PUERTO_1] and d.cerrado == 1
+    assert r["forzado"] is False and r["indice"] == 0 and isinstance(r["segundos"], float)
+    # Las 9 del perfil (exposure_manual no se lee), en unidades del perfil, como las da cv2.
+    esperado = {n: v for n, v in LEIDOS_GS1.items() if n != "focus"}
+    assert r["leidos"] == esperado and r["antes"] == esperado
+    assert r["leidos_nativos"] == {n: float(CRUDOS_GS1[n][0]) if n != "auto_white_balance" else 0.0
+                                   for n in esperado}
+    assert r["leidos_flags"] == {n: dp.FLAG_MANUAL for n in esperado}
+    # Dos lecturas (antes y despues) de los 9, en el orden del perfil.
+    assert d.gets == 2 * [dp.CONTROLES_COM[n] for n in esperado]
+
+
+def test_aplicar_escribe_solo_lo_que_difiere_y_lo_relee() -> None:
+    d = DispositivoFalso(CRUDOS_GS1)
+    capa, _ = _capa(d)
+    r = capa.aplicar(PUERTO_1, {**CONTROLS_GS1, "gain": 12, "exposure_ms": 3.906})
+    assert r["escritos"] == ["exposure_ms", "gain"] and r["set_false"] == []
+    assert d.sets == [("camara", 4, -8, False), ("procamp", 9, 12, False)]
+    assert r["antes"]["gain"] == 11.0 and r["leidos"]["gain"] == 12.0
+    assert r["antes"]["exposure_ms"] == 0.9766 and r["leidos"]["exposure_ms"] == 3.9062
+    assert r["leidos_nativos"]["exposure_ms"] == -8.0 and r["antes_nativos"]["exposure_ms"] == -10.0
+    assert d.cerrado == 1
+
+
+def test_aplicar_devuelve_las_mismas_claves_que_la_capa_de_cv2() -> None:
+    """`camera.backend` lee `leidos` y `escritos`; el resto es para la sonda. Nada de menos."""
+    d = DispositivoFalso(CRUDOS_GS1)
+    capa, _ = _capa(d)
+    r = capa.aplicar(PUERTO_1, {**CONTROLS_GS1, "gain": 12})
+    assert CLAVES_APLICAR <= set(r)
+    assert set(r) - CLAVES_APLICAR == {"leidos_flags"}
+    import json
+    json.dumps(r)        # el JSON de la sonda (--fijar) lo guarda tal cual
+
+
+def test_aplicar_escribe_si_solo_difiere_la_bandera() -> None:
+    """La camara tiene el valor correcto pero en automatico: hay que escribirlo en manual."""
+    crudos = {**CRUDOS_GS1, "exposure_ms": (-10, dp.FLAG_AUTO)}
+    d = DispositivoFalso(crudos)
+    capa, _ = _capa(d)
+    r = capa.aplicar(PUERTO_1, CONTROLS_GS1)
+    assert r["escritos"] == ["exposure_ms"] and d.sets == [("camara", 4, -10, False)]
+    assert r["leidos_flags"]["exposure_ms"] == dp.FLAG_MANUAL
+
+
+def test_aplicar_auto_white_balance_cambia_solo_la_bandera() -> None:
+    """true: `Set(WhiteBalance, <el valor que tenga la camara>, Auto)`; false, lo mismo con Manual."""
+    d = DispositivoFalso(CRUDOS_GS1)
+    capa, _ = _capa(d)
+    r = capa.aplicar(PUERTO_1, {**CONTROLS_GS1, "auto_white_balance": True})
+    assert r["escritos"] == ["auto_white_balance"]
+    assert d.sets == [("procamp", 7, 4600, True)]          # 4600: el valor de la camara, no 0
+    assert r["leidos"]["auto_white_balance"] is True and r["antes"]["auto_white_balance"] is False
+    assert r["leidos_nativos"]["auto_white_balance"] == 1.0
+    # Y de vuelta a manual, conservando el valor.
+    r2 = capa.aplicar(PUERTO_1, CONTROLS_GS1)
+    assert d.sets[-1] == ("procamp", 7, 4600, False) and r2["leidos"]["auto_white_balance"] is False
+
+
+def test_aplicar_forzar_escribe_todo_aunque_coincida() -> None:
+    """La marca se da de alta con `--fijar focus=500 --forzar` (CONTEXT §4.19): se escribe igual."""
+    d = DispositivoFalso(CRUDOS_GS1)
+    capa, _ = _capa(d)
+    r = capa.aplicar(PUERTO_1, {"focus": 500}, forzar=True)
+    assert r["escritos"] == ["focus"] and r["forzado"] is True and r["diferencias"] == []
+    assert d.sets == [("camara", 6, 500, False)] and r["leidos"] == {"focus": 500.0}
+    r2 = capa.aplicar(PUERTO_1, CONTROLS_GS1, forzar=True)
+    assert len(r2["escritos"]) == 9 and r2["diferencias"] == []
+
+
+def test_aplicar_que_no_queda_lanza_ajustes_no_aplicados_con_el_resultado() -> None:
+    d = DispositivoFalso(CRUDOS_GS1, ignora={"gain"})
+    capa, _ = _capa(d)
+    with pytest.raises(ac.AjustesNoAplicados, match="gain: declarado 12, leido 11") as ei:
+        capa.aplicar(PUERTO_1, {**CONTROLS_GS1, "gain": 12})
+    r = ei.value.resultado
+    assert r["escritos"] == ["gain"] and r["set_false"] == [] and r["diferencias"] == ["gain: declarado 12, leido 11"]
+    assert "escritos: ['gain']" in str(ei.value) and "[dshow_props]" in str(ei.value)
+    assert d.cerrado == 1
+
+
+def test_aplicar_set_false_se_anota_y_la_relectura_decide() -> None:
+    d = DispositivoFalso(CRUDOS_GS1, rechaza={"gamma"})
+    capa, _ = _capa(d)
+    with pytest.raises(ac.AjustesNoAplicados, match="set False: \\['gamma'\\]") as ei:
+        capa.aplicar(PUERTO_1, {**CONTROLS_GS1, "gamma": 120})
+    assert ei.value.resultado["set_false"] == ["gamma"] and ei.value.resultado["escritos"] == ["gamma"]
+
+
+def test_aplicar_valida_antes_de_abrir() -> None:
+    d = DispositivoFalso(CRUDOS_GS1)
+    capa, abiertos = _capa(d)
+    with pytest.raises(ValueError, match="exige exposure_manual"):
+        capa.aplicar(PUERTO_1, {"exposure_ms": 0.977})
+    with pytest.raises(ValueError, match="no es 1000\\*2\\^k"):
+        capa.aplicar(PUERTO_1, {"exposure_manual": True, "exposure_ms": 1.5})
+    with pytest.raises(ValueError, match="'iso' desconocido"):
+        capa.aplicar(PUERTO_1, {"iso": 1})
+    assert abiertos == [] and d.sets == [] and d.cerrado == 0
+
+
+def test_aplicar_cierra_si_get_revienta() -> None:
+    d = DispositivoFalso(CRUDOS_GS1, sin={"gamma"})
+    capa, _ = _capa(d)
+    with pytest.raises(OSError, match="0x80070490"):
+        capa.aplicar(PUERTO_1, CONTROLS_GS1)
+    assert d.cerrado == 1 and d.sets == []
+
+
+def test_nativos_para_escribir_y_como_cv2() -> None:
+    n = dp.nativos_para_escribir(CONTROLS_GS1)
+    assert list(n) == [k for k in ac.CONTROLES_CV2 if k != "focus"]       # el orden del perfil
+    assert n["exposure_ms"] == (-10, False) and n["auto_white_balance"] == (0, False)
+    assert dp.como_cv2("auto_white_balance", dp.Lectura(4600, True, 1)) == 1.0
+    assert dp.como_cv2("gain", dp.Lectura(11, False, 2)) == 11.0
+    # Las unidades nativas que compara `aplicar` son las de `controls.a_nativos_dshow`.
+    assert {k: dp.como_cv2(k, dp.Lectura(v, a)) for k, (v, a) in n.items()} == ac.a_nativos_dshow(CONTROLS_GS1)
 
 
 def test_capa_cumple_el_protocolo_de_controls() -> None:
@@ -209,8 +352,39 @@ def test_la_capa_sin_falso_no_toca_com(monkeypatch) -> None:
     """B34: `abrir_filtro` esta negado a la suite; `CapaWindowsCOM()` a secas lo llamaria."""
     with pytest.raises(RealHardwareForbidden, match="dshow_props.abrir_filtro"):
         dp.CapaWindowsCOM().leer(PUERTO_1, ["focus"])
-    # El tracker en Windows sigue con la capa de cv2: la parte A no cambia la cadena.
-    assert isinstance(ac.capa_para_plataforma("win32"), ac.CapaWindowsDShow)
+    with pytest.raises(RealHardwareForbidden, match="dshow_props.abrir_filtro"):
+        dp.CapaWindowsCOM().aplicar(PUERTO_1, {"gain": 11})
+
+
+def test_capa_para_plataforma_win32_es_la_com_desde_la_parte_b() -> None:
+    """J7: el tracker en Windows lee la marca y aplica los ajustes por COM, sin abrir video.
+    `CapaWindowsDShow` sigue existiendo para la sonda (`--capa cv2`, `--comparar-capas`)."""
+    assert isinstance(ac.capa_para_plataforma("win32"), dp.CapaWindowsCOM)
+    assert ac.capa_para_plataforma("win32")._abrir is dp.abrir_filtro      # el de verdad (negado en la suite)
+    assert callable(ac.CapaWindowsDShow.aplicar)
+
+
+def test_dispositivo_com_set_llama_a_la_vtable_con_la_bandera(monkeypatch) -> None:
+    """`Set(Property, lValue, Flags)` en el indice 4 de la vtable, con Manual (2) o Auto (1)."""
+    llamadas: list = []
+
+    def metodo(obj, indice, restype, *argtypes):
+        def fn(o, *args):
+            llamadas.append((obj, indice, args))
+            return 0 if args[0] != 99 else -2147024809     # E_INVALIDARG para la propiedad 99
+        return fn
+    monkeypatch.setattr(cu, "_metodo", metodo)
+    d = dp._DispositivoCOM(1, None, 11, 22, None, False)     # 11 y 22 hacen de punteros
+    assert d.set("procamp", 9, 12, False) is True
+    assert d.set("camara", 4, -10, False) is True
+    assert d.set("procamp", 7, 4600, True) is True
+    assert d.set("procamp", 99, 0, False) is False and d.ultimo_hr == -2147024809
+    assert llamadas == [(11, dp.VT_SET, (9, 12, dp.FLAG_MANUAL)), (22, dp.VT_SET, (4, -10, dp.FLAG_MANUAL)),
+                        (11, dp.VT_SET, (7, 4600, dp.FLAG_AUTO)), (11, dp.VT_SET, (99, 0, dp.FLAG_MANUAL))]
+    with pytest.raises(ValueError, match="grupo"):
+        d.set("otro", 0, 0, False)
+    with pytest.raises(OSError, match="no expone IAMCameraControl"):
+        dp._DispositivoCOM(1, None, 11, None, None, False).set("camara", 4, 0, False)
 
 
 def test_dispositivo_com_close_es_idempotente() -> None:

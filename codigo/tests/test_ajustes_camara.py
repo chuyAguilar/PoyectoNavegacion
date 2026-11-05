@@ -276,8 +276,10 @@ def test_leer_rechaza_nombres_que_no_se_leen() -> None:
 
 
 def test_capa_para_plataforma() -> None:
+    from camera import dshow_props as dp
     from camera import v4l2 as cv4l2
-    assert isinstance(ac.capa_para_plataforma("win32"), ac.CapaWindowsDShow)
+    # Meta 007, fase 7b · Las dos camaras a la vez en Windows, parte B (J7): COM sin video.
+    assert isinstance(ac.capa_para_plataforma("win32"), dp.CapaWindowsCOM)
     # Meta 007, fase 5 · La capa V4L2 y cada camara en la Jetson: linux ya tiene capa.
     assert isinstance(ac.capa_para_plataforma("linux"), cv4l2.CapaLinuxV4L2)
     assert isinstance(ac.capa_para_plataforma("linux2"), cv4l2.CapaLinuxV4L2)

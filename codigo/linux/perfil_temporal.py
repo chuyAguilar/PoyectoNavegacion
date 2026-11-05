@@ -1,13 +1,16 @@
 """Un perfil temporal: copia de un perfil del tracker con unas pocas claves cambiadas
 (meta 007 · El tracker en la Jetson Orin Nano; fase 5b · El ruido de gs1 por V4L2, P25;
-lo usa tambien la fase 7 · Las dos camaras a la vez, P18).
+lo usan tambien la fase 7 · Las dos camaras a la vez en la Jetson, P18, y la fase 7b · Las
+dos camaras a la vez en Windows, parte B: la marca cruzada sin mover cables).
 
 Para medir una variable por vez sin tocar los perfiles del repo: el puerto OpenIGTLink
-(dos trackers a la vez), el puerto USB de la camara (J4: gs1 en el puerto del hub de gs2)
-o la exposicion (la sensibilidad del ruido). Solo se pueden cambiar las claves de
-`CLAVES`; cualquier otra se niega (principio 7). La copia conserva los comentarios del
+(dos trackers a la vez), el puerto USB de la camara (J4: gs1 en el puerto del hub de gs2;
+en Windows, `camera.usb_port_windows`, la ruta `PCIROOT(…)#…` que da `probe_camera
+--puertos`) o la exposicion (la sensibilidad del ruido). Solo se pueden cambiar las claves
+de `CLAVES`; cualquier otra se niega (principio 7). La copia conserva los comentarios del
 perfil base: se cambia la linea de la clave y nada mas, y despues se carga con yaml y se
-comprueba que lo unico distinto del base son esas claves.
+comprueba que lo unico distinto del base son esas claves. El modulo vive en `linux/`
+aunque sirva tambien en Windows: en el PC se lanza igual, `python -m linux.perfil_temporal`.
 
 En la Jetson lo lanza el guardian (`ssh nav-jetson py <repo|wip> linux.perfil_temporal ...`,
 tope 30 s): `--base` cae dentro del arbol y `--salida` solo en `~/nav-salidas/`. No abre
@@ -20,6 +23,9 @@ ninguna camara ni escribe en ella. Uso (desde codigo/, con el venv):
         --salida /home/navagente/nav-salidas/perfiles/gs1_puerto22.yaml
     python -m linux.perfil_temporal --base profiles/tracker_config_gs1.yaml \\
         --poner camera.controls.exposure_ms=0.9 --salida ...
+    python -m linux.perfil_temporal --base profiles\\tracker_config_gs1.yaml \\
+        --poner "camera.usb_port_windows=PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)" \\
+        --salida "..\\Claude outputs\\fases\\007\\p7b\\gs1_en_puerto_gs2.yaml"
 
 `--puerto N` es el atajo de `--poner transforms_port=N`. `--poner` se repite. La salida no
 se pisa si ya existe.
@@ -37,6 +43,9 @@ from camera.v4l2 import RE_BYPATH
 
 PUERTOS_IGTL = range(18945, 18951)
 EXPOSICION_MS = (0.1, 10.0)
+# La ruta de un puerto USB en Windows, como la da `camera.uvc.datos_puerto` (CfgMgr32,
+# DEVPKEY_Device_LocationPaths): PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3).
+RE_PUERTO_WINDOWS = re.compile(r"^PCIROOT\([0-9]+\)(#[A-Z]+\([0-9A-Fa-f]+\))+$")
 
 # Las unicas claves que se pueden cambiar, con su tipo. La ruta es con puntos desde la raiz
 # del YAML; `transforms_port` esta bajo `igtlink` en los perfiles, pero se nombra a secas
@@ -44,16 +53,20 @@ EXPOSICION_MS = (0.1, 10.0)
 CLAVES: dict[str, type] = {
     "transforms_port": int,
     "camera.usb_port_linux": str,
+    "camera.usb_port_windows": str,
     "camera.controls.exposure_ms": float,
 }
 RUTA_YAML: dict[str, tuple[str, ...]] = {
     "transforms_port": ("igtlink", "transforms_port"),
     "camera.usb_port_linux": ("camera", "usb_port_linux"),
+    "camera.usb_port_windows": ("camera", "usb_port_windows"),
     "camera.controls.exposure_ms": ("camera", "controls", "exposure_ms"),
 }
 
 _RE_LINEA = re.compile(r"^(?P<sangria>[ ]*)(?P<clave>[A-Za-z_][A-Za-z0-9_]*):(?P<resto>.*)$")
-_RE_VALOR = re.compile(r"^(?P<espacio>\s*)(?P<valor>[^#]*?)(?P<coment>\s+#.*)?$")
+# En YAML un `#` abre comentario solo tras un espacio: el valor puede llevar `#` pegados
+# (la ruta de un puerto de Windows, `PCIROOT(0)#PCI(1400)#…`; fase 7b, parte B).
+_RE_VALOR = re.compile(r"^(?P<espacio>\s*)(?P<valor>.*?)(?P<coment>\s+#.*)?$")
 
 
 def validar(clave: str, valor: object) -> object:
@@ -82,6 +95,9 @@ def validar(clave: str, valor: object) -> object:
     if clave == "camera.usb_port_linux" and not RE_BYPATH.match(texto):
         raise ValueError(f"{clave}={texto!r} no es un nombre by-path "
                          f"(p. ej. platform-3610000.usb-usb-0:2.2:1.0-video-index0)")
+    if clave == "camera.usb_port_windows" and not RE_PUERTO_WINDOWS.match(texto):
+        raise ValueError(f"{clave}={texto!r} no es una ruta de puerto de Windows "
+                         f"(p. ej. PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4), la de --puertos)")
     return texto
 
 
@@ -189,7 +205,7 @@ def crear(base: Path, salida: Path, cambios: dict[str, object]) -> Path:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="Copia un perfil del tracker cambiando solo el puerto OpenIGTLink, el puerto "
-                    "USB de Linux o la exposicion (meta 007).")
+                    "USB (de Linux o de Windows) o la exposicion (meta 007).")
     ap.add_argument("--base", required=True, type=Path, help="Perfil base (profiles/tracker_config_gs1.yaml).")
     ap.add_argument("--salida", required=True, type=Path, help="Perfil nuevo (.yaml; no se pisa).")
     ap.add_argument("--puerto", type=int, default=None,

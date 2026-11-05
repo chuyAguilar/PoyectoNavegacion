@@ -6,7 +6,8 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-11-04 (§3.1, diagnósticos y árbol: meta 007 · El tracker en la Jetson Orin Nano, fase 7b · Las dos cámaras a la vez en Windows, parte A: `camera/dshow_props.py` (lectura por COM, el tracker no lo usa), la sonda con `--capa` y `--comparar-capas`, y `igtl_rate listen --idle-s`; sin cambio en la cadena). Antes, 2026-11-04 (diagnósticos y árbol: fase 7 · Las dos cámaras a la vez en la Jetson: `diagnostics/tegrastats_log.py`). Antes, 2026-11-03 (§3.5 y §6: fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes: `IgtlSender(port, iface)`, `--igtl-iface` y `diagnostics/clock_offset.py`; sin la opción la cadena no cambia; y `TCP_NODELAY` en cada cliente aceptado, §3.5)._
+> _Última actualización: 2026-11-04 (§3.1, diagnósticos y árbol: meta 007 · El tracker en la Jetson Orin Nano, fase 7b · Las dos cámaras a la vez en Windows, parte B: en Windows la marca y los ajustes se leen y se escriben por COM, sin abrir vídeo (`capa_para_plataforma("win32")` da `CapaWindowsCOM`), y `linux.perfil_temporal` gana `camera.usb_port_windows`; la cadena no cambia).
+> _Antes, 2026-11-04 (§3.1, diagnósticos y árbol: meta 007 · El tracker en la Jetson Orin Nano, fase 7b · Las dos cámaras a la vez en Windows, parte A: `camera/dshow_props.py` (lectura por COM, el tracker no lo usa), la sonda con `--capa` y `--comparar-capas`, y `igtl_rate listen --idle-s`; sin cambio en la cadena). Antes, 2026-11-04 (diagnósticos y árbol: fase 7 · Las dos cámaras a la vez en la Jetson: `diagnostics/tegrastats_log.py`). Antes, 2026-11-03 (§3.5 y §6: fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes: `IgtlSender(port, iface)`, `--igtl-iface` y `diagnostics/clock_offset.py`; sin la opción la cadena no cambia; y `TCP_NODELAY` en cada cliente aceptado, §3.5)._
 > _Antes, 2026-11-02 (§3.1 y §6: meta 007 · El tracker en la Jetson Orin Nano, fase 5 · La capa V4L2 y cada cámara en la Jetson: `camera/v4l2.py` y la rama Linux de `WebcamBackend`, `usb_port_linux` en los perfiles, `tests/data/linux/`). Antes, 2026-11-02 (§6 y §9.5: meta 007 · El tracker en la Jetson Orin Nano, fase 4 · La suite corre en Linux: la suite corre en la Jetson con 0 fallos; en Linux el replay admite 1e-3 mm, 1e-3° y 1e-3 px (P22); `diagnostics/explain_pose.py` compara el sha de la calibración con LF y CRLF, B74). Antes, 2026-11-02 (§6: meta 007 · El tracker en la Jetson Orin Nano, fase 3 · El entorno en la Jetson: `codigo\linux\` gana `enviar_wip.ps1` e `instalar_entorno.sh`, `codigo\` gana `requirements-jetson.txt`, y el guardián pasa a la versión 3). Antes, 2026-10-29 (§6: meta 007 · El tracker en la Jetson Orin Nano, fase 1 · El escaneo de la Jetson, solo lectura: entra `codigo\linux\` con el escaneo y su lanzador, y `specs\` nombra 006 y 007)._
 > _Antes, 2026-10-28 (§6: meta 005 · Agente de consulta para el equipo y buzón de peticiones, fase 4 · El aviso de peticiones en `direccion` y el circuito completo: entran en el árbol `peticiones\` y `equipo\`, con `equipo\peticiones_pendientes.ps1`, que `direccion` corre al arrancar). Antes, 2026-10-28 (§6: meta 005, fase 3 · La guía `docs/EQUIPO.md` y la instalación guiada: `docs\` gana `EQUIPO.md`). Antes, 2026-10-28 (§6: meta 005, fase 2 · El agente `consulta` y su skill de peticiones: `.claude\` gana el agente `consulta` y la skill `peticion`; `peticiones\` y `equipo\` entran en el árbol en la fase 4). Antes, 2026-10-26 (§6: meta 004 · Cómo funciona el tracker, fase 4 · Lectura con el autor y cierre de la meta: la meta cierra con 0 dudas en §9.2 y §9.4; §9 y el código no cambian). Antes, 2026-10-26 (índice, §9.2, §9.4 y §9.5: meta 004 · Cómo funciona el tracker, fase 3 · La explicación y el glosario: la detección → pose en 11 pasos, el glosario de los logs y la tabla de la fuente de cada número; el código no cambia). Antes, 2026-10-26 (§3.7: meta 004 · Cómo funciona el tracker, fase 2c · «Comprobar escala con regla» sin congelarse y con vista previa fluida: `calibration/check_scale.py` detecta la vista previa a la mitad y en otro hilo y repinta durante la medida)._
 > _Antes, 2026-10-26 (§3.7 y §9.1: meta 004 · Cómo funciona el tracker, fase 2b · «Verificar IDs y colocar la cámara» marca la cámara en verde y se quita «Probar cámara»: `status.chequeo_camara_tras_receta` pone el semáforo «Cámara» al terminar «Verificar IDs» y el panel ya no tiene el botón de la sonda corta). Antes, 2026-10-26 (§6 y §9.3: meta 004 · Cómo funciona el tracker, fase 2 · El ejemplo resuelto con un frame real: `diagnostics/explain_pose.py` sigue el frame 480 de gs1 desde las esquinas hasta la 4×4, el bloque generado y la figura `docs/img/004/marker0_gs1_frame_00480.png`; `tests/test_explain_pose.py` lo repite sobre los 6 frames guardados). Antes, 2026-10-26 (índice nuevo; §2, §6 y §9 nueva: meta 004, fase 1 · El mapa del proyecto: §9.1 con el mapa en Mermaid de archivo por caja y lo que pasa por cada flecha, de izquierda a derecha, su imagen SVG exportada con `diagnostics/export_map.py` (P9) y la prueba de fidelidad `tests/test_como_funciona.py`; §9.2, §9.4 y §9.5 se escriben en la fase 3)._
@@ -85,7 +86,7 @@ El mapa completo, con el archivo o la función de cada caja, el panel y el arran
 
 ### 3.1 Cámara (sensor de entrada)
 
-_Al día: 2026-11-04 (meta 007, fase 7b, parte A: `camera/dshow_props.py`; antes, 2026-11-02, fase 5, y 2026-10-25, meta 003, fase 7)._ Paquete `codigo/camera/`.
+_Al día: 2026-11-04 (meta 007, fase 7b, parte B: la marca y los ajustes por COM; antes, la parte A: `camera/dshow_props.py`; antes, 2026-11-02, fase 5, y 2026-10-25, meta 003, fase 7)._ Paquete `codigo/camera/`.
 
 Solo valen las dos **SVPRO AR0234 global shutter** (ADR-023, ADR-024, ADR-025), una por
 perfil: `profiles/tracker_config_gs1.yaml` (puerto 1, marca `focus` 500) y
@@ -100,25 +101,31 @@ el tracking va con la caja de luz al máximo (`CONTEXT.md` §4.20). `camera.back
   `close`) y `WebcamBackend`. La cámara se identifica por `camera.usb_port_windows`
   (ruta del puerto USB), no por el índice. `WebcamBackend.open()` hace, en orden:
   resolver el índice MSMF desde la ruta (`camera.uvc.resolver_indice`) → leer la
-  `marca` (`focus`) por DSHOW y parar sin escribir nada si no coincide (cámaras
+  `marca` (`focus`) por la capa de la plataforma (en Windows, COM) y parar sin escribir nada si no coincide (cámaras
   intercambiadas) → aplicar `controls` (`camera.controls`, solo lo que difiere) →
   `VideoCapture` MSMF + MJPG → warmup → comprobar que el frame es del tamaño pedido y
   del `image_width`/`image_height` del `.yml` de `calibration_file`; si algo falla tras
   abrir, libera la cámara y relanza.
 - `camera/uvc.py` — enumeración de cámaras (MSMF y DSHOW), ruta del puerto USB por
   CfgMgr32 y el apagado de la aceleración HW de MSMF (`describir_aceleracion_msmf`).
-- `camera/controls.py` — los `controls` del perfil (nombres propios, exposición en ms)
-  por DSHOW (`CapaWindowsDShow`); en Linux, `capa_para_plataforma("linux")` da `CapaLinuxV4L2`.
-- `camera/dshow_props.py` (Windows; meta 007, fase 7b, parte A, 2026-11-04) — los mismos 10
-  controles leídos por COM sobre el filtro de captura de DirectShow, **sin abrir vídeo**:
+- `camera/controls.py` — los `controls` del perfil (nombres propios, exposición en ms) y
+  `capa_para_plataforma`: `"win32"` da `dshow_props.CapaWindowsCOM` (desde la parte B de la fase 7b),
+  `"linux"` da `CapaLinuxV4L2`. `CapaWindowsDShow` (la apertura corta por `cv2` DSHOW) queda solo para la
+  sonda y para comparar (`probe_camera --capa cv2`, `--comparar-capas`; B93).
+- `camera/dshow_props.py` (Windows; meta 007, fase 7b, partes A y B, 2026-11-04) — los mismos 10
+  controles leídos y escritos por COM sobre el filtro de captura de DirectShow, **sin abrir vídeo**:
   `IMoniker::BindToObject(IBaseFilter)` y, sobre él, `IAMVideoProcAmp` e `IAMCameraControl`
   (`GetRange`, `Set`, `Get`, bandera auto/manual). `abrir_filtro(puerto)` (una sola cámara
   DSHOW por puerto; vuelve a enumerar y comprueba el DevicePath), `CONTROLES_COM`, `a_perfil`
-  y `a_nativo` (las conversiones son las de `camera.controls`) y `CapaWindowsCOM` (`leer`;
-  `aplicar` levanta NotImplementedError hasta la parte B). **El tracker no lo usa**: sigue con
-  `CapaWindowsDShow`, y `capa_para_plataforma("win32")` no cambió. Se compara con la capa de
-  `cv2` en vivo con `probe_camera --comparar-capas`. Existe porque, con una cámara
-  transmitiendo, la apertura corta de `cv2` sobre la otra falla (P-7w, 2026-11-04).
+  y `a_nativo` (las conversiones son las de `camera.controls`) y `CapaWindowsCOM`: `leer` y
+  `aplicar` (lee, escribe solo lo que difiere en valor o en bandera, relee y compara en
+  unidades nativas; `auto_white_balance` cambia solo la bandera; devuelve las mismas claves que
+  `CapaWindowsDShow.aplicar`, más `leidos_flags`, y `AjustesNoAplicados` si algo no quedó). **El
+  tracker lo usa desde la parte B**: `WebcamBackend.open` hace las mismas llamadas en el mismo
+  orden, ahora por COM. Existe porque, con una cámara transmitiendo por MSMF, la apertura corta
+  de `cv2`/DSHOW sobre la otra no abre (P-7w y P-7b-A, 2026-11-04); por COM la marca y los
+  ajustes se leen en ~0.2 s con la otra transmitiendo. El puerto de Windows de un perfil
+  temporal se cambia con `linux.perfil_temporal --poner camera.usb_port_windows=…`.
 - `camera/v4l2.py` (Linux, Jetson; meta 007 fase 5, 2026-11-02) — `listar_camaras_v4l2` y
   `resolver_dispositivo` (el enlace `/dev/v4l/by-path/…-video-index0` → `/dev/videoN`),
   `ejecutar_v4l2ctl` (argv cerrado, tope de 5 s), `parsear_list_ctrls`, las conversiones a

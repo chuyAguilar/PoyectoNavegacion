@@ -40,9 +40,11 @@ medicion se guarda en el JSON al tenerla, B25):
   --comparar-capas --puerto R
                             lee por com y despues por cv2 y dice cada
                             diferencia (A0 del P-7b-A: tienen que ser 0 de 10);
-  --fijar "k=v,..." --puerto R --capa cv2 [--forzar]
+  --fijar "k=v,..." --puerto R --capa cv2|com [--forzar]
                             aplica por la capa (escribe solo lo que difiere,
-                            relee) y los deja puestos; p. ej.
+                            relee) y los deja puestos; com escribe por COM sin
+                            video (parte B de la fase 7b, la capa del tracker
+                            desde entonces); p. ej.
                             "exposure_ms=1.953,gain=11". Con --forzar escribe
                             cada control pedido aunque la lectura coincida y
                             relee: asi se da de alta la marca (sesion del
@@ -81,6 +83,9 @@ explicitos (principio 7). Ejemplos:
     python -m diagnostics.probe_camera --comparar-capas ^
         --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)" ^
         --salida "..\\Claude outputs\\fases\\007\\p7b\\a0_gs1.json" --timeout 60
+    python -m diagnostics.probe_camera --fijar "gain=12" --capa com ^
+        --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)" ^
+        --salida "..\\Claude outputs\\fases\\007\\p7b\\B2_gs1_gain12.json" --timeout 60
 """
 from __future__ import annotations
 
@@ -135,9 +140,10 @@ TOLERANCIA = 1e-3
 
 BACKENDS = ("MSMF", "DSHOW")
 MODOS_CONTROLES = ("no", "leer", "probar")
-# Meta 007, fase 7b: la capa de ajustes de --leer, --fijar y --tras-msmf. 'cv2' es la de
-# hoy (CapaWindowsDShow: apertura corta por DSHOW); 'com' lee por COM sobre el filtro de
-# captura, sin video (camera.dshow_props.CapaWindowsCOM). Obligatoria (principio 7).
+# Meta 007, fase 7b: la capa de ajustes de --leer, --fijar y --tras-msmf. 'cv2' es la
+# anterior (CapaWindowsDShow: apertura corta por DSHOW); 'com' lee y escribe por COM sobre
+# el filtro de captura, sin video (camera.dshow_props.CapaWindowsCOM; la del tracker desde
+# la parte B). Obligatoria (principio 7).
 CAPAS = ("cv2", "com")
 MODOS_CON_CAPA = ("leer", "fijar", "tras_msmf")
 MOTIVO_MSMF = (
@@ -528,7 +534,7 @@ def parsear_fijar(texto: str) -> dict:
 
 
 def capa_por_nombre(nombre: str):
-    """La capa de ajustes que pide --capa: 'cv2' (CapaWindowsDShow, la de hoy) o 'com' (CapaWindowsCOM).
+    """La capa de ajustes que pide --capa: 'cv2' (CapaWindowsDShow, la anterior) o 'com' (CapaWindowsCOM, la del tracker).
 
     Se construye al llamar, no al importar: las pruebas sustituyen la clase en
     su modulo. Un nombre que no es uno de los dos para (principio 7).
@@ -780,8 +786,6 @@ def _fase_2a(ap, args, estado: dict, salida: Path) -> int:
                  "de hoy; com: el filtro de captura por COM, sin video; meta 007, fase 7b)")
     if modo not in MODOS_CON_CAPA and args.capa is not None:
         ap.error("--capa solo va con --leer, --fijar y --tras-msmf (--comparar-capas lee por las dos)")
-    if modo == "fijar" and args.capa == "com":
-        ap.error("--fijar --capa com: la escritura por COM es la parte B de la fase 7b; usa --capa cv2")
     if args.forzar and modo != "fijar":
         ap.error("--forzar solo va con --fijar")
     controls = None
@@ -883,7 +887,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--leer", action="store_true", help="lee los controles por la capa de --capa")
     ap.add_argument("--capa", choices=CAPAS,
                     help="capa de ajustes para --leer, --fijar y --tras-msmf (obligatoria): cv2 = la apertura "
-                         "corta por DSHOW de hoy; com = el filtro de captura por COM, sin video (fase 7b)")
+                         "corta por DSHOW (la anterior); com = el filtro de captura por COM, sin video "
+                         "(la del tracker desde la fase 7b)")
     ap.add_argument("--comparar-capas", action="store_true",
                     help="lee los 10 controles por com y por cv2 y dice cada diferencia (A0 del P-7b-A)")
     ap.add_argument("--fijar", help="controles a aplicar y dejar: 'exposure_ms=1.953,gain=11'")

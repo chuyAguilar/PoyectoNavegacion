@@ -11,14 +11,21 @@ propios: `exposure_manual` (bool), `exposure_ms` (milisegundos, P10),
 `wb_temperature` (la camara lo rechaza, fase 1).
 
 Una capa por sistema los aplica y los lee de vuelta:
-  - Windows (CapaWindowsDShow): OpenCV con cv2.CAP_DSHOW, en una apertura corta
-    antes del video por MSMF (por MSMF OpenCV 4.11 no lee ni escribe los
-    controles). Resuelve el indice DSHOW por la ruta del puerto
-    (camaras_uvc.listar_camaras_dshow), lee, escribe SOLO lo que difiere (los
-    ajustes persisten en la camara), relee siempre y libera. La exposicion se
-    convierte a log2 de segundos (3.906 ms -> -8) y para si el valor no es
-    representable. `exposure_manual` no es un valor que se escriba: se cumple
-    al escribir `exposure` (lo que la fase 2a mide en AMCap).
+  - Windows, la del tracker desde la meta 007, fase 7b, parte B (ADR J7):
+    `camera.dshow_props.CapaWindowsCOM`, COM sobre el filtro de captura de
+    DirectShow (`IAMVideoProcAmp`, `IAMCameraControl`), sin abrir video; es la
+    que devuelve `capa_para_plataforma("win32")`. Con la apertura corta de cv2
+    la segunda camara no abria mientras la otra transmitia por MSMF (P-7w).
+  - Windows, la anterior (CapaWindowsDShow, meta 002, fase 2a; hoy solo para la
+    sonda, `probe_camera --capa cv2` y `--comparar-capas`): OpenCV con
+    cv2.CAP_DSHOW, en una apertura corta antes del video por MSMF (por MSMF
+    OpenCV 4.11 no lee ni escribe los controles). Resuelve el indice DSHOW por
+    la ruta del puerto (camaras_uvc.listar_camaras_dshow), lee, escribe SOLO lo
+    que difiere (los ajustes persisten en la camara), relee siempre y libera. La
+    exposicion se convierte a log2 de segundos (3.906 ms -> -8) y para si el
+    valor no es representable. `exposure_manual` no es un valor que se escriba:
+    se cumple al escribir `exposure` (lo que la fase 2a mide en AMCap). Las dos
+    capas de Windows comparten estas conversiones y las mismas unidades.
   - Linux (CapaLinuxV4L2, en camera/v4l2.py; meta 007, fase 5): `v4l2-ctl` en un
     subproceso con tope, por el nombre by-path del puerto (`usb_port_linux`).
     Mismo formato de `controls`; la exposicion va en unidades de 100 us y
@@ -308,9 +315,11 @@ class CapaWindowsDShow:
 
 
 def capa_para_plataforma(plataforma: str = sys.platform) -> CapaAjustes:
-    """La capa del sistema: win32 -> CapaWindowsDShow; linux -> CapaLinuxV4L2 (meta 007, fase 5)."""
+    """La capa del sistema: win32 -> `dshow_props.CapaWindowsCOM` (meta 007, fase 7b, parte B;
+    antes CapaWindowsDShow, que queda para la sonda); linux -> CapaLinuxV4L2 (meta 007, fase 5)."""
     if plataforma == "win32":
-        return CapaWindowsDShow()
+        from camera.dshow_props import CapaWindowsCOM    # aqui: camera.dshow_props importa este modulo
+        return CapaWindowsCOM()
     if plataforma.startswith("linux"):
         from camera.v4l2 import CapaLinuxV4L2    # aqui: camera.v4l2 importa este modulo
         return CapaLinuxV4L2()

@@ -21,12 +21,20 @@ misma via que usa OpenCV por dentro para `get`/`set` por DSHOW
 (`cap_dshow.cpp`: `getVideoSettingFilter` y `getVideoSettingCamera`), solo que
 sin arrancar el video.
 
-Parte A (esta version): solo lectura. `abrir_filtro` y `CapaWindowsCOM.leer`;
-`CapaWindowsCOM.aplicar` y la escritura del dispositivo COM llegan en la parte B
-(ADR J7, si la parte A lo confirma) y hasta entonces levantan NotImplementedError.
-La sonda (`diagnostics.probe_camera --capa com` y `--comparar-capas`) compara
-esta lectura con la de `cv2` en vivo: la capa nueva tiene que leer lo mismo en
-los 10 controles de cada camara (A0). El tracker sigue con `CapaWindowsDShow`.
+Parte A (2026-11-04): solo lectura (`abrir_filtro`, `CapaWindowsCOM.leer`). El
+P-7b-A del autor la confirmo: A0 dio 0 diferencias de 10 en las dos camaras frente
+a `cv2`, y A2/A4 leyeron la marca de una camara mientras la otra transmitia por
+MSMF (lo que `cv2` por DSHOW no consigue: `isOpened=0`).
+
+Parte B (ADR J7): tambien la escritura. `_DispositivoCOM.set` llama a `Set` con la
+bandera manual (o auto, solo para `auto_white_balance`) y `CapaWindowsCOM.aplicar`
+cumple el mismo contrato que `CapaWindowsDShow.aplicar`: escribe solo lo que
+difiere (valor o bandera), relee siempre, compara en las unidades nativas con
+`controls.comparar_controles` y lanza `controls.AjustesNoAplicados` si algo no
+quedo. Desde esta parte `controls.capa_para_plataforma("win32")` devuelve esta
+capa: el tracker ya no abre video por DSHOW antes del video por MSMF, asi que dos
+trackers abren gs1 y gs2 a la vez en el PC. `CapaWindowsDShow` queda para la sonda
+(`--capa cv2`, `--comparar-capas`).
 
 Lo puro (la tabla `CONTROLES_COM`, `a_perfil`, `a_nativo` y `CapaWindowsCOM` con
 un dispositivo falso) se prueba sin camara; lo COM es fino y se comprueba en vivo.
@@ -35,11 +43,14 @@ un dispositivo falso) se prueba sin camara; lo COM es fino y se comprueba en viv
 Valores de `strmif.h` del Windows SDK (Context7, 2026-11-04: `/opencv/opencv` y
 el indice de Win32 `/websites/learn_microsoft_en-us_windows_win32_api` confirman
 `IMoniker::BindToObject(pbc, pmkToLeft, riid, ppv)`; la documentacion de
-`IAMVideoProcAmp`/`IAMCameraControl` no esta indexada): los IID, el orden de la
-vtable (QueryInterface 0, AddRef 1, Release 2, GetRange 3, Set 4, Get 5), las
-enumeraciones `VideoProcAmpProperty` y `CameraControlProperty` y las banderas
+`IAMVideoProcAmp`/`IAMCameraControl` no esta indexada, tampoco en la parte B): los
+IID, el orden de la vtable (QueryInterface 0, AddRef 1, Release 2, GetRange 3,
+Set 4, Get 5), `Set(long Property, long lValue, long Flags)` y
+`Get(long Property, long *lValue, long *Flags)`, las enumeraciones
+`VideoProcAmpProperty` y `CameraControlProperty` y las banderas
 `*_Flags_Auto = 1`, `*_Flags_Manual = 2`. Si un valor estuviera mal, `Get`
-devuelve un HRESULT de error y aqui se para (principio 7); A0 ata el resto.
+devuelve un HRESULT de error y aqui se para (principio 7); A0 ato la lectura en
+vivo (los 10 controles, flags 2 en todos) y el P-7b-B ata la escritura.
 
 Este modulo no usa cv2: las conversiones de unidades son las de
 `camera.controls` (una sola fuente, principio 8).
@@ -48,6 +59,7 @@ from __future__ import annotations
 
 import ctypes
 import sys
+import time
 from dataclasses import dataclass
 from typing import Callable, Protocol
 
@@ -103,10 +115,6 @@ CONTROLES_COM: dict[str, tuple[str, int]] = {
     "focus": ("camara", CAMARA["Focus"]),
 }
 
-PARTE_B = ("[dshow_props] la escritura por COM es la parte B de la fase 7b (meta 007); "
-           "en la parte A la capa COM solo lee")
-
-
 @dataclass
 class Lectura:
     """Lo que devuelve `Get`: el valor crudo y si el control esta en automatico.
@@ -141,8 +149,8 @@ def a_nativo(nombre: str, valor) -> tuple[int, bool]:
     """(valor, auto) para `Set`: la exposicion con `controls.exposicion_ms_a_dshow`.
 
     `auto_white_balance` da (0, True) o (0, False): quien escribe conserva el
-    valor que tenga la camara y cambia solo la bandera (parte B). Todo lo demas
-    va en manual con su valor entero.
+    valor que tenga la camara y cambia solo la bandera (`CapaWindowsCOM.aplicar`).
+    Todo lo demas va en manual con su valor entero.
     """
     if nombre not in CONTROLES_COM:
         raise ValueError(f"'{nombre}' no se escribe por COM; validos: {list(CONTROLES_COM)}")
@@ -167,6 +175,23 @@ def nombres_validos(nombres: list[str]) -> list[str]:
     return list(nombres)
 
 
+def como_cv2(nombre: str, lectura: Lectura) -> float:
+    """La lectura como la daria `cv2.get` por DSHOW: el valor crudo, y para
+    `auto_white_balance` la bandera auto (1.0 / 0.0). Con esto `controls.de_nativos_dshow`
+    y `controls.comparar_controles` valen igual para las dos capas (una sola fuente)."""
+    if nombre == "auto_white_balance":
+        return 1.0 if lectura.auto else 0.0
+    return float(lectura.valor)
+
+
+def nativos_para_escribir(controls: dict) -> dict[str, tuple[int, bool]]:
+    """Nombre del perfil -> (valor, auto) para `Set`, de los 10 que se escriben
+    (`exposure_manual` no es un valor: se cumple al escribir la exposicion en manual).
+    Valida con `controls.validar_controles` y para si la exposicion no es 1000*2^k."""
+    validos = ajustes.validar_controles(controls)
+    return {n: a_nativo(n, validos[n]) for n in CONTROLES_COM if n in validos}
+
+
 # ----------------------------------------------------------------------------
 # El dispositivo: lo que la capa necesita de la camara
 # ----------------------------------------------------------------------------
@@ -189,6 +214,7 @@ class _DispositivoCOM:
         self._ole32 = ole32
         self._com_propio = com_propio
         self._cerrado = False
+        self.ultimo_hr = 0
 
     def get(self, grupo: str, propiedad: int) -> Lectura:
         obj = self._if.get(grupo)
@@ -206,7 +232,19 @@ class _DispositivoCOM:
         return Lectura(int(valor.value), bool(flags.value & FLAG_AUTO), int(flags.value))
 
     def set(self, grupo: str, propiedad: int, valor: int, auto: bool) -> bool:
-        raise NotImplementedError(PARTE_B)
+        """`Set(Property, lValue, Flags)` con la bandera manual (o auto). True si el
+        HRESULT es de exito; False si el driver lo rechaza (la capa lo anota en
+        `set_false` y la relectura dice si quedo). Un grupo o interfaz que no hay, para."""
+        obj = self._if.get(grupo)
+        nombre = INTERFAZ_DE_GRUPO.get(grupo, grupo)
+        if grupo not in self._if:
+            raise ValueError(f"[dshow_props] grupo {grupo!r}; validos: {GRUPOS}")
+        if not obj:
+            raise OSError(f"[dshow_props] la camara no expone {nombre}")
+        fn = camaras_uvc._metodo(obj, VT_SET, ctypes.c_long, ctypes.c_long, ctypes.c_long, ctypes.c_long)
+        hr = fn(obj, int(propiedad), int(valor), FLAG_AUTO if auto else FLAG_MANUAL)
+        self.ultimo_hr = int(hr)
+        return hr >= 0
 
     def close(self) -> None:
         if self._cerrado:
@@ -325,16 +363,17 @@ def abrir_filtro(puerto: str, listar: Callable[[], list] | None = None) -> Dispo
 
 
 # ----------------------------------------------------------------------------
-# La capa (cumple controls.CapaAjustes; en la parte A, solo `leer`)
+# La capa (cumple controls.CapaAjustes)
 # ----------------------------------------------------------------------------
 
 class CapaWindowsCOM:
-    """Lee los controles por COM sobre el filtro de captura, sin abrir video.
+    """Lee y escribe los controles por COM sobre el filtro de captura, sin abrir video.
 
     `abrir(puerto)` da un `Dispositivo`; se inyecta en las pruebas (por defecto
-    `abrir_filtro`, que la suite niega). Mismo contrato de `leer` que
-    `CapaWindowsDShow`: las unidades del perfil, y ValueError para un nombre que
-    no se lee. `aplicar` es la parte B y por ahora levanta NotImplementedError.
+    `abrir_filtro`, que la suite niega). Mismo contrato que `CapaWindowsDShow`:
+    `leer` en las unidades del perfil (ValueError para un nombre que no se lee) y
+    `aplicar` que escribe solo lo que difiere, relee y devuelve las mismas claves,
+    para que `camera.backend` no cambie (meta 007, fase 7b, parte B; ADR J7).
     """
 
     def __init__(self, abrir: Callable[[str], Dispositivo] | None = None) -> None:
@@ -354,4 +393,63 @@ class CapaWindowsCOM:
         return {n: a_perfil(n, l) for n, l in self.leer_nativos(puerto, nombres).items()}
 
     def aplicar(self, puerto: str, controls: dict, *, forzar: bool = False) -> dict:
-        raise NotImplementedError(PARTE_B)
+        """Escribe solo lo que difiere (valor o bandera), relee y compara.
+        AjustesNoAplicados si algo no coincide.
+
+        Devuelve lo mismo que `CapaWindowsDShow.aplicar`: {"indice", "antes",
+        "leidos", "antes_nativos", "leidos_nativos", "escritos", "set_false",
+        "diferencias", "forzado", "segundos"}; `antes` y `leidos` en las unidades
+        del perfil, los `*_nativos` como los daria cv2 por DSHOW (`como_cv2`), y
+        ademas `leidos_flags` (las banderas tras escribir: 2 manual, 1 auto).
+
+        `auto_white_balance` cambia solo la bandera y conserva el valor que la
+        camara tenga. `forzar` (solo `probe_camera --fijar --forzar`) escribe cada
+        control aunque la lectura coincida: asi se da de alta la marca `focus`.
+        """
+        t0 = time.monotonic()
+        a_escribir = nativos_para_escribir(controls)
+        nombres = list(a_escribir)
+        declarados = {n: como_cv2(n, Lectura(v, auto)) for n, (v, auto) in a_escribir.items()}
+        escritos: list[str] = []
+        set_false: list[str] = []
+        dispositivo = self._abrir(puerto)
+        try:
+            antes = {n: dispositivo.get(*CONTROLES_COM[n]) for n in nombres}
+            for nombre, (valor, auto) in a_escribir.items():
+                actual = antes[nombre]
+                if nombre == "auto_white_balance":
+                    valor = actual.valor                     # solo la bandera; el valor se conserva
+                    difiere = actual.auto != auto
+                else:
+                    difiere = actual.valor != valor or actual.auto != auto
+                if not forzar and not difiere:
+                    continue
+                escritos.append(nombre)
+                if not dispositivo.set(*CONTROLES_COM[nombre], valor, auto):
+                    set_false.append(nombre)
+            despues = {n: dispositivo.get(*CONTROLES_COM[n]) for n in nombres}
+        finally:
+            dispositivo.close()
+        antes_nativos = {n: como_cv2(n, l) for n, l in antes.items()}
+        despues_nativos = {n: como_cv2(n, l) for n, l in despues.items()}
+        difs = ajustes.comparar_controles(declarados, despues_nativos)
+        indice = getattr(dispositivo, "indice", None)
+        resultado = {
+            "indice": indice,
+            "antes": ajustes.de_nativos_dshow(antes_nativos),
+            "leidos": ajustes.de_nativos_dshow(despues_nativos),
+            "antes_nativos": antes_nativos,
+            "leidos_nativos": despues_nativos,
+            "leidos_flags": {n: l.flags for n, l in despues.items()},
+            "escritos": escritos,
+            "set_false": set_false,
+            "diferencias": difs,
+            "forzado": forzar,
+            "segundos": round(time.monotonic() - t0, 2),
+        }
+        if difs:
+            raise ajustes.AjustesNoAplicados(
+                f"[dshow_props] la camara del puerto {puerto} (DSHOW {indice}) no quedo en lo "
+                f"declarado: {'; '.join(difs)} (escritos: {escritos or 'ninguno'}; "
+                f"set False: {set_false or 'ninguno'})", resultado)
+        return resultado

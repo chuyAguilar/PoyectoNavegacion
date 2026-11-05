@@ -1,9 +1,9 @@
 """sondear_camara.py sin camara: un VideoCapture falso (meta 002, fase 1).
 
-Meta 007, fase 7b · Las dos camaras a la vez en Windows (parte A): `--leer`, `--fijar` y
+Meta 007, fase 7b · Las dos camaras a la vez en Windows: `--leer`, `--fijar` y
 `--tras-msmf` exigen `--capa cv2|com` (com es `camera.dshow_props.CapaWindowsCOM`, sin
-video; `--fijar --capa com` es la parte B y para), y `--comparar-capas` lee por las dos
-y nombra cada diferencia, con lo crudo de COM (valor y banderas) en el JSON.
+video; desde la parte B `--fijar --capa com` escribe por ella), y `--comparar-capas` lee
+por las dos y nombra cada diferencia, con lo crudo de COM (valor y banderas) en el JSON.
 """
 from __future__ import annotations
 
@@ -535,7 +535,7 @@ def test_main_leer(monkeypatch, tmp_path) -> None:
 # ----------------------------------------------------------------------------
 
 class CapaCOMFalsa(CapaFalsa):
-    """Como CapaWindowsCOM: `leer_nativos` da Lectura(valor, auto, flags) y `aplicar` es la parte B."""
+    """Como CapaWindowsCOM: `leer_nativos` da Lectura(valor, auto, flags); `aplicar` es el de CapaFalsa."""
 
     def leer_nativos(self, puerto, nombres):
         from camera import dshow_props as dp
@@ -554,9 +554,6 @@ class CapaCOMFalsa(CapaFalsa):
     def leer(self, puerto, nombres):
         from camera import dshow_props as dp
         return {n: dp.a_perfil(n, l) for n, l in self.leer_nativos(puerto, nombres).items()}
-
-    def aplicar(self, puerto, controls, **kw):
-        raise NotImplementedError("parte B")
 
 
 # Como lo da la capa de cv2 (de_nativos_dshow redondea la exposicion a 4 decimales).
@@ -588,14 +585,28 @@ def test_leer_fijar_y_tras_msmf_exigen_capa(tmp_path, modo: list[str]) -> None:
     ["--comparar-capas", "--puerto", PUERTO_1, "--capa", "com"],
     ["--source", "0", "--backend", "DSHOW", "--controles", "leer", "--capa", "cv2"],
     ["--comparar-capas"],                                            # sin --puerto
-    ["--fijar", "gain=12", "--puerto", PUERTO_1, "--capa", "com"],   # la escritura por COM es la parte B
     ["--leer", "--puerto", PUERTO_1, "--capa", "v4l2"],
 ], ids=["puertos_con_capa", "comparar_con_capa", "legado_con_capa", "comparar_sin_puerto",
-        "fijar_com", "capa_desconocida"])
+        "capa_desconocida"])
 def test_capa_solo_donde_toca(tmp_path, argv: list[str]) -> None:
     with pytest.raises(SystemExit):
         sc.main(argv + ["--salida", str(tmp_path / "s.json"), "--timeout", "10"])
     assert not (tmp_path / "s.json").exists()
+
+
+def test_main_fijar_capa_com_escribe_por_la_capa_com(monkeypatch, tmp_path) -> None:
+    """Parte B (J7): `--fijar --capa com` aplica por CapaWindowsCOM y no toca la de cv2 (B2 del P-7b-B)."""
+    capa_cv2, capa_com = _dos_capas(monkeypatch, dict(ESTADO_GS1), dict(ESTADO_GS1))
+    rc = sc.main(["--fijar", "gain=12", "--puerto", PUERTO_1, "--capa", "com",
+                  "--salida", str(tmp_path / "f.json"), "--timeout", "10"])
+    assert rc == 0
+    d = _json(tmp_path / "f.json")
+    assert d["capa"] == "com" and d["fijar"]["escritos"] == ["gain"] and d["fijar"]["leidos"]["gain"] == 12.0
+    assert capa_com.aplicados == [{"gain": 12.0}] and capa_cv2.aplicados == [] and capa_cv2.lecturas == 0
+    # --forzar tambien llega a la capa COM (dar de alta la marca por COM).
+    rc = sc.main(["--fijar", "focus=500", "--forzar", "--puerto", PUERTO_1, "--capa", "com",
+                  "--salida", str(tmp_path / "g.json"), "--timeout", "10"])
+    assert rc == 0 and capa_com.kw == {"forzar": True} and _json(tmp_path / "g.json")["fijar"]["forzado"] is True
 
 
 def test_capa_por_nombre(monkeypatch) -> None:

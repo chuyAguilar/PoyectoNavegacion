@@ -1,8 +1,10 @@
 """linux.perfil_temporal (meta 007 · El tracker en la Jetson Orin Nano, fase 5b · El ruido de
-gs1 por V4L2, P25): la copia de un perfil con solo el puerto OpenIGTLink, el puerto USB de
-Linux o la exposicion cambiados, conservando comentarios y fines de linea; lo que niega
-(clave fuera de la lista, valor fuera de rango, clave que el base no tiene, salida que
-existe, sin cambios); el CLI; y que el guardian acepta la orden de J4 tal cual.
+gs1 por V4L2, P25; fase 7b · Las dos camaras a la vez en Windows, parte B: la clave
+`camera.usb_port_windows`): la copia de un perfil con solo el puerto OpenIGTLink, el puerto
+USB de Linux o de Windows, o la exposicion cambiados, conservando comentarios y fines de
+linea; lo que niega (clave fuera de la lista, valor fuera de rango o con otra forma, clave
+que el base no tiene, salida que existe, sin cambios); el CLI; y que el guardian acepta la
+orden de J4 tal cual.
 """
 from __future__ import annotations
 
@@ -18,6 +20,7 @@ from .conftest import PROFILES_DIR
 
 GS1 = PROFILES_DIR / "tracker_config_gs1.yaml"
 BYPATH_2 = "platform-3610000.usb-usb-0:2.2:1.0-video-index0"
+PUERTO_WIN_2 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)"      # el de gs2 en el PC
 
 
 def _carga(p: Path) -> dict:
@@ -52,6 +55,33 @@ def test_poner_usb_port_linux_conserva_comentarios_y_fin_de_linea(tmp_path: Path
     assert antes.startswith("  usb_port_linux: ") and despues.startswith("  usb_port_linux: ")
     assert antes[-2:] == despues[-2:]        # el mismo fin de linea (CRLF o LF)
     assert GS1.read_bytes().count(b"#") == salida.read_bytes().count(b"#")
+
+
+def test_poner_usb_port_windows_para_la_marca_cruzada_sin_mover_cables(tmp_path: Path) -> None:
+    """Criterio 3 del P-7b-B: gs1 (focus 500) apuntando al puerto de gs2 (focus 332) para que el
+    tracker pare con «declarado 500, leido 332» sin escribir nada."""
+    salida = pt.crear(GS1, tmp_path / "gs1_en_puerto_gs2.yaml", {"camera.usb_port_windows": PUERTO_WIN_2})
+    c = _carga(salida)
+    assert c["camera"]["usb_port_windows"] == PUERTO_WIN_2
+    assert c["camera"]["marca"] == {"focus": 500} and c["camera"]["usb_port_linux"] == _carga(GS1)["camera"]["usb_port_linux"]
+    dist = _lineas_distintas(GS1, salida)
+    assert len(dist) == 1, dist
+    antes, despues = dist[0]
+    assert antes.startswith("  usb_port_windows: ") and despues.rstrip("\r\n") == f"  usb_port_windows: {PUERTO_WIN_2}"
+    assert antes[-2:] == despues[-2:]
+    assert GS1.read_bytes().count(b"#") + PUERTO_WIN_2.count("#") - _carga(GS1)["camera"]["usb_port_windows"].count("#") \
+        == salida.read_bytes().count(b"#")
+
+
+@pytest.mark.parametrize("malo", ["USB(11)#USB(4)", "PCIROOT(0)", "/dev/video0", "PCIROOT(0)#PCI(1400)#",
+                                  "pciroot(0)#pci(1400)#usbroot(0)#usb(4)", "PCIROOT(0)#PCI(1400)#USB(4)/..",
+                                  BYPATH_2])
+def test_niega_un_usb_port_windows_con_otra_forma(tmp_path: Path, malo: str) -> None:
+    with pytest.raises(ValueError, match="ruta de puerto de Windows"):
+        pt.crear(GS1, tmp_path / "x.yaml", {"camera.usb_port_windows": malo})
+    assert not (tmp_path / "x.yaml").exists()
+    assert pt.RE_PUERTO_WINDOWS.match("PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)")
+    assert pt.RE_PUERTO_WINDOWS.match("PCIROOT(0)#PCI(1D00)#USBROOT(0)#USB(2)")       # PCI(1D00) existe
 
 
 def test_poner_exposicion_conserva_el_comentario_de_la_linea(tmp_path: Path) -> None:
@@ -137,6 +167,11 @@ def test_cli_crea_y_devuelve_1_si_niega(tmp_path: Path, capsys) -> None:
     assert rc == 1 and "dos veces" in capsys.readouterr().err
     rc = pt.main(["--base", str(GS1), "--salida", str(tmp_path / "v.yaml")])
     assert rc == 1 and "sin cambios" in capsys.readouterr().err
+    # Fase 7b, parte B: la clave de Windows por el CLI (en el PC se lanza igual, sin el guardian).
+    salida_w = tmp_path / "gs1_en_puerto_gs2.yaml"
+    rc = pt.main(["--base", str(GS1), "--salida", str(salida_w), "--poner", f"camera.usb_port_windows={PUERTO_WIN_2}"])
+    assert rc == 0 and _carga(salida_w)["camera"]["usb_port_windows"] == PUERTO_WIN_2
+    assert PUERTO_WIN_2 in capsys.readouterr().out
 
 
 def test_el_guardian_acepta_la_orden_de_j4(tmp_path: Path) -> None:

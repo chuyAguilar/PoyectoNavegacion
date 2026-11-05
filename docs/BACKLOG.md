@@ -75,6 +75,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B89 | Una calibración a medias pisa los intrínsecos que usa el tracker | Alta | — |
 | B90 | `info energia` del guardián no encuentra `nvpmodel` (fuera del PATH de `navagente`) | Baja | — |
 | B91 | Con dos cámaras la CPU de la Jetson va al 95.5 % y no deja margen para la meta 006 | Media | — |
+| B92 | Los fps de una cámara sola en el PC varían de una corrida a otra (caída tardía en A1, arranque lento en A4) | Media | — |
+| B93 | `CapaWindowsDShow` queda solo para la sonda; se archiva cuando nada la use | Baja | — |
 
 ## Abiertos
 
@@ -582,6 +584,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** P-7 de la fase 7 · Las dos cámaras a la vez en la Jetson, de la meta 007 (2026-11-04).
 - **Qué haría falta:** medir dónde se va la CPU (decodificar MJPEG, `ArucoDetector`, el hilo de captura) y probar, sin decidir: un solo proceso para las dos cámaras; decodificar el MJPEG por hardware (NVJPG, `nvjpegdec` de GStreamer) o directo a gris; detectar en una región alrededor de la última pose; el umbral adaptativo en la GPU (OpenCV con CUDA es una dependencia nueva, con su ADR); o dejar el grafo en el PC. Comparar con el P-7w del PC (fase 7b).
 - **Prioridad:** media (sin esto la meta 006 no cabe en la Jetson junto a los dos trackers).
+
+### B92 · Los fps de una cámara sola en el PC varían de una corrida a otra (caída tardía en A1, arranque lento en A4)
+- **Qué:** en el P-7b-A (2026-11-04; una cámara transmitiendo sola por el tracker sin ventana, con su listener local, caja de luz al máximo), en A1 gs2 fue a 88.5–89.3 fps de cámara durante y justo después de la lectura de gs1 por cv2, y a partir de ~35 s después de esa lectura su promedio acumulado cayó a 60.4 (al final: cámara 58.5 fps, bucle 55.4); en A4 gs1 arrancó bajo (`[FPS]` 44.7 en los primeros 5 s) y subió hasta 87.4 de media (bucle 86.4); en A2 gs2 estuvo estable a ~90 los 75 s (bucle 88.6). La caída no coincide en el tiempo con la lectura de la otra cámara: el hallazgo 17 del plan (la que transmite baja cuando la otra intenta abrir) no se confirmó, ni por cv2 ni por COM.
+- **Por qué queda:** no se midió la causa y no cambia lo que se envía. Hipótesis sin medir: la luz (B50: alguna sombra o reflejo con la caja al máximo), un control automático de la cámara al arrancar, u otro programa del PC.
+- **De dónde:** el P-7b-A del autor, fase 7b · Las dos cámaras a la vez en Windows (meta 007 · El tracker en la Jetson Orin Nano), 2026-11-04 (salidas en `Claude outputs/fases/007/p7b/A1_*`, `A4_*`).
+- **Qué haría falta:** repetir una cámara sola 120 s, tres veces, anotando las `[FPS]` de cada 5 s y la luz; si se repite, grabar con `--record` y mirar el brillo de los frames en la caída (B50); y comparar con la parte C (el P-7w largo), que da 450 s por cámara.
+- **Prioridad:** media (es una caída de fps en uso; sube a alta si en la parte C alguna cámara baja de 45 fps, P13).
+
+### B93 · `CapaWindowsDShow` queda solo para la sonda; se archiva cuando nada la use
+- **Qué:** desde la parte B de la fase 7b el tracker en Windows usa `camera.dshow_props.CapaWindowsCOM` (ADR J7); `CapaWindowsDShow` (`camera/controls.py`, la apertura corta por `cv2` DSHOW) la usan solo `probe_camera --capa cv2`, `--comparar-capas` y sus pruebas (`tests/test_ajustes_camara.py`).
+- **Por qué queda:** hoy sirve para comparar las dos capas (B1 del P-7b-B) y como rescate si COM dejara una cámara en otro valor (`--fijar … --capa cv2`); archivarla ahora quitaría esa comparación.
+- **De dónde:** el plan de la fase 7b (meta 007), «Lo que va al BACKLOG»; anotada el 2026-11-04 al implementar la parte B.
+- **Qué haría falta:** cuando una meta posterior deje de usarla también en la sonda, moverla a `codigo/historico/` con sus pruebas y dejar `--capa com` como única capa (la opción `--capa` podría irse con ella).
+- **Prioridad:** baja.
 
 ## Cerrados
 

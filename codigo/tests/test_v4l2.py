@@ -491,7 +491,8 @@ def test_linux_capa_por_defecto_es_v4l2() -> None:
     b = cb.WebcamBackend(usb_port_linux=BYPATH_1, plataforma="linux")
     assert isinstance(b._capa_ajustes(), cv4l2.CapaLinuxV4L2)
     w = cb.WebcamBackend(usb_port_windows=PUERTO_1, plataforma="win32")
-    assert isinstance(w._capa_ajustes(), ac.CapaWindowsDShow)
+    from camera import dshow_props as dp
+    assert isinstance(w._capa_ajustes(), dp.CapaWindowsCOM)      # fase 7b, parte B (J7)
 
 
 def test_linux_con_los_perfiles_reales_no_abre_nada() -> None:
