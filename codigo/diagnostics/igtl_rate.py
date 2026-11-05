@@ -41,7 +41,14 @@ Desde codigo\\, con el venv y los argumentos explicitos (principio 7), con tope
 (principio 9):
 
     python -m diagnostics.igtl_rate listen --port 18944 --seconds 30 --timeout 60 --device Marker0ToTracker
+    python -m diagnostics.igtl_rate listen --port 18944 --seconds 600 --timeout 60 --device Marker0ToTracker --idle-s 60
     python -m diagnostics.igtl_rate listen --host <IP de la Jetson> --port 18944 --seconds 30 --timeout 60 --device Marker0ToTracker --clock-offset-ms <desfase>
+
+Meta 007, fase 7b (B79): `listen --idle-s N` es cuanto espera conectado sin recibir
+nada antes de parar (sin la opcion, los 5 s de siempre, `NO_DATA_S`). En el PC
+abrir la camara tarda hasta ~8 s (la marca y los ajustes por DSHOW) y el listener
+se rendia antes del primer mensaje; con `--idle-s 60` espera al tracker local sin
+el bucle de reintento del P-7 (y B88 no interviene).
     python -m diagnostics.igtl_rate bench --port 18950 --hz 90 --seconds 20 --device RateProbeToTracker --timeout 10
     python -m diagnostics.igtl_rate bench --port 18944 --hz 90 --seconds 30 --device RateProbeToTracker --timeout 60 --external --timer-1ms
 
@@ -149,19 +156,24 @@ def listen(host: str, port: int, seconds: float, connect_timeout: float,
            device: str | None = None, stop: threading.Event | None = None,
            done: threading.Event | None = None, hold: threading.Event | None = None,
            clock: Callable[[], float] = time.perf_counter,
-           wall: Callable[[], float] = wall_s, log: Callable[[str], None] = _log) -> list[IgtlArrival]:
+           wall: Callable[[], float] = wall_s, log: Callable[[str], None] = _log,
+           idle_s: float | None = None) -> list[IgtlArrival]:
     """Se conecta como cliente a `host:port` y anota cada mensaje durante `seconds` s.
 
     La ventana de `seconds` empieza con el primer mensaje. Sin conexion en
     `connect_timeout`, `ConnectionError`. Conectado y sin datos durante
-    `NO_DATA_S`, para y lo dice (devuelve lo que haya). Si el servidor cierra,
-    para. Con `device`, solo cuenta ese dispositivo (los demas se leen y se
-    tiran). `stop` (opcional) la para desde fuera; `done` se activa al acabar
-    la ventana; con `hold`, el socket no se cierra hasta que se active (tope
-    `HOLD_S`): el banco lo usa para que cierre primero el servidor y pyigtl no
-    vea una conexion cortada."""
+    `idle_s` (por defecto `NO_DATA_S`, 5 s; B79: en el PC abrir la camara llega
+    a tardar ~8 s, y el P-7w pide `--idle-s 60`), para y lo dice (devuelve lo que
+    haya). Si el servidor cierra, para. Con `device`, solo cuenta ese dispositivo
+    (los demas se leen y se tiran). `stop` (opcional) la para desde fuera; `done`
+    se activa al acabar la ventana; con `hold`, el socket no se cierra hasta que
+    se active (tope `HOLD_S`): el banco lo usa para que cierre primero el
+    servidor y pyigtl no vea una conexion cortada."""
+    idle_s = float(NO_DATA_S if idle_s is None else idle_s)
+    if idle_s <= 0:
+        raise ValueError(f"{TAG} idle_s tiene que ser > 0, no {idle_s:g}")
     sock = _connect(host, port, connect_timeout, stop, clock)
-    log(f"conectado a {host}:{port}; esperando mensajes (sin datos en {NO_DATA_S:g} s, para)")
+    log(f"conectado a {host}:{port}; esperando mensajes (sin datos en {idle_s:g} s, para)")
     arrivals: list[IgtlArrival] = []
     buffer = bytearray()
     read_index = 0
@@ -176,8 +188,8 @@ def listen(host: str, port: int, seconds: float, connect_timeout: float,
                 break
             if t_first is not None and now >= t_first + float(seconds):
                 break
-            if now - t_last_data >= NO_DATA_S:
-                log(f"sin datos durante {NO_DATA_S:g} s: paro ({len(arrivals)} mensajes)")
+            if now - t_last_data >= idle_s:
+                log(f"sin datos durante {idle_s:g} s: paro ({len(arrivals)} mensajes)")
                 break
             try:
                 data = sock.recv(RECV_BYTES)
@@ -480,6 +492,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="reloj del emisor menos reloj de aqui, ms (de diagnostics.clock_offset measure); "
                          "se suma a la latencia. Sin el, 0: emisor y receptor en la misma maquina")
     pl.add_argument("--csv", type=Path, default=None, help="guarda cada llegada (no se pisa)")
+    pl.add_argument("--idle-s", type=float, default=None,
+                    help=f"segundos conectado sin recibir nada antes de parar (B79); sin el, {NO_DATA_S:g}. "
+                         "En el PC la camara tarda hasta ~8 s en abrir: con el tracker local, 60")
     pb = sub.add_parser("bench", help="emisor real en este proceso, sin camara")
     pb.add_argument("--port", required=True, type=int, help="18950 en E1; 18944 solo con Slicer y el tracker parado")
     pb.add_argument("--hz", required=True, type=float)
@@ -501,8 +516,11 @@ def main(argv: list[str] | None = None) -> int:
         ap.error(f"la salida ya existe, no se pisa: {args.csv}")
 
     if args.cmd == "listen":
+        if args.idle_s is not None:
+            _positive(ap, "--idle-s", args.idle_s)
         try:
-            arrivals = listen(args.host, args.port, args.seconds, args.timeout, args.device)
+            arrivals = listen(args.host, args.port, args.seconds, args.timeout, args.device,
+                              idle_s=args.idle_s)
         except ConnectionError as e:
             print(e)
             return EXIT_NO_CONNECTION

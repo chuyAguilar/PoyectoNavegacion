@@ -200,14 +200,20 @@ class LocalServer:
         self.thread: threading.Thread | None = None
         self.error: Exception | None = None
 
-    def serve(self, chunks: list[bytes], gap_s: float, close_after: bool) -> None:
+    def serve(self, chunks: list[bytes], gap_s: float, close_after: bool, tolerante: bool = False) -> None:
+        """Con `tolerante`, un `sendall` que falla porque el receptor ya cerro no cuenta como error."""
         def run() -> None:
             conn = None
             try:
                 self.sock.settimeout(5.0)
                 conn, _ = self.sock.accept()
                 for c in chunks:
-                    conn.sendall(c)
+                    try:
+                        conn.sendall(c)
+                    except OSError:
+                        if not tolerante:
+                            raise
+                        break
                     if gap_s:
                         time.sleep(gap_s)
                 if not close_after:
@@ -282,7 +288,60 @@ def test_listen_para_sin_datos(server: LocalServer, monkeypatch) -> None:
     t0 = time.perf_counter()
     arrivals = igtl_rate.listen("127.0.0.1", server.port, seconds=30.0, connect_timeout=2.0, log=logs.append)
     assert arrivals == [] and 0.3 <= time.perf_counter() - t0 < 2.0
-    assert any("sin datos durante" in m for m in logs)
+    assert any("sin datos durante 0.3 s" in m for m in logs)
+
+
+def test_listen_idle_s_espera_mas_que_no_data_s(server: LocalServer, monkeypatch) -> None:
+    """Meta 007, fase 7b (B79): `idle_s` manda sobre NO_DATA_S; el primer mensaje llega despues de NO_DATA_S."""
+    monkeypatch.setattr(igtl_rate, "NO_DATA_S", 0.1)
+    packed = _packed(3)
+    # Un trozo vacio y 0.3 s de hueco: los mensajes llegan despues de NO_DATA_S (la camara abriendo).
+    server.serve([b"", b"".join(p for p, _ in packed)], gap_s=0.3, close_after=False)
+    logs: list[str] = []
+    arrivals = igtl_rate.listen("127.0.0.1", server.port, seconds=0.3, connect_timeout=2.0,
+                                log=logs.append, idle_s=5.0)
+    assert len(arrivals) == 3
+    assert any("sin datos en 5 s, para" in m for m in logs)
+
+
+def test_listen_sin_idle_s_se_rinde_antes_del_primer_mensaje(server: LocalServer, monkeypatch) -> None:
+    """La regresion de B79: sin `idle_s`, con NO_DATA_S corto, no llega a ver los mensajes."""
+    monkeypatch.setattr(igtl_rate, "NO_DATA_S", 0.1)
+    packed = _packed(3)
+    # `tolerante`: el receptor cierra antes de que el servidor envie, y ese sendall puede fallar.
+    server.serve([b"", b"".join(p for p, _ in packed)], gap_s=0.3, close_after=False, tolerante=True)
+    logs: list[str] = []
+    arrivals = igtl_rate.listen("127.0.0.1", server.port, seconds=0.3, connect_timeout=2.0, log=logs.append)
+    assert arrivals == [] and any("sin datos durante 0.1 s" in m for m in logs)
+
+
+def test_listen_idle_s_corto_para_antes_que_no_data_s(server: LocalServer) -> None:
+    server.serve([], gap_s=0.0, close_after=False)
+    logs: list[str] = []
+    t0 = time.perf_counter()
+    arrivals = igtl_rate.listen("127.0.0.1", server.port, seconds=30.0, connect_timeout=2.0,
+                                log=logs.append, idle_s=0.25)
+    dt = time.perf_counter() - t0
+    assert arrivals == [] and 0.25 <= dt < 2.0 and dt < igtl_rate.NO_DATA_S
+    assert any("sin datos durante 0.25 s" in m for m in logs)
+
+
+def test_listen_sin_idle_s_usa_no_data_s_y_lo_rechaza_si_no_es_positivo() -> None:
+    import inspect
+    assert inspect.signature(igtl_rate.listen).parameters["idle_s"].default is None
+    assert igtl_rate.NO_DATA_S == 5.0
+    with pytest.raises(ValueError, match="idle_s"):
+        igtl_rate.listen("127.0.0.1", 18950, seconds=1.0, connect_timeout=0.1, idle_s=0.0)
+
+
+def test_main_listen_idle_s(server: LocalServer, capsys) -> None:
+    server.serve([], gap_s=0.0, close_after=False)
+    t0 = time.perf_counter()
+    rc = igtl_rate.main(["listen", "--port", str(server.port), "--seconds", "5", "--timeout", "2",
+                         "--idle-s", "0.2"])
+    assert rc == 1 and time.perf_counter() - t0 < 2.0
+    out = capsys.readouterr().out
+    assert "sin datos en 0.2 s, para" in out and "ningun mensaje recibido" in out
 
 
 def test_listen_done_y_hold(server: LocalServer) -> None:
@@ -391,11 +450,14 @@ def test_send_at_rate_para_con_el_evento() -> None:
     ["listen", "--port", "18950", "--seconds", "0", "--timeout", "1"],            # seconds 0
     ["listen", "--port", "18950", "--seconds", "1", "--timeout", "0"],            # timeout 0
     ["listen", "--port", "70000", "--seconds", "1", "--timeout", "1"],            # puerto fuera de rango
+    ["listen", "--port", "18950", "--seconds", "1", "--timeout", "1", "--idle-s", "0"],   # idle 0 (fase 7b)
+    ["listen", "--port", "18950", "--seconds", "1", "--timeout", "1", "--idle-s", "-5"],
     ["bench", "--port", "18950", "--hz", "90", "--seconds", "1", "--timeout", "1"],     # sin --device
     ["bench", "--port", "18950", "--hz", "90", "--seconds", "1", "--device", "X"],      # sin --timeout
     ["bench", "--port", "18950", "--hz", "0", "--seconds", "1", "--device", "X", "--timeout", "1"],
+    ["bench", "--port", "18950", "--hz", "90", "--seconds", "1", "--device", "X", "--timeout", "1", "--idle-s", "60"],
 ], ids=["nada", "listen_solo", "sin_port", "sin_timeout", "seconds_0", "timeout_0", "puerto_70000",
-        "bench_sin_device", "bench_sin_timeout", "bench_hz_0"])
+        "idle_0", "idle_negativo", "bench_sin_device", "bench_sin_timeout", "bench_hz_0", "bench_con_idle"])
 def test_main_exige_los_argumentos(argv: list[str]) -> None:
     with pytest.raises(SystemExit) as e:
         igtl_rate.main(argv)

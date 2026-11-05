@@ -63,7 +63,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B67 | Las herramientas de cámara (sonda, modos, calibración, «Verificar IDs») solo abren por Windows | Baja | — |
 | B77 | La sd z de gs1 por V4L2 es casi el doble que por MSMF (deriva lenta, no ruido) | Baja | — |
 | B78 | Un `ssh` cortado mata el tracker antes de guardar el `.npz` y el `--timing` | Media | — |
-| B79 | `igtl_rate listen` se para a los 5 s sin datos | Media | — |
 | B80 | El guardián no pasa `DISPLAY`: no hay corrida con ventana por `ssh nav-jetson` | Baja | — |
 | B82 | No hay verbo para el tamaño o el sha256 de un archivo de `~/nav-salidas/` | Baja | — |
 | B83 | `--timing=~/…` con `=` no expande `~` | Baja | — |
@@ -505,14 +504,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** que el tracker guarde al recibir SIGTERM o SIGPIPE (en Linux), o que el guardián le dé unos segundos tras el corte antes de matar el grupo; con su prueba.
 - **Prioridad:** media.
 
-### B79 · `igtl_rate listen` se para a los 5 s sin datos
-- **Qué:** si Marker0 no se ve al arrancar el tracker, `diagnostics.igtl_rate listen` se rinde a los 5 s sin mensajes y la corrida no mide nada aunque el tracker siga vivo (segunda corrida a de gs1 en el P-5).
-- **Por qué queda:** se arregla repitiendo la corrida con Marker0 a la vista.
-- **De dónde:** P-5 de la fase 5 (meta 007), 2026-11-03.
-- **Qué haría falta:** una opción `--idle-s` en `igtl_rate listen` (segundos a esperar sin datos) o esperar al primer mensaje antes de contar.
-- **Prioridad:** media (2026-11-04; era baja). Ya no es solo un descuido de la corrida: en el P-6 (fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes) impidió medir la corrida d), el listener local en el PC. Abrir la cámara en el PC tardó ~8 s (la marca 6.11 s y los ajustes 1.41 s) y el listener se paró a los 5 s sin datos; el tracker corrió 60 s sin cliente, código 0. En la corrida del criterio 5 la misma marca tardó 1.26 s; del P-5 no hay medida de ese tiempo, y la variación (6.11 contra 1.26 s) no se ha explicado.
-- **Al día (2026-11-04, fase 7 · Las dos cámaras a la vez en la Jetson):** sin cambiar `igtl_rate`, el P-7 lanza cada listener en un bucle de PowerShell que lo repite al momento si sale con código 1 (sin datos), hasta 6 veces; el tracker sigue vivo y acepta la conexión nueva cuando su primer envío falla en la vieja (B88). El arreglo de verdad sigue siendo `--idle-s` o esperar al primer mensaje.
-
 ### B80 · El guardián no pasa `DISPLAY`: no hay corrida con ventana por `ssh nav-jetson`
 - **Qué:** la corrida b) del P-5 (con ventana) no se pudo medir: la Jetson no tiene escritorio abierto y el guardián no pasa `DISPLAY` a lo que lanza.
 - **Por qué queda:** el tracker en la Jetson se usa sin ventana (el panel del PC lo lanza así, fase 8).
@@ -569,6 +560,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** fase 7 · Las dos cámaras a la vez en la Jetson, de la meta 007 (2026-11-04), al preparar el bucle de listeners del P-7 para B79.
 - **Qué haría falta:** medirlo (CPU del tracker con un cliente que se conecta y se va con Marker0 tapado); si se confirma y estorba, que `IgtlSender` detecte el cierre (p. ej. un `verify_request` que deje el socket con `SO_KEEPALIVE`, o un envío de prueba) o un parche a `pyigtl`, con su ADR y la verificación de la cadena.
 - **Prioridad:** baja.
+- **Al día (2026-11-04, fase 7b · Las dos cámaras a la vez en Windows, parte A):** con `igtl_rate listen --idle-s 60` (B79, cerrada) el listener ya no se rinde mientras el tracker abre la cámara y no hace falta reconectarlo, así que el P-7w no tropieza con esto; el hilo que gira en vacío solo aparecía al reconectar. Sigue sin medirse.
 
 ### B89 · Una calibración a medias pisa los intrínsecos que usa el tracker
 - **Qué:** la ventana de calibración del panel (`gui/calibration_window.py`, `salidas_del_perfil`) le pasa a `calibration/calibrate_camera.py` como `--output` el mismo `data/intrinsecos_<cámara>_<modo>.yml` que lee el perfil, y el script lo escribe siempre, incluso si el criterio no se cumple (sale con código 1 y deja el `.yml` «con el veredicto dentro»). Una calibración de prueba, una demostración o una que alguien abre y abandona cambia la K y la distorsión con las que trabaja el tracker, sin que nadie la acepte.
@@ -592,6 +584,10 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Prioridad:** media (sin esto la meta 006 no cabe en la Jetson junto a los dos trackers).
 
 ## Cerrados
+
+### B79 · `igtl_rate listen` se para a los 5 s sin datos
+- **Qué era:** si Marker0 no se veía al arrancar el tracker, `diagnostics.igtl_rate listen` se rendía a los 5 s sin mensajes y la corrida no medía nada aunque el tracker siguiera vivo (P-5, fase 5; y en el P-6, fase 6, impidió la corrida d): abrir la cámara en el PC tardó ~8 s).
+- **Cerrado:** 2026-11-04, por la fase 7b · Las dos cámaras a la vez en Windows, parte A (meta 007): `igtl_rate listen --idle-s <segundos>` (y `listen(..., idle_s=)`) fija cuánto espera conectado sin recibir nada; sin la opción siguen los 5 s de `NO_DATA_S`, y 0 o negativo se rechaza (código 2). El P-7b y el P-7w lo usan con 60. Con `tests/test_igtl_rate.py`. Queda sin explicar por qué la misma marca tardó 6.11 s en el P-6 y 1.26 s en otra corrida; la opción lo cubre, no lo explica.
 
 ### B81 · `linux.perfil_temporal` está en la lista blanca del guardián y no existe
 - **Qué era:** la lista blanca de módulos de `py` en `codigo/linux/guardian.py` nombra `linux.perfil_temporal`, y ese módulo no estaba en `codigo/linux/`.

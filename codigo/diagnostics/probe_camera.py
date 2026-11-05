@@ -32,8 +32,15 @@ Modos de la fase 2a (identidad por puerto y controles por DSHOW; cada
 medicion se guarda en el JSON al tenerla, B25):
   --puertos                 enumera MSMF y DSHOW con indice, instancia, ruta
                             del puerto y ubicacion;
-  --leer --puerto R         lee los controles por DSHOW (capa de ajustes);
-  --fijar "k=v,..." --puerto R [--forzar]
+  --leer --puerto R --capa cv2|com
+                            lee los controles por la capa de ajustes: cv2 es la
+                            apertura corta por DSHOW de hoy (CapaWindowsDShow);
+                            com lee por COM sobre el filtro de captura, sin
+                            video (camera.dshow_props, meta 007 fase 7b);
+  --comparar-capas --puerto R
+                            lee por com y despues por cv2 y dice cada
+                            diferencia (A0 del P-7b-A: tienen que ser 0 de 10);
+  --fijar "k=v,..." --puerto R --capa cv2 [--forzar]
                             aplica por la capa (escribe solo lo que difiere,
                             relee) y los deja puestos; p. ej.
                             "exposure_ms=1.953,gain=11". Con --forzar escribe
@@ -41,8 +48,8 @@ medicion se guarda en el JSON al tenerla, B25):
                             relee: asi se da de alta la marca (sesion del
                             2026-10-22: el focus 332 de fabrica de la camara 2
                             saltaba sin escribir; escrito, quedo fijo 5 de 5);
-  --tras-msmf --puerto R --modo 640x480:MJPG --fps 90 --segundos 10
-                            lee por DSHOW, abre y captura por MSMF (testigo:
+  --tras-msmf --puerto R --capa cv2|com --modo 640x480:MJPG --fps 90 --segundos 10
+                            lee por la capa, abre y captura por MSMF (testigo:
                             brillo, nitidez, FPS, tamano real), cierra y relee:
                             las diferencias dicen si MSMF piso lo escrito. Su
                             `fps_testigo` incluye calcular brillo y nitidez en
@@ -65,12 +72,15 @@ explicitos (principio 7). Ejemplos:
         --salida "..\\Claude outputs\\camaras\\controles_gs1_dshow.json" --timeout 180
     python -m diagnostics.probe_camera --puertos ^
         --salida "..\\Claude outputs\\camaras\\puertos_cam1_p1.json" --timeout 60
-    python -m diagnostics.probe_camera --fijar "exposure_ms=1.953,gain=11" ^
+    python -m diagnostics.probe_camera --fijar "exposure_ms=1.953,gain=11" --capa cv2 ^
         --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(2)" ^
         --salida "..\\Claude outputs\\camaras\\fijar_cam1.json" --timeout 60
-    python -m diagnostics.probe_camera --fijar "focus=332" --forzar ^
+    python -m diagnostics.probe_camera --fijar "focus=332" --forzar --capa cv2 ^
         --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)" ^
         --salida "..\\Claude outputs\\camaras\\marca_gs2.json" --timeout 60
+    python -m diagnostics.probe_camera --comparar-capas ^
+        --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)" ^
+        --salida "..\\Claude outputs\\fases\\007\\p7b\\a0_gs1.json" --timeout 60
 """
 from __future__ import annotations
 
@@ -125,6 +135,11 @@ TOLERANCIA = 1e-3
 
 BACKENDS = ("MSMF", "DSHOW")
 MODOS_CONTROLES = ("no", "leer", "probar")
+# Meta 007, fase 7b: la capa de ajustes de --leer, --fijar y --tras-msmf. 'cv2' es la de
+# hoy (CapaWindowsDShow: apertura corta por DSHOW); 'com' lee por COM sobre el filtro de
+# captura, sin video (camera.dshow_props.CapaWindowsCOM). Obligatoria (principio 7).
+CAPAS = ("cv2", "com")
+MODOS_CON_CAPA = ("leer", "fijar", "tras_msmf")
 MOTIVO_MSMF = (
     "por MSMF los controles no se leen ni se prueban: get() no refleja la camara "
     "(sesion del 2026-10-20: la sonda dejo la exposicion en 0 y get seguia leyendo -6) "
@@ -512,12 +527,99 @@ def parsear_fijar(texto: str) -> dict:
     return validos
 
 
+def capa_por_nombre(nombre: str):
+    """La capa de ajustes que pide --capa: 'cv2' (CapaWindowsDShow, la de hoy) o 'com' (CapaWindowsCOM).
+
+    Se construye al llamar, no al importar: las pruebas sustituyen la clase en
+    su modulo. Un nombre que no es uno de los dos para (principio 7).
+    """
+    if nombre == "cv2":
+        return ajustes_camara.CapaWindowsDShow()
+    if nombre == "com":
+        from camera import dshow_props
+        return dshow_props.CapaWindowsCOM()
+    raise ValueError(f"--capa {nombre!r}: tiene que ser {CAPAS}")
+
+
 def leer_controles(puerto: str, capa=None) -> dict:
-    """Los controles de la camara del puerto por la capa (DSHOW), en unidades del perfil."""
+    """Los controles de la camara del puerto por la capa (cv2 por DSHOW si no se da), en unidades del perfil."""
     capa = capa if capa is not None else ajustes_camara.CapaWindowsDShow()
     t0 = time.monotonic()
     leidos = capa.leer(puerto, list(ajustes_camara.CONTROLES_CV2))
     return {"puerto": puerto, "leidos": leidos, "segundos": round(time.monotonic() - t0, 2)}
+
+
+def comparar_capas(puerto: str, capa_cv2=None, capa_com=None, resultado: dict | None = None) -> dict:
+    """Lee los 10 controles por COM (sin video) y por cv2 (apertura corta por DSHOW) y los compara.
+
+    Primero COM y despues cv2: si la apertura de cv2 falla (la otra camara
+    transmitiendo, P29), la lectura COM ya esta en `resultado`, que es el dict
+    del `estado` del vigilante y se rellena paso a paso. `com.nativos` trae el
+    valor crudo y las banderas de cada control. `diferencias` lista cada control
+    que no coincide (tolerancia TOLERANCIA) o que una capa no pudo leer. Es la
+    medida A0 del P-7b-A: 0 diferencias en los 10 dice que la via COM lee lo
+    mismo que cv2.
+    """
+    capa_cv2 = capa_cv2 if capa_cv2 is not None else capa_por_nombre("cv2")
+    capa_com = capa_com if capa_com is not None else capa_por_nombre("com")
+    r = resultado if resultado is not None else {}
+    nombres = list(ajustes_camara.CONTROLES_CV2)
+    r["puerto"] = puerto
+    r["orden"] = ["com", "cv2"]
+    for etiqueta, leer in (("com", lambda: _leer_com(capa_com, puerto, nombres)),
+                           ("cv2", lambda: {"leidos": capa_cv2.leer(puerto, nombres)})):
+        t0 = time.monotonic()
+        try:
+            r[etiqueta] = leer()
+        except (OSError, ValueError, RuntimeError) as e:
+            r[etiqueta] = {"error": str(e)}
+        r[etiqueta]["segundos"] = round(time.monotonic() - t0, 2)
+        print(f"[sonda] {etiqueta} ({r[etiqueta]['segundos']} s): "
+              f"{r[etiqueta].get('leidos', 'ERROR ' + r[etiqueta].get('error', ''))}", flush=True)
+    r["diferencias"] = diferencias_entre_capas(r["cv2"].get("leidos"), r["com"].get("leidos"), nombres)
+    return r
+
+
+def _leer_com(capa_com, puerto: str, nombres: list[str]) -> dict:
+    """Lo leido por COM en unidades del perfil y, si la capa lo da, lo crudo (valor, auto, flags)."""
+    if hasattr(capa_com, "leer_nativos"):
+        from camera import dshow_props
+        nativos = capa_com.leer_nativos(puerto, nombres)
+        return {"leidos": {n: dshow_props.a_perfil(n, l) for n, l in nativos.items()},
+                "nativos": {n: {"valor": l.valor, "auto": l.auto, "flags": l.flags}
+                            for n, l in nativos.items()}}
+    return {"leidos": capa_com.leer(puerto, nombres)}
+
+
+def diferencias_entre_capas(cv2_leidos: dict | None, com_leidos: dict | None,
+                            nombres: list[str]) -> list[str]:
+    """Por control: 'nombre: cv2 X, com Y' si difieren mas de TOLERANCIA o si una capa no lo leyo."""
+    difs: list[str] = []
+    for n in nombres:
+        a = None if cv2_leidos is None else cv2_leidos.get(n)
+        b = None if com_leidos is None else com_leidos.get(n)
+        if a is None or b is None:
+            difs.append(f"{n}: cv2 {'sin lectura' if a is None else format(float(a), 'g')}, "
+                        f"com {'sin lectura' if b is None else format(float(b), 'g')}")
+        elif abs(float(a) - float(b)) > TOLERANCIA:
+            difs.append(f"{n}: cv2 {float(a):g}, com {float(b):g}")
+    return difs
+
+
+def imprimir_comparacion(r: dict) -> None:
+    nombres = list(ajustes_camara.CONTROLES_CV2)
+    cv2_l, com_l = r.get("cv2", {}).get("leidos") or {}, r.get("com", {}).get("leidos") or {}
+    nativos = r.get("com", {}).get("nativos") or {}
+    print("\n| control | cv2 (DSHOW) | com | com crudo (valor, flags) | igual |")
+    print("|---|---|---|---|---|")
+    for n in nombres:
+        a, b = cv2_l.get(n), com_l.get(n)
+        crudo = nativos.get(n)
+        crudo_txt = f"{crudo['valor']}, {crudo['flags']}" if crudo else "-"
+        igual = "si" if (a is not None and b is not None and abs(float(a) - float(b)) <= TOLERANCIA) else "NO"
+        print(f"| {n} | {'-' if a is None else a} | {'-' if b is None else b} | {crudo_txt} | {igual} |")
+    print(f"[sonda] diferencias: {len(r['diferencias'])} de {len(nombres)}"
+          + (": " + "; ".join(r["diferencias"]) if r["diferencias"] else ""), flush=True)
 
 
 def fijar(puerto: str, controls: dict, capa=None, forzar: bool = False) -> dict:
@@ -534,7 +636,7 @@ def fijar(puerto: str, controls: dict, capa=None, forzar: bool = False) -> dict:
 
 def tras_msmf(puerto: str, modo: tuple[int, int, str], fps: float, segundos: float,
               capa=None, resultado: dict | None = None) -> dict:
-    """Lee por DSHOW, abre y captura por MSMF con `modo`, cierra y relee.
+    """Lee por la capa (cv2 por DSHOW si no se da), abre y captura por MSMF con `modo`, cierra y relee.
 
     `resultado` es el dict del `estado` del vigilante: se rellena paso a paso
     (antes, msmf, despues, diferencias). Las diferencias (en unidades del
@@ -663,14 +765,23 @@ def _fase_2a(ap, args, estado: dict, salida: Path) -> int:
     Uno por corrida; cada medicion queda en `estado` al tenerla, y el vigilante
     la guarda si salta el tope. 0 si se midio; 1 si algo fallo (el JSON dice que).
     """
-    modos = [n for n in ("puertos", "verificar_orden", "leer", "fijar", "tras_msmf") if getattr(args, n)]
+    modos = [n for n in ("puertos", "verificar_orden", "leer", "fijar", "tras_msmf", "comparar_capas")
+             if getattr(args, n)]
     if len(modos) != 1:
-        ap.error("uno solo de --puertos, --verificar-orden, --leer, --fijar o --tras-msmf por corrida")
+        ap.error("uno solo de --puertos, --verificar-orden, --leer, --fijar, --tras-msmf o "
+                 "--comparar-capas por corrida")
     (modo,) = modos
     if modo == "verificar_orden" and args.backend is None:
         ap.error("--verificar-orden exige --backend MSMF|DSHOW explicito")
-    if modo in ("leer", "fijar", "tras_msmf") and not args.puerto:
+    if modo in MODOS_CON_CAPA + ("comparar_capas",) and not args.puerto:
         ap.error(f"--{modo.replace('_', '-')} exige --puerto (la ruta_puerto que da --puertos)")
+    if modo in MODOS_CON_CAPA and args.capa is None:
+        ap.error(f"--{modo.replace('_', '-')} exige --capa cv2|com (cv2: la apertura corta por DSHOW "
+                 "de hoy; com: el filtro de captura por COM, sin video; meta 007, fase 7b)")
+    if modo not in MODOS_CON_CAPA and args.capa is not None:
+        ap.error("--capa solo va con --leer, --fijar y --tras-msmf (--comparar-capas lee por las dos)")
+    if modo == "fijar" and args.capa == "com":
+        ap.error("--fijar --capa com: la escritura por COM es la parte B de la fase 7b; usa --capa cv2")
     if args.forzar and modo != "fijar":
         ap.error("--forzar solo va con --fijar")
     controls = None
@@ -692,10 +803,18 @@ def _fase_2a(ap, args, estado: dict, salida: Path) -> int:
     estado["opencv"] = cv2.__version__
     estado["aceleracion_msmf"] = dict(camaras_uvc.ACELERACION_MSMF)
     estado["modo"] = modo
+    estado["capa"] = args.capa
+    estado["OPENCV_VIDEOIO_DEBUG"] = os.environ.get("OPENCV_VIDEOIO_DEBUG")
     vig = _vigilante(args.timeout, estado, salida)
     rc = 0
     try:
-        if modo == "puertos":
+        if modo == "comparar_capas":
+            estado["comparar_capas"] = {}
+            comparar_capas(args.puerto, resultado=estado["comparar_capas"])
+            imprimir_comparacion(estado["comparar_capas"])
+            if estado["comparar_capas"]["diferencias"]:
+                rc = 1
+        elif modo == "puertos":
             estado["puertos"] = puertos()
             for backend, lista in estado["puertos"].items():
                 if isinstance(lista, dict):
@@ -714,12 +833,13 @@ def _fase_2a(ap, args, estado: dict, salida: Path) -> int:
                 print(f"[sonda] ERROR: {args.backend} no enumera ninguna camara de video")
                 rc = 1
         elif modo == "leer":
-            estado["leer"] = leer_controles(args.puerto)
-            print(f"[sonda] leidos ({estado['leer']['segundos']} s): {estado['leer']['leidos']}")
+            estado["leer"] = leer_controles(args.puerto, capa=capa_por_nombre(args.capa))
+            print(f"[sonda] leidos por {args.capa} ({estado['leer']['segundos']} s): {estado['leer']['leidos']}")
         elif modo == "fijar":
             estado["fijar"] = {"puerto": args.puerto, "controls": controls, "forzar": args.forzar}
             try:
-                estado["fijar"].update(fijar(args.puerto, controls, forzar=args.forzar))
+                estado["fijar"].update(fijar(args.puerto, controls, capa=capa_por_nombre(args.capa),
+                                             forzar=args.forzar))
                 print(f"[sonda] fijados{' (forzado)' if args.forzar else ''} en "
                       f"{estado['fijar']['segundos']} s; escritos "
                       f"{estado['fijar']['escritos'] or 'ninguno'}; leidos {estado['fijar']['leidos']}")
@@ -731,7 +851,8 @@ def _fase_2a(ap, args, estado: dict, salida: Path) -> int:
         else:
             print(f"[sonda] {camaras_uvc.describir_aceleracion_msmf()}", flush=True)
             estado["tras_msmf"] = {}
-            tras_msmf(args.puerto, modo_msmf, args.fps, args.segundos, resultado=estado["tras_msmf"])
+            tras_msmf(args.puerto, modo_msmf, args.fps, args.segundos, capa=capa_por_nombre(args.capa),
+                      resultado=estado["tras_msmf"])
             if estado["tras_msmf"]["diferencias"] or "error" in estado["tras_msmf"]["msmf"]:
                 rc = 1
     except (OSError, ValueError, RuntimeError) as e:
@@ -759,7 +880,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--puertos", action="store_true",
                     help="enumera MSMF y DSHOW con la ruta del puerto de cada camara")
     ap.add_argument("--puerto", help="ruta del puerto (ruta_puerto de --puertos) para --leer, --fijar y --tras-msmf")
-    ap.add_argument("--leer", action="store_true", help="lee los controles por DSHOW (capa de ajustes)")
+    ap.add_argument("--leer", action="store_true", help="lee los controles por la capa de --capa")
+    ap.add_argument("--capa", choices=CAPAS,
+                    help="capa de ajustes para --leer, --fijar y --tras-msmf (obligatoria): cv2 = la apertura "
+                         "corta por DSHOW de hoy; com = el filtro de captura por COM, sin video (fase 7b)")
+    ap.add_argument("--comparar-capas", action="store_true",
+                    help="lee los 10 controles por com y por cv2 y dice cada diferencia (A0 del P-7b-A)")
     ap.add_argument("--fijar", help="controles a aplicar y dejar: 'exposure_ms=1.953,gain=11'")
     ap.add_argument("--forzar", action="store_true",
                     help="con --fijar: escribe cada control pedido aunque la lectura coincida y "
@@ -776,10 +902,12 @@ def main(argv: list[str] | None = None) -> int:
     salida = Path(args.salida)
     estado: dict = {"fecha": time.strftime("%Y-%m-%d %H:%M:%S"), "argv": sys.argv[1:] if argv is None else argv}
 
-    if args.puertos or args.verificar_orden or args.leer or args.fijar or args.tras_msmf:
+    if args.puertos or args.verificar_orden or args.leer or args.fijar or args.tras_msmf or args.comparar_capas:
         return _fase_2a(ap, args, estado, salida)
     if args.forzar:
         ap.error("--forzar solo va con --fijar")
+    if args.capa is not None:
+        ap.error("--capa solo va con --leer, --fijar y --tras-msmf")
 
     faltan = [n for n in ("source", "backend", "controles") if getattr(args, n) is None]
     if faltan:

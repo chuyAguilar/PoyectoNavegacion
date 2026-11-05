@@ -228,8 +228,17 @@ python -m diagnostics.identify_ids --config profiles\tracker_config_gs1.yaml --n
 # como cliente del tracker (se arranca ANTES del tracker; el tracker lo ve como un cliente valido);
 # `bench` es un emisor real en este proceso, con receptor propio (E1) o con Slicer (--external, E3)
 python -m diagnostics.igtl_rate listen --port 18944 --seconds 30 --timeout 60 --device Marker0ToTracker
+# Con --idle-s N el listener espera hasta N s conectado sin recibir nada (sin la opción, 5 s): lo que
+# tarda el tracker en abrir la cámara en el PC, hasta ~8 s
+python -m diagnostics.igtl_rate listen --port 18944 --seconds 30 --timeout 60 --device Marker0ToTracker --idle-s 60
 python -m diagnostics.igtl_rate bench --port 18950 --hz 90 --seconds 20 --device RateProbeToTracker --timeout 10
 python -m diagnostics.igtl_rate bench --port 18944 --hz 90 --seconds 30 --device RateProbeToTracker --timeout 60 --external --timer-1ms
+
+# Leer los 10 controles de una cámara sin escribir nada, por la apertura corta de cv2 (como el tracker)
+# o por COM sobre el filtro de DirectShow, sin abrir vídeo (meta 007, fase 7b). --capa es obligatoria
+# en --leer, --fijar y --tras-msmf; --comparar-capas lee por las dos y da código 1 si difieren
+python -m diagnostics.probe_camera --leer --capa com --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)" --salida salida.json --timeout 60
+python -m diagnostics.probe_camera --comparar-capas --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)" --salida salida.json --timeout 60
 
 # La suite de pruebas (sin cámara)
 python -m pytest tests -q

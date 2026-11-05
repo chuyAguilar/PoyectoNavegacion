@@ -18,7 +18,9 @@ comprueba que un perfil real no abre nada.
 Linux (meta 007, fase 4 · La suite corre en Linux): `no_real_camera` vale igual en la
 Jetson, porque niega `cv2.VideoCapture` sea cual sea el backend (V4L2 incluido). Desde la
 fase 5 · La capa V4L2 y cada camara en la Jetson niega tambien `camera.v4l2.listar_camaras_v4l2`
-(lee /dev/v4l/by-path) y `camera.v4l2.ejecutar_v4l2ctl` (lanza v4l2-ctl). Ademas,
+(lee /dev/v4l/by-path) y `camera.v4l2.ejecutar_v4l2ctl` (lanza v4l2-ctl). Desde la fase 7b ·
+Las dos camaras a la vez en Windows niega `camera.dshow_props.abrir_filtro` (COM sobre el
+filtro de captura). Ademas,
 fuera de Windows, `python_del_venv_fuera_de_windows` hace que las recetas del panel
 (`gui.recipes`) usen el python que corre la suite: el panel corre en el PC (P16) y en la
 Jetson el venv esta en `~/.venvs/navegacion`, no en `codigo/.venv/Scripts/python.exe`.
@@ -60,12 +62,15 @@ def no_real_camera(monkeypatch):
     import cv2
     import pyigtl
     from camera import backend as cb
+    from camera import dshow_props
     from camera import uvc as cu
     from camera import v4l2 as cv4l2
 
     monkeypatch.setattr(cv2, "VideoCapture", _forbid("cv2.VideoCapture"))
     monkeypatch.setattr(cu, "listar_camaras_msmf", _forbid("camera.uvc.listar_camaras_msmf"))
     monkeypatch.setattr(cu, "listar_camaras_dshow", _forbid("camera.uvc.listar_camaras_dshow"))
+    # Meta 007, fase 7b: la unica funcion que toca COM de verdad (el filtro de captura).
+    monkeypatch.setattr(dshow_props, "abrir_filtro", _forbid("camera.dshow_props.abrir_filtro"))
     monkeypatch.setattr(cv4l2, "listar_camaras_v4l2", _forbid("camera.v4l2.listar_camaras_v4l2"))
     monkeypatch.setattr(cv4l2, "ejecutar_v4l2ctl", _forbid("camera.v4l2.ejecutar_v4l2ctl"))
     monkeypatch.setattr(pyigtl, "OpenIGTLinkServer", _forbid("pyigtl.OpenIGTLinkServer"))
