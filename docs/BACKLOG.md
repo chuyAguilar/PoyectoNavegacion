@@ -81,6 +81,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B95 | La pose cruda de IPPE_SQUARE es 1.2–1.5× más ruidosa que la de mínimos cuadrados sobre las mismas esquinas | Media | — |
 | B96 | El desfase δ entre cámaras (P13) no se distingue en S4: la curva es plana | Baja | — |
 | B97 | Cuánto ancho de banda isócrono reserva cada SVPRO en MJPG 1280x960 90 fps, sin leer su descriptor | Baja | — |
+| B98 | La Jetson como fuente del fusionador de la meta 006 | Baja | — |
+| B99 | El ancla de reloj de los `.npz` usa `time.time`, que en Windows con Python 3.11 va a pasos de hasta 15.6 ms | Baja | — |
 
 ## Abiertos
 
@@ -608,7 +610,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** en el experimento fuera de línea de la fase 1 · Verlo (meta 006 · Grafo de factores óptico-inercial, parte A, `python -m fusion.experiment` sobre la grabación del 2026-11-05 en la Jetson), los extrínsecos T_gs1←gs2 por Marker0 (P12 b, media de `T_gs1←M · T_gs2←M⁻¹` por posición) cambian 17.7 mm / 2.7° (RMS) de una posición de S2 a otra, y el criterio 1 del spec (gs2 llevada a gs1 frente a gs1, validación cruzada, P27) da 19.5 mm / 5.8° en la peor posición frente a < 0.5 mm / < 0.2°. No es ruido (la sd dentro de cada posición es 0.05–0.25 mm, 0.1–0.6°): ajustando a la vez los extrínsecos y la pose del marker en las 5 posiciones (`fusion/bundle.py`, con las 32 combinaciones de la ambigüedad de IPPE) quedan 5.8 px RMS, cuando cada vista sola ajusta a 0.02–0.25 px (gs2 en S2_pos4, 1.25 px); y la distancia entre los centros del marker de dos posiciones, que no depende de los extrínsecos, difiere entre gs1 y gs2 hasta 6.8 mm (S2_pos1–S2_pos2: 62.5 frente a 55.7 mm). S1_reposo y S2_pos1 (el marker en el mismo sitio, grabados seguidos) sí coinciden a 0.4–0.5 mm; en S4 (movimiento), tras alinear rígidamente las dos trayectorias quedan 3.8 mm RMS de diferencia de forma.
 - **Por qué queda:** la fase 1 cierra con el número (el plan lo fija: los criterios del spec son el resultado, no el criterio de la fase) y la causa no se separa con esta grabación. Dos hipótesis: (a) una cámara (o las dos, en sus pinzas) se movió entre posiciones al recolocar el soporte del marker; (b) la pose de un marker planar desde una cámara sola tiene un error sistemático de grados en la inclinación que arrastra la profundidad (z·tan θ·δθ: a 30° y 3°, ~10 mm), por los intrínsecos en esa zona de la imagen (gs2, B36), por un marker no plano o no cuadrado, o por el sesgo de las esquinas. Si es (b), el tracker de hoy publica Marker0 con un error de posición de mm que cambia con la vista, y nadie lo ha medido: la meta 002 midió la escala en el plano y la 003 el jitter, no la exactitud en profundidad.
 - **De dónde:** fase 1 · Verlo, parte A, de la meta 006 (2026-11-05; informe en `Claude outputs/fases/006/fase-1/corrida-02/informe.html`).
-- **Qué haría falta:** (1) repetir S2 sin tocar las cámaras y grabando la posición 1 otra vez al final (si pos1-inicio y pos1-final coinciden a < 0.5 mm y las demás no, es (b); si no coinciden, es (a)); (2) los extrínsecos por tablero de la fase 2 (independientes de Marker0) y repetir el criterio 1 con ellos; (3) medir la exactitud en profundidad de una cámara sola: Marker0 a distancias y ángulos conocidos (un calibre o la regla de la meta 002) frente a lo que da IPPE; (4) mirar por qué gs2 ajusta a 1.25 px en S2_pos4 (recalibrar gs2 o comprobar la planitud del marker).
+- **Qué haría falta:** (1) repetir S2 sin tocar las cámaras y grabando la posición 1 otra vez al final (desde el 2026-11-05, la Fase 2 · S2 otra vez en Windows, y B94, de la meta 006, con su veredicto) (si pos1-inicio y pos1-final coinciden a < 0.5 mm y las demás no, es (b); si no coinciden, es (a)); (2) los extrínsecos por tablero (independientes de Marker0; desde el replan por P33, la Fase 7 · Los extrínsecos por tablero, que se adelanta si la Fase 2 da «sesgo por vista», P36) y repetir el criterio 1 con ellos; (3) medir la exactitud en profundidad de una cámara sola: Marker0 a distancias y ángulos conocidos (un calibre o la regla de la meta 002) frente a lo que da IPPE; (4) mirar por qué gs2 ajusta a 1.25 px en S2_pos4 (recalibrar gs2 o comprobar la planitud del marker).
 - **Prioridad:** alta (si es (b), el resultado que publica el tracker está mal por mm según la vista; hasta separarlo, ningún número de fusión entre cámaras vale).
 
 ### B95 · La pose cruda de IPPE_SQUARE es 1.2–1.5× más ruidosa que la de mínimos cuadrados sobre las mismas esquinas
@@ -631,6 +633,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** el P-7b5 de la fase 7b · Las dos cámaras a la vez en Windows (meta 007 · El tracker en la Jetson Orin Nano), 2026-11-05; análisis en `Claude outputs/fases/007/por-que-atorados-7b.md`.
 - **Qué haría falta:** leer el descriptor de configuración de cada cámara (las alternativas de la interfaz de vídeo y su `wMaxPacketSize`) con USBView en el PC o `lsusb -v` en la Jetson (por el autor, si necesita `sudo`), y anotar qué alternativa elige cada una en MJPG 1280x960 90 fps.
 - **Prioridad:** baja (espera datos; no cambia lo que se envía).
+
+### B98 · La Jetson como fuente del fusionador de la meta 006
+- **Qué:** que los dos trackers de la Jetson manden sus esquinas por `--feed` a la IP del PC y el fusionador del PC las use igual que las de los trackers locales.
+- **Por qué queda:** P33 (2026-11-05): el PC ya puede con las dos cámaras (P-7b5) y el autor dio prioridad a Windows; la Jetson sale de la meta 006 por ahora. Su CPU va al 95.5 % con los dos trackers (B91).
+- **De dónde:** el replan de la meta 006 · Grafo de factores óptico-inercial por P33 (`specs/006-grafo-factores/plan.md`, «Lo que va al BACKLOG»).
+- **Qué haría falta:** el mismo `--feed` de la Fase 3 hacia la IP del PC, la regla del cortafuegos, el desfase entre los relojes de las dos máquinas (`clock_offset`, B87; los relojes de la Jetson y del PC son distintos, aunque las dos cámaras de la Jetson comparten el suyo) y la hora del buffer de V4L2. Sustituye a «la hora del buffer de V4L2» y a «MQTT u otro bus» del plan anterior.
+- **Prioridad:** baja (no impide usar el sistema: el PC lo hace solo).
+
+### B99 · El ancla de reloj de los `.npz` usa `time.time`, que en Windows con Python 3.11 va a pasos de hasta 15.6 ms
+- **Qué:** en el venv (CPython 3.11.9), `time.get_clock_info("time")` da `GetSystemTimeAsFileTime()` con resolución 0.015625 s; medido el 2026-11-05, los pasos reales fueron de 0.35 a 2.0 ms en ese momento: dependen de la resolución del temporizador que pida algún proceso, así que pueden volver a 15.6 ms. `perf_counter` (`QueryPerformanceCounter`, 1e-07 s, común a todos los procesos) no tiene el problema, y el emparejado de las dos cámaras usa solo `perf_counter`.
+- **Por qué queda:** solo afecta a la comprobación del ancla de `check_segment`, que exige ≤ 1 ms; la Fase 2 de la meta 006 la abre con `--tolerancia-ancla-ms 20` en el PC, sin tocar `tracker.py`. Así, en Windows esa comprobación solo detecta errores gruesos.
+- **De dónde:** el replan de la meta 006 por P33 (2026-11-05).
+- **Qué haría falta:** en `tracker.py` (la cadena, principio 6), tomar el ancla con `GetSystemTimePreciseAsFileTime` por `ctypes` (resolución de ~1 µs) o, si se pasa a Python 3.13, con `time.time()`, que allí usa ese reloj (hipótesis: no confirmado en Context7); y volver a 1 ms.
+- **Prioridad:** baja (no cambia ningún resultado: el emparejado no la usa).
 
 ## Cerrados
 

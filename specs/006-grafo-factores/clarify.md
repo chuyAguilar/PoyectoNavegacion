@@ -187,3 +187,39 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Respuesta del autor (2):** (a).
 - **Consecuencia:** se replanea la meta desde la Fase 1, parte B, y el autor autoriza el plan nuevo.
 - **Fecha:** 2026-11-05
+
+## P34 · Dos procesos o uno con las dos cámaras en el PC (replan del 2026-11-05, tarde, P33)
+
+- **Opciones:** (a) recomendada: dos trackers (los de hoy, cada uno con su cámara, su GIL y su bucle; ~90 fps cada uno a la vez en el P-7b5) que mandan sus esquinas por UDP local a un fusionador, lanzado todo con un comando, `python -m tracker --fusion profiles\fusion_gs1_gs2.yaml` (P10); si una cámara falla, la otra sigue; sirve igual si la Jetson vuelve; coste: `--feed` en `tracker.py` (principio 6, fase 3) y coordinar tres procesos por PID. (b) Un proceso con las dos cámaras: sin red ni apretón de manos, pero la detección cuesta 5.6–5.8 ms por frame (meta 003, fase 6) y las dos en serie no llegan a 85 parejas/s; en paralelo depende de que `detectMarkers` suelte el GIL (sin documentar); y es un segundo bucle de cámara que mantener; habría que medirlo antes. (c) Dos trackers sin cambios y el fusionador como cliente de OpenIGTLink: `tracker.py` intacto, pero llega solo la pose con el 1-Euro, en float32, sin esquinas (solo `numpy_pose`, −31.9 %, en el límite del 30 %) y con la hora de llegada.
+- **Respuesta del autor:** (a), la recomendada: dos trackers con `--feed` y un fusionador, lanzados con un solo comando.
+- **Fecha:** 2026-11-05
+
+## P35 · Las ventanas durante la grabación de S2 en Windows (replan del 2026-11-05, tarde)
+
+- **Opciones:** (a) recomendada: las dos ventanas abiertas toda la sesión (la vista y la grabación) y tramos de 60 s: con dos ventanas cada bucle puede bajar a ~45–60 fps (con una, 61.7 y 55.2 en la meta 003; con dos, sin medir), y 60 s a ≥ 45 fps dan ≥ 2700 parejas, sobre las 2000 de P16; la sesión dura ~18 min. (b) Las ventanas solo en la vista de antes de cada tramo y la grabación sin ventana, 40 s a ~90 fps, como en la Jetson: ~15 min, pero durante la grabación no se ve si algo se mueve.
+- **Respuesta del autor:** (a), la recomendada: las dos ventanas abiertas toda la sesión y tramos de 60 s.
+- **Fecha:** 2026-11-05
+
+## P36 · Si la fase 2 da «sesgo por vista» (o «se movió» dos veces) (replan del 2026-11-05, tarde)
+
+- **Opciones:** (a) recomendada: adelantar la fase 7 (el tablero) justo después de la 2: da extrínsecos que no dependen de Marker0 y separa «los extrínsecos están mal» de «la pose de una cámara sola está sesgada»; la fusión en vivo espera. (b) Seguir a la fusión en vivo con los extrínsecos del ajuste conjunto y B94 abierta: el criterio 2 (jitter) se puede medir, pero los criterios 1 y 3 no van a cumplir y la pose publicada mezclaría dos vistas que no casan. (c) Una fase nueva antes de todo: la exactitud en profundidad de una cámara sola (B94, punto 3: Marker0 a distancias y ángulos conocidos frente a lo que da IPPE), que es lo que diría si el tracker de hoy publica mm de error según la vista.
+- **Respuesta del autor:** (a), la recomendada: se adelanta la fase 7 (el tablero) justo después de la 2, y la fusión en vivo espera.
+- **Fecha:** 2026-11-05
+
+## P37 · Los topes de tiempo real del fusionador sin GTSAM en el PC (replan del 2026-11-05, tarde; revisa P15)
+
+- **Opciones:** (a) recomendada: cámara ≥ 85 fps cada una; bucle de cada tracker con `--feed` ≥ 85 fps sin ventana y ≥ 45 con dos ventanas; fusión por pareja p95 ≤ 5 ms y máx. ≤ 15 ms (la parte A midió en el PC p50 2.9–3.3 ms y p95 20.5 ms con el BLAS en hilos; si no llega, se prueba `OPENBLAS_NUM_THREADS=1`); poses fusionadas ≥ 85/s sin ventana y ≥ 45/s con ventana; latencia añadida (captura del frame más nuevo de la pareja → envío a Slicer) p95 ≤ 12 ms; pérdida UDP ≤ 0.1 %; Slicer ≥ 50 Hz (techo ~65, B54). Los de P15 para GTSAM siguen en la fase 6. (b) Los de P15 tal cual (fusión p95 ≤ 3 ms, ≥ 50/s con ventana): con la parte A medida, la fusión numpy probablemente no llega sin optimizarla. (c) Otros números del autor.
+- **Respuesta del autor:** (a), la recomendada: los topes revisados para el PC.
+- **Fecha:** 2026-11-05
+
+## P38 · Qué viaja de cada tracker al fusionador en el PC (replan del 2026-11-05, tarde; revisa P24)
+
+- **Opciones:** (a) recomendada: por frame, aunque no vea nada, la cámara, una secuencia, la hora de captura en ns y las esquinas de Marker0 (~50 bytes), por `127.0.0.1:18961`; el fusionador rehace las dos soluciones de IPPE con `fusion.dataset.ippe_solutions`, igual que el experimento, así que en vivo se fusiona lo mismo que fuera de línea; el tracker solo añade un envío; la pose cruda y la otra solución de P24 sobran (las calculaba la Jetson; la parte A midió 0 medidas salvadas por la otra solución); sin regla de cortafuegos. (b) Lo de P24 tal cual (además la pose cruda y la otra solución): el tracker tendría que calcular la pose sin el 1-Euro aparte (hoy `tvec` sale filtrada), más cambio en la cadena para nada que el fusionador no pueda rehacer.
+- **Respuesta del autor:** (a), la recomendada: por frame, la cámara, la secuencia, la hora de captura y las esquinas de Marker0; el fusionador rehace IPPE.
+- **Fecha:** 2026-11-05
+
+## P39 · Qué motor publica el fusionador en vivo (replan del 2026-11-05, tarde)
+
+- **Opciones:** (a) recomendada: `numpy_reproj`, el PnP conjunto sobre las 8 esquinas (−63.1 % en la parte A, aunque con B94 abierta; la pose sola de IPPE es 1.2–1.5× más ruidosa, B95), y con una sola cámara, su pose por mínimos cuadrados; `numpy_pose` queda elegible en el perfil; se confirma con los números de la fase 2. (b) `numpy_pose`, la media ponderada de las dos poses de IPPE (−31.9 %, justo en el 30 %): más simple, y con una sola cámara pasa su pose de IPPE tal cual. (c) Decidirlo con la fase 2, sin valor por defecto en el perfil.
+- **Respuesta del autor:** (a), la recomendada: `numpy_reproj`; `numpy_pose` queda elegible en el perfil y se confirma con los números de la fase 2.
+- **Fecha:** 2026-11-05
