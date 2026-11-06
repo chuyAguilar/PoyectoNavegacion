@@ -199,6 +199,9 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: las dos ventanas abiertas toda la sesión (la vista y la grabación) y tramos de 60 s: con dos ventanas cada bucle puede bajar a ~45–60 fps (con una, 61.7 y 55.2 en la meta 003; con dos, sin medir), y 60 s a ≥ 45 fps dan ≥ 2700 parejas, sobre las 2000 de P16; la sesión dura ~18 min. (b) Las ventanas solo en la vista de antes de cada tramo y la grabación sin ventana, 40 s a ~90 fps, como en la Jetson: ~15 min, pero durante la grabación no se ve si algo se mueve.
 - **Respuesta del autor:** (a), la recomendada: las dos ventanas abiertas toda la sesión y tramos de 60 s.
 - **Fecha:** 2026-11-05
+- **Revisada el 2026-11-05 (noche), tras la corrida `grabacion-pc/correr_20261105-223853`:**
+  - **Qué se vio:** con las dos ventanas abiertas, cada cámara bajó a ~31 fps (bucle 30–34) al cabo de unos minutos, por debajo de los 45 del criterio. La mirilla no se cerraba con Enter (tres veces por el tope de 300 s) y la corrida se paró con Ctrl+C antes del primer tramo.
+  - **Respuesta del autor:** «hagamos directamente las mediciones ahora»: ya alineó las dos cámaras con AMCap y las dos ven Marker0. Sin mirilla; los seis tramos se graban sin ventana (como (b): 40 s a ~90 fps).
 
 ## P36 · Si la fase 2 da «sesgo por vista» (o «se movió» dos veces) (replan del 2026-11-05, tarde)
 
