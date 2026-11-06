@@ -20,7 +20,7 @@ from .conftest import PROFILES_DIR
 
 GS1 = PROFILES_DIR / "tracker_config_gs1.yaml"
 BYPATH_2 = "platform-3610000.usb-usb-0:2.2:1.0-video-index0"
-PUERTO_WIN_2 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)"      # el de gs2 en el PC
+PUERTO_WIN_2 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)"      # el de gs2 en el PC en el P-7b-B (hasta el 2026-11-05)
 
 
 def _carga(p: Path) -> dict:

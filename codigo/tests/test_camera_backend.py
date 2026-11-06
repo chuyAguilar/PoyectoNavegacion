@@ -26,7 +26,7 @@ from camera import backend as cb
 from .conftest import CODIGO_DIR, HISTORICO_DIR, PROFILES_DIR
 
 PUERTO_1 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)"
-PUERTO_2 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)"
+PUERTO_2 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(5)"     # el de gs2 desde el 2026-11-05 (P-7b5; antes USB(11)#USB(4))
 CONTROLS = {"exposure_manual": True, "exposure_ms": 3.906, "gain": 11,
             "auto_white_balance": False, "brightness": 0, "contrast": 0,
             "saturation": 56, "sharpness": 0, "gamma": 110, "backlight": 54}

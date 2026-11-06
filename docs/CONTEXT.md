@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-11-04 (§6: meta 007, fase 7b · Las dos cámaras a la vez en Windows, parte B: la marca y los ajustes por COM en el tracker de Windows, hecha sin cámara). Antes, 2026-11-04 (§6: meta 007, fase 7 · Las dos cámaras a la vez en la Jetson, el código hecho y el P-7 pendiente). Antes, 2026-11-02 (§6: meta 007, fase 4 · La suite corre en Linux, hecha: 0 fallos en la Jetson). Antes, 2026-11-02 (§6: meta 007, fase 3 · El entorno en la Jetson, parcial, con el venv y la suite en la Jetson; faltan las ráfagas). Antes, 2026-11-02 (§6: meta 007, fase 3, parcial, esperando el guardián 3). Antes, 2026-11-02 (§6: meta 007 · El tracker en la Jetson Orin Nano, fase 2 · La barrera de seguridad para los agentes, hecha con los números en vivo). Antes, 2026-10-29 (§6: la meta 007 entra en la vía activa, fase 1). Antes, 2026-10-28 (§5: meta 005 · Agente de consulta para el equipo y buzón de peticiones, fase 1 · El buzón `peticiones/` y los hooks: los compañeros envían peticiones nuevas, ADR-034). Antes, 2026-10-26 (§6: meta 004 · Cómo funciona el tracker, fase 4 · Lectura con el autor y cierre de la meta: la meta pasa a «Hecho»; la suite, 618 pruebas). Antes, 2026-10-25 (§6: meta 003 · Arquitectura y optimización del tracker, fase 8c · Cierre de la meta: la meta pasa a «Hecho», con los números en vivo de las fases 7, 7b, 8a y 8b). Antes, 2026-10-25 (§6: meta 003, fase 8a · Un botón por modo en el panel, hecha sin cámara). Antes, 2026-10-25 (§3, §4.5, §4.20 y §6: meta 003, fase 7 · Subir los fps con ventana, cerrada; el tracker espera a Slicer con tope y aborta, los perfiles siguen a 90 fps y el tracking va con la caja al máximo). Las actualizaciones anteriores, en el historial de git._
+> _Última actualización: 2026-11-05 (§4.21 y §6: meta 007, fase 7b · Las dos cámaras a la vez en Windows: la causa de B5 medida, el concentrador USB 2.0 compartido; gs2 pasa al frontal USB 3.0, P-7b5). Antes, 2026-11-04 (§6: meta 007, fase 7b · Las dos cámaras a la vez en Windows, parte B: la marca y los ajustes por COM en el tracker de Windows, hecha sin cámara). Antes, 2026-11-04 (§6: meta 007, fase 7 · Las dos cámaras a la vez en la Jetson, el código hecho y el P-7 pendiente). Antes, 2026-11-02 (§6: meta 007, fase 4 · La suite corre en Linux, hecha: 0 fallos en la Jetson). Antes, 2026-11-02 (§6: meta 007, fase 3 · El entorno en la Jetson, parcial, con el venv y la suite en la Jetson; faltan las ráfagas). Antes, 2026-11-02 (§6: meta 007, fase 3, parcial, esperando el guardián 3). Antes, 2026-11-02 (§6: meta 007 · El tracker en la Jetson Orin Nano, fase 2 · La barrera de seguridad para los agentes, hecha con los números en vivo). Antes, 2026-10-29 (§6: la meta 007 entra en la vía activa, fase 1). Las actualizaciones anteriores, en el historial de git._
 
 ---
 
@@ -154,12 +154,26 @@
     bajan solas de 90 a 22–31 fps (medido con el hilo de captura, fase 7 de la meta 003,
     2026-10-25): algún control automático que el perfil no fija (B50). Pedir 60 fps no
     sirve: la cámara no tiene ese modo a 1280×960 MJPG y entrega ~29.
-21. **Con una cámara transmitiendo por MSMF, la otra no se abre por `cv2`/DSHOW.** La
-    apertura corta por índice da `isOpened=0` a ~2 s, también si la primera va a 640x480
-    (no es el ancho de banda; P-7b-A, 2026-11-04). Por eso en Windows la marca `focus` y
-    los ajustes se leen y se escriben por COM sobre el filtro de captura, sin abrir vídeo
-    (`camera/dshow_props.py`; el tracker, desde la parte B de la fase 7b). No volver a la
-    apertura corta para leer una cámara mientras la otra corre.
+21. **En Windows, cada cámara en su propio enlace USB 2.0: gs1 en el concentrador Genesys
+    (`05E3:0608`, `…#USB(11)#USB(3)`) y gs2 en el frontal USB 3.0 (`…#USB(5)`, directo
+    al concentrador raíz).** Con las dos MJPG 1280x960 90 fps en el mismo concentrador
+    USB 2.0 (el Genesys, `HS11`), la segunda abre por MSMF y pasa la marca y los ajustes
+    por COM, pero `grabFrame` falla con `0x800718CF` («una interfaz de cámara no tiene el
+    ancho de banda deseado para la transferencia de datos») y no da ningún frame, en los
+    dos órdenes (P-7b-B, 2026-11-04): no caben las dos reservas isócronas en un enlace.
+    Con gs2 en `USB(5)`, la única variable cambiada (P-7b5, 2026-11-05), las dos a la vez
+    cumplen en los dos órdenes: gs1 → gs2 89.9 / 90.0 fps de cámara y listeners a
+    88.6 / 88.6 mensajes/s; gs2 → gs1 90.0 / 89.5 fps y 89.4 / 89.1; códigos 0, sin
+    `0x800718CF`. Cuánto reserva cada cámara (¿~197 Mbit/s?) es hipótesis, sin leer su
+    descriptor (B97). Si una cámara cambia de puerto, cambia su ruta: medirla otra vez con
+    `python -m diagnostics.probe_camera --puertos` y poner al día `usb_port_windows` del
+    perfil (con la ruta vieja el backend no la encuentra; si se cruzan, la marca `focus`
+    lo detecta y para). Aparte, con las dos en el Genesys y una transmitiendo por MSMF, la
+    apertura corta por `cv2`/DSHOW de la otra daba `isOpened=0` a ~2 s, también a 640x480
+    (P-7b-A, 2026-11-04; probablemente la misma causa, sin medir). Por eso en Windows la
+    marca y los ajustes se leen y se escriben por COM sobre el filtro de captura, sin
+    abrir vídeo (`camera/dshow_props.py`; el tracker, desde la parte B de la fase 7b).
+    No volver a la apertura corta para leer una cámara mientras la otra corre.
 
 ## 5. Metodología de trabajo (cómo colaboramos humano + IA)
 
@@ -213,7 +227,7 @@ Desde el 2026-10-28 (ADR-034, meta 005 · Agente de consulta para el equipo y bu
 
 - **Meta 007, fase 7 · Las dos cámaras a la vez en la Jetson** (hecha el 2026-11-04 con el P-7 del autor, sin condición B, P28): `diagnostics/tegrastats_log.py` resume el log de `medir tegrastats` (CPU por núcleo, RAM, temperatura) en una ventana por la hora. gs2 corre con un perfil temporal en el 18946 (`linux.perfil_temporal --puerto 18946`, P18). Con las dos a la vez (450 s, Ollama parado): la cámara da 86.2 fps cada una (sola, 88.5) y el bucle 63.2 (cumple P13, ≥ 45), listeners 63.2 msg/s, latencia p95 10.3 ms; la CPU va al 95.5 % con la GPU al 0 %, RAM máx 3074 de 7620 MB, 69.9 °C: caben en el USB, pero sin margen de CPU para la meta 006 (B91). Ollama deshabilitado. La cadena no cambia. El P-7w del PC pasa a la fase 7b · Las dos cámaras a la vez en Windows.
 
-- **Meta 007, fase 7b · Las dos cámaras a la vez en Windows** (en marcha; autorizada el 2026-11-04, tres partes con su commit cada una). **Parte A · El diagnóstico (`244d31e`):** `camera/dshow_props.py` lee los 10 controles por COM sobre el filtro de captura de DirectShow, sin abrir vídeo; `probe_camera` gana `--capa cv2|com` y `--comparar-capas`; `igtl_rate listen --idle-s` (cierra B79). P-7b-A en vivo: COM y cv2 leen lo mismo (0 diferencias de 10, por cámara) y COM lee en 0.2 s con la otra cámara transmitiendo; la apertura corta por cv2/DSHOW de una cámara no abre con la otra transmitiendo por MSMF, ni a 640x480 (no es el ancho de banda); decisión: J7 (COM). **Parte B · El arreglo, hecha sin cámara (falta el P-7b-B del autor):** `CapaWindowsCOM.aplicar` escribe por COM y relee; `capa_para_plataforma("win32")` da `CapaWindowsCOM`, así que el tracker lee la marca y aplica los ajustes sin abrir vídeo y sin la apertura corta que fallaba; `linux.perfil_temporal` gana `camera.usb_port_windows` (y se arregló su regex para valores con `#`); `probe_camera --fijar --capa com`. La cadena (índice MSMF, modo, calibración, detección, filtro, envío) no cambia: replay 0.0 mm / 0.0° / 0.0 px. Suite del PC 1071: 1061 pasan, 10 saltadas, 0 fallan. Falta la parte C (el P-7w largo). B92 (fps que varían) y B93 (`CapaWindowsDShow` solo para la sonda) anotadas.
+- **Meta 007, fase 7b · Las dos cámaras a la vez en Windows** (en marcha; autorizada el 2026-11-04, tres partes con su commit cada una). **Parte A · El diagnóstico (`244d31e`):** `camera/dshow_props.py` lee los 10 controles por COM sobre el filtro de captura de DirectShow, sin abrir vídeo; `probe_camera` gana `--capa cv2|com` y `--comparar-capas`; `igtl_rate listen --idle-s` (cierra B79). P-7b-A en vivo: COM y cv2 leen lo mismo (0 diferencias de 10, por cámara) y COM lee en 0.2 s con la otra cámara transmitiendo; la apertura corta por cv2/DSHOW de una cámara no abre con la otra transmitiendo por MSMF, ni a 640x480 (entonces se leyó «no es el ancho de banda»; desde el P-7b5, probablemente la misma causa que B5, sin medir); decisión: J7 (COM). **Parte B · El arreglo (`ba3ed36`; P-7b-B del autor el 2026-11-04 y P-7b5 el 2026-11-05):** B1–B3 cumplen; B4, gs1 sola con Slicer, 82.2 fps de cámara y 81.7 de bucle, faltan los Hz de Slicer; B5 no cumplía con las dos en el Genesys (`0x800718CF`) y cumple con gs2 en `USB(5)`, ~89–90 fps cada una (§4.21; el perfil de gs2 cambió de ruta). Lo hecho sin cámara: `CapaWindowsCOM.aplicar` escribe por COM y relee; `capa_para_plataforma("win32")` da `CapaWindowsCOM`, así que el tracker lee la marca y aplica los ajustes sin abrir vídeo y sin la apertura corta que fallaba; `linux.perfil_temporal` gana `camera.usb_port_windows` (y se arregló su regex para valores con `#`); `probe_camera --fijar --capa com`. La cadena (índice MSMF, modo, calibración, detección, filtro, envío) no cambia: replay 0.0 mm / 0.0° / 0.0 px. Suite del PC 1071: 1061 pasan, 10 saltadas, 0 fallan. Falta la parte C (el P-7w largo). B92 (fps que varían) y B93 (`CapaWindowsDShow` solo para la sonda) anotadas.
 
 - **Meta 006, fase 1 parte A · Los números sin gtsam** (hecha el 2026-11-05, pendiente del commit del autor): `codigo/fusion/` (`python -m fusion.experiment`) corre fuera de línea, sin cámara ni gtsam y sin tocar la cadena, sobre la grabación de las dos cámaras en la Jetson. Fusionar baja el jitter 31.9 % (pose) y 63.1 % (PnP conjunto), pero los extrínsecos por Marker0 no coinciden entre gs1 y gs2 (19.5 mm / 5.82°; B94, alta). Falta la parte B (GTSAM).
 

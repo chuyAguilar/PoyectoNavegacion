@@ -638,6 +638,8 @@ Añadida el 2026-11-04 por P29. Pesada (ADR-022): toca cómo se comprueba la mar
 
 Si la parte A acaba en P30 (b) o (c), la parte B cambia de entrega según esa respuesta y la parte C no cambia.
 
+**Al día (2026-11-05):** la lectura de la parte A («no es el ancho de banda») ya no vale: B5 fallaba con `0x800718CF` porque las dos cámaras compartían el concentrador USB 2.0 Genesys (`…USB(11)`), y con gs2 en el frontal USB 3.0 (`…#USB(5)`, mismo controlador `PCI(1400)` pero otro enlace USB 2.0, no otro controlador como suponían el hallazgo de la línea «Nueva, si la parte A confirma H1» y P30 (a)) cumple en los dos órdenes (P-7b5; `docs/CONTEXT.md` §4.21). El perfil de gs2 lleva ya esa ruta; el montaje de la parte C es gs1 en `…USB(11)#USB(3)` y gs2 en `…#USB(5)`, no el de la parte A.
+
 ### Fase 8 · El panel del PC lanza y para el tracker de la Jetson (pesada)
 
 - **Entrega:** `profiles/jetson.yaml`, `recipes.cargar_jetson`, `recipes.receta_tracker_jetson` y el botón «Arrancar tracker en la Jetson» (solo si existe `jetson.yaml`), con sus pruebas: el argv exacto, `BatchMode`, rutas con `/`, `stop_stdin=True` y que la orden remota es un verbo del guardián (`decidir` la acepta).

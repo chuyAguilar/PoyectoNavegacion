@@ -5,8 +5,11 @@
 # ruta fisica de su puerto USB (camera.usb_port_windows), medida en la
 # fase 2a (2026-10-21): las dos SVPRO tienen la misma serie 01.00.00 y la
 # instancia USB cambia con el orden de conexion; la ruta del puerto no.
-# Las dos cuelgan de un hub: si cambia el hub o el puerto raiz, cambia la
-# ruta y hay que medirla otra vez (python -m diagnostics.probe_camera --puertos).
+# Desde el 2026-11-05 (P-7b5, meta 007 fase 7b) gs2 va en el frontal USB 3.0,
+# directo al concentrador raiz, FUERA del hub Genesys de gs1: con las dos en
+# el mismo hub USB 2.0 la segunda no daba frames (0x800718CF, sin ancho de
+# banda; CONTEXT.md 4.21). Si cambia el puerto, cambia la ruta y hay que
+# medirla otra vez (python -m diagnostics.probe_camera --puertos).
 #
 # Modo y exposicion elegidos en la fase 3 (2026-10-22, sesion en vivo):
 # 1280x960 MJPG 90 fps (P16, eleccion del autor: ningun modo llego a 88.2
@@ -21,9 +24,10 @@ camera:
   camera_type: webcam           # webcam | femtobolt
 
   # ===== Identidad: la ruta fisica del puerto USB (fase 2a, 6 de 6) =====
-  # Puerto 2 = Port_#0004.Hub_#0003. Sin `source`: el indice se resuelve
-  # enumerando el backend al abrir (camaras_uvc.resolver_indice).
-  usb_port_windows: PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)
+  # Desde el 2026-11-05: USB(5), el frontal USB 3.0 (antes USB(11)#USB(4),
+  # Port_#0004.Hub_#0003 del Genesys, compartido con gs1). Sin `source`: el
+  # indice se resuelve enumerando el backend al abrir (camaras_uvc.resolver_indice).
+  usb_port_windows: PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(5)
 
   # ===== Identidad en Linux (meta 007, fase 5; ADR J1, P11): el nombre del
   # enlace bajo /dev/v4l/by-path, que fija el puerto USB fisico (by-id no

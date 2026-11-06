@@ -78,7 +78,7 @@ explicitos (principio 7). Ejemplos:
         --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(2)" ^
         --salida "..\\Claude outputs\\camaras\\fijar_cam1.json" --timeout 60
     python -m diagnostics.probe_camera --fijar "focus=332" --forzar --capa cv2 ^
-        --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(4)" ^
+        --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(5)" ^
         --salida "..\\Claude outputs\\camaras\\marca_gs2.json" --timeout 60
     python -m diagnostics.probe_camera --comparar-capas ^
         --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)" ^

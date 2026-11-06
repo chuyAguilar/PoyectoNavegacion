@@ -80,6 +80,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B94 | La pose de Marker0 desde una cámara sola no coincide entre gs1 y gs2 (19.5 mm / 5.8° en la peor posición) y las 5 posiciones no caben en dos cámaras rígidas | Alta | — |
 | B95 | La pose cruda de IPPE_SQUARE es 1.2–1.5× más ruidosa que la de mínimos cuadrados sobre las mismas esquinas | Media | — |
 | B96 | El desfase δ entre cámaras (P13) no se distingue en S4: la curva es plana | Baja | — |
+| B97 | Cuánto ancho de banda isócrono reserva cada SVPRO en MJPG 1280x960 90 fps, sin leer su descriptor | Baja | — |
 
 ## Abiertos
 
@@ -384,6 +385,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** los perfiles son de la cadena (principio 6) y la meta 004 · Cómo funciona el tracker no los toca.
 - **De dónde:** visto al escribir la fase 3 · La explicación y el glosario (meta 004), 2026-10-26.
 - **Qué haría falta:** poner al día esos comentarios en una fase que ya toque `profiles/`, comprobando con la suite que el perfil leído no cambia.
+- **Al día (2026-11-05, fase 7b · Las dos cámaras a la vez en Windows, meta 007):** gs2 pasó a `…#USB(5)`, fuera del hub Genesys, y su comentario de identidad se puso al día; el de gs1 sigue diciendo «Las dos cuelgan de un hub», que ya no vale (el encargo no tocaba ese perfil).
 - **Prioridad:** baja.
 
 ### B60 · El repo es público, versiona el DICOM y ahora más personas tienen escritura y el clon completo
@@ -622,6 +624,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** fase 1 · Verlo, parte A, de la meta 006 (2026-11-05).
 - **Qué haría falta:** otro S4 con las dos cámaras viendo el marker todo el rato y movimiento más rápido (≥ 100 mm/s, un vaivén de ~10 cm a 1 Hz), después de resolver B94; o medir δ con la hora del buffer de V4L2 (fase 3 del plan).
 - **Prioridad:** baja.
+
+### B97 · Cuánto ancho de banda isócrono reserva cada SVPRO en MJPG 1280x960 90 fps, sin leer su descriptor
+- **Qué:** en el PC, con gs1 y gs2 en el mismo concentrador USB 2.0 (Genesys `05E3:0608`, `HS11`) la segunda cámara no daba frames (`0x800718CF`, «sin ancho de banda»; P-7b-B, 2026-11-04) y con gs2 en el frontal USB 3.0 (`…#USB(5)`, fuera del Genesys) las dos van a ~90 fps (P-7b5, 2026-11-05; `docs/CONTEXT.md` §4.21). La causa medida es el enlace compartido; que cada cámara reserve el máximo de un enlace de alta velocidad (~197 Mbit/s, la alternativa de mayor `wMaxPacketSize`) sigue siendo hipótesis.
+- **Por qué queda:** la regla de §4.21 (un enlace USB 2.0 por cámara) ya resuelve el uso; el número solo diría si caben dos en un enlace con otro modo o en otro concentrador, y en la Jetson las dos comparten un hub USB 2.0 y sí funcionan (fase 7, 86.2 fps cada una), lo que el número ayudaría a explicar.
+- **De dónde:** el P-7b5 de la fase 7b · Las dos cámaras a la vez en Windows (meta 007 · El tracker en la Jetson Orin Nano), 2026-11-05; análisis en `Claude outputs/fases/007/por-que-atorados-7b.md`.
+- **Qué haría falta:** leer el descriptor de configuración de cada cámara (las alternativas de la interfaz de vídeo y su `wMaxPacketSize`) con USBView en el PC o `lsusb -v` en la Jetson (por el autor, si necesita `sudo`), y anotar qué alternativa elige cada una en MJPG 1280x960 90 fps.
+- **Prioridad:** baja (espera datos; no cambia lo que se envía).
 
 ## Cerrados
 
