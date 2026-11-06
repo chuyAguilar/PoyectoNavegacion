@@ -2,7 +2,8 @@
 criterios, las tablas de cada bloque, las graficas (PNG de matplotlib embebido en base64)
 y los diagramas Mermaid (por la CDN de jsdelivr, `mermaid@11`, como la pagina
 `como-funciona-tracking.html` de la meta 007: sin Internet, el texto del diagrama se ve
-igual dentro de su `<pre>`). `write_report` no pisa un informe que exista.
+igual dentro de su `<pre>`). `write_report` no pisa un informe que exista. Desde la fase 2,
+la seccion de B94 (`_section_b94`): el veredicto, la posicion 1 repetida y las mitades.
 
 Context7 (2026-11-05): matplotlib `/matplotlib/matplotlib` (`Figure` + `FigureCanvasAgg` sin
 pyplot, `fig.savefig(buffer, format="png")`); Mermaid `/mermaid-js/mermaid` (plan: `<pre
@@ -355,6 +356,44 @@ def _section_agreement(results: dict) -> str:
     return _table(["posición", "parejas", "|Δt| medio mm", "sd mm", "máx mm", "ángulo medio °", "sd °", "Δxyz medio (gs1 − gs2→gs1) mm", "sesgo mm"], rows)
 
 
+def _section_b94(results: dict) -> str:
+    """El veredicto de B94 (fase 2): la posicion 1 repetida, las mitades de cada tramo y la regla."""
+    b = results.get("b94") or {}
+    if not b:
+        return "<p>Sin veredicto de B94: este resultados.json es anterior a la fase 2 o el experimento no lo calculo.</p>"
+    v = str(b.get("veredicto", "—"))
+    cls = {"cumple": "ok", "se_movio": "bad", "sesgo_por_vista": "bad", "sin_decidir": "na"}.get(v, "")
+    u = b.get("umbrales") or {}
+    out = [f"<p>Veredicto: <b class=\"{cls}\">{html.escape(v)}</b>. {html.escape(str(b.get('motivo', '')))}</p>",
+           f"<p class=\"nota\">Tolerancia del ancla de reloj usada en la comprobacion: {_fmt(results.get('tolerancia_ancla_ms'), 1)} ms. "
+           f"Umbrales: extrinsecos iguales si difieren &lt; {_fmt(u.get('mm'), 1)} mm y &lt; {_fmt(u.get('deg'), 1)}°; el marker volvio a su sitio si, "
+           f"visto por gs1, pos1_fin esta a ≤ {_fmt(u.get('volvio_mm'), 0)} mm y ≤ {_fmt(u.get('volvio_deg'), 0)}° de pos1.</p>"]
+    r = b.get("repeticion")
+    if r:
+        rows = [["extrinsecos T<sub>gs1←gs2</sub> de pos1 frente a pos1_fin", r["n_first"], r["n_last"], _fmt(r["diff_mm"]), _fmt(r["diff_deg"]), r["coinciden"]],
+                ["el marker, visto por gs1 (pose media)", r["n_first"], r["n_last"], _fmt(r["marker_shift_ref_mm"], 2), _fmt(r["marker_shift_ref_deg"], 2), "—"],
+                ["el marker, visto por gs2 (pose media)", r["n_first"], r["n_last"], _fmt(r["marker_shift_other_mm"], 2), _fmt(r["marker_shift_other_deg"], 2), "—"]]
+        out.append("<p><b>La posicion 1 al principio y al final.</b> Si los extrinsecos coinciden y el marker volvio a su sitio, nada se movio entre las camaras.</p>")
+        out.append(_table(["que", "parejas pos1", "parejas pos1_fin", "Δ mm", "Δ °", "coinciden"], rows,
+                          ["ok" if r["coinciden"] else "bad", "", ""]))
+    else:
+        out.append("<p class=\"bad\">Sin la posicion 1 repetida (S2_pos1_fin): la comparacion que separa las dos hipotesis de B94 no se pudo hacer.</p>")
+    m = b.get("mitades") or {}
+    if m:
+        rows = [[seg, h["n"], h["n_first"], h["n_second"], _fmt(h["diff_mm"]), _fmt(h["diff_deg"])] for seg, h in m.items()]
+        classes = ["ok" if (h["diff_mm"] < (u.get("mm") or 0.5) and h["diff_deg"] < (u.get("deg") or 0.2)) else "bad" for h in m.values()]
+        out.append(f"<p><b>Las dos mitades de cada tramo</b> (el suelo de ruido de los extrinsecos y si algo se movio dentro del tramo): "
+                   f"peor {_fmt(b.get('mitades_peor_mm'))} mm / {_fmt(b.get('mitades_peor_deg'))}°.</p>")
+        out.append(_table(["tramo", "parejas", "1.ª mitad", "2.ª mitad", "Δ mm", "Δ °"], rows, classes))
+    if b.get("distancias_max_diff_mm") is not None:
+        out.append(f"<p class=\"nota\">Distancias entre posiciones medidas por gs1 y por gs2 (invariantes a los extrinsecos; seccion Diagnostico): "
+                   f"difieren hasta {_fmt(b['distancias_max_diff_mm'], 2)} mm.</p>")
+    out.append("<p class=\"nota\">La regla, en orden: «sin decidir» si falta la repetida o el marker no volvio a su sitio; «se movio» si los extrinsecos "
+               "de pos1 y pos1_fin, o las dos mitades de un tramo, difieren ≥ los umbrales; «cumple» si nada se movio y el criterio 1 cumple; "
+               "«sesgo por vista» si nada se movio y el criterio 1 no cumple. El veredicto es el resultado de la fase 2, no su criterio.</p>")
+    return "\n".join(out)
+
+
 def _section_sigma(results: dict) -> str:
     s = results.get("sigma_px") or {}
     rows = [[cam, _fmt(v.get("sigma_px"), 4), _fmt(v.get("sigma_px_detrended"), 4), ", ".join(v.get("segmentos", [])), v.get("origen", "")]
@@ -434,7 +473,7 @@ h1 { font-size: 1.5em; } h2 { font-size: 1.2em; margin-top: 1.6em; border-bottom
 table { border-collapse: collapse; margin: 8px 0; font-size: 0.86em; } th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; vertical-align: top; }
 th { background: #f4f6f8; } tr.ok td:nth-child(5), tr.ok td.estado { color: #0a7a2f; font-weight: 600; }
 tr.ok { background: #f3fbf5; } tr.bad { background: #fdf3f3; } tr.info { background: #f6f6fb; } tr.na { color: #666; }
-p.bad { color: #a40000; font-weight: 600; }
+p.bad { color: #a40000; font-weight: 600; } b.ok { color: #0a7a2f; } b.bad { color: #a40000; } b.na { color: #666; }
 pre { background: #f8f8f8; border: 1px solid #eee; padding: 8px; overflow-x: auto; font-size: 0.85em; }
 pre.mermaid { background: #fff; border: 1px solid #eaeef2; border-radius: 8px; padding: 10px; }
 img { max-width: 100%; border: 1px solid #eee; margin: 6px 0; }
@@ -459,6 +498,7 @@ def write_report(results: dict, figures: dict[str, bytes], mermaid: dict[str, st
                "<h2>La comprobacion de la grabacion</h2>", _section_checks(results),
                "<h2>Los extrinsecos por Marker0</h2>", _section_extrinsics(results),
                "<h2>Criterio 1 · Las camaras coinciden (validacion cruzada)</h2>", _section_agreement(results),
+               "<h2>B94 · Las dos camaras no ven el Marker0 en el mismo sitio: el veredicto</h2>", _section_b94(results),
                "<h2>Diagnostico · Las posiciones caben en dos camaras rigidas?</h2>", _section_consistency(results),
                "<h2>σ_px por camara</h2>", _section_sigma(results),
                "<h2>Criterio 2 · La fusion baja el jitter (por instante)</h2>", _section_reduction(results),

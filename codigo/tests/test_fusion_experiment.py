@@ -5,6 +5,14 @@ sigma_px, criterio 2 por motor) a 1e-6 relativo; dos corridas dan el mismo `resu
 la CLI devuelve 2 si la salida existe o faltan intrinsecos, 0 si todo pasa, 1 si un segmento
 no pasa; el tope corta; los motores gtsam_* se rechazan en la parte A.
 
+Fase 2 (B94): la referencia de la fase 1 se reproduce sin cambios (la tolerancia del ancla por
+defecto no cambia ningun numero); `S2_pos1_fin` entra en sigma_px y en el criterio 2 pero no en
+los extrinsecos ni en la validacion cruzada; `b94_verdict` sobre dos camaras sinteticas da
+«cumple» sin mover nada, «se_movio» con gs2 desplazada 2.0 mm y girada 0.5 grados entre pos1 y
+pos1_fin (recuperado a < 0.01 mm y < 0.001 grados), «sesgo_por_vista» con un sesgo de
+inclinacion que cambia con la vista y nada movido, y «sin_decidir» si el marker no volvio a su
+sitio o falta la repetida; la CLI acepta `--tolerancia-ancla-ms`.
+
 Para regenerar la referencia a proposito (el cambio queda en git diff), desde codigo/:
 
     python -m tests.test_fusion_experiment --regenerar
@@ -12,15 +20,22 @@ Para regenerar la referencia a proposito (el cambio queda en git diff), desde co
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from scipy.spatial.transform import Rotation
 
 from fusion import experiment as xp
+from fusion import extrinsics as ex
+from fusion import geometry as g
 
 from .conftest import DATA_DIR, TESTS_DATA_DIR
+from .test_fusion_extrinsics import POSITIONS, moved_camera, pairs_of_position
+from .test_fusion_geometry import second_camera
 
 RECORTE = TESTS_DATA_DIR / "fusion_gs1_gs2"
 REFERENCIA = RECORTE / "referencia.json"
@@ -98,6 +113,11 @@ def test_lo_que_sale_tiene_sentido(corrida) -> None:
     assert set(tiempos["por_motor"]) == set(ENGINES) and tiempos["por_motor"]["numpy_pose"]["n"] > 1000
     assert "S1_reposo" in series and set(series["S1_reposo"]["positions"]) == {"gs1", "gs2", *ENGINES}
     assert rep["desfase"] == {} and any(c["id"] == "delta" and c["estado"] == "sin evaluar" for c in rep["criterios"])
+    # Fase 2: sin S2_pos1_fin el veredicto de B94 queda sin decidir, y la tolerancia usada es la de siempre.
+    assert rep["tolerancia_ancla_ms"] == 1.0
+    assert rep["b94"]["veredicto"] == "sin_decidir" and "falta" in rep["b94"]["motivo"] and rep["b94"]["repeticion"] is None
+    assert set(rep["b94"]["mitades"]) == {"S2_pos1", "S2_pos2", "S2_pos3", "S2_pos4", "S2_pos5"}
+    assert all(c["id"] != "B94" for c in rep["criterios"])      # el veredicto no es un criterio del spec
 
 
 def test_dos_corridas_dan_el_mismo_json(corrida) -> None:
@@ -119,8 +139,15 @@ def test_cli_codigos_y_archivos(tmp_path: Path, capsys) -> None:
     assert (salida / "resultados.json").is_file() and (salida / "informe.html").is_file() and (salida / "tiempos.json").is_file()
     rep = json.loads((salida / "resultados.json").read_text(encoding="utf-8"))
     assert "tiempos" not in rep and "series" not in rep and rep["motores"] == ["numpy_pose"]
-    assert "[experimento] criterios:" in out.out and "informe:" in out.out
+    assert "[experimento] criterios:" in out.out and "informe:" in out.out and "B94:" in out.out
+    assert rep["tolerancia_ancla_ms"] == 1.0
     assert xp.main(args) == 2 and "no se pisa" in capsys.readouterr().err
+    # Fase 2: la tolerancia del ancla por la CLI (20 para las grabaciones del PC); 0 no vale.
+    salida_t = tmp_path / "tol"
+    assert xp.main(args[:-6] + ["--salida", str(salida_t), "--motores", "numpy_pose", "--timeout", "300", "--tolerancia-ancla-ms", "20"]) == 0
+    assert json.loads((salida_t / "resultados.json").read_text(encoding="utf-8"))["tolerancia_ancla_ms"] == 20.0
+    assert xp.main(args[:-6] + ["--salida", str(tmp_path / "t0"), "--motores", "numpy_pose", "--timeout", "300", "--tolerancia-ancla-ms", "0"]) == 2
+    assert "tolerancia" in capsys.readouterr().err
     assert xp.main(args[:2] + ["--intrinsecos", f"gs1={INTRINSICS['gs1']}", "--salida", str(tmp_path / "b"), "--timeout", "10"]) == 2
     assert xp.main(["--datos", str(tmp_path / "nada"), "--intrinsecos", f"gs1={INTRINSICS['gs1']}", f"gs2={INTRINSICS['gs2']}",
                     "--salida", str(tmp_path / "c"), "--timeout", "10"]) == 2
@@ -159,9 +186,140 @@ def test_tope_y_motores_de_la_parte_b() -> None:
         xp.run_experiment(RECORTE, INTRINSICS, None, ("numpy_pose",), timeout_s=0.0)
     with pytest.raises(ValueError, match="parte B"):
         xp.run_experiment(RECORTE, INTRINSICS, None, ("gtsam_pose",), timeout_s=10)
+    with pytest.raises(ValueError, match="tolerancia"):
+        xp.run_experiment(RECORTE, INTRINSICS, None, ("numpy_pose",), timeout_s=10, anchor_tol_ms=0)
     d = xp.Deadline(None)
     d.check("nada")
     assert d.elapsed() >= 0
+
+
+# ---------------------------------------------------------------------------- B94 (fase 2)
+
+S2 = ["S2_pos1", "S2_pos2", "S2_pos3", "S2_pos4", "S2_pos5"]
+FIN = "S2_pos1_fin"
+
+
+def _rx(deg: float) -> np.ndarray:
+    T = np.eye(4)
+    T[:3, :3] = Rotation.from_euler("x", deg, degrees=True).as_matrix()
+    return T
+
+
+def _rest(T12: np.ndarray, T12_fin: np.ndarray | None = None, n: int = 30, bias_deg: dict | None = None,
+          marker_shift_fin_mm: float = 0.0, second_half_T12: dict | None = None) -> dict:
+    """Un `rest` como el de `run_experiment` (tracks con `T_raw` y `pairs`) con dos camaras
+    sinteticas exactas en S2_pos1..5 y S2_pos1_fin. `T12_fin`: gs2 en la repetida (si se movio);
+    `bias_deg[seg]`: un giro de la pose que gs2 mide, sobre el eje x del marker (un sesgo que cambia
+    con la vista); `marker_shift_fin_mm`: el marker no vuelve exactamente a pos1; `second_half_T12[seg]`:
+    gs2 en la segunda mitad de ese tramo (se movio dentro del tramo)."""
+    rest = {}
+    for seg in S2 + [FIN]:
+        pos = dict(POSITIONS[0] if seg == FIN else POSITIONS[S2.index(seg)])
+        if seg == FIN:
+            pos["x"] = pos["x"] + marker_shift_fin_mm
+        T = T12_fin if (seg == FIN and T12_fin is not None) else T12
+        Ta, Tb = pairs_of_position(T, pos, n)
+        if second_half_T12 and seg in second_half_T12:
+            Ta2, Tb2 = pairs_of_position(second_half_T12[seg], pos, n)
+            Ta, Tb = np.concatenate([Ta[: n // 2], Ta2[n // 2:]]), np.concatenate([Tb[: n // 2], Tb2[n // 2:]])
+        if bias_deg and seg in bias_deg:
+            Tb = np.einsum("nij,jk->nik", Tb, _rx(bias_deg[seg]))
+        idx = np.arange(len(Ta))
+        rest[seg] = {"tracks": {"gs1": SimpleNamespace(T_raw=Ta), "gs2": SimpleNamespace(T_raw=Tb)},
+                     "pairs": np.column_stack([idx, idx])}
+    return rest
+
+
+def _criterio_1(rest: dict) -> dict:
+    ppp = [(rest[s]["tracks"]["gs1"].T_raw, rest[s]["tracks"]["gs2"].T_raw) for s in S2]
+    loo = ex.leave_one_out(ppp)
+    worst_mm = max(r["agreement"]["mean_mm"] for r in loo)
+    worst_deg = max(r["agreement"]["mean_deg"] for r in loo)
+    return {"peor_mm": worst_mm, "peor_deg": worst_deg,
+            "cumple": bool(worst_mm < xp.THRESH["agreement_mm"] and worst_deg < xp.THRESH["agreement_deg"])}
+
+
+def test_b94_sin_mover_nada_cumple() -> None:
+    rest = _rest(second_camera(30.0))
+    v = xp.b94_verdict(rest, S2, _criterio_1(rest))
+    assert v["veredicto"] == "cumple", v["motivo"]
+    r = v["repeticion"]
+    assert r["diff_mm"] < 1e-6 and r["diff_deg"] < 1e-6 and r["coinciden"] and r["marker_shift_ref_mm"] < 1e-6
+    assert set(v["mitades"]) == set(S2 + [FIN]) and v["mitades_peor_mm"] < 1e-6 and v["mitades_peor_deg"] < 1e-6
+    assert v["criterio_1_cumple"] is True and v["umbrales"] == {"mm": 0.5, "deg": 0.2, "volvio_mm": 5.0, "volvio_deg": 2.0}
+    assert "distancias_max_diff_mm" not in v
+    assert xp.b94_verdict(rest, S2, _criterio_1(rest), {"distancias_max_diff_mm": 0.3})["distancias_max_diff_mm"] == 0.3
+
+
+def test_b94_gs2_movida_entre_pos1_y_pos1_fin_da_se_movio() -> None:
+    T12 = second_camera(30.0)
+    rest = _rest(T12, T12_fin=moved_camera(T12, 2.0, 0.5))
+    c1 = _criterio_1(rest)
+    assert c1["cumple"]                                   # las 5 posiciones son coherentes: solo la repetida delata el movimiento
+    v = xp.b94_verdict(rest, S2, c1)
+    assert v["veredicto"] == "se_movio" and "pos1_fin" in v["motivo"] and "mitades" not in v["motivo"]
+    r = v["repeticion"]
+    assert abs(r["diff_mm"] - 2.0) < 0.01 and abs(r["diff_deg"] - 0.5) < 0.001 and not r["coinciden"]
+    assert r["marker_shift_ref_mm"] < 0.01                # visto por gs1, el marker volvio a su sitio
+    # Movida dentro de un tramo (la segunda mitad de S2_pos3): tambien «se movio», por las mitades.
+    rest = _rest(T12, second_half_T12={"S2_pos3": moved_camera(T12, 2.0, 0.5)})
+    v = xp.b94_verdict(rest, S2, _criterio_1(rest))
+    assert v["veredicto"] == "se_movio" and "mitades de S2_pos3" in v["motivo"]
+    assert abs(v["mitades"]["S2_pos3"]["diff_mm"] - 2.0) < 0.01 and v["mitades"]["S2_pos1"]["diff_mm"] < 1e-6
+
+
+def test_b94_sesgo_por_vista_sin_mover_nada() -> None:
+    # Un giro de la pose de gs2 sobre el eje x del marker que cambia con la vista; pos1 y pos1_fin, la misma.
+    bias = {"S2_pos1": 1.0, "S2_pos2": 3.0, "S2_pos3": -2.0, "S2_pos4": 4.0, "S2_pos5": 0.0, FIN: 1.0}
+    rest = _rest(second_camera(30.0), bias_deg=bias)
+    c1 = _criterio_1(rest)
+    assert not c1["cumple"] and c1["peor_mm"] > 1.0
+    v = xp.b94_verdict(rest, S2, c1)
+    assert v["veredicto"] == "sesgo_por_vista", v["motivo"]
+    assert v["repeticion"]["coinciden"] and v["repeticion"]["diff_mm"] < 1e-6 and v["mitades_peor_mm"] < 1e-6
+    assert "hipotesis b" in v["motivo"]
+
+
+def test_b94_sin_decidir_si_el_marker_no_volvio_o_falta_la_repetida() -> None:
+    T12 = second_camera(30.0)
+    rest = _rest(T12, marker_shift_fin_mm=10.0)           # las dos lo ven 10 mm mas alla
+    v = xp.b94_verdict(rest, S2, _criterio_1(rest))
+    assert v["veredicto"] == "sin_decidir" and "no volvio" in v["motivo"]
+    assert abs(v["repeticion"]["marker_shift_ref_mm"] - 10.0) < 0.05
+    rest.pop(FIN)
+    v = xp.b94_verdict(rest, S2, _criterio_1(rest))
+    assert v["veredicto"] == "sin_decidir" and "falta" in v["motivo"] and v["repeticion"] is None and FIN not in v["mitades"]
+    # La regla, suelta: sin criterio 1 evaluado (una sola posicion) tampoco decide.
+    rep = {"diff_mm": 0.0, "diff_deg": 0.0, "marker_shift_ref_mm": 0.0, "marker_shift_ref_deg": 0.0, "coinciden": True}
+    assert xp.b94_rule(rep, {}, {})[0] == "sin_decidir"
+    assert xp.b94_rule(rep, {}, {"cumple": True, "peor_mm": 0.1, "peor_deg": 0.05})[0] == "cumple"
+    assert xp.b94_rule(rep, {"S2_pos2": {"diff_mm": 0.6, "diff_deg": 0.0}}, {"cumple": True, "peor_mm": 0.1, "peor_deg": 0.05})[0] == "se_movio"
+    assert xp.b94_rule(None, {}, {"cumple": True})[0] == "sin_decidir"
+    assert all(v in xp.B94_VERDICTS for v in ("sin_decidir", "se_movio", "cumple", "sesgo_por_vista"))
+
+
+def test_s2_pos1_fin_entra_en_sigma_y_criterio_2_pero_no_en_los_extrinsecos(corrida, tmp_path: Path) -> None:
+    datos = tmp_path / "datos"
+    datos.mkdir()
+    for p in RECORTE.glob("S*.npz"):
+        shutil.copy(p, datos / p.name)
+    for c in ("gs1", "gs2"):
+        shutil.copy(RECORTE / f"S2_pos1_{c}.npz", datos / f"S2_pos1_fin_{c}.npz")      # la repetida, identica a pos1
+    res = xp.run_experiment(datos, INTRINSICS, None, ("numpy_pose",), timeout_s=300)
+    rep, _, _ = xp._split_results(res)
+    assert FIN in rep["comprobacion"] and rep["comprobacion"][FIN]["ok"] and rep["segmentos_fuera"] == []
+    assert FIN not in rep["extrinsecos"]["segmentos"] and rep["extrinsecos"]["n_positions"] == 5
+    assert FIN not in [r["segmento"] for r in rep["criterio_1"]["por_posicion"]]
+    assert FIN not in rep["consistencia"]["segmentos"]
+    # Fuera de los extrinsecos de verdad: la matriz es la misma que sin la repetida, bit a bit.
+    assert np.array_equal(np.asarray(rep["extrinsecos"]["T_ref_other"]), np.asarray(corrida["rep"]["extrinsecos"]["T_ref_other"]))
+    assert rep["criterio_1"]["peor_mm"] == corrida["rep"]["criterio_1"]["peor_mm"]
+    assert FIN in [r["segmento"] for r in rep["criterio_2"]["por_segmento"]]
+    assert FIN in rep["sigma_px"]["gs1"]["segmentos"] and rep["sigma_px"]["gs1"]["sigma_px"] != corrida["rep"]["sigma_px"]["gs1"]["sigma_px"]
+    b = rep["b94"]
+    assert b["repeticion"] is not None and b["repeticion"]["diff_mm"] < 1e-9 and b["repeticion"]["coinciden"]
+    assert FIN in b["mitades"] and b["veredicto"] in xp.B94_VERDICTS and b["veredicto"] != "sin_decidir"
+    assert "falta" not in b["motivo"]
 
 
 def main(argv: list[str] | None = None) -> int:

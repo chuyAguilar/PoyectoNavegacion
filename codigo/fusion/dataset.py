@@ -216,12 +216,17 @@ def expected_duration(meta: dict) -> float | None:
 
 def check_segment(tracks: dict[str, CameraTrack], intrinsics: dict[str, Path],
                   expected_s: float | None, occluded: str | None = None,
-                  rotation_tol_deg: float = ROTATION_TOL_DEG) -> dict:
+                  rotation_tol_deg: float = ROTATION_TOL_DEG,
+                  anchor_tol_ms: float = ANCHOR_TOL_MS) -> dict:
     """La comprobacion del plan. Devuelve los numeros y `ok` con sus `reasons`:
-    |ancla gs1 - ancla gs2| <= 1 ms (ancla = t_start - t_loop_start de cada `.npz`);
-    solape >= esperado - 10 s; pose en >= 90 % de los frames (la tapada, entre 60 y 95 %);
-    el sha256 de la calibracion de cada `.npz` igual al del `.yml` de `data/`; la rotacion
-    rehecha desde las esquinas igual a la enviada (<= `rotation_tol_deg`) y en los mismos frames."""
+    |ancla gs1 - ancla gs2| <= `anchor_tol_ms` (1 ms por defecto; ancla = t_start - t_loop_start
+    de cada `.npz`; en Windows `t_start` es `time.time()`, con pasos de 15.6 ms, y las grabaciones
+    del PC piden 20, fase 2); solape >= esperado - 10 s; pose en >= 90 % de los frames (la tapada,
+    entre 60 y 95 %); el sha256 de la calibracion de cada `.npz` igual al del `.yml` de `data/`; la
+    rotacion rehecha desde las esquinas igual a la enviada (<= `rotation_tol_deg`) y en los mismos
+    frames."""
+    if not anchor_tol_ms > 0:
+        raise ValueError(f"anchor_tol_ms tiene que ser > 0, no {anchor_tol_ms!r}")
     cams = list(tracks)
     reasons: list[str] = []
     out: dict = {"cameras": cams, "expected_s": expected_s}
@@ -233,8 +238,8 @@ def check_segment(tracks: dict[str, CameraTrack], intrinsics: dict[str, Path],
     if len(anchors) == len(cams) and len(cams) >= 2:
         vals = list(anchors.values())
         out["anchor_diff_ms"] = float((max(vals) - min(vals)) * 1000.0)
-        if out["anchor_diff_ms"] > ANCHOR_TOL_MS:
-            reasons.append(f"ancla de reloj: {out['anchor_diff_ms']:.3f} ms > {ANCHOR_TOL_MS} ms")
+        if out["anchor_diff_ms"] > anchor_tol_ms:
+            reasons.append(f"ancla de reloj: {out['anchor_diff_ms']:.3f} ms > {float(anchor_tol_ms)} ms")
     else:
         out["anchor_diff_ms"] = float("nan")
         reasons.append("falta t_start o t_loop_start en metadata")

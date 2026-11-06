@@ -83,6 +83,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B97 | Cuánto ancho de banda isócrono reserva cada SVPRO en MJPG 1280x960 90 fps, sin leer su descriptor | Baja | — |
 | B98 | La Jetson como fuente del fusionador de la meta 006 | Baja | — |
 | B99 | El ancla de reloj de los `.npz` usa `time.time`, que en Windows con Python 3.11 va a pasos de hasta 15.6 ms | Baja | — |
+| B100 | El suelo de ruido de `half_split` frente al umbral de 0.5 mm del veredicto de B94 | Media | — |
+| B101 | Las dos ventanas del tracker llevan el mismo título y se abren en el mismo sitio | Baja | — |
 
 ## Abiertos
 
@@ -647,6 +649,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** el replan de la meta 006 por P33 (2026-11-05).
 - **Qué haría falta:** en `tracker.py` (la cadena, principio 6), tomar el ancla con `GetSystemTimePreciseAsFileTime` por `ctypes` (resolución de ~1 µs) o, si se pasa a Python 3.13, con `time.time()`, que allí usa ese reloj (hipótesis: no confirmado en Context7); y volver a 1 ms.
 - **Prioridad:** baja (no cambia ningún resultado: el emparejado no la usa).
+
+### B100 · El suelo de ruido de `half_split` frente al umbral de 0.5 mm del veredicto de B94
+- **Qué:** `fusion.extrinsics.half_split` calcula los extrínsecos de las dos mitades de un tramo y su diferencia; el veredicto «se movió» (`b94_rule`) lo da si la diferencia de algún tramo llega a 0.5 mm o 0.2°. Sobre la grabación de la Jetson `20261105-120826` (informativo, sin la pos1 repetida) las mitades dan: S2_pos1 0.566 mm / 0.091° (1961 parejas), pos2 0.334 / 0.047, pos3 0.437 / 0.063, pos4 0.280 / 0.043, pos5 0.119 / 0.018. La pos1 supera el umbral dentro de un mismo tramo, con el marker supuestamente quieto: o algo se movía despacio, o el ruido de los extrínsecos por mitades ya es del orden de 0.5 mm y el umbral no lo separa del movimiento.
+- **Por qué queda:** el umbral es el del criterio 1 del spec, no está medido como suelo de ruido de este método; la grabación de Windows (Fase 2, en vivo pendiente) da los seis tramos y dirá si el umbral vale (todas las mitades < 0.2 mm) o no (todas rondan 0.5 mm).
+- **De dónde:** la fase 2 · S2 otra vez en Windows, y B94 (meta 006 · Grafo de factores óptico-inercial), 2026-11-05; nota en `Claude outputs/fases/006/fase-2-implementa.md`.
+- **Qué haría falta:** con la grabación de Windows, medir la sd de los extrínsecos por bloques de un mismo tramo (p. ej. 4 u 8 bloques) y fijar el umbral de las mitades como un múltiplo de esa sd; o cerrar el veredicto «se movió» solo con `repeat_check` (pos1 frente a pos1_fin) y dejar las mitades como aviso. Antes de leer un «se movió» que venga solo de las mitades, la dirección mira este número.
+- **Prioridad:** media (puede dar un «se movió» falso y repetir la sesión sin necesidad, o un «cumple» con la cámara en movimiento lento).
+
+### B101 · Las dos ventanas del tracker llevan el mismo título y se abren en el mismo sitio
+- **Qué:** con dos trackers con ventana a la vez (M1 de `grabacion-pc/correr.ps1`, Fase 2 de la meta 006), el título de la ventana es el mismo en los dos y la posición también; una puede salir encima de la otra y el autor no distingue cuál es gs1 y cuál gs2.
+- **Por qué queda:** darle un título o una posición por perfil (`WINDOW_TITLE` o un campo del perfil) toca `tracker.py` (la cadena, principio 6) y pide su plan, el replay y su verificación en vivo; la Fase 2 solo toca `fusion/`.
+- **De dónde:** la fase 2 · S2 otra vez en Windows, y B94 (meta 006), 2026-11-05.
+- **Qué haría falta:** que el título lleve el nombre del perfil (`Tracker gs1`, `Tracker gs2`) y, si hace falta, un desplazamiento en x; la prueba en `test_tracker_loop.py` de que sin ese campo el título no cambia. Mientras tanto, el autor arrastra una ventana a un lado al abrirlas.
+- **Prioridad:** baja (estorba solo en la mirilla y en los tramos con ventanas; no cambia ningún resultado).
 
 ## Cerrados
 

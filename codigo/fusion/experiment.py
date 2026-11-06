@@ -19,6 +19,14 @@ Desde `codigo\\` con el venv, con todos los argumentos explicitos (principio 7):
 Codigo 0 si corrio entero y todos los segmentos pasaron la comprobacion; 1 si algun
 segmento no la paso (lo dice, lo deja fuera y sigue con los demas); 2 si no pudo empezar o
 se paso del tope. No importa gtsam: los motores `gtsam_*` son de la parte B.
+
+Fase 2 · S2 otra vez en Windows, y B94: el segmento `S2_pos1_fin` (la posicion 1 repetida al
+final; entra en sigma_px y en el criterio 2 como un reposo mas, pero no en los extrinsecos
+ni en la validacion cruzada, que dejarian dentro a su gemelo), el veredicto de B94
+(`b94_verdict`: sin_decidir | se_movio | cumple | sesgo_por_vista) y `--tolerancia-ancla-ms`
+(1 por defecto; 20 para las grabaciones del PC, donde `t_start` es `time.time()` con pasos de
+15.6 ms). Con la tolerancia por defecto y sin `S2_pos1_fin`, `resultados.json` es el de la
+fase 1 mas las claves `b94` y `tolerancia_ancla_ms`.
 """
 from __future__ import annotations
 
@@ -46,6 +54,7 @@ SEGMENTS: dict[str, dict] = {
     "S2_pos1": {"kind": "rest", "role": "S2"}, "S2_pos2": {"kind": "rest", "role": "S2"},
     "S2_pos3": {"kind": "rest", "role": "S2"}, "S2_pos4": {"kind": "rest", "role": "S2"},
     "S2_pos5": {"kind": "rest", "role": "S2"},
+    "S2_pos1_fin": {"kind": "rest", "role": "S2_rep"},      # fase 2: la posicion 1 otra vez, al final
     "S3_tapa_gs1": {"kind": "occlusion", "covered": "gs1"},
     "S3_tapa_gs2": {"kind": "occlusion", "covered": "gs2"},
     "S4_movimiento": {"kind": "motion"},
@@ -53,6 +62,9 @@ SEGMENTS: dict[str, dict] = {
 THRESH = {"agreement_mm": 0.5, "agreement_deg": 0.2, "reduction": 0.30, "jump_mm": 0.5}
 ANGLE_WARN_DEG = 10.0
 REF, OTHER = "gs1", "gs2"
+B94_REPEAT = ("S2_pos1", "S2_pos1_fin")
+B94_RETURN_TOL = {"mm": 5.0, "deg": 2.0}      # el marker no volvio a su sitio (umbral propuesto en el plan, sin medir)
+B94_VERDICTS = ("sin_decidir", "se_movio", "cumple", "sesgo_por_vista")
 
 
 class Deadline:
@@ -261,13 +273,77 @@ def consistency_diagnostics(rest: dict, ext_segs: list[str], T12_init: np.ndarra
     return out
 
 
+def b94_rule(repeat: dict | None, halves: dict[str, dict], criterio_1: dict,
+             tol_mm: float = THRESH["agreement_mm"], tol_deg: float = THRESH["agreement_deg"],
+             return_tol: dict = B94_RETURN_TOL) -> tuple[str, str]:
+    """La regla del veredicto de B94 (plan, fase 2), en este orden; devuelve `(veredicto, motivo)`:
+    - `sin_decidir` si falta la posicion repetida o el marker no volvio a su sitio (visto por gs1,
+      pos1_fin esta a > 5 mm o > 2 grados de pos1): con la vista cambiada, un sesgo por vista
+      tambien cambiaria;
+    - `se_movio` si los extrinsecos de pos1 y pos1_fin difieren >= 0.5 mm o >= 0.2 grados, o si
+      las dos mitades de algun tramo difieren eso;
+    - `cumple` si no se movio y el criterio 1 (validacion cruzada) cumple;
+    - `sesgo_por_vista` si no se movio y el criterio 1 no cumple (la hipotesis b de B94)."""
+    if repeat is None:
+        return "sin_decidir", (f"falta {B94_REPEAT[0]} o {B94_REPEAT[1]} con parejas: sin la posicion 1 repetida al final "
+                               "no se separan las dos hipotesis de B94")
+    if repeat["marker_shift_ref_mm"] > return_tol["mm"] or repeat["marker_shift_ref_deg"] > return_tol["deg"]:
+        return "sin_decidir", (f"el marker no volvio a su sitio: visto por {REF}, {B94_REPEAT[1]} esta a "
+                               f"{repeat['marker_shift_ref_mm']:.2f} mm / {repeat['marker_shift_ref_deg']:.2f} grados de {B94_REPEAT[0]} "
+                               f"(umbral {return_tol['mm']:g} mm / {return_tol['deg']:g} grados); repetir la sesion con mas cuidado en las marcas")
+    moved = []
+    if not (repeat["diff_mm"] < tol_mm and repeat["diff_deg"] < tol_deg):
+        moved.append(f"los extrinsecos de {B94_REPEAT[0]} y {B94_REPEAT[1]} difieren {repeat['diff_mm']:.3f} mm / {repeat['diff_deg']:.3f} grados")
+    for seg, h in halves.items():
+        if not (h["diff_mm"] < tol_mm and h["diff_deg"] < tol_deg):
+            moved.append(f"las dos mitades de {seg} difieren {h['diff_mm']:.3f} mm / {h['diff_deg']:.3f} grados")
+    if moved:
+        return "se_movio", "; ".join(moved) + f" (umbral {tol_mm:g} mm / {tol_deg:g} grados): fijar el montaje y repetir la sesion"
+    if criterio_1.get("cumple") is None:
+        return "sin_decidir", "nada se movio, pero el criterio 1 no se evaluo (una sola posicion usable)"
+    if criterio_1["cumple"]:
+        return "cumple", (f"nada se movio y el criterio 1 cumple ({criterio_1['peor_mm']:.3f} mm / {criterio_1['peor_deg']:.3f} grados "
+                          f"en la peor posicion): B94 se cierra; la causa fue el montaje de la grabacion anterior")
+    return "sesgo_por_vista", (f"nada se movio y el criterio 1 no cumple ({criterio_1['peor_mm']:.3f} mm / {criterio_1['peor_deg']:.3f} grados "
+                               f"en la peor posicion): la pose de una camara sola tiene un error que cambia con la vista (hipotesis b de B94); P36")
+
+
+def b94_verdict(rest: dict, ext_segs: list[str], criterio_1: dict, consistencia: dict | None = None) -> dict:
+    """El veredicto de B94 sobre los segmentos de reposo ya emparejados (`rest[seg]["tracks"]`,
+    `rest[seg]["pairs"]`): `repeat_check` de S2_pos1 frente a S2_pos1_fin, `half_split` de cada
+    tramo (los de los extrinsecos y la repetida), las distancias invariantes del diagnostico de
+    consistencia si llega, y la regla (`b94_rule`)."""
+    def ppp(seg):
+        tr, pairs = rest[seg]["tracks"], rest[seg]["pairs"]
+        return tr[REF].T_raw[pairs[:, 0]], tr[OTHER].T_raw[pairs[:, 1]]
+
+    out: dict = {"posiciones_repetidas": list(B94_REPEAT), "repeticion": None, "mitades": {},
+                 "umbrales": {"mm": THRESH["agreement_mm"], "deg": THRESH["agreement_deg"],
+                              "volvio_mm": B94_RETURN_TOL["mm"], "volvio_deg": B94_RETURN_TOL["deg"]}}
+    a, b = B94_REPEAT
+    if a in rest and b in rest and len(rest[a]["pairs"]) >= 2 and len(rest[b]["pairs"]) >= 2:
+        out["repeticion"] = ex.repeat_check(ppp(a), ppp(b), THRESH["agreement_mm"], THRESH["agreement_deg"])
+    for seg in list(ext_segs) + ([b] if b in rest and b not in ext_segs else []):
+        if seg in rest and len(rest[seg]["pairs"]) >= 4:
+            h = ex.half_split(*ppp(seg))
+            out["mitades"][seg] = {k: h[k] for k in ("n", "n_first", "n_second", "diff_mm", "diff_deg")}
+    if out["mitades"]:
+        out["mitades_peor_mm"] = float(max(h["diff_mm"] for h in out["mitades"].values()))
+        out["mitades_peor_deg"] = float(max(h["diff_deg"] for h in out["mitades"].values()))
+    if consistencia:
+        out["distancias_max_diff_mm"] = consistencia.get("distancias_max_diff_mm")
+    out["criterio_1_cumple"] = criterio_1.get("cumple")
+    out["veredicto"], out["motivo"] = b94_rule(out["repeticion"], out["mitades"], criterio_1)
+    return out
+
+
 # ---------------------------------------------------------------------------
 # El experimento
 # ---------------------------------------------------------------------------
 
 def run_experiment(data_dir: Path, intrinsics: dict[str, Path], sigma_px: dict[str, float] | None,
                    engines: tuple[str, ...], attempts: dict[str, str] | None = None,
-                   timeout_s: float | None = None, log=print) -> dict:
+                   timeout_s: float | None = None, log=print, anchor_tol_ms: float = ds.ANCHOR_TOL_MS) -> dict:
     """Todo el experimento. Devuelve `results` (lo que va a `resultados.json`, mas `series`
     para las graficas y `tiempos` para `tiempos.json`, que `main` separa)."""
     deadline = Deadline(timeout_s)
@@ -275,6 +351,8 @@ def run_experiment(data_dir: Path, intrinsics: dict[str, Path], sigma_px: dict[s
     for e in engines:
         if e not in ENGINES_A:
             raise ValueError(f"motor {e!r}: en la parte A solo {ENGINES_A}; los gtsam_* son de la parte B")
+    if not anchor_tol_ms > 0:
+        raise ValueError(f"la tolerancia del ancla tiene que ser > 0 ms, no {anchor_tol_ms!r}")
     attempts = dict(attempts or {})
     results: dict = {"datos": data_dir.name, "motores": list(engines), "criterios": [], "avisos": [], "notas": [],
                      "comprobacion": {}, "segmentos_fuera": []}
@@ -291,7 +369,7 @@ def run_experiment(data_dir: Path, intrinsics: dict[str, Path], sigma_px: dict[s
         t0 = time.perf_counter()
         tracks = ds.load_segment(data_dir, seg, (REF, OTHER), attempts.get(seg))
         exp_s = ds.expected_duration(tracks[REF].meta)
-        check = ds.check_segment(tracks, intrinsics, exp_s, occluded=info.get("covered"))
+        check = ds.check_segment(tracks, intrinsics, exp_s, occluded=info.get("covered"), anchor_tol_ms=anchor_tol_ms)
         check["files"] = {c: tracks[c].file for c in tracks}
         check["load_s"] = time.perf_counter() - t0
         results["comprobacion"][seg] = check
@@ -308,17 +386,20 @@ def run_experiment(data_dir: Path, intrinsics: dict[str, Path], sigma_px: dict[s
     usable = {s: t for s, t in tracks_by_seg.items() if results["comprobacion"][s]["ok"]}
     rest_S2 = {s: {"tracks": t} for s, t in usable.items() if SEGMENTS[s].get("role") == "S2"}
     rest_S1 = {s: {"tracks": t} for s, t in usable.items() if SEGMENTS[s].get("role") == "S1"}
+    rest_rep = {s: {"tracks": t} for s, t in usable.items() if SEGMENTS[s].get("role") == "S2_rep"}   # fase 2
     if "S1_reposo" in tracks_by_seg and "S1_reposo" not in usable:
         results["avisos"].append("S1_reposo no cumple la comprobacion: hay que grabar otra vez.")
     if sum(1 for s in SEGMENTS if SEGMENTS[s].get("role") == "S2" and s in tracks_by_seg and s not in usable) > 1:
         results["avisos"].append("Mas de una posicion de S2 no cumple la comprobacion: hay que grabar otra vez.")
 
-    # 2. Parejas de cada segmento de reposo.
-    rest = {**rest_S1, **rest_S2}
+    # 2. Parejas de cada segmento de reposo (la posicion repetida tambien: sigma_px y criterio 2).
+    rest = {**rest_S1, **rest_S2, **rest_rep}
     for seg, r in rest.items():
         r["pairs"], r["tolerance_s"] = pairs_of(r["tracks"])
 
-    # 3. Extrinsecos por Marker0 (P12 b) sobre las posiciones de S2; sin S2, sobre S1.
+    # 3. Extrinsecos por Marker0 (P12 b) sobre las posiciones de S2; sin S2, sobre S1. La
+    # posicion repetida (S2_pos1_fin) queda fuera: dentro, dejar pos1 fuera en la validacion
+    # cruzada dejaria a su gemelo y el numero saldria optimista.
     ext_segs = [s for s in rest_S2 if len(rest_S2[s]["pairs"]) > 0] or [s for s in rest_S1 if len(rest_S1[s]["pairs"]) > 0]
     if not ext_segs:
         raise ValueError("ningun segmento de reposo usable con parejas: no hay extrinsecos")
@@ -380,8 +461,13 @@ def run_experiment(data_dir: Path, intrinsics: dict[str, Path], sigma_px: dict[s
             "del orden de la vista sola", "informativo",
             "si el conjunto no cabe y cada vista si, o una camara se movio entre posiciones o la pose de un marker solo tiene un error que cambia con la vista (inclinacion-profundidad)"))
 
-    # 5. sigma_px por camara, ajustado en S2 (no en S1); si no hay S2, en S1 y se dice.
-    fit_on = rest_S2 if rest_S2 else rest_S1
+    # 4b. El veredicto de B94 (fase 2): la posicion repetida, las mitades y la regla.
+    results["b94"] = b94_verdict(rest, ext_segs, c1, results["consistencia"])
+    log(f"[experimento] B94: {results['b94']['veredicto']} ({results['b94']['motivo']})")
+    deadline.check("el veredicto de B94")
+
+    # 5. sigma_px por camara, ajustado en S2 (y en la posicion repetida; no en S1); si no hay S2, en S1 y se dice.
+    fit_on = {**rest_S2, **rest_rep} if rest_S2 else rest_S1
     sig: dict = {}
     for cam in (REF, OTHER):
         if sigma_px and cam in sigma_px:
@@ -527,7 +613,8 @@ def run_experiment(data_dir: Path, intrinsics: dict[str, Path], sigma_px: dict[s
     results["criterios"].append(_criterion("IPPE", "Medidas que solo se salvan con la otra solucion de IPPE", f"{resc} de {inval} con z <= 0",
                                            "—", "informativo", "dato para P24 (si viajan las dos soluciones)"))
 
-    # 10. Tiempos (aparte del JSON reproducible).
+    # 10. Lo que se uso (fase 2) y los tiempos (aparte del JSON reproducible).
+    results["tolerancia_ancla_ms"] = float(anchor_tol_ms)
     results["tiempos"] = {"por_motor": {e: {"n": len(ms), **timing_stats(ms)} for e, ms in timings.items()},
                           "total_s": deadline.elapsed(), "carga_s": {s: results["comprobacion"][s]["load_s"] for s in results["comprobacion"]}}
     results["series"] = series
@@ -581,7 +668,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--intento", nargs="*", type=_seg_attempt, default=[], metavar="SEG=rN",
                     help="Que intento usar de un segmento (por defecto, el ultimo).")
     ap.add_argument("--timeout", required=True, type=float, help="Tope en segundos (principio 9).")
+    ap.add_argument("--tolerancia-ancla-ms", type=float, default=ds.ANCHOR_TOL_MS,
+                    help=f"Tolerancia del ancla de reloj entre los dos .npz (defecto {ds.ANCHOR_TOL_MS:g}; "
+                         f"20 para las grabaciones del PC, donde t_start va a pasos de 15.6 ms).")
     args = ap.parse_args(argv)
+    if not args.tolerancia_ancla_ms > 0:
+        print(f"[experimento] --tolerancia-ancla-ms tiene que ser > 0, no {args.tolerancia_ancla_ms}", file=sys.stderr)
+        return 2
 
     intr = dict(args.intrinsecos)
     for cam in (REF, OTHER):
@@ -596,7 +689,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         results = run_experiment(args.datos, intr, dict(args.sigma_px) or None, tuple(args.motores),
-                                 attempts=dict(args.intento), timeout_s=args.timeout)
+                                 attempts=dict(args.intento), timeout_s=args.timeout,
+                                 anchor_tol_ms=args.tolerancia_ancla_ms)
     except TimeoutError as e:
         print(f"[experimento] {e}", file=sys.stderr)
         return 2
@@ -617,6 +711,7 @@ def main(argv: list[str] | None = None) -> int:
     print("[experimento] criterios:")
     for c in rep["criterios"]:
         print(f"  {c['id']:>4}  {c['estado']:<12} {c['valor'] if c['valor'] is not None else '—':<36} {c['nombre']}")
+    print(f"[experimento] B94: {rep['b94']['veredicto']}: {rep['b94']['motivo']}")
     print(f"[experimento] informe: {args.salida / 'informe.html'} ({tiempos.get('total_s', 0):.1f} s)")
     return 1 if rep["segmentos_fuera"] else 0
 

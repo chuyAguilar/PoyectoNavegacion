@@ -1,7 +1,7 @@
 """fusion.report (meta 006, fase 1): el informe se escribe en un solo HTML con la tabla de
 criterios, las graficas en base64 y los diagramas Mermaid (CDN de jsdelivr), y no pisa uno
 que exista; `figures_for` da >= 6 PNG con unos resultados minimos; `mermaid_diagrams` da
->= 2 diagramas.
+>= 2 diagramas. Fase 2: la seccion de B94 (veredicto, la posicion repetida y las mitades).
 """
 from __future__ import annotations
 
@@ -56,6 +56,15 @@ def _results() -> tuple[dict, dict]:
         "ippe_otra_solucion": {"S1_reposo": {"gs1": {"sin_deteccion": 16, "varias_detecciones": 0, "pose_invalida": 0, "rescatables_por_la_otra_solucion": 0}}},
         "tiempos": {"por_motor": {"numpy_pose": {"n": 10, "mean_ms": 1.0, "p50_ms": 1.0, "p95_ms": 2.0, "max_ms": 3.0}}, "total_s": 12.0},
         "segmento_reposo": "S1_reposo",
+        "tolerancia_ancla_ms": 20.0,
+        "b94": {"veredicto": "sesgo_por_vista", "motivo": "nada se movio y el criterio 1 no cumple (prueba)",
+                "posiciones_repetidas": ["S2_pos1", "S2_pos1_fin"],
+                "umbrales": {"mm": 0.5, "deg": 0.2, "volvio_mm": 5.0, "volvio_deg": 2.0},
+                "repeticion": {"n_first": 2800, "n_last": 2750, "diff_mm": 0.12, "diff_deg": 0.03, "coinciden": True,
+                               "marker_shift_ref_mm": 0.8, "marker_shift_ref_deg": 0.4, "marker_shift_other_mm": 0.9, "marker_shift_other_deg": 0.5},
+                "mitades": {"S2_pos1": {"n": 2800, "n_first": 1400, "n_second": 1400, "diff_mm": 0.05, "diff_deg": 0.01},
+                            "S2_pos3": {"n": 2700, "n_first": 1350, "n_second": 1350, "diff_mm": 0.71, "diff_deg": 0.02}},
+                "mitades_peor_mm": 0.71, "mitades_peor_deg": 0.02, "distancias_max_diff_mm": 6.8, "criterio_1_cumple": False},
     }
     return results, series
 
@@ -79,6 +88,14 @@ def test_write_report_escribe_un_html_y_no_pisa(tmp_path: Path) -> None:
     assert "Los criterios del spec" in html and "coinciden" in html and "sin evaluar" in html and "un aviso" in html
     assert "62.50" in html and "+6.80" in html       # el diagnostico de distancias
     assert "S3_tapa_gs1" in html and "tapar" in html and "una nota" in html
+    # Fase 2: la seccion de B94 con el veredicto, la repetida, las mitades y la tolerancia usada.
+    assert "B94" in html and "sesgo_por_vista" in html and "20.0 ms" in html and "0.710" in html and "2800" in html
+    assert html.index("B94 · Las dos camaras") < html.index("Diagnostico · Las posiciones")
+    sin = dict(results)
+    sin.pop("b94")
+    assert "Sin veredicto de B94" in rp._section_b94(sin)
+    sin_rep = {**results, "b94": {**results["b94"], "repeticion": None}}
+    assert "Sin la posicion 1 repetida" in rp._section_b94(sin_rep)
     with pytest.raises(FileExistsError):
         rp.write_report(results, figs, {}, p)
     assert "| 1 |" not in rp.criteria_table(results) and "<table>" in rp.criteria_table(results)

@@ -1,8 +1,9 @@
 """fusion.dataset (meta 006, fase 1): `ippe_solutions` da dos soluciones y la primera es la de
 `solvePnP` (la del tracker); `build_track` rehace la pose cruda desde las esquinas de un `.npz`
 de `PoseLog` (sintetico y el recorte real) con la rotacion igual a la enviada; `check_segment`
-pasa con una grabacion buena y dice por que no con una mala; `cut_segment` recorta sin frames
-y `expected_duration` lee el `--duration` o el recorte; `segment_file` elige el ultimo intento.
+pasa con una grabacion buena y dice por que no con una mala (y, desde la fase 2, con la
+tolerancia del ancla como argumento); `cut_segment` recorta sin frames y `expected_duration`
+lee el `--duration` o el recorte; `segment_file` elige el ultimo intento.
 """
 from __future__ import annotations
 
@@ -104,6 +105,11 @@ def test_check_segment_dice_por_que_no(fake_segment) -> None:
     tracks["gs2"].meta["t_start"] += 0.005                     # 5 ms de ancla
     ch = ds.check_segment(tracks, INTRINSICS, 10.0)
     assert not ch["ok"] and any("ancla" in r for r in ch["reasons"]) and ch["anchor_diff_ms"] == pytest.approx(5.0, abs=0.01)
+    # Fase 2: la tolerancia del ancla es un argumento (20 ms para las grabaciones del PC, B-ancla).
+    assert ds.check_segment(tracks, INTRINSICS, 10.0, anchor_tol_ms=20.0)["ok"]
+    assert not ds.check_segment(tracks, INTRINSICS, 10.0, anchor_tol_ms=4.9)["ok"]
+    with pytest.raises(ValueError, match="anchor_tol_ms"):
+        ds.check_segment(tracks, INTRINSICS, 10.0, anchor_tol_ms=0.0)
     tracks["gs2"].meta["t_start"] -= 0.005
     assert any("solape" in r for r in ds.check_segment(tracks, INTRINSICS, 25.0)["reasons"])
     n = len(tracks["gs1"].t)
