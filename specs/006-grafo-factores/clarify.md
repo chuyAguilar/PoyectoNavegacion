@@ -172,3 +172,18 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: P17 (el hub USB de Windows) queda sin objeto, porque con P22 el PC no abre cámaras; si algún día vuelve, es B5 de la meta 007. P19 (retirar `--feed` si perdía la arquitectura de dos trackers) queda sin objeto: ya no hay dos arquitecturas que comparar, y el envío por UDP de la fase 3 es la vía. P20: (a), el 30 % se mide siempre por instante (P14), gane el método de sincronía que gane; la sd publicada con el factor de movimiento se da aparte, sin veredicto. (b) Dejarlas abiertas hasta el replan de la fase 3.
 - **Respuesta del autor:** (a), la recomendada: P17 y P19 quedan sin objeto; P20 se contesta con (a).
 - **Fecha:** 2026-11-05
+
+## P33 · Windows primero, tras P-7b5 (pregunta de la dirección, 2026-11-05)
+
+- **Contexto:** en P-7b5 (meta 007, `Claude outputs/fases/007/p7b5/correr_20261105-193558`), con gs2 fuera del concentrador Genesys (`…USB(5)`), las dos cámaras van a la vez en Windows a 89.5–90 fps cada una, en los dos órdenes, sin `0x800718CF`. El autor pide prioridad a Windows para usar ya las dos cámaras a la vez.
+- **Pregunta 1, el papel de la Jetson.** Opciones:
+  - (a) recomendada: fuera por ahora. El PC detecta y fusiona, la fase 3 «La Jetson envía al PC» desaparece y la meta 007 sigue en pausa.
+  - (b) La Jetson como alternativa: el fusionador acepta las detecciones de las dos plataformas.
+- **Respuesta del autor (1):** (a). P22 cambia: el PC detecta con las dos cámaras y fusiona; la Jetson sale de la meta 006 por ahora.
+- **Pregunta 2, el orden.** Opciones:
+  - (a) recomendada: primero se regraba S2 en Windows, con las ventanas de las dos cámaras a la vista, y se resuelve B94 · Las dos cámaras no ven el Marker0 en el mismo sitio; después, la fusión en vivo en el PC con lo de la parte A, sin GTSAM; GTSAM y el tablero, al final.
+  - (b) La fusión en vivo ya, con los extrínsecos de hoy y el sesgo de B94.
+  - (c) El orden del plan actual: la parte B (GTSAM) y el tablero primero.
+- **Respuesta del autor (2):** (a).
+- **Consecuencia:** se replanea la meta desde la Fase 1, parte B, y el autor autoriza el plan nuevo.
+- **Fecha:** 2026-11-05
