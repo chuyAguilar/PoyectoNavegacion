@@ -208,6 +208,9 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: adelantar la fase 7 (el tablero) justo después de la 2: da extrínsecos que no dependen de Marker0 y separa «los extrínsecos están mal» de «la pose de una cámara sola está sesgada»; la fusión en vivo espera. (b) Seguir a la fusión en vivo con los extrínsecos del ajuste conjunto y B94 abierta: el criterio 2 (jitter) se puede medir, pero los criterios 1 y 3 no van a cumplir y la pose publicada mezclaría dos vistas que no casan. (c) Una fase nueva antes de todo: la exactitud en profundidad de una cámara sola (B94, punto 3: Marker0 a distancias y ángulos conocidos frente a lo que da IPPE), que es lo que diría si el tracker de hoy publica mm de error según la vista.
 - **Respuesta del autor:** (a), la recomendada: se adelanta la fase 7 (el tablero) justo después de la 2, y la fusión en vivo espera.
 - **Fecha:** 2026-11-05
+- **Aplicada el 2026-11-09 con un solo «se movió», sin repetir S2:**
+  - **Lo que salió en la fase 2** (`ccfe803`): «se movió», con pos1 frente a pos1_fin 0.703 mm / 0.151°, al borde del umbral de 0.5 mm, que ya está en duda por el ruido (B100). Pero los extrínsecos por pose cambian 15.4 mm entre posiciones y el criterio 1 da 4.20 mm / 6.09°, mientras el ajuste conjunto cabe en 0.298 px. Lo que domina es el sesgo por vista, no el movimiento.
+  - **Respuesta del autor:** adelantar ya la fase 7 (el tablero), sin repetir S2 como pide la regla del plan para «se movió». Las cámaras no se mueven hasta el tablero.
 
 ## P37 · Los topes de tiempo real del fusionador sin GTSAM en el PC (replan del 2026-11-05, tarde; revisa P15)
 
