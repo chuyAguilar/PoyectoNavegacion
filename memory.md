@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-11-05 (meta 006 · Grafo de factores óptico-inercial, activa: Fase 2 · S2 otra vez en Windows, y B94, parcial; la meta 007 · El tracker en la Jetson Orin Nano, en pausa, y la 005 también)._
+_Actualizado: 2026-11-09 (meta 006 · Grafo de factores óptico-inercial, activa: Fase 2 · S2 otra vez en Windows, y B94, hecha con «se movió»; la meta 007 · El tracker en la Jetson Orin Nano, en pausa, y la 005 también)._
 
 Spec activo: `specs/006-grafo-factores/`
 
@@ -43,9 +43,9 @@ Peticiones pendientes: 0
 ## Meta 006 · Grafo de factores óptico-inercial (activa desde el 2026-11-05; plan rehecho por P33 y autorizado el 2026-11-05)
 
 - **Fase 1 · parte A (sin gtsam): hecha el 2026-11-05 (`a1a714b`).** Paquete `codigo/fusion/` (fuera de línea). Sobre la grabación de la Jetson `20261105-120826`: fusionar baja el jitter −31.9 % (pose) / −63.1 % (PnP conjunto), pero **los extrínsecos por Marker0 no coinciden: 19.5 mm / 5.82° frente a < 0.5 mm / 0.2°** (**B94, alta**: una cámara se movió, o error sistemático de inclinación en la pose). B95 (IPPE más ruidoso), B96 (δ no se ve en S4). Reporte: `Claude outputs/fases/006/fase-1a.md`.
-- **Fase 2 · S2 otra vez en Windows, y B94: parcial (2026-11-05), la parte sin cámara hecha; en vivo pendiente.** En `fusion/`: el segmento `S2_pos1_fin`, `half_split`, `repeat_check`, `b94_verdict` (cumple / se_movio / sesgo_por_vista / sin_decidir), `--tolerancia-ancla-ms`, `python -m fusion.extrinsics guardar` (no pisa; exige criterio 1 y veredicto «cumple») y la sección de B94 del informe; todo probado con cámaras sintéticas. Con la tolerancia por defecto, el resultado sobre la grabación de la Jetson es igual byte a byte a la fase 1. Reporte: `Claude outputs/fases/006/fase-2.md`. B100 (umbral de `half_split`, media: la pos1 de la Jetson da 0.566 mm entre mitades) y B101 (dos ventanas con el mismo título).
+- **Fase 2 · S2 otra vez en Windows, y B94: hecha el 2026-11-09, veredicto «se movió»** (sin cámara `be78d55`: `half_split`, `repeat_check`, `b94_verdict`, `fusion.extrinsics guardar`). Grabación del PC `grabacion-pc/datos/20261109-163350` (6 tramos de 40 s, pose 99.9–100 %); experimento en `fase-2/corrida-pc-01`: pos1 frente a pos1_fin 0.703 mm / 0.151° (marker devuelto a 2.56 mm / 1.41°), mitades de S2_pos2 0.952 mm (gs2 salta entre dos soluciones de IPPE), las demás ≤ 0.315; ajuste conjunto 0.298 px (cabe; Jetson 5.58); criterio 1 4.198 mm / 6.087° (Jetson 19.5 / 5.82); criterio 2 62.4 / 61.1 %. B94 sigue alta; B100 con los números del PC; B102 (parejas reales 1284–2343, bajo las 2000 de P16 en 3 de 5). Reporte: `Claude outputs/fases/006/fase-2.md`.
 - **Plan rehecho por P33 y autorizado el 2026-11-05 (Windows primero; P34–P39 contestadas, todas la recomendada).** El PC detecta con las dos cámaras (P-7b5) y fusiona; la Jetson sale de la meta por ahora (P22 cambia). Dos trackers con `--feed` (hora y esquinas por UDP local, P38) y un fusionador que publica `Marker0ToTracker` con `numpy_reproj` (P39), con un solo comando (P34). Fases nuevas: 2 · S2 otra vez en Windows, y B94 (ventanas abiertas, tramos de 60 s, P35); 3 · Cada tracker envía sus esquinas al fusionador; 4 · El fusionador del PC, sin GTSAM; 5 · La fusión en vivo con Slicer (topes de P37); 6 · El grafo con GTSAM (la antigua parte B); 7 · Los extrínsecos por tablero (la antigua fase 2; se adelanta tras la 2 si B94 da «sesgo por vista» o «se movió» dos veces, P36); 7b · Sobre la estructura; 8 · Cierre.
-- **Lo siguiente:** la sesión en vivo de la Fase 2 con `grabacion-pc/correr.ps1 -SinMirilla -SinVentana` (P35 revisada; script revisado por la dirección el 2026-11-06). Con su veredicto de B94, marcar la casilla; después la Fase 3.
+- **Lo siguiente (P36 a, encargo de la dirección):** adelantar la Fase 7 · Los extrínsecos por tablero; la fusión en vivo espera. Abierto: la regla del plan para «se movió» pide repetir S2 (hasta dos veces) antes de P36; lo confirma el autor.
 - Qué es: GTSAM fusiona lo de gs1 y gs2; solo cámaras, el IMU después. P1–P39 en `specs/006-*/clarify.md`. El GitHub MCP, nunca con `--scope project`. Fuente: `documentos/tecnicos/Factor Graphs for robot perception.pdf`, sin seguir en git.
 
 ## Meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC (en pausa desde el 2026-11-05; plan autorizado el 2026-10-29)
@@ -56,7 +56,7 @@ Peticiones pendientes: 0
 
 ## Pendientes del autor
 
-- **Meta 006:** plan rehecho por P33 y autorizado el 2026-11-05. Grabación de la Jetson hecha el 2026-11-05: `Claude outputs/fases/006/grabacion/datos/20261105-120826/`, 18 `.npz`; 8 de 9 tramos cumplen (S4_movimiento, gs2 con pose 71.6 %). Sd z en reposo, cada cámara sola: 0.046 / 0.043 mm. Lo siguiente: grabar S2 en Windows con `grabacion-pc/correr.ps1` (Fase 2; protocolo en `grabacion-pc/protocolo.md`) y correr después el experimento con `--tolerancia-ancla-ms 20`. Miniforge, para la Fase 6.
+- **Meta 006:** el commit de la Fase 2 (cierre en vivo); decidir Fase 7 (P36) o repetir S2; no mover las cámaras antes del tablero. Miniforge, para la Fase 6.
 - **Meta 007 (en pausa):** los Hz de Slicer de B4; `enviar_wip.ps1` y `ssh nav-jetson suite wip` con la parte B (esperado 0 fallos); hacer persistente el ahorro de energía de la Wi-Fi de la Jetson (B86, con sudo); el cable directo (B85) antes de llevarla.
 
 - Meta 005 (aplazado por el autor hasta compartirlo con sus compañeros, 2026-10-28): la prueba en vivo de la fase 1 (7 casos), la de la fase 2 (2 envíos con `consulta`), la lectura de `docs/EQUIPO.md` de la fase 3 (10 pasos, ~20 min) y el circuito de la fase 4 (una petición de prueba a `origin`, ~10 min), con sus protocolos en `Claude outputs/fases/005/`.
