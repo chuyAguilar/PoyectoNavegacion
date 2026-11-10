@@ -87,6 +87,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B101 | Las dos ventanas del tracker llevan el mismo título y se abren en el mismo sitio | Baja | — |
 | B102 | Las parejas reales de la grabación del PC quedan bajo las 2000 de P16 aunque el script estime más | Media | — |
 | B103 | El filtro z ≤ 0 de `estimate_single_pose` no atrapa el salto de IPPE_SQUARE entre sus dos soluciones, y el tracker lo publica a Slicer | Alta | — |
+| B104 | Un tramo repetido por los `correr.ps1` de grabación (`<tramo>_r2_<cámara>.npz`) no lo encuentra `fusion.dataset.segment_file` (`<tramo>_<cámara>_r2.npz`) | Media | — |
+| B105 | `diagnostics.probe_camera._vigilante` no para el proceso si `estado` no se puede escribir como JSON | Baja | — |
 
 ## Abiertos
 
@@ -681,6 +683,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** la dirección, explicando el paso 9 al autor (2026-11-09).
 - **Qué haría falta:** (1) medirlo fuera de línea sobre las grabaciones con esquinas (Jetson `20261105-120826`, PC `20261109-163350`): con `solvePnPGeneric(IPPE_SQUARE)`, por frame, el cociente de los errores de reproyección de las dos soluciones y cuántos frames cambian de solución respecto al anterior; (2) elegir la regla: descartar la pose si el cociente es cercano a 1, elegir la más cercana a la del frame anterior, o refinar (B95); (3) corregir el docstring de `estimate_single_pose`; (4) con dos cámaras, el fusionador por reproyección de la meta 006 (P39) lo resuelve en las vistas que ven las dos. Con ADR si cambia la pose publicada.
 - **Prioridad:** alta (da un resultado equivocado en la orientación que recibe Slicer, ya observado en gs2; no sabemos aún cuánto con una cámara en uso normal).
+
+### B104 · Un tramo repetido por los `correr.ps1` de grabación (`<tramo>_r2_<cámara>.npz`) no lo encuentra `fusion.dataset.segment_file` (`<tramo>_<cámara>_r2.npz`)
+- **Qué:** los tres scripts de grabación de la meta 006, fuera de git (`Claude outputs/fases/006/grabacion/correr.ps1`, `grabacion-b94/correr.ps1` y `grabacion-pc/correr.ps1`), nombran un tramo repetido con el intento antes de la cámara (`"$($seg.id)_r$k"` y luego `_<cámara>.npz`: `S2_pos3_r2_gs1.npz`). `fusion.dataset.segment_file` busca el intento después de la cámara (`<segmento>_<cámara>_r*.npz`: `S2_pos3_gs1_r2.npz`), y `--intento S2_pos3=r2` también. Si el autor repite un tramo con `r`, el experimento no ve la repetición: usa el primer intento (el que no cumplió) sin decirlo, salvo por el nombre de archivo en `comprobacion.<segmento>.files`. Leído en el código de los dos lados; no ha pasado todavía: en la grabación del PC (`20261109-163350`) no se repitió ningún tramo y en la de la Jetson solo la mirilla (`M1_r2`, `M1_r3`), que el experimento no lee.
+- **Por qué queda:** salió al escribir el script del tablero (Fase 7 · Los extrínsecos por tablero), que ya nombra sus repeticiones como espera el código (`T05_gs1_r2_frames`); arreglar los scripts de las fases 1 y 2 o `segment_file` no es de esta fase, y `fusion/dataset.py` no está entre sus archivos.
+- **De dónde:** la fase 7 · Los extrínsecos por tablero, independientes de Marker0 (meta 006 · Grafo de factores óptico-inercial), 2026-11-09; nota en `Claude outputs/fases/006/fase-7-implementa.md`.
+- **Qué haría falta:** una de dos, con su prueba: que `segment_file` admita también `<segmento>_rN_<cámara>.npz` (y falle si encuentra las dos formas), o cambiar el nombre en `grabacion-pc/correr.ps1` antes de volver a usarlo. Mientras tanto, si se repite S2 con ese script y se usa `r`, renombrar a mano los `.npz` del intento bueno antes de correr `fusion.experiment` y comprobar `files` en `resultados.json`.
+- **Prioridad:** media (el experimento usaría un intento que el script marcó como «no cumple», con el marker en el mismo sitio: menos datos o un tramo fuera, no una pose equivocada; no toca lo que publica el tracker).
+
+### B105 · `diagnostics.probe_camera._vigilante` no para el proceso si `estado` no se puede escribir como JSON
+- **Qué:** el vigilante del tope (`_vigilante(timeout, estado, salida)`, que usan `probe_camera`, `calibration.calibrate_camera` y desde la Fase 7 `calibration.calibrate_extrinsics`) escribe `estado` con `json.dumps` a secas dentro de un `try` que solo atrapa `OSError`, y después llama a `os._exit(2)`. Si `estado` lleva algo que JSON no admite (un `ndarray`, un `Path`), `json.dumps` lanza `TypeError` en el hilo del temporizador, el hilo muere y `os._exit` no llega a ejecutarse: el tope no para nada y nadie lo dice. Leído en el código; no se ha visto fallar.
+- **Por qué queda:** `diagnostics/probe_camera.py` no es de la Fase 7. `calibrate_extrinsics` lo esquiva guardando en `estado` solo tipos de JSON (una prueba lo fija: `test_el_estado_que_escribiria_el_vigilante_es_json`).
+- **De dónde:** la fase 7 · Los extrínsecos por tablero, independientes de Marker0 (meta 006 · Grafo de factores óptico-inercial), 2026-11-09.
+- **Qué haría falta:** que `disparar` atrape cualquier excepción al escribir (o use `default=str`) y llame siempre a `os._exit(2)` en un `finally`; una prueba con un `estado` no serializable y un `os._exit` falso.
+- **Prioridad:** baja (`calibrate_extrinsics` guarda solo tipos de JSON, con su prueba; en `probe_camera` y `calibrate_camera` no se ha comprobado qué llevan en `estado` en cada momento; es una trampa para el siguiente).
 
 ## Cerrados
 
