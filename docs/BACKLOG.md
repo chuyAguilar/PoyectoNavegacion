@@ -94,6 +94,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B108 | En la fusión, los frames que ve una sola cámara pasan tal cual y pueden dar un escalón en Slicer | Media | Meta 006, Fase 4 |
 | B109 | El emparejado por hora admite medio periodo: con el marker en movimiento, el PnP conjunto mezcla dos instantes | Media | Meta 006, Fase 4 |
 | B110 | El RMS de reproyección del PnP conjunto podría avisar en vivo de una cámara movida | Media | — |
+| B111 | gs2 grabó a 41.4 fps en un tramo de la sesión del tablero cortada | Baja | — |
+| B112 | El asistente del tablero podría servir para los intrínsecos | Baja | — |
+| B113 | El asistente no comprueba en vivo el orden de las esquinas ni la coherencia de la vista | Baja | — |
 
 ## Abiertos
 
@@ -737,6 +740,27 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** la dirección, explicando el fusionador al autor (2026-11-09).
 - **Qué haría falta:** en la Fase 4 o 5, publicar el RMS (en el log o en el panel) y fijar el umbral con la sd del RMS en reposo; con un valor sostenido por encima, avisar y, si el autor lo decide, dejar de publicar la pose fusionada.
 - **Prioridad:** media (mejora clara de seguridad sin riesgo; no cambia la pose).
+
+### B111 · gs2 grabó a 41.4 fps en un tramo de la sesión del tablero cortada
+- **Qué:** en T03 de `Claude outputs/fases/006/fase-7/correr_20261110-180748`, el bucle de gs2 grabó 4 frames a 41.4 fps; en el resto de tramos, 84–88. Causa desconocida (¿la luz, B50?).
+- **Por qué queda:** un solo tramo; la vista salió usable. El asistente de la Fase 7a da los fps por tramo y dirá si se repite.
+- **De dónde:** el plan de la Fase 7a · El asistente de captura del tablero (meta 006, replan del 2026-11-10).
+- **Qué haría falta:** mirar los fps por tramo de la sesión del asistente; si se repite, medirlo con la caja al máximo y una sola variable. Si algún tramo da < 85 fps, la entrada sube a media con ese número.
+- **Prioridad:** baja (un tramo, sin efecto en la vista).
+
+### B112 · El asistente del tablero podría servir para los intrínsecos
+- **Qué:** `calibration.capture_stereo_board` (Fase 7a) con una sola cámara sustituiría la captura por ESPACIO de `calibration.calibrate_camera.capturar_vistas`: captura sola al quedar quieto y con variedad medida.
+- **Por qué queda:** los intrínsecos de gs1 y gs2 valen (meta 002); solo hace falta si hay que recalibrarlos.
+- **De dónde:** el plan de la Fase 7a (meta 006, replan del 2026-11-10).
+- **Qué haría falta:** un modo de una cámara en el asistente y que `calibrate_camera` lea sus vistas; con su plan.
+- **Prioridad:** baja (solo si hay que recalibrar intrínsecos: B36, o la estructura del autor).
+
+### B113 · El asistente no comprueba en vivo el orden de las esquinas ni la coherencia de la vista
+- **Qué:** el asistente de la Fase 7a no corre `emparejar_orden` durante la sesión; una vista incoherente (el tablero movido entre cámaras, imposible con la ráfaga simultánea salvo un golpe) la aparta el cálculo de `calibrate_extrinsics`.
+- **Por qué queda:** con la captura simultánea es improbable; comprobarlo en vivo añade tiempo a cada ráfaga.
+- **De dónde:** el plan de la Fase 7a (meta 006, replan del 2026-11-10).
+- **Qué haría falta:** solo si el cálculo aparta más de 2 vistas de una sesión del asistente: correr la coherencia en el hilo de la comprobación.
+- **Prioridad:** baja (espera datos).
 
 ## Cerrados
 

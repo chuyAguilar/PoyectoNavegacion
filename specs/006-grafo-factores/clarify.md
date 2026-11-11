@@ -229,3 +229,34 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: `numpy_reproj`, el PnP conjunto sobre las 8 esquinas (−63.1 % en la parte A, aunque con B94 abierta; la pose sola de IPPE es 1.2–1.5× más ruidosa, B95), y con una sola cámara, su pose por mínimos cuadrados; `numpy_pose` queda elegible en el perfil; se confirma con los números de la fase 2. (b) `numpy_pose`, la media ponderada de las dos poses de IPPE (−31.9 %, justo en el 30 %): más simple, y con una sola cámara pasa su pose de IPPE tal cual. (c) Decidirlo con la fase 2, sin valor por defecto en el perfil.
 - **Respuesta del autor:** (a), la recomendada: `numpy_reproj`; `numpy_pose` queda elegible en el perfil y se confirma con los números de la fase 2.
 - **Fecha:** 2026-11-05
+
+## P40 · Cómo se graba el tablero de la Fase 7 · Los extrínsecos por tablero (tras la sesión cortada del 2026-11-10)
+
+- **Contexto:** la primera sesión con `Claude outputs/fases/006/fase-7/correr.ps1` (`correr_20261110-180748`) se detuvo en T04 por el tope de 15 min de la mano, con 3 vistas usables y casi iguales (tablero plano; gs1 z 364–373 mm e inclinación 21–24°, gs2 z 425–437 mm y 19–26°). Las cámaras miran de arriba hacia abajo y el tablero se pone sobre la mesa, con cuñas. El script abre cada cámara por turnos en cada posición (~25 s de máquina), no muestra nada en vivo y va por teclado.
+- **Opciones:** (a) recomendada: un asistente en vivo, `calibration.capture_stereo_board`: las dos cámaras abiertas a la vez en un proceso, una ventana con las dos vistas, el tablero marcado, `z` e inclinación en vivo, la postura siguiente y su estado; captura sola cuando el tablero lleva ~1 s quieto y la vista es distinta de las ya tomadas; escribe las vistas en el formato que ya lee `calibrate_extrinsics --desde-vistas`; no usa el tracker ni la cadena. (b) Arreglar `correr.ps1`: la mano sin tope corto, `-Continuar`, posturas en horizontal y aviso de vista repetida. (c) Repetir `correr.ps1` tal cual.
+- **Respuesta del autor:** (a), el asistente en vivo. Se replanifica la Fase 7 para incluirlo; las vistas de `correr_20261110-180748` no se reutilizan.
+- **Fecha:** 2026-11-10
+
+## P41 · El umbral de variedad del asistente del tablero (Fase 7a, replan del 2026-11-10)
+
+- **Opciones:** (a) recomendada: una vista es distinta si, frente a cada una de las ya tomadas, el tablero giró ≥ 10° o su centro se movió ≥ 40 mm (medido en gs1; las dos medidas no dependen de la cámara ni del orden de las esquinas). Con la guía, las cuñas dan 20–30° y la pila 80 mm, así que cada postura pasa; las 3 planas de la sesión cortada (21–26°, 9 mm de `z`) habrían contado como una. (b) 5° o 25 mm: acepta más vistas parecidas y la sesión termina antes, pero el ajuste gana menos con cada una. (c) 15° o 60 mm: más variedad garantizada, pero los desplazamientos de 5–6 cm de la guía (T13, T14, T19, T20) solo pasarían por su cuña.
+- **Respuesta del autor:** (a), la recomendada: ≥ 10° o ≥ 40 mm frente a cada vista tomada, medido en gs1.
+- **Fecha:** 2026-11-10
+
+## P42 · Cuántas vistas toma el asistente (Fase 7a, replan del 2026-11-10)
+
+- **Opciones:** (a) recomendada: objetivo 20 (termina solo al llegar) y mínimo 18 (con `q` termina si ya hay 18); el cálculo pide 18 usables (15 de ajuste y 3 de control) y aparta las vistas incoherentes, así que 2 de margen evitan repetir la sesión por una. (b) Objetivo 18 y mínimo 18: la sesión más corta, sin margen. (c) Objetivo 24 y mínimo 18: más margen y más vistas en el ajuste, ~6 posturas más (las «extra» de la guía).
+- **Respuesta del autor:** (a), la recomendada: objetivo 20 (termina solo) y mínimo 18 (con `q`).
+- **Fecha:** 2026-11-10
+
+## P43 · Los topes del asistente (Fase 7a, replan del 2026-11-10; principio 9)
+
+- **Opciones:** (a) recomendada: tope de la sesión 45 min (`--timeout 2700`; el vigilante, 60 s después, y `correr.ps1` para el proceso por su PID a los 2700 + 120 s); sin tope por postura, para que no se corte como a los 15 min de T04; la ventana dice los minutos desde la última captura; una cámara sin frames 5 s para la sesión (código 4); la comprobación de una ráfaga, 30 s. Al tope, lo tomado queda escrito y vale para el cálculo si llega a 18. (b) 30 min de sesión: el ritmo de la guía (~1 min por postura) da para 20, pero con cuñas a mano puede no bastar. (c) 60 min de sesión.
+- **Respuesta del autor:** (a), la recomendada: 45 min de sesión, sin tope por postura; una cámara sin frames 5 s para la sesión (código 4); la comprobación de una ráfaga, 30 s.
+- **Fecha:** 2026-11-10
+
+## P44 · Si la postura tomada tiene que coincidir con la de la guía (Fase 7a, replan del 2026-11-10)
+
+- **Opciones:** (a) recomendada: no; vale cualquier vista que las dos cámaras vean entera, quieta y distinta de las tomadas; la ventana muestra la postura siguiente de la guía como orientación, `n` la salta, y el informe da la variedad lograda (en gs1, inclinación de ≤ 10° a ≥ 30° y `z` con ≥ 60 mm de recorrido) para juzgarla con un número. (b) Sí: el asistente comprueba la postura pedida (p. ej. «inclinación ≥ 15° más que T01» con cuña, «`z` 60 mm menos» sobre la pila) y no captura otra cosa; más guía, pero más lógica que probar y más esperas si la cuña no da justo lo previsto.
+- **Respuesta del autor:** (a), la recomendada: no; vale cualquier vista distinta, la guía orienta, `n` la salta y el informe da la variedad lograda.
+- **Fecha:** 2026-11-10
