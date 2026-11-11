@@ -93,15 +93,23 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B107 | La hora del mensaje TRANSFORM es la del envío (`time.time` de pyigtl), no la de captura | Baja | — |
 | B108 | En la fusión, los frames que ve una sola cámara pasan tal cual y pueden dar un escalón en Slicer | Media | Meta 006, Fase 4 |
 | B109 | El emparejado por hora admite medio periodo: con el marker en movimiento, el PnP conjunto mezcla dos instantes | Media | Meta 006, Fase 4 |
-| B110 | El RMS de reproyección del PnP conjunto podría avisar en vivo de una cámara movida | Media | — |
+| B110 | El RMS de reproyección del PnP conjunto podría avisar en vivo de una cámara movida | Media | Meta 006, Fase 5 |
 | B111 | gs2 grabó a 41.4 fps en un tramo de la sesión del tablero cortada | Baja | — |
-| B112 | El asistente del tablero podría servir para los intrínsecos | Baja | — |
-| B113 | El asistente no comprueba en vivo el orden de las esquinas ni la coherencia de la vista | Baja | — |
-| B114 | `calibrate_extrinsics --solo-comprobar` da la `z` de la primera esquina del tablero, que depende del orden de las esquinas | Baja | — |
+| B112 | El asistente del tablero podría servir para los intrínsecos | Baja | Meta 006, Fase 7d |
+| B113 | El asistente no comprueba en vivo el orden de las esquinas ni la coherencia de la vista | Baja | Meta 006, Fase 7f |
+| B114 | `calibrate_extrinsics --solo-comprobar` da la `z` de la primera esquina del tablero, que depende del orden de las esquinas | Baja | Meta 006, Fase 7f |
 | B115 | Las pruebas del asistente del tablero suman 26 s a la suite (el plan decía ≤ 25) | Baja | — |
 | B116 | La calibración cámara-IMU, con Kalibr `imu_camera`, cuando llegue el IMU | Media | — |
 | B117 | mrcal como validador externo de la calibración | Baja | — |
-| B118 | El criterio de desfase entre cámaras de la Fase 7a (≤ 11.1 ms) no tiene sentido con el tablero quieto | Baja | — |
+| B118 | El criterio de desfase entre cámaras de la Fase 7a (≤ 11.1 ms) no tiene sentido con el tablero quieto | Baja | Meta 006, sesión 2 |
+| B119 | Avisar si se ve un marker de referencia viejo (ID 0) | Baja | — |
+| B120 | Intrínsecos y estéreo en la misma sesión | Baja | — |
+| B121 | La prueba de tocar la mesa para medir la rigidez del montaje | Baja | — |
+| B122 | Las carpetas de las recalibraciones crecen | Baja | — |
+| B123 | El aviso en vivo de calibración podría dejar de publicar | Baja | — |
+| B124 | Las skills de Claude Code fuera del repo nombrarán un transform que ya no existe | Baja | — |
+| B125 | La Jetson publicará `ReferenceToTracker` al retomar la meta 007 | Baja | — |
+| B126 | Una sola ventana para recalibrar y lanzar la fusión | Baja | — |
 
 ## Abiertos
 
@@ -598,6 +606,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** el autor, al cerrar la fase 7 · Las dos cámaras a la vez en la Jetson (meta 007), 2026-11-04.
 - **Qué haría falta:** que la calibración escriba siempre a un archivo provisional (por ejemplo, en `Claude outputs/camaras/`), y que el `.yml` de `data/` solo se sustituya con un paso explícito de «aceptar», con el criterio cumplido, una copia de seguridad del anterior (como el ADR-018 con el perfil) y un aviso si la K cambia; con sus pruebas, y comprobando que el replay sigue igual.
 - **Prioridad:** alta (puede dar un resultado equivocado: el tracker trabajaría con una calibración no aceptada sin avisar).
+- **Nota (2026-11-11):** la Fase 7e de la meta 006 la rodea (la propuesta va a `Claude outputs/` y se acepta a un `.yml` nuevo con fecha, P56), pero la ventana de calibración del panel sigue pasando como `--output` el `.yml` del perfil: B89 sigue abierta.
 
 ### B90 · `info energia` del guardián no encuentra `nvpmodel`
 - **Qué:** `ssh nav-jetson info energia` falló en el paso 0 del P-7 con «no se pudo lanzar nvpmodel: [Errno 2]» (código 125): `nvpmodel` vive en `/usr/sbin`, que no está en el PATH de la cuenta `navagente`. El modo de energía (`MAXN_SUPER`) lo leyó el autor a mano en su sesión.
@@ -747,6 +756,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** la dirección, explicando el fusionador al autor (2026-11-09).
 - **Qué haría falta:** en la Fase 4 o 5, publicar el RMS (en el log o en el panel) y fijar el umbral con la sd del RMS en reposo; con un valor sostenido por encima, avisar y, si el autor lo decide, dejar de publicar la pose fusionada.
 - **Prioridad:** media (mejora clara de seguridad sin riesgo; no cambia la pose).
+- **Nota (2026-11-11):** entra en la meta 006 como disparador de la recalibración (P53, P61: avisa y sigue publicando); el aviso va en la Fase 4 y se cierra con la Fase 5, con una prueba moviendo gs2 a propósito; el umbral, el de la coherencia del PnP conjunto de P54 (mediana ≤ 0.5 px, p95 ≤ 1.0 px).
 
 ### B111 · gs2 grabó a 41.4 fps en un tramo de la sesión del tablero cortada
 - **Qué:** en T03 de `Claude outputs/fases/006/fase-7/correr_20261110-180748`, el bucle de gs2 grabó 4 frames a 41.4 fps; en el resto de tramos, 84–88. Causa desconocida (¿la luz, B50?).
@@ -803,6 +813,62 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** la sesión `fase-7/asistente/correr_20261111-124742` (2026-11-11).
 - **Qué haría falta:** pasarlo a informativo, o ligarlo a la quietud (desfase × velocidad del tablero), en el replan de la Fase 7.
 - **Prioridad:** baja (no afecta al resultado).
+
+### B119 · Avisar si se ve un marker de referencia viejo (ID 0)
+- **Qué:** desde la Fase 7c de la meta 006 la referencia es el ID 100 (P48, P49) y el ID 0 sale de la lista blanca: el tracker descarta en silencio un marker viejo a la vista y no publica nada. «Verificar IDs» lo enseña con su número.
+- **Por qué queda:** basta con «Verificar IDs» mientras nadie vuelva a poner el viejo.
+- **De dónde:** el plan de la meta 006, replan del 2026-11-11.
+- **Qué haría falta:** un aviso en el log del tracker y en el panel si aparece el ID 0, sin publicarlo.
+- **Prioridad:** baja (solo si en una sesión alguien vuelve a poner el viejo).
+
+### B120 · Intrínsecos y estéreo en la misma sesión
+- **Qué:** que el asistente acepte para cada cámara sus vistas aunque la otra no vea el tablero, y saque intrínsecos y extrínsecos de una sola sesión en vez de tres.
+- **Por qué queda:** con P62 los intrínsecos se rehacen solo por eventos; no hace falta todavía.
+- **De dónde:** el plan de la meta 006, replan del 2026-11-11.
+- **Qué haría falta:** con ChArUco (7d, 7f), juntar los dos modos del asistente; con su plan.
+- **Prioridad:** baja (solo si recalibrar intrínsecos se vuelve frecuente).
+
+### B121 · La prueba de tocar la mesa para medir la rigidez del montaje
+- **Qué:** el tablero quieto 60 s mientras alguien toca la mesa y las pinzas, con los extrínsecos por frame; separa «cede al tocar» de «cede al poner el tablero» (diagnóstico del 2026-11-11: desplazamiento de ~0.1° por vista agrupado en el tiempo).
+- **Por qué queda:** con la recalibración por sesión (P53) es menos necesaria.
+- **De dónde:** el plan de la meta 006, replan del 2026-11-11.
+- **Qué haría falta:** un modo del asistente que grabe el tablero quieto y dé los extrínsecos por frame.
+- **Prioridad:** baja (solo si la rigidez de la sesión 2 no cumple).
+
+### B122 · Las carpetas de las recalibraciones crecen
+- **Qué:** cada recalibración (Fase 7g) deja en `Claude outputs/recalibraciones/` los frames de sus vistas: ~70 MB estimados por el plan con 12 vistas; con las 20 de P60, más (sin medir). Nadie las borra (regla del autor).
+- **Por qué queda:** no estorba aún.
+- **De dónde:** el plan de la meta 006, replan del 2026-11-11 (tarde).
+- **Qué haría falta:** medir lo que ocupan tras unas semanas y decidir con el autor si se archivan o se guardan solo las esquinas.
+- **Prioridad:** baja (solo si estorba).
+
+### B123 · El aviso en vivo de calibración podría dejar de publicar
+- **Qué:** con P61 el fusionador avisa y sigue publicando si en vivo el RMS del PnP conjunto o el lado de la referencia no cuadran. La alternativa (P61 c) es dejar de publicar o publicar solo gs1.
+- **Por qué queda:** el autor eligió avisar y seguir (2026-11-11).
+- **De dónde:** P61.
+- **Qué haría falta:** si en uso un aviso llega tarde o se ignora, decidirlo con su ADR (cambia qué recibe Slicer).
+- **Prioridad:** baja.
+
+### B124 · Las skills de Claude Code fuera del repo nombrarán un transform que ya no existe
+- **Qué:** `surgical-nav-project-context`, `slicer-igt-workflow` y `surgical-navigation-aruco` nombran `Marker0ToTracker`; tras la Fase 7c2 de la meta 006 la cadena publica `ReferenceToTracker` (P57).
+- **Por qué queda:** son del autor y ningún agente las toca.
+- **De dónde:** el plan de la meta 006, replan del 2026-11-11 (tarde).
+- **Qué haría falta:** que el autor las ponga al día tras cerrar la 7c2.
+- **Prioridad:** baja.
+
+### B125 · La Jetson publicará `ReferenceToTracker` al retomar la meta 007
+- **Qué:** al retomar la meta 007 (en pausa), su clon toma los perfiles nuevos (ID 100, `Reference`); lo de su fase 6 (Slicer en el PC por la LAN) se verifica otra vez con el nombre nuevo.
+- **Por qué queda:** la meta 007 está en pausa.
+- **De dónde:** el plan de la meta 006, replan del 2026-11-11 (tarde).
+- **Qué haría falta:** en la primera fase al retomarla, `enviar_wip.ps1`, la suite allí y una verificación en vivo del nodo.
+- **Prioridad:** baja.
+
+### B126 · Una sola ventana para recalibrar y lanzar la fusión
+- **Qué:** la recalibración (7g) abre las cámaras y las cierra antes de que arranque la fusión; desde el panel podría ser un solo botón.
+- **Por qué queda:** el paso de uno a otro no está medido como molestia.
+- **De dónde:** el plan de la meta 006, replan del 2026-11-11 (tarde).
+- **Qué haría falta:** una receta del panel que encadene las dos, con sus topes.
+- **Prioridad:** baja (solo si estorba).
 
 ## Cerrados
 

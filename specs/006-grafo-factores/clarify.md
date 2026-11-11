@@ -282,3 +282,125 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: probar la rigidez primero; (b) recalibrar los intrínsecos de gs2 ya; (c) pasar a la estructura rígida directamente.
 - **Respuesta del autor (texto libre):** «es verdad que el montaje actual no es rígido; no entiendo por qué los intrínsecos se descalibrarían, pero podemos volver a calibrarlos por seguridad; es un paso que deberíamos automatizar, sacar rápido la calibración de intrínsecos».
 - **Fecha:** 2026-11-11
+
+## P48 · El ID del Marker0 nuevo de ~100 mm (Fase 7c · El Marker0 con su propio ID, replan del 2026-11-11)
+
+- **Contexto:** el diccionario es `DICT_ARUCO_MIP_36h12` (IDs 0–249). En uso o vistos: 0 (los dos Marker0 de hoy, el de 80 y el de 100), 170–180 (el dodecaedro archivado), 181–191 (el stylus, B14), 87 y 115 (lecturas fantasma de un Marker0 sintético inclinado, B39).
+- **Opciones:** (a) recomendada: ID 100: libre, lejos de todos los de arriba, y recuerda los 100 mm al leerlo en «Verificar IDs» (el problema de B55 fue de procedimiento). (b) ID 1: el siguiente al 0, sin significado. (c) Otro que el autor elija.
+- **Respuesta del autor:** (a), la recomendada: ID 100. (Y el nombre cambia: P57.)
+- **Fecha:** 2026-11-11
+
+## P49 · Cómo conviven el Marker0 nuevo y los de ID 0 en el perfil (Fase 7c, replan del 2026-11-11)
+
+- **Opciones:** (a) recomendada: `markers.list` lleva solo el nuevo, con `name: Marker0` y su `size_mm`; el ID 0 sale de la lista blanca, así que ni el de 80 ni el de 100 viejo (los dos son ID 0) pueden dar una pose; si se ven los dos, se publica solo el nuevo, un `Marker0ToTracker` por frame como hoy; `profiles.load` impide dos entradas con el mismo nombre. Para volver al de 80 bastaría cambiar el perfil (con su replay y su verificación). (b) Los dos en la lista con nombres distintos (`Marker0` el nuevo y `Marker0_80` el viejo): el tracker publicaría también `Marker0_80ToTracker`, un nodo nuevo en Slicer: contradice ADR-026 (solo `Marker0ToTracker`) y pide otro ADR y verificación. (c) Los dos con el nombre `Marker0`: dos envíos por frame con poses distintas; no se recomienda y `check_markers` lo prohibiría.
+- **Respuesta del autor:** (a), la recomendada: solo el nuevo en el perfil; el ID 0 sale de la lista blanca y un marker viejo a la vista no envía nada. (El nombre ya no es «Marker0»: P57.)
+- **Fecha:** 2026-11-11
+
+## P50 · Cómo se hace el marker nuevo (Fase 7c, replan del 2026-11-11)
+
+- **Opciones:** (a) recomendada: con un generador del repo (`python -m diagnostics.marker_image`): un SVG en mm exactos (100 mm de lado, margen blanco, una regla de 50 mm para comprobar la escala de la impresión, el ID y el diccionario escritos fuera del marker) y una PNG; el autor lo hace como hizo los de ahora (negro mate, sobre un soporte plano) y lo mide con calibrador, 5 medidas del lado negro; la media va a `size_mm`. (b) Sin generador: el autor genera la imagen con otra herramienta y da el lado medido; una pieza menos que mantener, pero el ID y el diccionario no los comprueba ninguna prueba hasta la sesión.
+- **Respuesta del autor:** (a), la recomendada: un generador del repo da SVG y PNG a escala; el autor lo imprime, lo mide con calibrador y ese número va al perfil.
+- **Fecha:** 2026-11-11
+
+## P51 · ChArUco para los intrínsecos, ahora o después (Fase 7d, replan del 2026-11-11)
+
+- **Contexto:** el diagnóstico dio cobertura 0.83, sin esquinas en los ~150 px laterales. Un ChArUco (`CharucoBoard`, `CharucoDetector.detectBoard`, `matchImagePoints`, OpenCV por Context7) se detecta con el tablero en parte fuera de la imagen, porque cada esquina lleva su ID: es lo que cubre los bordes.
+- **Opciones:** (a) recomendada: después, solo si el asistente de una cámara no llega a 0.85 de cobertura fina con el tablero de ajedrez de hoy (la sesión de la 7e lo dice con un número); el asistente guía hacia las celdas sin cubrir, que es lo que faltó el 11-11. (b) Ahora: un tablero ChArUco nuevo (imprimirlo plano y medirlo) y su detector en el asistente y en `calibrate_camera`; cubre mejor los bordes, pero es una pieza física más y un segundo camino de detección que probar antes de recalibrar. (c) No: solo el tablero de ajedrez.
+- **Respuesta del autor:** **Ahora, en la Fase 7d** (no la recomendada): el asistente de intrínsecos nace con ChArUco y hay que imprimir un tablero ChArUco nuevo.
+- **Fecha:** 2026-11-11
+
+## P52 · Las vistas y el criterio de los intrínsecos (Fases 7d y 7e, replan del 2026-11-11)
+
+- **Contexto:** la meta 002 calibró con 23 vistas (RMS 0.15–0.17, control 0.15, cobertura 4×3 = 1.00, sd de fx 0.67–1.09 px). El 11-11, con 20 vistas del tablero estéreo, el jackknife dio ±1.5–2.2 px; la investigación del autor (P45) habla de 40–80 vistas. El asistente estéreo tomó 20 en 8.6 min.
+- **Opciones:** (a) recomendada: objetivo 40 y mínimo 30, ≤ 20 min de asistente por cámara (~40 min las dos); criterio: RMS ≤ 0.5 px, control (5 vistas) ≤ 0.75 px, cobertura 4×3 = 1.00 y 8×6 ≥ 0.85, sd de fx, fy, cx, cy ≤ 1.0 px. (b) Objetivo 25 y mínimo 20, el criterio de la meta 002 sin la sd: ~10 min por cámara, pero la sd probablemente se queda en 1.5–2 px, como el jackknife. (c) Objetivo 60 y mínimo 50: más cerca de lo que pide la investigación, ~30 min por cámara.
+- **Respuesta del autor:** (a), la recomendada: objetivo 40 vistas, mínimo 30; ≤ 20 min por cámara; sd de fx, fy, cx, cy ≤ 1.0 px; cobertura 8×6 ≥ 0.85.
+- **Fecha:** 2026-11-11
+
+## P53 · El montaje de las cámaras: la estructura rígida y las pinzas mientras tanto (replan del 2026-11-11)
+
+- **Contexto:** el autor dice que las pinzas no son rígidas; el diagnóstico ve ~0.1° por vista agrupado en el tiempo y un giro de 12° entre el 11-09 y el 11-11. Los intrínsecos (7e) y el marker (7c) no dependen del montaje; los extrínsecos (Fase 7, sesión 2) y la fusión en vivo (3–5), sí.
+- **Opciones:** (a) recomendada: 7c, 7d y 7e ya; la sesión 2 de la Fase 7 sobre las pinzas, sujetas con cinta o peso, con la rigidez medida, y sus extrínsecos como provisionales para desarrollar las fases 3–5; los definitivos, en la 7b sobre la estructura. El autor dice además cuándo espera tener la estructura. (b) 7c, 7d y 7e ya, y ninguna sesión de extrínsecos ni fusión en vivo hasta la estructura: no se gasta una sesión en un montaje que ya se sabe que cede, pero 3–5 esperan. (c) La estructura ya existe (o llega en días): la sesión 2 se hace directamente sobre ella y sustituye a la 7b.
+- **Respuesta del autor:** **Texto libre del autor:** «ningún montaje es perfecto; para mayor seguridad conviene hacer recalibraciones cada cierto tiempo, por ejemplo cada que termine una sesión, cada que cambie de día, cada que algo no cuadre y apunte a la calibración; por eso debemos automatizar el proceso de recalibración, que no sea algo cansado y pesado para el usuario, que sea recalibrar y continuar». Lectura de la dirección: se sigue con el montaje actual; los extrínsecos se dan por válidos solo para la sesión en que se midieron, y la recalibración (extrínsecos, y los intrínsecos cuando toque) tiene que ser rápida y guiada, con sus disparadores (inicio de sesión o de día, o un aviso de que algo no cuadra, p. ej. el RMS del PnP conjunto, B110).
+- **Fecha:** 2026-11-11
+
+## P54 · Los grados del criterio 1 (0.2°), con un marker por cámara (replan del 2026-11-11)
+
+- **Contexto:** el criterio 1 del spec pide que la pose de gs2 llevada a gs1 difiera de la de gs1 en < 0.5 mm y < 0.2°. Con la escala corregida, el diagnóstico da 0.87–1.12 mm y 5.4–6.6° con cualquier juego de extrínsecos: los grados son la orientación de IPPE de cada cámara sola (B95; en la Fase 2, gs2 saltaba entre dos soluciones de IPPE separadas ~5°, B103). La fusión no publica esa orientación: publica la del PnP conjunto de las 8 esquinas (P39). Cambiar un número del spec es decisión del autor.
+- **Opciones:** (a) recomendada: los mm se quedan (< 0.5 mm); los grados de cada cámara sola pasan a número informativo, y en su lugar cuenta la coherencia de lo que publicará la fusión: el RMS del PnP conjunto de cada pareja con los extrínsecos del tablero, mediana ≤ 0.5 px y p95 ≤ 1.0 px en cada posición de S2 (`consistencia_conjunta`). (b) Los grados con la pose de cada cámara refinada por mínimos cuadrados desde las dos soluciones de IPPE (la de menor reproyección), < 0.2°: mide la misma cosa que pide el spec con menos sesgo, pero puede seguir sin cumplir y no está medido. (c) Se queda como está (< 0.2° con IPPE): según el diagnóstico, no va a cumplir con ningún extrínseco.
+- **Respuesta del autor:** (a), la recomendada: los mm siguen en < 0.5; los grados de una cámara sola pasan a informativos y cuenta la coherencia del PnP conjunto (mediana ≤ 0.5 px, p95 ≤ 1.0 px).
+- **Fecha:** 2026-11-11
+
+## P55 · Residuos, error epipolar y rigidez en el criterio del tablero (Fase 7, replan del 2026-11-11; P45)
+
+- **Contexto:** el 11-11, el error epipolar de gs2 dio mediana 0.58 y p95 1.87 px; el residuo medio por vista, +1.1 a +2.0 px en T03–T06 y −0.2 a −1.1 en el resto; ~0.1° por vista agrupado por orden de toma. Los umbrales de abajo son propuestas sin más datos que esos; la parte sin cámara mide el suelo de ruido y para si no queda por debajo de la mitad de cada uno.
+- **Opciones:** (a) recomendada: que cuenten para escribir el `.yml`: epipolar (vistas de control) mediana ≤ 0.3 px y p95 ≤ 0.75 px; residuo medio por vista ≤ 0.25 px en cada cámara; rigidez: el giro de los extrínsecos por vista a ≤ 0.05° de su mediana y |ρ| con el orden de toma < 0.5; si la rigidez no cumple, el veredicto es «el montaje se mueve». (b) Solo como números en el reporte, sin veredicto: el criterio sigue siendo RMS, control y distancia. (c) Solo el epipolar.
+- **Respuesta del autor:** (a), la recomendada: cuentan; epipolar mediana ≤ 0.3 y p95 ≤ 0.75 px, residuo medio por vista ≤ 0.25 px, rigidez ≤ 0.05°; los umbrales se ajustan si el ruido medido no queda por debajo de la mitad.
+- **Fecha:** 2026-11-11
+
+## P56 · Dónde van los intrínsecos nuevos (Fase 7e, replan del 2026-11-11; B89)
+
+- **Opciones:** (a) recomendada: archivos nuevos, `data/intrinsecos_gs{1,2}_1280x960_<AAAAMMDD>.yml`, y `calibration_file` de los perfiles apuntando a ellos; los de la meta 002 se quedan (las grabaciones guardan su sha256, la copia congelada del perfil y `explain_pose` los citan, y así se puede volver atrás cambiando una línea). (b) Pisar los de ahora con una copia `.bak`: un archivo por cámara, pero rompe las pruebas que comparan el sha256 de las grabaciones y repite el riesgo de B89.
+- **Respuesta del autor:** (a), la recomendada: archivos nuevos con su fecha; los perfiles los apuntan; los de la meta 002 se quedan (B89).
+- **Fecha:** 2026-11-11
+
+## P57 · El nombre del marker de referencia y de su transform (2026-11-11, a raíz de P48)
+
+- **Contexto:** con ID 100 (P48), «Marker0» deja de tener sentido; el autor pide no llamarlo así. El transform que recibe Slicer, `Marker0ToTracker`, es parte de la cadena (principio 6): cambiarlo exige ADR, poner al día los scripts de `codigo/slicer/` y verificación en vivo con Slicer.
+- **Opciones:** (a) recomendada: por su papel, `Reference` y `ReferenceToTracker` (si cambia el ID, el nombre sigue valiendo); (b) por su ID, `Marker100` y `Marker100ToTracker`; (c) renombrar el marker en perfiles y docs pero mantener `Marker0ToTracker` por ahora.
+- **Respuesta del autor:** (a): `Reference` y `ReferenceToTracker`, en la Fase 7c, con su ADR y en vivo.
+- **Fecha:** 2026-11-11
+
+## P58 · ChArUco también en los extrínsecos, y cuándo (Fase 7f, replan del 2026-11-11, tarde; tras P51)
+
+- **Contexto:** con P51 el tablero ChArUco llega en la 7d para los intrínsecos. Hoy los extrínsecos piden el 8 × 5 entero en las dos cámaras a la vez: eso dejó fuera las inclinaciones fuertes y los bordes el 11-11, y obliga a adivinar el orden de las esquinas (B113, B114). Con ChArUco vale la parte que ven las dos (comprobado en `.venv`: `stereoCalibrate` acepta vistas con distinto número de puntos).
+- **Opciones:** (a) recomendada: sí, en esta ronda, en una fase propia (7f) después de la 7e y antes de la recalibración rápida (7g): un solo tablero para todo, la recalibración frecuente más fácil de colocar, y sin orden de esquinas que adivinar; el 8 × 5 queda como camino alterno con sus pruebas; coste: una fase pesada más antes de la sesión 2. (b) Después, al BACKLOG: la sesión 2 y la recalibración con el 8 × 5; menos código ahora, pero cada recalibración pide que las dos vean el tablero entero y el autor maneja dos tableros. (c) Solo ChArUco, retirando el 8 × 5 de los extrínsecos: menos código que mantener, pero se pierde el camino probado (32 pruebas del asistente, la comparación con la meta 002).
+- **Respuesta del autor:** (a), la recomendada: sí, en esta ronda, en su propia Fase 7f.
+- **Fecha:** 2026-11-11
+
+## P59 · Las medidas y el diccionario del tablero ChArUco (Fase 7d, replan del 2026-11-11, tarde)
+
+- **Contexto:** imagen 1280 × 960, fx ≈ 850 px, distancia de trabajo 30–50 cm, impresión en 3D bicolor en la cama de 256 × 256 de la A1 con el negro agrandado 0.40 mm por lado (como el 9 × 6 de la meta 002). Comprobado en `.venv` (OpenCV 4.11): el 9 × 7 de (a) da 31 marcadores y 48 esquinas y se detecta entero en su propia imagen.
+- **Opciones:** (a) recomendada: 9 × 7 casillas de 26 mm, marcadores de 19.5 mm, `DICT_4X4_50`, 8 mm de margen (250 × 198 mm), patrón nuevo; a 50 cm, ~44 px por casilla y ~5.5 px por módulo del marcador (módulo impreso de 3.25 mm); 48 esquinas por vista; con una muestra de 3 × 3 casillas impresa antes. (b) 7 × 5 casillas de 34 mm, marcadores de 25.5 mm, `DICT_4X4_50` (256 × 188 mm: sin margen en la cama): módulos de 4.25 mm, más fáciles de imprimir y de leer lejos, pero 24 esquinas por vista y menos cobertura fina por vista. (c) 11 × 8 casillas de 21 mm, marcadores de 15.75 mm, `DICT_5X5_100`: 70 esquinas por vista, pero módulos de 2.25 mm (~3.8 px a 50 cm), al límite de la impresión y de la lectura.
+- **Respuesta del autor:** (a), la recomendada: 9×7 casillas de 26 mm, marcadores de 19.5 mm, `DICT_4X4_50`, 250 × 198 mm con margen; antes, la muestra de 3×3.
+- **Fecha:** 2026-11-11
+
+## P60 · Cuántas vistas y cuánto tiempo la recalibración rápida de extrínsecos (Fase 7g, replan del 2026-11-11, tarde; P53)
+
+- **Contexto:** el 11-11 el asistente tomó 20 vistas en 8.6 min (~26 s por vista). Con los intrínsecos fijos los extrínsecos son 6 números; la fase prueba con 0.1 px de ruido que el mínimo los deja a ≤ 0.1 mm a 37 cm y, si no, para con el número.
+- **Opciones:** (a) recomendada: objetivo 12 vistas y mínimo 10 (8 de ajuste y 2 de control), 3 frames por ráfaga, más 10 s de la referencia a la vista; ≤ 5 min de asistente y ≤ 6 min de punta a punta; tope 10 min. (b) Objetivo 10 y mínimo 8: ~4 min, pero la rigidez se juzga con menos vistas. (c) Objetivo 20 y mínimo 18, como la sesión del 11-11: más robusto, ~10 min cada vez.
+- **Respuesta del autor:** **(c), no la recomendada:** objetivo 20 vistas y mínimo 18, como la sesión del 11-11; ~10 min cada vez. Donde el plan dice 12 / 10 vistas y ≤ 5–6 min, vale esto; el tope pasa a 15 min (1.5 × 10, nota de la dirección).
+- **Fecha:** 2026-11-11
+
+## P61 · Qué hace el sistema con cada disparador de recalibración (Fases 7g y 4, replan del 2026-11-11, tarde; P53, B110)
+
+- **Contexto:** el autor pidió recalibrar al terminar una sesión, al cambiar de día y cuando algo no cuadre. Los disparadores: la edad de los extrínsecos al arrancar la fusión; en vivo, el RMS del PnP conjunto (B110) y el lado de la referencia triangulado; en cada recalibración, sus comprobaciones.
+- **Opciones:** (a) recomendada: al arrancar, la fusión no arranca con extrínsecos de otro día o de más de 12 h (código 2 y el comando de recalibrar; `--aceptar-extrinsecos-viejos` lo salta y queda escrito); en vivo, con la mediana de 2 s del RMS conjunto > 1.0 px o el lado a > 1.0 mm de su tamaño durante 5 s, un aviso en el log, el resumen y el panel, y se sigue publicando; la recalibración que no cumple no escribe nada. (b) Solo avisos, también al arrancar: la fusión arranca siempre y avisa de la edad; menos fricción, pero una sesión puede correr entera con extrínsecos de otro día. (c) Como (a), y además en vivo deja de publicar (o publica solo gs1) mientras dure el aviso: más seguro, pero Slicer pierde la pose o cambia de fuente sin que nadie lo decida en el momento; pide su ADR.
+- **Respuesta del autor:** (a), la recomendada: la fusión no arranca con extrínsecos de otro día o de más de 12 h, salvo una opción explícita; en vivo, avisa y sigue publicando.
+- **Fecha:** 2026-11-11
+
+## P62 · Cuándo se recalibran los intrínsecos (Fase 7g, replan del 2026-11-11, tarde; P47, P53)
+
+- **Contexto:** los intrínsecos son de cada cámara y no dependen del montaje; recalibrarlos son ~40 min (7e, las dos cámaras). La recalibración de extrínsecos puede reconocer su firma: el epipolar o el residuo por vista fuera con la rigidez dentro.
+- **Opciones:** (a) recomendada: por eventos: dos recalibraciones de extrínsecos seguidas con la firma de intrínsecos, o un lente o el enfoque tocados (CONTEXT §4.10, B36); y un aviso (no un bloqueo) cuando pasen 30 días. (b) Cada semana, fija, aunque nada falle. (c) Solo cuando el autor lo decida, sin aviso.
+- **Respuesta del autor:** (a), la recomendada: por eventos (lente o enfoque tocados, o dos recalibraciones seguidas con la firma de intrínsecos malos) y un aviso a los 30 días.
+- **Fecha:** 2026-11-11
+
+## P63 · Cómo lanza el autor la recalibración (Fases 7g y 7h, replan del 2026-11-11, tarde; P53)
+
+- **Opciones:** (a) recomendada: un comando de un paso, `python -m calibration.recalibrar --montaje pinzas` con los perfiles del repo (lo demás lo fijan sus constantes), y un botón del panel, «Recalibrar extrínsecos (gs1 + gs2)», que lo lanza y enseña la edad de los vigentes; el botón en una fase ligera aparte (7h), después de probar el comando en vivo. (b) Solo el comando: menos código, pero el autor tiene que tenerlo a mano. (c) Solo el botón, en la misma fase que el comando: un paso menos, pero la primera prueba en vivo mezcla el panel y la recalibración.
+- **Respuesta del autor:** (a), la recomendada: el comando de un paso y el botón del panel (Fase 7h), con la edad de la calibración.
+- **Fecha:** 2026-11-11
+
+## P64 · Dónde van los extrínsecos de cada recalibración y cuál vale (Fase 7g, replan del 2026-11-11, tarde; revisa P18)
+
+- **Contexto:** con «recalibrar y continuar» habrá un archivo por sesión. P18 fijaba un nombre por montaje (`extrinsecos_gs1_gs2_pinzas.yml`) y nada se pisa (B89, P56).
+- **Opciones:** (a) recomendada: `codigo/data/extrinsecos/<montaje>/<AAAAMMDD-HHMMSS>.yml` (formato 2, con su fecha y `criteria_passed`), versionados pero sin commit obligatorio por recalibración (el autor los sube cuando quiera); vale el más nuevo que cumplió con los intrínsecos de hoy; las grabaciones de la fusión copian el que usaron; los frames de cada recalibración, fuera de git en `Claude outputs/recalibraciones/`. (b) Lo mismo fuera de git (en `.gitignore`): `git status` limpio, pero un clon no tiene los extrínsecos (hoy solo el PC del autor abre las cámaras) y solo la copia de las grabaciones los guarda. (c) Un archivo por montaje que se pisa con copia `.bak`: el más simple, pero va contra P56 y B89.
+- **Respuesta del autor:** (a), la recomendada: `data/extrinsecos/<montaje>/<fecha-hora>.yml`, versionados sin commit obligatorio; vale el más nuevo que cumplió.
+- **Fecha:** 2026-11-11
+
+## P65 · El script de Slicer con el nombre nuevo (Fase 7c2, replan del 2026-11-11, tarde; P57)
+
+- **Contexto:** el script versionado es `codigo/slicer/receive_marker0.py`; el autor lo carga con `exec(open(r"…\receive_marker0.py"…))`, y `docs/ARCHITECTURE.md` §9.1 lo nombra en el mapa (el Mermaid tiene que reexportarse si cambia, ADR-032, con `mermaid-cli` por `npx`).
+- **Opciones:** (a) recomendada: renombrarlo con `git mv` a `receive_reference.py`, con `NAME = "ReferenceToTracker"` y la comprobación de que `Marker0ToTracker` no está en la escena, y reexportar el mapa (el Mermaid cambia igual por el nombre del nodo). (b) Mantener `receive_marker0.py` y cambiar solo su `NAME`: el comando de Slicer del autor no cambia, pero el nombre del archivo cuenta otra cosa que lo que mide.
+- **Respuesta del autor:** (a), la recomendada: `git mv` a `receive_reference.py` y reexportar el mapa de §9.1.
+- **Fecha:** 2026-11-11
