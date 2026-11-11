@@ -1,0 +1,133 @@
+# =====================================================================
+# Perfil gs2 - camara global shutter SVPRO AR0234 del PUERTO 2 (meta 002)
+# =====================================================================
+# Un perfil por camara fisica (ADR-024). La camara se identifica por la
+# ruta fisica de su puerto USB (camera.usb_port_windows), medida en la
+# fase 2a (2026-10-21): las dos SVPRO tienen la misma serie 01.00.00 y la
+# instancia USB cambia con el orden de conexion; la ruta del puerto no.
+# Desde el 2026-11-05 (P-7b5, meta 007 fase 7b) gs2 va en el frontal USB 3.0,
+# directo al concentrador raiz, FUERA del hub Genesys de gs1: con las dos en
+# el mismo hub USB 2.0 la segunda no daba frames (0x800718CF, sin ancho de
+# banda; CONTEXT.md 4.21). Si cambia el puerto, cambia la ruta y hay que
+# medirla otra vez (python -m diagnostics.probe_camera --puertos).
+#
+# Modo y exposicion elegidos en la fase 3 (2026-10-22, sesion en vivo):
+# 1280x960 MJPG 90 fps (P16, eleccion del autor: ningun modo llego a 88.2
+# fps de tracking con ventana; la ventana del tracker es el cuello, 19-25
+# fps en cualquier resolucion) y exposure_ms 0.977 (P15, -10 por DSHOW, la
+# misma en las dos camaras). Calibrada en la fase 5 (ver calibration_file).
+# Caja de luz en nivel 2 (P7). La camara 2 se enfoco en la fase 3 (nitidez
+# 156.0 a 1280x960, misma escena; en la fase 2a estaba desenfocada).
+# =====================================================================
+
+camera:
+  camera_type: webcam           # webcam | femtobolt
+
+  # ===== Identidad: la ruta fisica del puerto USB (fase 2a, 6 de 6) =====
+  # Desde el 2026-11-05: USB(5), el frontal USB 3.0 (antes USB(11)#USB(4),
+  # Port_#0004.Hub_#0003 del Genesys, compartido con gs1). Sin `source`: el
+  # indice se resuelve enumerando el backend al abrir (camaras_uvc.resolver_indice).
+  usb_port_windows: PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(5)
+
+  # ===== Identidad en Linux (meta 007, fase 5; ADR J1, P11): el nombre del
+  # enlace bajo /dev/v4l/by-path, que fija el puerto USB fisico (by-id no
+  # sirve: las dos SVPRO tienen la misma serie). Medido en el escaneo de la
+  # fase 1 (2026-10-29) en la Jetson: el puerto 2 del hub USB 2.0 (usb-0:2.2)
+  # tiene la camara con focus 332. Fuera de Windows el backend es siempre
+  # V4L2 (el `backend` de abajo no se usa) y los controles van por v4l2-ctl.
+  # Si cambia el hub o el puerto: python -m camera.v4l2 --listar en la Jetson.
+  usb_port_linux: platform-3610000.usb-usb-0:2.2:1.0-video-index0
+
+  # ===== Marca de la unidad (P13): un control que no cambia la imagen y
+  # persiste en la camara. El backend lo lee antes de escribir nada y para
+  # si no es este valor (las camaras se intercambiaron de puerto). No va en
+  # controls: el backend solo la lee.
+  # focus 332 era el valor de fabrica de la camara 2 y, sin escribir,
+  # saltaba entre lecturas (268, 362, 254, 337). Se ESCRIBIO el 2026-10-22
+  # y desde entonces se lee 332 en 5 de 5 aperturas y tras desenchufar.
+  # La marca solo es fiable si se escribe a proposito. Alta de la marca de
+  # una camara nueva (escribe aunque la lectura coincida, y relee):
+  #   python -m diagnostics.probe_camera --fijar "focus=<valor>" --forzar ^
+  #     --puerto "<usb_port_windows>" ^
+  #     --salida "..\Claude outputs\camaras\marca_<perfil>.json" --timeout 60
+  marca:
+    focus: 332
+
+  # ===== Modo de video (MSMF + MJPG, o el FPS cae; CONTEXT.md §4.3) =====
+  # La apertura (crear + open + close: 3.6-4.0 s, 2026-10-22) cuenta con la
+  # aceleracion HW de MSMF apagada (OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0;
+  # la pone el codigo, camaras_uvc, y el panel a sus procesos); encendida,
+  # 43-51 s con los mismos ~90 fps. tracker.py lanzado a mano la necesita en
+  # el entorno: $env:OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS='0'.
+  width: 1280
+  height: 960
+  fps: 90
+  backend: MSMF
+  fourcc: MJPG
+
+  # ===== Ajustes fijos (ajustes_camara.py; DSHOW antes de abrir por MSMF) =====
+  # Nombres y unidades propios (exposicion en ms, P10). Se escriben solo
+  # los que difieren de lo que la camara tiene y se releen siempre. Valores
+  # leidos de esta camara el 2026-10-21 (fase 2a), salvo auto_white_balance
+  # (fijo en false por el plan). exposure_ms elegida en la fase 3 (P15).
+  controls:
+    exposure_manual: true
+    exposure_ms: 0.977          # -10 por DSHOW (log2 de segundos)
+    gain: 11
+    auto_white_balance: false
+    brightness: 0
+    contrast: 0
+    saturation: 56
+    sharpness: 0
+    gamma: 110
+    backlight: 54
+
+  # ===== Calibracion intrinseca (.yml de calibrar_camara.py) =====
+  # Calibrada el 2026-10-23 (fase 5, desde el panel): detector sb, RMS 0.154
+  # px (23 vistas), control 0.150 px, cobertura 1.00, tablero de 24.86 mm.
+  # cy 389.8 (el punto principal queda ~90 px sobre el centro): NO girar ni
+  # sacar el lente sin recalibrar (B36). El backend para si el frame real no
+  # es del tamano del perfil o del .yml.
+  calibration_file: data/intrinsecos_gs2_1280x960.yml
+
+
+# =====================================================================
+# Diccionario ArUco y detector (los que valieron en P02 con la camara 1)
+# =====================================================================
+markers:
+  dictionary: DICT_ARUCO_MIP_36h12
+
+  detector:
+    adaptive_thresh_win_size_min: 5
+    adaptive_thresh_win_size_max: 35
+    adaptive_thresh_win_size_step: 10
+    min_marker_perimeter_rate: 0.02
+    polygonal_approx_accuracy_rate: 0.05
+    max_erroneous_bits_in_border_rate: 0.40
+    corner_refinement_win_size: 7
+
+  # Marker0 (referencia osea): 80 mm, el de P02, medido con calibrador (P3).
+  list:
+    - id: 0
+      name: Marker0
+      size_mm: 80.0
+
+
+# =====================================================================
+# OpenIGTLink (principio 6: no cambia)
+# =====================================================================
+igtlink:
+  transforms_port: 18944
+  video_port: 18945
+  send_video: false
+
+
+filtering:
+  enabled: true
+  min_cutoff: 2.0
+  beta: 0.05
+
+
+debug:
+  show_window: true
+  verbose: false

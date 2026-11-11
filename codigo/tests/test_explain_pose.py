@@ -20,6 +20,9 @@ meta 007).
 
 Además, `format_markdown` es determinista, `draw_example` recorta al tamaño pedido
 y la CLI falla fuerte (frame sin PNG, salida que ya existe, perfil sin el marker).
+
+El perfil es la copia congelada del que grabo (`tests/data/marker0_<cam>_perfil.yaml`),
+no el del repo (meta 006, fase 7c, B55).
 """
 from __future__ import annotations
 
@@ -47,7 +50,7 @@ def _paths(cam: str) -> dict:
     return {"dataset": TESTS_DATA_DIR / f"marker0_{cam}.npz",
             "frames": TESTS_DATA_DIR / f"marker0_{cam}_frames",
             "reference": TESTS_DATA_DIR / f"marker0_{cam}_reference.npz",
-            "profile": PROFILES_DIR / f"tracker_config_{cam}.yaml"}
+            "profile": TESTS_DATA_DIR / f"marker0_{cam}_perfil.yaml"}
 
 
 @pytest.fixture(scope="module")

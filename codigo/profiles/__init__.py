@@ -38,10 +38,43 @@ def resolve_path(p: str | Path) -> Path:
     return path.resolve()
 
 
+def check_markers(cfg: dict, profile_name: str) -> None:
+    """Valida `markers.list` del perfil; ValueError con el perfil y la entrada si algo no cuadra.
+
+    Meta 006, fase 7c (B55; principio 7): la lista no puede estar vacia; cada entrada trae
+    `id` (entero >= 0), `name` (texto) y `size_mm` (> 0); ni los IDs ni los nombres se
+    repiten. El tracker publica `<name>ToTracker` por cada marker de la lista con pose: con
+    dos entradas del mismo nombre mandaria dos transforms con ese nombre por frame, y con un
+    `size_mm` que no es el del marker la pose sale a otra escala sin avisar.
+    """
+    markers = cfg.get("markers")
+    lista = markers.get("list") if isinstance(markers, dict) else None
+    if not isinstance(lista, list) or not lista:
+        raise ValueError(f"perfil {profile_name}: markers.list falta o esta vacia")
+    ids: dict[int, int] = {}
+    nombres: dict[str, int] = {}
+    for n, m in enumerate(lista):
+        donde = f"perfil {profile_name}: markers.list[{n}] = {m!r}"
+        if not isinstance(m, dict):
+            raise ValueError(f"{donde}: tiene que traer id, name y size_mm")
+        mid, nombre, lado = m.get("id"), m.get("name"), m.get("size_mm")
+        if isinstance(mid, bool) or not isinstance(mid, int) or mid < 0:
+            raise ValueError(f"{donde}: id tiene que ser un entero >= 0")
+        if not isinstance(nombre, str) or not nombre.strip():
+            raise ValueError(f"{donde}: name tiene que ser un texto")
+        if isinstance(lado, bool) or not isinstance(lado, (int, float)) or not lado > 0:
+            raise ValueError(f"{donde}: size_mm tiene que ser un numero > 0")
+        if mid in ids:
+            raise ValueError(f"{donde}: el id {mid} ya esta en markers.list[{ids[mid]}]")
+        if nombre in nombres:
+            raise ValueError(f"{donde}: el nombre '{nombre}' ya esta en markers.list[{nombres[nombre]}]")
+        ids[mid], nombres[nombre] = n, n
+
+
 def load(path: str | Path, *, missing_ok: bool = False) -> dict:
     """Carga el YAML del perfil `path` y deja absolutas sus rutas de archivo.
 
-    Resuelve `camera.calibration_file` y el `geometry_file` de cada rigid body
+    Valida `markers.list` con `check_markers` (ValueError con el nombre del perfil). Resuelve `camera.calibration_file` y el `geometry_file` de cada rigid body
     con `resolve_path`. Si una no existe, FileNotFoundError con el nombre del
     perfil; con `missing_ok=True` (quien va a crear ese archivo, p. ej. la
     calibracion de la camara) la deja absoluta aunque no exista.
@@ -51,6 +84,7 @@ def load(path: str | Path, *, missing_ok: bool = False) -> dict:
         cfg = yaml.safe_load(f)
     if not isinstance(cfg, dict):
         raise ValueError(f"perfil {path.name}: no es un YAML con secciones")
+    check_markers(cfg, path.name)
 
     def _resolve(p, what):
         if not p:

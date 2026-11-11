@@ -36,7 +36,7 @@ import pytest
 
 from diagnostics import explain_pose, export_map
 
-from .conftest import CODIGO_DIR, PROFILES_DIR, TESTS_DATA_DIR
+from .conftest import CODIGO_DIR, TESTS_DATA_DIR
 
 ROOT = CODIGO_DIR.parent
 ARCH = ROOT / "docs" / "ARCHITECTURE.md"
@@ -245,7 +245,7 @@ def _sin_ruido_numerico(text: str) -> str:
 def _example_result() -> dict:
     return explain_pose.explain_frame(TESTS_DATA_DIR / "marker0_gs1.npz",
                                       TESTS_DATA_DIR / "marker0_gs1_frames", 480,
-                                      PROFILES_DIR / "tracker_config_gs1.yaml", alt_size_mm=98.6)
+                                      TESTS_DATA_DIR / "marker0_gs1_perfil.yaml", alt_size_mm=98.6)
 
 
 @requiere_docs

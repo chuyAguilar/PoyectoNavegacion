@@ -24,6 +24,7 @@ from camera import uvc as cu
 from camera import backend as cb
 
 from .conftest import CODIGO_DIR, HISTORICO_DIR, PROFILES_DIR
+from .synthetic import MARKER0_ID, MARKER0_MM      # el Marker0 del perfil gs1 (meta 006, fase 7c)
 
 PUERTO_1 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)"
 PUERTO_2 = "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(5)"     # el de gs2 desde el 2026-11-05 (P-7b5; antes USB(11)#USB(4))
@@ -237,7 +238,9 @@ def test_perfiles_gs1_gs2_contrato() -> None:
         assert "focus" not in cam["controls"]           # la marca no se escribe
         assert cam["controls"]["exposure_manual"] is True
         assert cam["controls"]["auto_white_balance"] is False
-        assert cfg["markers"]["list"] == [{"id": 0, "name": "Marker0", "size_mm": 80.0}]
+        # Meta 006, fase 7c (B55): los dos perfiles llevan la misma y unica entrada; que ID y que
+        # tamano pueden ser lo fija `test_referencia_id.py` (0 con 80 mm, o 100 con su lado medido).
+        assert cfg["markers"]["list"] == [{"id": MARKER0_ID, "name": "Marker0", "size_mm": MARKER0_MM}]
         # Meta 003, fase 2 (ADR-026): la cadena publica solo Marker0ToTracker; el
         # bloque del dodecaedro (rigid_bodies, rigid_bodies_quality) ya no esta.
         assert "rigid_bodies" not in cfg and "rigid_bodies_quality" not in cfg

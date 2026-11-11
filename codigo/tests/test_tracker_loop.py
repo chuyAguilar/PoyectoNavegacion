@@ -26,7 +26,7 @@ import tracker
 from vision.tracking import MarkerTracker
 
 from .conftest import PROFILES_DIR
-from .synthetic import (DIST_SYN, K_SYN, FakeCamera, FakeSender, fake_time, render_marker,
+from .synthetic import (DIST_SYN, K_SYN, MARKER0_ID, FakeCamera, FakeSender, fake_time, render_marker,
                         servidor_pyigtl_sin_puerto)
 
 GS1 = PROFILES_DIR / "tracker_config_gs1.yaml"
@@ -172,7 +172,7 @@ def test_config_obligatorio_y_aceleracion_en_el_log(fakes, frames_syn, profile_s
     fakes(frames_syn, profile_syn(), extra=["--no-window"])
     out = capsys.readouterr().out
     assert "[Tracker] Aceleracion HW de MSMF" in out
-    assert "[Whitelist] IDs aceptados: [0]" in out and "[Salida limpia]" in out
+    assert f"[Whitelist] IDs aceptados: [{MARKER0_ID}]" in out and "[Salida limpia]" in out
     assert "[OpenIGTLink] Cliente conectado" in out and "[Captura] Camara" in out
     # Fase 6 (meta 007): sin --igtl-iface el emisor no lleva interfaz y el log dice 127.0.0.1:18944.
     assert FakeSender.instances[0].iface is None

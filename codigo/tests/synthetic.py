@@ -9,6 +9,10 @@ por defecto: el bucle procesa un frame de 640x480 en ~3 ms, asi que alcanza a
 procesar cada frame antes de que llegue el siguiente); las lecturas fallidas
 (None) no tardan. `fake_time()` da el modulo `time` falso que el tracker usa
 (`perf_counter` avanza un paso fijo por llamada; `time` tambien, aparte).
+
+Meta 006, fase 7c (B55): `render_marker` dibuja por defecto el Marker0 del perfil gs1
+del repo (`MARKER0_ID`, `MARKER0_MM`, leidos al importar), no el ID 0 de 80 mm: las
+pruebas que pasan un frame sintetico por el perfil del repo siguen al perfil.
 """
 from __future__ import annotations
 
@@ -20,6 +24,8 @@ import cv2
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+import profiles
+
 K_SYN = np.array([[800.0, 0.0, 320.0], [0.0, 800.0, 240.0], [0.0, 0.0, 1.0]])
 DIST_SYN = np.zeros((1, 5))
 DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_MIP_36h12)
@@ -27,7 +33,20 @@ FAKE_DELAY_S = 0.02
 FAKE_STEP_S = 0.011
 
 
-def render_marker(tz: float, tx: float, marker_id: int = 0, size_mm: float = 80.0,
+def _marker0_del_perfil() -> tuple[int, float]:
+    """El ID y el lado (mm) de la entrada `Marker0` del perfil gs1 del repo."""
+    perfil = profiles.PROFILES_DIR / "tracker_config_gs1.yaml"
+    lista = profiles.load(perfil)["markers"]["list"]
+    m0 = [m for m in lista if m["name"] == "Marker0"]
+    if len(m0) != 1:
+        raise ValueError(f"{perfil.name}: se esperaba una entrada 'Marker0' en markers.list, hay {len(m0)}")
+    return int(m0[0]["id"]), float(m0[0]["size_mm"])
+
+
+MARKER0_ID, MARKER0_MM = _marker0_del_perfil()
+
+
+def render_marker(tz: float, tx: float, marker_id: int = MARKER0_ID, size_mm: float = MARKER0_MM,
                   K: np.ndarray = K_SYN, dist: np.ndarray = DIST_SYN,
                   shape: tuple[int, int] = (480, 640), euler_xy=(185.0, 5.0)) -> np.ndarray:
     """Un marker del diccionario del tracker proyectado con `K` a (tx, 5, tz) mm,

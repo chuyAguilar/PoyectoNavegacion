@@ -26,6 +26,7 @@ import profiles
 from vision import tracking
 
 from .conftest import CODIGO_DIR, PROFILES_DIR
+from .synthetic import MARKER0_ID, MARKER0_MM      # el Marker0 del perfil gs1 (meta 006, fase 7c)
 
 PERFIL_GS1 = str(PROFILES_DIR / "tracker_config_gs1.yaml")
 DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_MIP_36h12)
@@ -35,7 +36,7 @@ DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_MIP_36h12)
 # Falsos
 # ----------------------------------------------------------------------------
 
-def imagen_marker(mid: int = 0, lado: int = 120, lienzo: tuple[int, int] = (300, 300)) -> np.ndarray:
+def imagen_marker(mid: int = MARKER0_ID, lado: int = 120, lienzo: tuple[int, int] = (300, 300)) -> np.ndarray:
     """Un frame BGR con el marker `mid` del diccionario del tracker centrado sobre fondo blanco."""
     img = DICT.generateImageMarker(mid, lado)
     h, w = lienzo
@@ -219,8 +220,8 @@ def test_medir_captura_solo_lee_y_guarda_muestra() -> None:
 
 def test_preparar_tracking_con_el_perfil_gs1() -> None:
     ctx = mm.preparar_tracking(cfg_gs1())
-    assert ctx["ids_conocidos"] == {0}
-    assert isinstance(ctx["tracker"], tracking.MarkerTracker) and set(ctx["tracker"].filters) == {0}
+    assert ctx["ids_conocidos"] == {MARKER0_ID}
+    assert isinstance(ctx["tracker"], tracking.MarkerTracker) and set(ctx["tracker"].filters) == {MARKER0_ID}
 
 
 def test_preparar_tracking_exige_markers() -> None:
@@ -232,7 +233,7 @@ def test_preparar_tracking_exige_markers() -> None:
 
 def test_analizar_muestra_ve_marker0_y_la_saturacion() -> None:
     ctx = mm.preparar_tracking(cfg_gs1())
-    r = mm.analizar_muestra([imagen_marker(0), imagen_marker(0)], ctx)
+    r = mm.analizar_muestra([imagen_marker(), imagen_marker()], ctx)
     assert r["markers_mediana"] == 1 and r["frames_con_markers"] == 2
     assert 0.0 < r["saturada"] < 1.0                   # fondo blanco a 255 dentro del margen
     assert 100.0 < r["brillo"] < 255.0
@@ -246,7 +247,7 @@ def test_analizar_muestra_ve_marker0_y_la_saturacion() -> None:
 def test_medir_tracking_sin_ventana_marker0_da_pose() -> None:
     ctx = mm.preparar_tracking(cfg_gs1())
     K, dist = mm.k_nominal(300, 300, 84.0)
-    r = mm.medir_tracking(CamFalsa([imagen_marker(0)]), ctx, 0.3, False, K, dist)
+    r = mm.medir_tracking(CamFalsa([imagen_marker()]), ctx, 0.3, False, K, dist)
     assert r["frames"] > 0 and r["fps"] > 0 and r["interrumpida"] is False
     assert r["markers_mediana"] == 1 and r["fraccion_pose"] == 1.0
     r5 = mm.medir_tracking(CamFalsa([imagen_marker(5)]), ctx, 0.2, False, K, dist)
@@ -263,10 +264,10 @@ def test_medir_tracking_pasa_por_marker_tracker_y_empieza_los_filtros_de_cero(mo
         return original(corners, size_mm, K, dist)
     monkeypatch.setattr(tracking, "estimate_single_pose", espia)
     K, dist = mm.k_nominal(300, 300, 84.0)
-    ctx["tracker"].filters[0].filter(np.array([[1.0], [1.0], [1.0]]), 0.0)    # estado sucio
-    r = mm.medir_tracking(CamFalsa([imagen_marker(0)]), ctx, 0.3, False, K, dist)
-    assert r["fraccion_pose"] == 1.0 and llamadas and llamadas[0] == 80.0
-    assert ctx["tracker"].filters[0].filters[0].t_prev > 0.0            # reset() lo dejo de cero
+    ctx["tracker"].filters[MARKER0_ID].filter(np.array([[1.0], [1.0], [1.0]]), 0.0)    # estado sucio
+    r = mm.medir_tracking(CamFalsa([imagen_marker()]), ctx, 0.3, False, K, dist)
+    assert r["fraccion_pose"] == 1.0 and llamadas and llamadas[0] == MARKER0_MM
+    assert ctx["tracker"].filters[MARKER0_ID].filters[0].t_prev > 0.0            # reset() lo dejo de cero
 
 
 def test_cfg_camara_para_no_toca_el_perfil() -> None:
@@ -287,7 +288,7 @@ def test_medir_fila_anota_la_exposicion_leida_y_libera() -> None:
 
     def abrir(cfg_camera):
         pedidos.append(cfg_camera)
-        cams.append(CamFalsa([imagen_marker(0)], ajustes_leidos={"exposure_ms": 1.9531, "gain": 11.0}))
+        cams.append(CamFalsa([imagen_marker()], ajustes_leidos={"exposure_ms": 1.9531, "gain": 11.0}))
         return cams[-1]
     fila = mm.medir_fila(cfg, ctx, (300, 300, "MJPG"), 90, 1.953, 0.2, 0.0, 84.0, abrir=abrir)
     assert pedidos[0]["controls"]["exposure_ms"] == 1.953 and pedidos[0]["calibration_file"] is None
@@ -304,7 +305,7 @@ def test_medir_fila_con_tracking(monkeypatch) -> None:
     monkeypatch.setattr(mm.cv2, "waitKey", lambda *a, **k: -1)
     monkeypatch.setattr(mm.cv2, "destroyAllWindows", lambda: None)
     fila = mm.medir_fila(cfg, ctx, (300, 300, "MJPG"), 90, None, 0.2, 0.2, 84.0,
-                         abrir=lambda c: CamFalsa([imagen_marker(0)]))
+                         abrir=lambda c: CamFalsa([imagen_marker()]))
     assert fila["fps_tracking"] > 0 and fila["fps_tracking_ventana"] > 0
     assert fila["tracking_sin_ventana"]["frames"] > 0 and fila["tracking_con_ventana"]["frames"] > 0
     assert fila["markers_mediana"] == 1 and fila["fraccion_pose"] == 1.0
@@ -367,7 +368,7 @@ def test_main_exposicion_con_camara_falsa(tmp_path, monkeypatch) -> None:
         e = cfg_camera["controls"]["exposure_ms"]
         brillo = 200 if e > 5 else 100          # a la mitad de exposicion, la mitad de brillo
         frame = np.full((300, 300, 3), brillo, dtype=np.uint8)
-        frame[90:210, 90:210] = imagen_marker(0)[90:210, 90:210]
+        frame[90:210, 90:210] = imagen_marker()[90:210, 90:210]
         frame[frame == 255] = 250               # sin pixeles saturados: la candidata vale
         return CamFalsa([frame], ajustes_leidos={"exposure_ms": e})
     monkeypatch.setattr(mm, "abrir_por_perfil", abrir)
@@ -400,7 +401,7 @@ def test_main_modos_guarda_cada_fila_al_tenerla(tmp_path, monkeypatch) -> None:
     def abrir(cfg_camera):
         if cfg_camera["fourcc"] == "YUY2":
             raise RuntimeError("[Webcam] la camara no entrego ningun frame en el warmup")
-        return CamFalsa([imagen_marker(0, lienzo=(cfg_camera["height"], cfg_camera["width"]))])
+        return CamFalsa([imagen_marker(lienzo=(cfg_camera["height"], cfg_camera["width"]))])
     monkeypatch.setattr(mm, "abrir_por_perfil", abrir)
     rc = mm.main(_base(tmp_path, "--modos", "300x300:MJPG,320x240:MJPG", "--modos-solo-captura", "640x480:YUY2",
                        "--fps", "90", "--segundos-captura", "0.2", "--segundos-tracking", "0.2",
@@ -479,7 +480,7 @@ def test_medir_fila_con_intrinsecos_usa_la_K_del_backend(monkeypatch, tmp_path) 
 
     def abrir(cfg_camera):
         pedidos.append(cfg_camera)
-        return CamConK([imagen_marker(0)], K_real, np.zeros(5))
+        return CamConK([imagen_marker()], K_real, np.zeros(5))
     yml = str(tmp_path / "k.yml")
     fila = mm.medir_fila(cfg, ctx, (300, 300, "MJPG"), 90, None, 0.2, 0.2, None, abrir=abrir, intrinsecos=yml)
     assert pedidos[0]["calibration_file"] == yml and fila["intrinsecos"] == yml
@@ -499,7 +500,7 @@ def test_main_intrinsecos_solo_en_la_medicion_2(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(mm.cv2, "waitKey", lambda *a, **k: -1)
     monkeypatch.setattr(mm.cv2, "destroyAllWindows", lambda: None)
     K_real, _ = mm.k_nominal(300, 300, 84.0)
-    monkeypatch.setattr(mm, "abrir_por_perfil", lambda c: CamConK([imagen_marker(0)], K_real, np.zeros(5)))
+    monkeypatch.setattr(mm, "abrir_por_perfil", lambda c: CamConK([imagen_marker()], K_real, np.zeros(5)))
     rc = mm.main(_base(tmp_path, "--modos", "300x300:MJPG", "--fps", "90", "--segundos-captura", "0.2",
                        "--segundos-tracking", "0.2", "--luz", "2", "--intrinsecos", str(yml)))   # sin --fov-grados
     assert rc == 0

@@ -32,9 +32,14 @@ argumentos explicitos (principio 7); no pisa una salida que ya existe:
 
     python -m diagnostics.explain_pose --dataset tests\data\marker0_gs1.npz ^
         --frames-dir tests\data\marker0_gs1_frames --frame 480 ^
-        --config profiles\tracker_config_gs1.yaml --alt-size-mm 98.6 ^
+        --config tests\data\marker0_gs1_perfil.yaml --alt-size-mm 98.6 ^
         --output-markdown "..\Claude outputs\fases\004\ejemplo_gs1_480.md" ^
         --output-image ..\docs\img\004\marker0_gs1_frame_00480.png --crop-px 320
+
+El perfil es el de la grabacion: para las de `tests/data/`, su copia congelada
+(`tests/data/marker0_<cam>_perfil.yaml`: ID 0, 80 mm), no el del repo, que desde la
+meta 006, fase 7c (B55) sigue a la referencia de ID 100. El bloque nombra el perfil por
+su ruta relativa a `codigo/` (`profile_path`).
 
 Context7 (2026-10-26, OpenCV 4.13; instalado 4.11): `projectPoints(obj, rvec,
 tvec, K, dist)` -> `(imagePoints, jacobian)`; `drawFrameAxes(img, K, dist, rvec,
@@ -112,6 +117,14 @@ def _pinhole(K: np.ndarray, p: np.ndarray) -> tuple[float, float]:
     """u = fx*X/Z + cx, v = fy*Y/Z + cy, sin distorsion."""
     X, Y, Z = (float(v) for v in np.asarray(p).flatten())
     return float(K[0, 0] * X / Z + K[0, 2]), float(K[1, 1] * Y / Z + K[1, 2])
+
+
+def _rel_codigo(path: Path) -> str:
+    """La ruta de `path` relativa a `codigo/` (con /) si cae dentro; si no, su nombre."""
+    try:
+        return Path(path).resolve().relative_to(profiles.CODE_ROOT).as_posix()
+    except ValueError:
+        return Path(path).name
 
 
 def explain_frame(dataset: Path, frames_dir: Path, frame: int, profile: Path,
@@ -204,6 +217,7 @@ def explain_frame(dataset: Path, frames_dir: Path, frame: int, profile: Path,
 
     out = {
         "dataset": dataset.name, "png": png.name, "profile": profile.name,
+        "profile_path": _rel_codigo(profile),
         "frame": int(frame), "frames_in_recording": int(n_frames),
         "image_size": [int(gray.shape[1]), int(gray.shape[0])],
         "marker": {"id": mid, "name": name, "size_mm": size_mm,
@@ -271,13 +285,13 @@ def format_markdown(r: dict) -> str:
     L: list[str] = []
     L.append(f"_Generado por `diagnostics/explain_pose.py:format_markdown` sobre `{r['png']}` (el frame "
              f"{r['frame']} de {r['frames_in_recording']} de `{r['dataset']}`, grabado en vivo con "
-             f"`profiles/{r['profile']}`). No se edita a mano: `tests/test_como_funciona.py` comprueba que es "
+             f"`{r['profile_path']}`). No se edita a mano: `tests/test_como_funciona.py` comprueba que es "
              f"la salida del script, y `tests/test_explain_pose.py` repite lo mismo sobre los 3 frames de cada cámara._")
     L.append("")
     L.append(f"**1 · El frame.** `{r['png']}`: {w}×{hh} en gris, tal como lo ve `vision/detection.py:detect` "
              f"(el tracker pasa a gris el frame BGR de la cámara en `tracker.py:main`). El marker es "
              f"`{m['name']}`, ID {m['id']} del diccionario `{m['dictionary']}`, de {m['size_mm']:.1f} mm de lado "
-             f"(`profiles/{r['profile']}`, `markers.list`).")
+             f"(`{r['profile_path']}`, `markers.list`).")
     L.append("")
     c0 = d["corners_px"][0]
     where = (("abajo" if c0[1] > d["centroid_px"][1] else "arriba") + " a la "

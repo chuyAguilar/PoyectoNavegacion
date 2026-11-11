@@ -42,6 +42,8 @@ KS = {"gs1": tce.K_640, "gs2": tce.K2_640}
 INTR = {c: {"K": K, "dist": tce.SIN_DIST, "shape": SHAPE} for c, K in KS.items()}
 OBJP = cc.construir_objp(COLS, ROWS, SQ)
 T_21 = tce.camara_2(30.0, (-250.0, 10.0, 60.0))        # T_gs2<-gs1, la de la sesion de test_calibrate_extrinsics
+# `profiles.load` exige `markers.list` desde la meta 006, fase 7c (`check_markers`); el asistente no la usa.
+MARKERS_YAML = "markers:\n  dictionary: DICT_ARUCO_MIP_36h12\n  list:\n  - {id: 100, name: Marker0, size_mm: 98.6}\n"
 TICK = 1.0 / 12.0                                       # una vuelta del bucle en el reloj falso
 DT_GS2_MS = 1000.0 / 90.0 - 4.0                         # en la rafaga falsa, lo que tarda gs2 tras gs1
 
@@ -692,7 +694,8 @@ def montaje(tmp_path, poses, monkeypatch):
         yml = tce._yml(tmp_path / f"intrinsecos_{cam}.yml", KS[cam], detector="sb")
         perfiles[cam] = tmp_path / f"perfil_{cam}.yaml"
         perfiles[cam].write_text("camera:\n  camera_type: webcam\n  source: %d\n  width: 640\n  height: 480\n  fps: 90\n"
-                                 "  calibration_file: '%s'\n" % (k, str(yml).replace("\\", "/")), encoding="utf-8")
+                                 "  calibration_file: '%s'\n" % (k, str(yml).replace("\\", "/")) + MARKERS_YAML,
+                                 encoding="utf-8")
     cams = {"gs1": CamFalsa(ts.a_bgr(render("gs1", poses[0]))), "gs2": CamFalsa(ts.a_bgr(render("gs2", poses[0])))}
     pedidas = []
 
@@ -774,7 +777,8 @@ def test_main_no_empieza(montaje, sin_ventanas) -> None:
     a[2] = f"gs2={montaje['tmp'] / 'no_existe.yaml'}"
     assert csb.main(a) == 2                                                  # un perfil que no existe
     sin_cal = montaje["tmp"] / "sin_cal.yaml"
-    sin_cal.write_text("camera:\n  camera_type: webcam\n  source: 2\n  width: 640\n  height: 480\n", encoding="utf-8")
+    sin_cal.write_text("camera:\n  camera_type: webcam\n  source: 2\n  width: 640\n  height: 480\n" + MARKERS_YAML,
+                       encoding="utf-8")
     a = _argv(montaje)
     a[2] = f"gs2={sin_cal}"
     assert csb.main(a) == 2                                                  # sin calibration_file

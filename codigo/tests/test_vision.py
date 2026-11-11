@@ -13,7 +13,7 @@ import profiles
 from vision import detection, filtering, pose, tracking
 
 from .conftest import DATA_DIR, PROFILES_DIR
-from .synthetic import DIST_SYN, K_SYN, render_marker
+from .synthetic import DIST_SYN, K_SYN, MARKER0_ID, MARKER0_MM, render_marker
 
 GS1 = PROFILES_DIR / "tracker_config_gs1.yaml"
 
@@ -191,13 +191,13 @@ def test_position_filter_son_tres_one_euro() -> None:
 def test_marker_tracker_con_gs1_detecta_y_estima_marker0() -> None:
     cfg = _cfg()
     mt = tracking.MarkerTracker(cfg["markers"], cfg["filtering"])
-    assert mt.valid_ids == {0} and set(mt.filters) == {0}
+    assert mt.valid_ids == {MARKER0_ID} and set(mt.filters) == {MARKER0_ID}
     gray = cv2.cvtColor(render_marker(450.0, 2.0), cv2.COLOR_BGR2GRAY)
     poses = mt.process(gray, 1000.0, K_SYN, DIST_SYN)
     assert len(poses) == 1
     p = poses[0]
     assert isinstance(p, tracking.MarkerPose)
-    assert (p.id, p.name, p.size_mm) == (0, "Marker0", 80.0)
+    assert (p.id, p.name, p.size_mm) == (MARKER0_ID, "Marker0", MARKER0_MM)
     assert p.matrix.shape == (4, 4) and 440.0 < p.matrix[2, 3] < 460.0
     assert np.array_equal(p.matrix, pose.rvec_tvec_to_matrix(p.rvec, p.tvec))
     assert p.corners.shape == (1, 4, 2)
@@ -207,23 +207,23 @@ def test_marker_tracker_con_gs1_detecta_y_estima_marker0() -> None:
 def test_process_corners_dict_o_secuencia_en_orden_y_filtro_de_cero() -> None:
     cfg = _cfg()
     cfg["markers"]["list"].append({"id": 7, "name": "Otro", "size_mm": 40.0})
-    gray0 = cv2.cvtColor(render_marker(450.0, 0.0, 0), cv2.COLOR_BGR2GRAY)
+    gray0 = cv2.cvtColor(render_marker(450.0, 0.0), cv2.COLOR_BGR2GRAY)
     gray7 = cv2.cvtColor(render_marker(500.0, 0.0, 7, size_mm=40.0), cv2.COLOR_BGR2GRAY)
     mt = tracking.MarkerTracker(cfg["markers"], {"enabled": False})
     c0, _ = mt.detect(gray0)
     c7, _ = mt.detect(gray7)
-    sin_filtro = mt.process_corners([(7, c7[0]), (0, c0[0]), (99, c0[0])], 1000.0, K_SYN, DIST_SYN)
+    sin_filtro = mt.process_corners([(7, c7[0]), (MARKER0_ID, c0[0]), (99, c0[0])], 1000.0, K_SYN, DIST_SYN)
     assert [p.name for p in sin_filtro] == ["Otro", "Marker0"]      # orden de entrada; 99 fuera
-    por_dict = mt.process_corners({0: c0[0], 7: c7[0]}, 1000.0, K_SYN, DIST_SYN)
+    por_dict = mt.process_corners({MARKER0_ID: c0[0], 7: c7[0]}, 1000.0, K_SYN, DIST_SYN)
     assert [p.name for p in por_dict] == ["Marker0", "Otro"]
     assert np.array_equal(por_dict[0].matrix, sin_filtro[1].matrix)
 
     con = tracking.MarkerTracker(cfg["markers"], cfg["filtering"])
-    a = con.process_corners([(0, c0[0])], 1000.0, K_SYN, DIST_SYN)[0]
-    b = con.process_corners([(0, c0[0])], 1000.5, K_SYN, DIST_SYN)[0]
+    a = con.process_corners([(MARKER0_ID, c0[0])], 1000.0, K_SYN, DIST_SYN)[0]
+    b = con.process_corners([(MARKER0_ID, c0[0])], 1000.5, K_SYN, DIST_SYN)[0]
     assert np.array_equal(a.tvec, sin_filtro[1].tvec)              # la primera muestra sale tal cual
     assert np.allclose(b.tvec, a.tvec)
     con.reset()
-    c = con.process_corners([(0, c0[0])], 1000.6, K_SYN, DIST_SYN)[0]
+    c = con.process_corners([(MARKER0_ID, c0[0])], 1000.6, K_SYN, DIST_SYN)[0]
     assert np.array_equal(c.tvec, a.tvec)                          # tras reset, primera muestra otra vez
     assert con.process_corners([], 1000.7, K_SYN, DIST_SYN) == []

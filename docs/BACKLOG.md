@@ -110,6 +110,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B124 | Las skills de Claude Code fuera del repo nombrarán un transform que ya no existe | Baja | — |
 | B125 | La Jetson publicará `ReferenceToTracker` al retomar la meta 007 | Baja | — |
 | B126 | Una sola ventana para recalibrar y lanzar la fusión | Baja | — |
+| B127 | La malla del STL bicolor quedará en dos sitios cuando llegue `calibration/stl_bicolor.py` | Baja | — |
 
 ## Abiertos
 
@@ -269,6 +270,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** es sobre imágenes sintéticas, no reales; la fase 1 no cambia el detector (principio 6, P6 = a).
 - **De dónde:** `tests/test_pose_log.py`, fase 1 · Línea base de Marker0 en vivo, antes de mover nada (meta 003), 2026-10-23.
 - **Acotado (2026-10-23, línea base en vivo):** con Marker0 real de frente (≤ 10°) a ~37–38 cm, 100 % de los frames con pose y ID 0 en las dos cámaras (gs1 977 y 628 frames; gs2 973 y 1057); no apareció ni un 87 o 115. No se ha probado inclinado 15–20° con imágenes reales, así que no se cierra: solo se sabe que de frente no pasa.
+- **Ampliado (2026-11-11, meta 006, fase 7c · La referencia con su propio ID; sin cámara):** con el detector de `tracker_config_gs1.yaml`. (1) La referencia nueva, ID 100, sintética (98.6 mm, `tests/synthetic.render_marker`, 2028 poses: 350–550 mm, ±40 mm de lado, inclinada hasta ±40° en dos ejes) se lee como 100 en 1824 (89.9 %) y como otro ID en 204 (87 en 121 de ellas, 149 en 30, 160 en 20); el ID 0 de 80 mm, en las mismas poses, como 0 en 1676 (82.6 %). Ninguno de los dos se leyó nunca como el otro (0 ↔ 100). Con `DetectorParameters()` por defecto, 1978 y 1984 de 2028. (2) Sobre la imagen perfecta de cada ID (`diagnostics.marker_image.marker_png`, sin perspectiva, 250 IDs a 100, 150, 300 y 600 ppp), 12 de 1000 se leen como otro ID: 53 → 68, 89 → 22, 91 → 101, 112 → 69, 121 → 68, 151 → 149 y 223 → 149 (a 100–300 ppp; ninguno a 600); con los parámetros por defecto, 0 de 1000. El ID 100, bien en 56 de 56 resoluciones (50–600 ppp). (3) El texto junto a un marker da IDs fantasma: con el ID y el diccionario dibujados bajo el marker (fuente Hershey), se leía además un 20 o un 160 en 5 de 56 resoluciones; por eso la PNG del generador no lleva texto y la franja del SVG se recorta. Todo esto es sobre imágenes sintéticas. Qué mirar: en la sesión en vivo de la Fase 7c2, la fracción de frames con pose del ID 100 y si «Verificar IDs» enseña algún ID que no sea 100; y al elegir los IDs del instrumento (B40), pasarlos antes por el detector del perfil (los siete de arriba, descartados).
 - **Qué haría falta:** una corrida en vivo con Marker0 inclinado 15–20° (se graba con `--record`; el resumen de `pose_log.py` da la fracción con pose) y, si queda por debajo de 95 %, buscar qué parámetro lo causa (`polygonal_approx_accuracy_rate` 0.05, `max_erroneous_bits_in_border_rate` 0.40, ventanas del umbral), una variable a la vez, con el replay de detección de la fase 1. Se puede hacer en la sesión en vivo de otra fase de la meta 003 sin costo extra.
 - **Prioridad:** baja (sube si la corrida inclinada da menos del 95 % con pose o si aparece otro ID leído como 0).
 
@@ -869,6 +871,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** el plan de la meta 006, replan del 2026-11-11 (tarde).
 - **Qué haría falta:** una receta del panel que encadene las dos, con sus topes.
 - **Prioridad:** baja (solo si estorba).
+
+### B127 · La malla del STL bicolor quedará en dos sitios cuando llegue `calibration/stl_bicolor.py`
+- **Qué:** `diagnostics/marker_image.py` (Fase 7c de la meta 006) trae `malla_altura`, `aristas_sin_pareja` y `stl_ascii`, pasadas de `Claude outputs/tablero/generar_tablero.py`, para sacar el STL bicolor de la referencia. El plan de la Fase 7d · El tablero ChArUco pasa esa misma malla a `calibration/stl_bicolor.py` «para rectángulos cualesquiera»: habrá dos copias.
+- **Por qué queda:** el plan de la 7c pedía solo SVG y PNG (P50); el STL se añadió por encargo de la dirección, para que el autor imprima la referencia en la Bambu Lab A1 como el tablero, y la 7d aún no existe.
+- **De dónde:** fase 7c · La referencia con su propio ID (meta 006), 2026-11-11.
+- **Qué haría falta:** en la 7d, que `diagnostics/marker_image.py` importe la malla de `calibration/stl_bicolor.py` (o al revés) y quede una sola, con sus pruebas (`tests/test_marker_image.py` ya comprueba que las dos piezas son mallas cerradas, que juntas llenan la pieza y que desde arriba son el marker sin espejo).
+- **Prioridad:** baja (duplicación, sin riesgo para la cadena).
 
 ## Cerrados
 

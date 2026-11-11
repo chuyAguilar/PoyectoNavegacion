@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-11-11 (meta 006 · Grafo de factores óptico-inercial, activa: replan autorizado el 2026-11-11 con las fases 7c a 7h (P45–P65); lo siguiente, la Fase 7c · La referencia con su propio ID; la 7a, hecha y commiteada; la Fase 7, parcial; la meta 007 · El tracker en la Jetson Orin Nano, en pausa, y la 005 también)._
+_Actualizado: 2026-11-11 (meta 006 · Grafo de factores óptico-inercial, activa: replan autorizado el 2026-11-11 con las fases 7c a 7h (P45–P65); la Fase 7c · La referencia con su propio ID, hecha sin cámara (pendiente del commit); lo siguiente, la 7c2 · `Reference` y `ReferenceToTracker`; la 7a, hecha y commiteada; la Fase 7, parcial; la meta 007 · El tracker en la Jetson Orin Nano, en pausa, y la 005 también)._
 
 Spec activo: `specs/006-grafo-factores/`
 
@@ -8,9 +8,8 @@ Peticiones pendientes: 0
 
 ## Dónde estamos
 
-- Método de trabajo (ADR-020): etapas 1 (`8f398da`) y 2 (`edb9aa0`) commiteadas; la etapa 3 (hooks) queda para cuando haga falta. `settings.json` niega commit, push y los datos de paciente.
-- **Meta 001 · limpieza y orden del repo:** cerrada el 2026-10-19 (ADR-021; P01 «pasa»).
-- **Meta 002 · Calibración de las cámaras global shutter:** cerrada el 2026-10-23 (ADR-023 a ADR-025; P03 «pasa»). Detalle en `specs/002-*/`.
+- Método de trabajo (ADR-020): etapas 1 y 2 commiteadas; la 3 (hooks) cuando haga falta. `settings.json` niega commit, push y los datos de paciente.
+- **Metas 001 (limpieza, 2026-10-19) y 002 · Calibración de las cámaras global shutter:** cerrada el 2026-10-23 (ADR-023 a ADR-025; P03 «pasa»). Detalle en `specs/002-*/`.
 - **Meta 003 · Arquitectura y optimización del tracker:** cerrada el 2026-10-26 (ADR-026 a ADR-031; P04 «pasa»). Detalle en `specs/003-*/resultados.md`.
 - **Meta 004 · Cómo funciona el tracker:** cerrada el 2026-10-26 (P12: 0 dudas). Todo en `docs/ARCHITECTURE.md` §9 (ADR-032).
 
@@ -26,7 +25,7 @@ Peticiones pendientes: 0
 
 ## La suite
 
-- `codigo/tests/`: **1199: 1189 pasan, 10 saltadas, 0 fallan** (9 «solo Linux»: tope, grupo de procesos, `_parar_grupo` y el pyigtl real con `iface`; 1 solo en la Jetson: el clon sin datos de paciente); 182.8 y 201.6 s (2026-11-10, meta 006 fase 7a, sin cámara; antes 1165 en 152.3 y 146.8 s; el asistente solo, 32 pruebas en 26.3 s: B115). `test_probar_barrera.py` añade ~35 s (B72). **En la Jetson** (`ssh nav-jetson suite wip`): la última corrida, fase 7b parte A, 1051: 993 pasan, 0 fallan, 58 saltadas, 52.4 s (la parte B, sin correr); en Linux el replay admite 1e-3 mm/°/px (P22) y lo que solo vale en Windows o necesita `docs/` se salta con su motivo (`codigo/linux/README.md`, «La suite en Linux»). Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
+- `codigo/tests/`: **1313: 1303 pasan, 10 saltadas, 0 fallan** (9 «solo Linux»: tope, grupo de procesos, `_parar_grupo` y el pyigtl real con `iface`; 1 solo en la Jetson: el clon sin datos de paciente); 286.9 y 346.3 s (2026-11-11, meta 006 fase 7c, sin cámara; antes 1199 en 182.8 y 201.6 s: las 114 pruebas nuevas solas tardan ~5 s, el resto es carga de la máquina; con 346 s el margen contra el tope de 600 s baja, vigilar B115). `test_probar_barrera.py` añade ~35 s (B72). **En la Jetson** (`ssh nav-jetson suite wip`): la última corrida, fase 7b parte A, 1051: 993 pasan, 0 fallan, 58 saltadas, 52.4 s (la parte B, sin correr); en Linux el replay admite 1e-3 mm/°/px (P22) y lo que solo vale en Windows o necesita `docs/` se salta con su motivo (`codigo/linux/README.md`, «La suite en Linux»). Niega la cámara real y el servidor pyigtl (fixture `no_real_camera`). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`; para ver los totales, `-o addopts="-p no:cacheprovider" -q`.
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm / 0.0°, detección 0.0 px) + `python -m gui.panel --selftest` (con `PYTHONIOENCODING=utf-8`, B49). Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -45,12 +44,13 @@ Peticiones pendientes: 0
 - **Fase 2 · S2 otra vez en Windows, y B94: hecha (`ccfe803`), «se movió».** `grabacion-pc/datos/20261109-163350`; criterio 1 4.198 mm / 6.087° (¿a escala 0.81?, nota en `tasks.md`); criterio 2 62.4 / 61.1 %. B100, B102. Reporte: `Claude outputs/fases/006/fase-2.md`.
 - **Plan por P33 (2026-11-05):** el PC detecta con las dos cámaras y fusiona: Fases 3 · Cada tracker envía sus esquinas al fusionador; 4 · El fusionador del PC, sin GTSAM; 5 · La fusión en vivo con Slicer; 6 · El grafo con GTSAM; 8 · Cierre.
 - **Fase 7 · Los extrínsecos por tablero: parcial (sin cámara, `1cf90c3`).** `calibrate_extrinsics --desde-vistas`; distancia nominal 200.43 mm. B104, B105.
+- **Fase 7c · La referencia con su propio ID: hecha sin cámara (pendiente del commit).** `diagnostics/marker_image.py` (SVG, PNG y STL bicolor del ID 100 de ~100 mm, listos en `Claude outputs/fases/006/fase-7c/marker/`), `profiles.check_markers` y las copias congeladas `tests/data/marker0_gs{1,2}_perfil.yaml`; **los perfiles siguen con ID 0 y 80 mm** hasta las 5 medidas del autor. Replay 8/8 en 0.0. B39 ampliada, B127.
 - **Fase 7a · El asistente de captura del tablero: hecha (`238117e`).** `calibration/capture_stereo_board.py`. La prueba de 20 poses da 0.294 mm (no < 0.01) por esquinas renderizadas; el formato, igual (0.0). B114, B115.
 - **Sesión con el asistente (2026-11-11, `fase-7/asistente/correr_20261111-124742`):** el asistente cumple (dos cámaras en un proceso, 90 fps, 20 vistas en 8.6 min, 9 % rechazadas); el cálculo no (RMS 0.548 px, control 1.611, triangulada 0.908 mm). Base del tablero 236.6 mm; el autor mide ~25 cm. S2 repetida sin tocar nada: `grabacion-pc/datos/20261111-131000`.
 - **Diagnóstico sin cámara (P45 a; `fase-7/diagnostico-20261111/reporte.md`):** las cámaras giraron 12° entre el 11-09 y el 11-11; la S2 del 11-11 fue con el **marker de ~100 mm y el perfil en 80 (B55, ahora alta)**: lado triangulado 98.3–98.6 mm; con la escala corregida, criterio 1 0.87–1.12 mm, pero 5.4–6.6° con cualquier extrínseco (IPPE, B95). gs2 cambió de intrínsecos (fx +11, cx −9.5, cy −7.3 px; 4–7 σ). Queda ~0.5 px por vista agrupado en el tiempo: el montaje de pinzas no es rígido (el autor lo confirma). El autor cree probable que la S2 del 11-09 también fuera con el de 100: los mm de la Fase 2 estarían a escala 0.81 (nota en `tasks.md`).
 - **Replan del 2026-11-11, autorizado ese día (P46–P65):** la referencia pasa a ID 100 (~100 mm), se llama `Reference` y la cadena publica `ReferenceToTracker` (P57; ADR G7, enmienda el principio 6); ChArUco 9×7 de 26 mm, `DICT_4X4_50`, para intrínsecos (7d, 7e) y extrínsecos (7f); «recalibrar y continuar» (P53): los extrínsecos valen para su sesión, `python -m calibration.recalibrar` con 20 vistas en ~10 min (P60 c) y botón del panel; la fusión no arranca con extrínsecos de otro día o > 12 h y en vivo avisa (P61); los grados del criterio 1, informativos (P54). La 7b se retira. B116–B126 anotadas.
-- **Lo siguiente, en orden:** 7c · La referencia con su propio ID (sale el generador del marker: avisar al autor para imprimirlo) → 7c2 · `Reference` y `ReferenceToTracker` (sesión con Slicer) → 7d · El tablero ChArUco y los intrínsecos (avisar para imprimir la muestra 3×3 y el tablero) → 7e → 7 parte sin cámara 2 → 7f → 7g → 7 sesión 2 → 7h; después las Fases 3 a 6 y 8. ADR G1 (la meta 006 es «el PC detecta y fusiona», P33) sigue sin escribir desde el 2026-11-05.
-- Qué es: GTSAM fusiona lo de gs1 y gs2; el IMU después. P1–P65 en `specs/006-*/clarify.md`. El GitHub MCP, nunca con `--scope project`.
+- **Lo siguiente, en orden:** 7c2 · `Reference` y `ReferenceToTracker` (sesión con Slicer) → 7d · El tablero ChArUco y los intrínsecos (avisar para imprimir la muestra 3×3 y el tablero) → 7e → 7 parte sin cámara 2 → 7f → 7g → 7 sesión 2 → 7h; después las Fases 3 a 6 y 8. ADR G1 (la meta 006 es «el PC detecta y fusiona», P33) sigue sin escribir desde el 2026-11-05.
+- Qué es: GTSAM fusiona lo de gs1 y gs2; el IMU después. P1–P65 en `specs/006-*/clarify.md`.
 
 ## Meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC (en pausa desde el 2026-11-05; plan autorizado el 2026-10-29)
 
@@ -60,10 +60,10 @@ Peticiones pendientes: 0
 
 ## Pendientes del autor
 
-- **Meta 006:** imprimir el marker ID 100 y el ChArUco cuando salgan sus generadores (7c y 7d) y medirlos con calibrador; ninguna sesión con Marker0 vale hasta cerrar la 7c2. Miniforge, para la Fase 6.
+- **Meta 006:** imprimir el marker ID 100 (`Claude outputs/fases/006/fase-7c/imprimir_y_medir.md`; dar las 5 medidas con calibrador) y el ChArUco cuando salga su generador (7d); ninguna sesión con Marker0 vale hasta cerrar la 7c2. Miniforge, para la Fase 6.
 - **Meta 007 (en pausa):** los Hz de Slicer de B4; `enviar_wip.ps1` y `ssh nav-jetson suite wip` con la parte B (esperado 0 fallos); hacer persistente el ahorro de energía de la Wi-Fi de la Jetson (B86, con sudo); el cable directo (B85) antes de llevarla.
 
-- Meta 005 (aplazado por el autor hasta compartirlo con sus compañeros, 2026-10-28): la prueba en vivo de la fase 1 (7 casos), la de la fase 2 (2 envíos con `consulta`), la lectura de `docs/EQUIPO.md` de la fase 3 (10 pasos, ~20 min) y el circuito de la fase 4 (una petición de prueba a `origin`, ~10 min), con sus protocolos en `Claude outputs/fases/005/`.
+- Meta 005 (aplazado hasta compartirlo con los compañeros, 2026-10-28): las pruebas en vivo de las fases 1 a 4, con sus protocolos en `Claude outputs/fases/005/`.
 - B55: decidido el 2026-10-26, se usa el Marker0 de 80 mm y el de 100 se guarda (media).
 - Decidir si B19 y B20 (alta) se cierran: su código y su punta se archivaron. Decidir si B35 entra en la meta.
 - Los commits se proponen con `git -C C:/Dev/OrtoMeta/PoyectoNavegacion …`, con barras `/`.

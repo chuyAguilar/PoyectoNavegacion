@@ -33,7 +33,7 @@ from diagnostics import identify_ids
 from vision.detection import apply_detector_params
 
 from .conftest import PROFILES_DIR
-from .synthetic import FakeCamera, render_marker
+from .synthetic import MARKER0_ID, FakeCamera, render_marker
 
 GS1 = PROFILES_DIR / "tracker_config_gs1.yaml"
 CAM_DELAY_S = 0.002
@@ -118,7 +118,7 @@ def test_ids_sale_con_q_y_dibuja_los_ids(fakes, frames, profile, capsys) -> None
     assert est["imshow"] == 3 and est["titles"] == {identify_ids.WINDOW_TITLE}
     assert est["named"] == [identify_ids.WINDOW_TITLE]
     out = capsys.readouterr().out
-    assert "visibles: [0]" in out and "[IDs] q: saliendo." in out and out.rstrip().endswith("[Salida limpia]")
+    assert f"visibles: [{MARKER0_ID}]" in out and "[IDs] q: saliendo." in out and out.rstrip().endswith("[Salida limpia]")
     # Fase 8a: lee por el hilo de captura, que se para antes de cerrar la camara.
     (g,) = est["grabbers"]
     assert g.cam_closed_at_stop is False and not g.running and g.frames_read >= 3
@@ -233,7 +233,7 @@ def test_draw_ids_y_draw_preview_pintan() -> None:
     det = identify_ids.make_detector(cfg, permisive=False)
     corners, ids, _ = det.detectMarkers(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
     disp = frame.copy()
-    assert identify_ids.draw_ids(disp, corners, ids) == [0] and not np.array_equal(disp, frame)
+    assert identify_ids.draw_ids(disp, corners, ids) == [MARKER0_ID] and not np.array_equal(disp, frame)
     assert identify_ids.draw_ids(frame.copy(), (), None) == []
     prev = frame.copy()
     identify_ids.draw_preview(prev, None, "tracker_config_gs1.yaml")
@@ -310,7 +310,7 @@ def test_con_deteccion_dibuja_la_cruz_y_los_fps_de_la_camara(fakes, frames, prof
     out = capsys.readouterr().out
     # Los fps son los de la camara (frames_read), no los del bucle (30).
     assert "[IDs] camara 90.0 fps" in out and "camara 30.0 fps" not in out
-    assert "visibles: [0]" in out
+    assert f"visibles: [{MARKER0_ID}]" in out
     fps_lines = [(t, y) for t, y in drawing["texts"] if " fps | q = salir" in t]
     assert fps_lines and {y for _t, y in fps_lines} == {identify_ids.PREVIEW_Y_WITH_IDS}
     assert any("camara 90.0 fps" in t for t, _y in fps_lines)

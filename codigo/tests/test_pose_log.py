@@ -21,7 +21,7 @@ import tracker
 
 from . import replay_util
 from .conftest import PROFILES_DIR
-from .synthetic import DIST_SYN, K_SYN, FakeCamera, FakeSender, fake_time, render_marker
+from .synthetic import DIST_SYN, K_SYN, MARKER0_ID, FakeCamera, FakeSender, fake_time, render_marker
 
 N_FRAMES = 12
 
@@ -157,7 +157,7 @@ def test_main_record_guarda_lo_enviado_y_el_replay_lo_repite(
         assert np.array_equal(M_rec.astype(np.float32), M_srv)
     assert rec["frames_saved"].tolist() == [0, 4, 8]
     meta = rec["metadata"]
-    assert meta["show_window"] is False and meta["whitelist"] == [0] and meta["frames"] == N_FRAMES
+    assert meta["show_window"] is False and meta["whitelist"] == [MARKER0_ID] and meta["frames"] == N_FRAMES
 
     replay = replay_util.run_marker0_replay(rec_path, profile_syn)
     c = replay_util.compare_marker0(replay, replay_util.recorded_marker0(rec_path))

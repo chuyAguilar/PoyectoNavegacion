@@ -22,12 +22,17 @@ pytest no recoge este archivo (no empieza por `test_`). Como CLI, desde
         --frames-dir "..\\Claude outputs\\grabaciones\\003\\gs1_frames" --count 3 ^
         --output-dir tests\\data\\marker0_gs1_frames
     python -m tests.replay_util reference-marker0 --dataset tests\\data\\marker0_gs1.npz ^
-        --config profiles\\tracker_config_gs1.yaml ^
+        --config tests\\data\\marker0_gs1_perfil.yaml ^
         --output tests\\data\\marker0_gs1_reference.npz
 
 `reference-marker0` imprime tambien el replay frente a lo enviado en vivo y lo
 guarda en el `.json`; aborta si la referencia existe salvo con `--overwrite`.
 La referencia no se regenera sola, y el cambio queda visible en `git diff`.
+
+Meta 006, fase 7c (B55): el perfil de las grabaciones de `tests/data/` es su copia
+congelada, `tests/data/marker0_<cam>_perfil.yaml` (el perfil de HEAD antes de la fase:
+ID 0, 80 mm, los intrinsecos de la meta 002), no el del repo, que pasa a la referencia de
+ID 100; `profile_diff` dice en que difieren los dos.
 """
 from __future__ import annotations
 
@@ -92,6 +97,24 @@ def marker0_params(profile: Path) -> dict:
                       "min_cutoff": float(cfg["filtering"]["min_cutoff"]),
                       "beta": float(cfg["filtering"]["beta"])},
     }
+
+
+def profile_diff(a: Path, b: Path) -> dict:
+    """Lo que difiere entre dos perfiles de lo que decide la pose: las claves de
+    `marker0_params` (`markers`, `dictionary`, `detector`, `filtering`) y
+    `calibration_file` (la ruta de los intrinsecos, relativa a codigo/). Devuelve
+    `{clave: (valor_a, valor_b)}` solo de las que difieren; vacio si coinciden.
+
+    Meta 006, fase 7c (B55): el replay compara con la copia congelada del perfil con que
+    se grabo (`tests/data/marker0_<cam>_perfil.yaml`); esto dice en que se aparta de ella
+    el perfil del repo."""
+    lados = []
+    for perfil in (a, b):
+        params = marker0_params(perfil)
+        yml = (profiles.load(str(perfil), missing_ok=True).get("camera", {}) or {}).get("calibration_file")
+        params["calibration_file"] = _rel(Path(yml)) if yml else None
+        lados.append(params)
+    return {k: (lados[0][k], lados[1][k]) for k in lados[0] if lados[0][k] != lados[1][k]}
 
 
 def run_marker0_replay(dataset: Path, profile: Path, name: str = "Marker0") -> dict:

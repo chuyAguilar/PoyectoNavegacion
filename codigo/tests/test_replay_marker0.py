@@ -17,6 +17,11 @@ Linux, la que decidio el autor tras medir la Jetson (P22, 2026-11-02: 1e-3 mm, 1
 2.3e-13 mm y 4.4e-13°; la deteccion sobre los PNG difiere de lo grabado en el PC en
 6.1e-05 px como mucho, y la 4x4 del ejemplo de `test_explain_pose.py` (con esas esquinas) en
 3.3e-05 mm y 1.1e-04°. El ruido con Marker0 quieto es ~0.03 mm.
+
+El perfil es la copia congelada del que grabo (`tests/data/marker0_<cam>_perfil.yaml`:
+ID 0, 80 mm, los intrinsecos de la meta 002), no el del repo (meta 006, fase 7c, B55):
+el perfil del repo pasa a la referencia de ID 100 y las grabaciones siguen siendo las
+del Marker0 de 80 mm.
 """
 from __future__ import annotations
 
@@ -26,7 +31,7 @@ import sys
 import pytest
 
 from . import replay_util
-from .conftest import PROFILES_DIR, TESTS_DATA_DIR
+from .conftest import TESTS_DATA_DIR
 
 CAMERAS = ("gs1", "gs2")
 EN_LINUX = sys.platform.startswith("linux")
@@ -41,7 +46,7 @@ def _paths(cam: str) -> dict:
         "reference": TESTS_DATA_DIR / f"marker0_{cam}_reference.npz",
         "provenance": TESTS_DATA_DIR / f"marker0_{cam}_reference.json",
         "frames": TESTS_DATA_DIR / f"marker0_{cam}_frames",
-        "profile": PROFILES_DIR / f"tracker_config_{cam}.yaml",
+        "profile": TESTS_DATA_DIR / f"marker0_{cam}_perfil.yaml",
     }
 
 
