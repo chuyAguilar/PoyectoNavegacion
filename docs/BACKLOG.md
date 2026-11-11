@@ -89,6 +89,11 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B103 | El filtro z ≤ 0 de `estimate_single_pose` no atrapa el salto de IPPE_SQUARE entre sus dos soluciones, y el tracker lo publica a Slicer | Alta | — |
 | B104 | Un tramo repetido por los `correr.ps1` de grabación (`<tramo>_r2_<cámara>.npz`) no lo encuentra `fusion.dataset.segment_file` (`<tramo>_<cámara>_r2.npz`) | Media | — |
 | B105 | `diagnostics.probe_camera._vigilante` no para el proceso si `estado` no se puede escribir como JSON | Baja | — |
+| B106 | El 1-Euro de hoy deja la posición hasta ~3 mm detrás del marker cuando se mueve | Baja | — |
+| B107 | La hora del mensaje TRANSFORM es la del envío (`time.time` de pyigtl), no la de captura | Baja | — |
+| B108 | En la fusión, los frames que ve una sola cámara pasan tal cual y pueden dar un escalón en Slicer | Media | Meta 006, Fase 4 |
+| B109 | El emparejado por hora admite medio periodo: con el marker en movimiento, el PnP conjunto mezcla dos instantes | Media | Meta 006, Fase 4 |
+| B110 | El RMS de reproyección del PnP conjunto podría avisar en vivo de una cámara movida | Media | — |
 
 ## Abiertos
 
@@ -681,7 +686,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué:** con 4 puntos coplanares, `SOLVEPNP_IPPE_SQUARE` tiene casi siempre dos soluciones de reproyección parecida, que se diferencian en la inclinación del marker (la doc de OpenCV, por Context7: «the estimation of the pose using only 4 coplanar points is subject to ambiguity»; `solvePnPGeneric` devuelve las dos). `vision/pose.py:estimate_single_pose` usa `cv2.solvePnP`, que devuelve solo una, y descarta la pose si `tvec z ≤ 0`; su docstring dice que la solución equivocada es la que queda detrás de la cámara. En el caso típico las dos quedan delante (z > 0), así que el filtro no atrapa el salto: el tracker manda a Slicer un `Marker0ToTracker` cuya orientación salta varios grados entre frames, con la posición casi igual. Ya se vio en la grabación del PC de la Fase 2 de la meta 006 (`20261109-163350`, S2_pos2): la orientación de gs2 salta entre dos soluciones separadas ~5° en el 21–29 % de los frames (B94, B100).
 - **Por qué queda:** salió en la sesión de entendimiento del paso 9 · La pose (PnP) del HTML `Claude outputs/fases/007/como-funciona-tracking.html` (2026-11-09); arreglarlo toca `vision/pose.py` (la cadena, principio 6) y cambia lo que llega a Slicer: pide su plan, su replay y una verificación en vivo. Cuánto pasa con una cámara sola, en las vistas de uso, no está medido: lo de gs2 en S2_pos2 es una vista.
 - **De dónde:** la dirección, explicando el paso 9 al autor (2026-11-09).
-- **Qué haría falta:** (1) medirlo fuera de línea sobre las grabaciones con esquinas (Jetson `20261105-120826`, PC `20261109-163350`): con `solvePnPGeneric(IPPE_SQUARE)`, por frame, el cociente de los errores de reproyección de las dos soluciones y cuántos frames cambian de solución respecto al anterior; (2) elegir la regla: descartar la pose si el cociente es cercano a 1, elegir la más cercana a la del frame anterior, o refinar (B95); (3) corregir el docstring de `estimate_single_pose`; (4) con dos cámaras, el fusionador por reproyección de la meta 006 (P39) lo resuelve en las vistas que ven las dos. Con ADR si cambia la pose publicada.
+- **Qué haría falta:** (1) medirlo fuera de línea sobre las grabaciones con esquinas (Jetson `20261105-120826`, PC `20261109-163350`): con `solvePnPGeneric(IPPE_SQUARE)`, por frame, el cociente de los errores de reproyección de las dos soluciones y cuántos frames cambian de solución respecto al anterior; (2) elegir la regla: descartar la pose si el cociente es cercano a 1, elegir la más cercana a la del frame anterior, o refinar (B95); (3) corregir el docstring de `estimate_single_pose`; (4) con dos cámaras, el fusionador por reproyección de la meta 006 (P39) lo resuelve en las vistas que ven las dos, pero solo si arranca bien: `fusion.geometry.joint_pnp` es local (Gauss-Newton) y `experiment.fuse_pair` lo arranca desde `T0 = Z1`, la solución de IPPE que eligió gs1; si gs1 eligió la inclinación equivocada, puede quedarse en un mínimo local (hipótesis alta, sin medir). Para la Fase 4 · El fusionador del PC, sin GTSAM: arrancar desde las 2×2 soluciones de `fusion.dataset.ippe_solutions` (las dos de cada cámara, gs2 llevada a gs1) y quedarse con la de menor RMS, como hacía `fusion/bundle.py` con sus 32 combinaciones; medirlo antes sobre S2_pos2 del PC. Con ADR si cambia la pose publicada.
 - **Prioridad:** alta (da un resultado equivocado en la orientación que recibe Slicer, ya observado en gs2; no sabemos aún cuánto con una cámara en uso normal).
 
 ### B104 · Un tramo repetido por los `correr.ps1` de grabación (`<tramo>_r2_<cámara>.npz`) no lo encuentra `fusion.dataset.segment_file` (`<tramo>_<cámara>_r2.npz`)
@@ -697,6 +702,41 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** la fase 7 · Los extrínsecos por tablero, independientes de Marker0 (meta 006 · Grafo de factores óptico-inercial), 2026-11-09.
 - **Qué haría falta:** que `disparar` atrape cualquier excepción al escribir (o use `default=str`) y llame siempre a `os._exit(2)` en un `finally`; una prueba con un `estado` no serializable y un `os._exit` falso.
 - **Prioridad:** baja (`calibrate_extrinsics` guarda solo tipos de JSON, con su prueba; en `probe_camera` y `calibrate_camera` no se ha comprobado qué llevan en `estado` en cada momento; es una trampa para el siguiente).
+
+### B106 · El 1-Euro de hoy deja la posición hasta ~3 mm detrás del marker cuando se mueve
+- **Qué:** con los parámetros de los perfiles (`min_cutoff` 2.0 Hz, `beta` 0.05), simulando `vision.filtering.OneEuroFilter` a 90 fps con rampas de velocidad constante (2026-11-09, la dirección, sin cámara), el retraso de la posición filtrada es 0.24 mm a 5 mm/s, 0.57 a 20, 1.26 a 100, 2.17 a 500 y 2.78 a 2000 mm/s; el tope teórico es `1/(2π·beta)` ≈ 3.2 mm. En reposo baja la sd de un ruido blanco de 0.050 a 0.013 mm (el ruido real tiene deriva lenta y bajará menos, hipótesis alta).
+- **Por qué queda:** para Marker0 (la referencia ósea, casi quieta) importa poco; importará cuando haya un instrumento que se mueva (la punta se rehace, ADR-025).
+- **De dónde:** la dirección, explicando al autor el paso 10 de `Claude outputs/fases/007/como-funciona-tracking.html` (2026-11-09).
+- **Qué haría falta:** cuando exista el instrumento, medir el retraso real con un movimiento conocido y elegir `beta` por perfil (subirlo baja el retraso y deja pasar más ruido); los perfiles ya lo admiten sin tocar código.
+- **Prioridad:** baja (solo si estorba; no cambia nada de Marker0 quieto).
+
+### B107 · La hora del mensaje TRANSFORM es la del envío (`time.time` de pyigtl), no la de captura
+- **Qué:** `transport.igtl.IgtlSender.send` crea `pyigtl.TransformMessage(M, device_name=...)` sin `timestamp`, y pyigtl 0.3.1 pone `time.time()` al crear el mensaje (`pyigtl/messages.py:35`): es la hora del envío, no la del frame (`perf_counter` del `FrameGrabber`). En Windows con Python 3.11, `time.time` puede avanzar a pasos de hasta 15.6 ms (B99). La diferencia con la captura es la latencia del bucle más ese paso.
+- **Por qué queda:** hoy Slicer no usa esa hora para nada que veamos (hipótesis alta); estorbará si algo la usa (sincronizar con el IMU, grabar en Slicer y compararlo con la cámara). Pasarle la hora de captura toca `transport/` (la cadena, principio 6) y cambia los bytes del mensaje.
+- **De dónde:** la dirección, explicando al autor el paso 11 del mismo HTML (2026-11-09).
+- **Qué haría falta:** decidir qué reloj de pared se manda (la hora de captura convertida a época con un ancla `time.time_ns`/`perf_counter` al arrancar) y pasarla como `timestamp=`; comprobar en Slicer que el nodo no cambia.
+- **Prioridad:** baja (espera a que algo use la hora).
+
+### B108 · En la fusión, los frames que ve una sola cámara pasan tal cual y pueden dar un escalón en Slicer
+- **Qué:** `fusion.experiment.fused_timeline` fusiona las parejas y deja pasar tal cual los frames con pose de una sola cámara (gs2 llevada a gs1 con los extrínsecos). En esos frames vuelve todo lo de una cámara sola (B103, B95), y al pasar de «fusionado» a «solo gs1» o «solo gs2» la pose publicada puede saltar varios mm si los extrínsecos o la pose de una cámara tienen sesgo (B94: el criterio 1 dio 4.2 mm / 6.1° en el PC).
+- **Por qué queda:** el fusionador en vivo es la Fase 4 · El fusionador del PC, sin GTSAM, de la meta 006; hoy solo existe fuera de línea.
+- **De dónde:** la dirección, explicando el fusionador al autor (2026-11-09).
+- **Qué haría falta:** en la Fase 4, decidir y medir qué se publica con una sola cámara (tal cual, nada, o un PnP de una cámara arrancado en la última pose fusionada) y medir el escalón en una grabación con oclusiones; que el criterio de la Fase 5 lo incluya.
+- **Prioridad:** media (con extrínsecos buenos el escalón debería ser pequeño; sin medir).
+
+### B109 · El emparejado por hora admite medio periodo: con el marker en movimiento, el PnP conjunto mezcla dos instantes
+- **Qué:** el fusionador empareja un frame de gs1 con uno de gs2 si sus horas de captura difieren hasta medio periodo (~5–6 ms a 90 fps). Con el marker quieto no importa; en movimiento, las dos cámaras lo vieron en sitios distintos y `joint_pnp` busca una pose que explique a la vez dos posiciones: a 100 mm/s, 5 ms son 0.5 mm; a 500 mm/s, 2.5 mm. El residuo sube y la pose queda entre las dos. El desfase δ entre relojes (P13) no se pudo medir (B96).
+- **Por qué queda:** la meta 006 mide el criterio con el marker en reposo; el movimiento rápido llega con el instrumento.
+- **De dónde:** la dirección, explicando el fusionador al autor (2026-11-09).
+- **Qué haría falta:** medir en una grabación en movimiento el residuo del PnP conjunto frente a la diferencia de horas de cada pareja; si crece, interpolar la pose de una cámara a la hora de la otra, o el modelo de velocidad del grafo de GTSAM (Fase 6).
+- **Prioridad:** media (puede dar mm de error en movimiento rápido; no afecta al reposo).
+
+### B110 · El RMS de reproyección del PnP conjunto podría avisar en vivo de una cámara movida
+- **Qué:** `fusion.geometry.joint_pnp` devuelve el RMS de reproyección de las 8 esquinas. Con extrínsecos buenos queda cerca del de una vista sola (~0.2–0.3 px en el PC); con extrínsecos que no casan sube mucho (12.9 px en la Jetson, B94). Si alguien golpea una cámara durante el uso, los extrínsecos dejan de valer y ese RMS lo delataría sin hardware nuevo.
+- **Por qué queda:** el fusionador en vivo aún no existe (Fase 4) y el umbral no está medido. Es una propuesta, no un fallo.
+- **De dónde:** la dirección, explicando el fusionador al autor (2026-11-09).
+- **Qué haría falta:** en la Fase 4 o 5, publicar el RMS (en el log o en el panel) y fijar el umbral con la sd del RMS en reposo; con un valor sostenido por encima, avisar y, si el autor lo decide, dejar de publicar la pose fusionada.
+- **Prioridad:** media (mejora clara de seguridad sin riesgo; no cambia la pose).
 
 ## Cerrados
 
