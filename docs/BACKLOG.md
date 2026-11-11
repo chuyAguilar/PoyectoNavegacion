@@ -97,6 +97,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B111 | gs2 grabó a 41.4 fps en un tramo de la sesión del tablero cortada | Baja | — |
 | B112 | El asistente del tablero podría servir para los intrínsecos | Baja | — |
 | B113 | El asistente no comprueba en vivo el orden de las esquinas ni la coherencia de la vista | Baja | — |
+| B114 | `calibrate_extrinsics --solo-comprobar` da la `z` de la primera esquina del tablero, que depende del orden de las esquinas | Baja | — |
+| B115 | Las pruebas del asistente del tablero suman 26 s a la suite (el plan decía ≤ 25) | Baja | — |
 
 ## Abiertos
 
@@ -761,6 +763,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** el plan de la Fase 7a (meta 006, replan del 2026-11-10).
 - **Qué haría falta:** solo si el cálculo aparta más de 2 vistas de una sesión del asistente: correr la coherencia en el hilo de la comprobación.
 - **Prioridad:** baja (espera datos).
+
+### B114 · `calibrate_extrinsics --solo-comprobar` da la `z` de la primera esquina del tablero, que depende del orden de las esquinas
+- **Qué:** `calibration.calibrate_extrinsics.detectar_posiciones` reporta `z_mm = T[2, 3]`, la z del origen del tablero, que es su primera esquina interior. El detector puede empezar por cualquiera de las dos esquinas opuestas (medido en la Fase 7), y con el tablero inclinado 30° esas dos esquinas distan hasta ~100 mm en z. El asistente de la Fase 7a (`capture_stereo_board.medidas_tablero`) da la z del centro, que no depende del orden. En T03 de gs1 de la sesión cortada del 2026-11-10: 364 mm en la tabla de `--solo-comprobar` y 398 mm en el asistente, sobre el mismo tramo.
+- **Por qué queda:** no cambia el cálculo (R y T no usan ese número), solo lo que se reporta por posición; la Fase 7a no toca `calibrate_extrinsics.py`.
+- **De dónde:** la Fase 7a · El asistente de captura del tablero (meta 006), «implementa», 2026-11-10.
+- **Qué haría falta:** que `detectar_posiciones` dé la z del centro del tablero (o las dos), con su prueba. Mientras tanto, la variedad de `z` de la sesión se lee de `sesion.json` del asistente, no de la tabla del cálculo.
+- **Prioridad:** baja (solo el número reportado).
+
+### B115 · Las pruebas del asistente del tablero suman 26 s a la suite (el plan decía ≤ 25)
+- **Qué:** `tests/test_capture_stereo_board.py` tarda 26.3 s solo (32 pruebas): `test_veinte_poses_y_el_calculo_sobre_su_carpeta` 10.4 s y el montaje de la fixture `guion` 5.6 s. La suite entera dio 182.8 y 201.6 s el 2026-11-10 (antes 152.3 y 146.8; el resto es ruido de la máquina, que no se midió aparte).
+- **Por qué queda:** el plan pedía que la suite creciera ≤ 25 s; el exceso es ~1 s por prueba propia y la prueba larga es la que ata el formato del asistente al cálculo. Recortarla (menos poses, o 18 en vez de 20) rebaja la cobertura.
+- **De dónde:** la Fase 7a · El asistente de captura del tablero (meta 006), «verifica», 2026-11-10.
+- **Qué haría falta:** si el tiempo de la suite estorba, bajar a 18 poses (el mínimo del asistente) y reutilizar el render de `guion`; medir la suite con la máquina quieta antes de decidir.
+- **Prioridad:** baja.
 
 ## Cerrados
 

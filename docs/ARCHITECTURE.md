@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-11-09 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7 · Los extrínsecos por tablero, parte sin cámara: `calibration/calibrate_extrinsics.py`, fuera de la cadena)._
+> _Última actualización: 2026-11-10 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7a · El asistente de captura del tablero: `calibration/capture_stereo_board.py`, fuera de la cadena; antes, 2026-11-09, `calibrate_extrinsics.py`)._
 > _Antes, 2026-11-05 (§6: meta 006 · Grafo de factores óptico-inercial, fase 1 · Verlo, parte A: paquete nuevo `codigo/fusion/`, fuera de línea y sin gtsam, que no toca la cadena)._
 > _Antes, 2026-11-04 (§3.1, diagnósticos y árbol: meta 007 · El tracker en la Jetson Orin Nano, fase 7b · Las dos cámaras a la vez en Windows, parte B: en Windows la marca y los ajustes se leen y se escriben por COM, sin abrir vídeo (`capa_para_plataforma("win32")` da `CapaWindowsCOM`), y `linux.perfil_temporal` gana `camera.usb_port_windows`; la cadena no cambia).
 > _Antes, 2026-11-04 (§3.1, diagnósticos y árbol: meta 007 · El tracker en la Jetson Orin Nano, fase 7b · Las dos cámaras a la vez en Windows, parte A: `camera/dshow_props.py` (lectura por COM, el tracker no lo usa), la sonda con `--capa` y `--comparar-capas`, y `igtl_rate listen --idle-s`; sin cambio en la cadena). Antes, 2026-11-04 (diagnósticos y árbol: fase 7 · Las dos cámaras a la vez en la Jetson: `diagnostics/tegrastats_log.py`). Antes, 2026-11-03 (§3.5 y §6: fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes: `IgtlSender(port, iface)`, `--igtl-iface` y `diagnostics/clock_offset.py`; sin la opción la cadena no cambia; y `TCP_NODELAY` en cada cliente aceptado, §3.5)._
@@ -376,6 +376,19 @@ en `codigo/historico/iter4/dodecahedron/gui/` (meta 003, fase 3).
   y se le da `--output`, escribe `data/extrinsecos_gs1_gs2_pinzas.yml` con `method: tablero`
   y los de Marker0 en `alternative`. Código 0 cumple, 1 no cumple, 2 no pudo empezar.
   Importa `fusion/` (`Extrinsics`, `agreement_stats`); nada de la cadena lo importa.
+- `calibration/capture_stereo_board.py` (meta 006, fase 7a, 2026-11-10; fuera de la cadena) —
+  `python -m calibration.capture_stereo_board --config gs1=… gs2=… --salida <carpeta> …`
+  graba lo que lee `calibrate_extrinsics --desde-vistas`: abre gs1 y después gs2 en un
+  proceso (`create_backend` y un `FrameGrabber` por cámara), enseña una ventana con las dos
+  vistas y una franja, y captura sola cuando las dos ven el tablero entero, lleva 1 s quieto
+  (vista previa `clasico` × 0.5, `QUIETO_PX` 0.5) y la vista es distinta de las tomadas
+  (≥ 10° o ≥ 40 mm). Cada captura es una ráfaga de 5 frames por cámara, alternando, con su
+  hora; se guarda como `TNN_gs{1,2}_frames` y se comprueba con `esquinas_de_posicion` (`sb`,
+  ≤ 0.3 px) en un hilo; la que no vale queda como intento (`_r2`…) y no se borra. Termina con
+  `--objetivo` (20), con `q` o en `--timeout`; deja `sesion.json`. Código 0 con ≥ `--minimo`
+  (18) vistas, 1 con menos, 2 si no pudo empezar, 4 si una cámara dejó de dar frames.
+  `--medir-desde` mide la vista previa sin cámara. Importa `calibrate_extrinsics`,
+  `calibrate_camera`, `camera/` y `profiles`; nada de la cadena lo importa.
 - `diagnostics/probe_camera.py` (sonda: modos, puertos, `--leer`, `--fijar`; desde la fase 7b
   de la meta 007, 2026-11-04, `--capa cv2|com` es obligatoria en `--leer`, `--fijar` y
   `--tras-msmf`, `--fijar --capa com` aún para (parte B), y `--comparar-capas --puerto` lee
@@ -488,7 +501,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   │   └── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO, sin `rigid_bodies` (solo Marker0): puerto USB, marca focus, controles, 1280×960 MJPG 90 fps, 0.977 ms, `calibration_file: data/intrinsecos_gsN_1280x960.yml`
 │   ├── data\                       # intrinsecos_gs1/gs2_1280x960.yml y tablero_calibracion.yaml (nada más)
 │   ├── camera\                     # grabber.py (`FrameGrabber`: hilo de captura con el último frame; `SyncGrabber`; fase 7); __init__ importa camera.uvc (apaga la aceleración HW de MSMF); backend.py (WebcamBackend: puerto, marca, controles, tamaño; `femtobolt` aborta: archivada), uvc.py (enumeración y ruta del puerto USB), controls.py (camera.controls por DSHOW), dshow_props.py (los controles por COM sin abrir vídeo, solo lectura; el tracker no lo usa; meta 007 fase 7b parte A, 2026-11-04), v4l2.py (la capa de Linux: by-path, `v4l2-ctl`, `CapaLinuxV4L2`; meta 007 fase 5, 2026-11-02)
-│   ├── calibration\                # calibrate_camera.py (intrínsecos con tablero, detectores clasico|sb|ambos), check_scale.py (escala contra regla), calibrate_extrinsics.py (T_gs1←gs2 con el tablero, sin cámara; meta 006 fase 7)
+│   ├── calibration\                # calibrate_camera.py (intrínsecos con tablero, detectores clasico|sb|ambos), check_scale.py (escala contra regla), calibrate_extrinsics.py (T_gs1←gs2 con el tablero, sin cámara; meta 006 fase 7), capture_stereo_board.py (asistente que graba el tablero con las dos cámaras; fase 7a)
 │   ├── fusion\                     # meta 006, fase 1 parte A (2026-11-05): el experimento fuera de línea de las dos cámaras, sin gtsam ni cámara; nada de la cadena lo importa. geometry.py (SE(3), jacobiana de la reproyección, covarianzas, `fuse_poses`, `joint_pnp`), dataset.py (carga los `.npz` de la Jetson), extrinsics.py (T_gs1←gs2 por Marker0, `.yml`), bundle.py, pairing.py, metrics.py, report.py (HTML), experiment.py (`python -m fusion.experiment --datos … --intrinsecos … --salida … --timeout …`)
 │   ├── diagnostics\                # probe_camera.py (sonda: modos, puertos, --leer/--fijar con --capa cv2|com, --comparar-capas; fase 7b), measure_modes.py (--enfocar, exposiciones, modos, --elegir), identify_ids.py, pose_log.py (graba y resume poses; `Stopwatch` para --timing), measure_window.py (la ventana sin cámara; fase 6), igtl_rate.py (receptor OpenIGTLink de control y banco de ráfagas sin cámara; fase 8b, 2026-10-25; `listen --idle-s`, fase 7b, 2026-11-04), ruido_pose.py (el ruido en reposo de las grabaciones `--record`, sin cámara; meta 007 fase 5b, 2026-11-03), tegrastats_log.py (resume un log de `tegrastats`: CPU por núcleo, RAM, temperatura y corte; meta 007 fase 7, 2026-11-04), export_map.py (exporta a SVG el mapa de §9.1 con mermaid-cli, Node.js fuera del venv, y escribe su .sha256; meta 004, fase 1, 2026-10-26), explain_pose.py (el ejemplo resuelto de §9.3: un frame grabado desde las esquinas hasta la 4×4, el bloque Markdown y la figura; meta 004, fase 2)
 │   ├── gui\                        # panel PySide6 (`python -m gui.panel`): panel.py, recipes.py (argv con -m), processes.py, status.py (semáforos: entorno, config, intrínsecos, puerto, cámara), calibration_window.py, profile_editor.py, camera_probe.py
