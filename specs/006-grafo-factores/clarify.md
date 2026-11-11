@@ -260,3 +260,25 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: no; vale cualquier vista que las dos cámaras vean entera, quieta y distinta de las tomadas; la ventana muestra la postura siguiente de la guía como orientación, `n` la salta, y el informe da la variedad lograda (en gs1, inclinación de ≤ 10° a ≥ 30° y `z` con ≥ 60 mm de recorrido) para juzgarla con un número. (b) Sí: el asistente comprueba la postura pedida (p. ej. «inclinación ≥ 15° más que T01» con cuña, «`z` 60 mm menos» sobre la pila) y no captura otra cosa; más guía, pero más lógica que probar y más esperas si la cuña no da justo lo previsto.
 - **Respuesta del autor:** (a), la recomendada: no; vale cualquier vista distinta, la guía orienta, `n` la salta y el informe da la variedad lograda.
 - **Fecha:** 2026-11-10
+
+## P45 · Cómo seguir tras la primera sesión del asistente, con la investigación del autor (2026-11-11)
+
+- **Contexto:** sesión `fase-7/asistente/correr_20261111-124742`: el asistente cumple (20 vistas en 8.6 min, 90 fps), el cálculo no (RMS 0.548 px, control 1.611, distancia triangulada 0.908 mm; sin las 5 vistas de ≥ 50°, 0.482 / 1.076 / 0.500). Base del tablero 236.6 mm frente a ~188.8 de Marker0 (S2 del 2026-11-09); el autor mide ~25 cm con regla y cree que las cámaras se movieron; S2 repetida sin tocar nada: `grabacion-pc/datos/20261111-131000`. El autor dejó una investigación (`Claude outputs/especificaci_n_de_calibraci_n_est_reo_para_navegaci_n_por_grafo_de_factores.md`: Kalibr, Basalt, mrcal, ChArUco, flujo desacoplado, criterios). Lectura de la dirección: el método ya es el del documento (§3.3, pasos 1 y 2); faltan el refinado conjunto acotado, más vistas, ChArUco para cubrir los bordes, y residuos y error epipolar; Kalibr y Basalt no ahora (VIO, ROS/Linux), Kalibr `imu_camera` cuando llegue el IMU, mrcal opcional como validador externo.
+- **Opciones:** (a) recomendada: diagnóstico primero, sin cámara y sin escribir en el repo (Marker0 con la S2 nueva, criterio 1 con el tablero de hoy contra ella, intrínsecos recalibrados con las vistas de hoy, refinado conjunto con `CALIB_USE_INTRINSIC_GUESS` como medida, residuos y epipolar); después se decide el método con los números. (b) Replan directo a ChArUco y 40 vistas. (c) Solo el criterio 1 con la S2 nueva.
+- **Respuesta del autor:** (a), diagnóstico primero.
+- **Fecha:** 2026-11-11
+
+## P46 · B55: el Marker0 de 100 mm con el perfil en 80 (tras el diagnóstico del 2026-11-11)
+
+- **Contexto:** el diagnóstico (`Claude outputs/fases/006/fase-7/diagnostico-20261111/reporte.md`) triangula con el tablero el lado del Marker0 de la S2 de hoy en 98.26–98.56 mm: era el de 100 mm (98.6 con calibrador) con el perfil en 80, así que todas las distancias por Marker0 salieron a escala 0.81. Corregida la escala, el criterio 1 baja de 44.6 a 0.87–1.12 mm (los grados siguen en 5.4–6.6°, B95). El autor midió el marker del montaje: ~98 mm. Dice que en las sesiones anteriores usó el de 80 y hoy los confundió.
+- **Opciones:** (a) recomendada: B55 a alta y otro ID para el de 100 mm, con su `size_mm` en el perfil, para que el tracker no pueda confundirlos (toca la cadena: ADR y verificación en vivo con Slicer). (b) Alta y usar solo el de 80. (c) Alta y una comprobación de escala en «Verificar IDs».
+- **Respuesta del autor:** (a). Además: «podemos usar el de 98 mm de ahora en adelante».
+- **Nota de la dirección:** la base por Marker0 salió 188.76 mm el 11-09 y 188.81 hoy, a escala 80. Si el 11-09 hubiera sido el de 80 y hoy el de 100, la coincidencia a 0.05 mm sería casual entre dos montajes distintos (las cámaras giraron 12°). Que el 11-09 fuera también el de 100 queda abierto: sin comprobar.
+- **Fecha:** 2026-11-11
+
+## P47 · Los intrínsecos y la rigidez del montaje (tras el diagnóstico del 2026-11-11)
+
+- **Contexto:** los intrínsecos de gs2 se apartan de los de la meta 002 (fx +11, cx −9.5, cy −7.3 px, 4–7 σ); el ~0.5 px que queda en el tablero es un desplazamiento por vista agrupado por orden de toma (hipótesis: el montaje de pinzas cede).
+- **Opciones:** (a) recomendada: probar la rigidez primero; (b) recalibrar los intrínsecos de gs2 ya; (c) pasar a la estructura rígida directamente.
+- **Respuesta del autor (texto libre):** «es verdad que el montaje actual no es rígido; no entiendo por qué los intrínsecos se descalibrarían, pero podemos volver a calibrarlos por seguridad; es un paso que deberíamos automatizar, sacar rápido la calibración de intrínsecos».
+- **Fecha:** 2026-11-11

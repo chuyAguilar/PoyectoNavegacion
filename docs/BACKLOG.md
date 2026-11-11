@@ -42,7 +42,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B52 | «Detener tracker» con el tracker con ventana sigue dependiendo de encontrar la ventana por su título | Baja | — |
 | B53 | Con `--stop-stdin`, la parada no se atiende mientras el tracker espera a Slicer | Baja | — |
 | B54 | Slicer recibe como mucho ~65 Hz de Marker0, aunque el tracker envíe ~90 | Baja | — |
-| B55 | Con el Marker0 de 100 mm y el perfil en 80, todas las distancias salen a escala 0.81 sin aviso | Media | — |
+| B55 | Con el Marker0 de 100 mm y el perfil en 80, todas las distancias salen a escala 0.81 sin aviso | Alta | Meta 006 |
 | B56 | `slicer/receive_marker0.py` dice que `pyigtl` bloquea si Slicer no está conectado | Baja | — |
 | B57 | El `.json` de procedencia de las referencias del replay nombra rutas de `iter4/` | Baja | — |
 | B58 | La ventana de «Calibrar con tablero» detecta la vista previa a resolución completa y va lenta sin tablero | Media | — |
@@ -99,6 +99,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B113 | El asistente no comprueba en vivo el orden de las esquinas ni la coherencia de la vista | Baja | — |
 | B114 | `calibrate_extrinsics --solo-comprobar` da la `z` de la primera esquina del tablero, que depende del orden de las esquinas | Baja | — |
 | B115 | Las pruebas del asistente del tablero suman 26 s a la suite (el plan decía ≤ 25) | Baja | — |
+| B116 | La calibración cámara-IMU, con Kalibr `imu_camera`, cuando llegue el IMU | Media | — |
+| B117 | mrcal como validador externo de la calibración | Baja | — |
+| B118 | El criterio de desfase entre cámaras de la Fase 7a (≤ 11.1 ms) no tiene sentido con el tablero quieto | Baja | — |
 
 ## Abiertos
 
@@ -375,7 +378,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** fase 8c, 2026-10-26 (`specs/003-*/resultados.md`).
 - **Qué haría falta:** decidir con cuál se trabaja y guardar o marcar el otro; o darle otro ID al de 100 (ArUco permite IDs distintos) y su `size_mm` en el perfil, para que el tracker no pueda confundirlos; o una comprobación de escala en «Verificar IDs y colocar la cámara» con una distancia conocida.
 - **Decisión del autor (2026-10-26):** se trabaja con el Marker0 de 80 mm (el de los perfiles) y el de 100 se guarda y se marca. Con eso el riesgo queda en el procedimiento, no en el código.
-- **Prioridad:** media (era alta; baja a media con la decisión del autor). Vuelve a alta si hace falta usar otro tamaño: entonces, otro ID y su `size_mm`.
+- **Pasó (2026-11-11):** la S2 de la meta 006 del 2026-11-11 (`grabacion-pc/datos/20261111-131000`) se grabó con el de 100 mm: triangulado con los extrínsecos del tablero, su lado mide 98.26–98.56 mm (el autor lo confirmó con regla, ~98). El criterio 1 dio 44.6 mm en vez de 0.87–1.12 (`Claude outputs/fases/006/fase-7/diagnostico-20261111/reporte.md`). El procedimiento no bastó.
+- **Decisión del autor (2026-11-11, P46):** prioridad alta; el de 100 mm (98.6) tendrá su propio ID y su `size_mm` en el perfil, para que el tracker no pueda confundirlos, y se usa ese de ahora en adelante. Toca la cadena (principio 6): ADR y verificación en vivo con Slicer. Va en la meta 006.
+- **Prioridad:** alta desde el 2026-11-11: ya dio un resultado equivocado sin aviso, y se usará el otro tamaño. Antes fue media (2026-10-26: «vuelve a alta si hace falta usar otro tamaño: entonces, otro ID y su `size_mm`»).
 
 ### B56 · `slicer/receive_marker0.py` dice que `pyigtl` bloquea si Slicer no está conectado
 - **Qué:** el docstring de `codigo/slicer/receive_marker0.py` cita `CONTEXT.md` §4.5 de antes de ADR-028 («pyigtl bloquea el bucle»). Desde la fase 7 de la meta 003 · Arquitectura y optimización del tracker, el tracker espera a Slicer con tope (`--slicer-timeout`, 30 s) y, si no llega, aborta con código 3 sin abrir la cámara.
@@ -777,6 +782,27 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** la Fase 7a · El asistente de captura del tablero (meta 006), «verifica», 2026-11-10.
 - **Qué haría falta:** si el tiempo de la suite estorba, bajar a 18 poses (el mínimo del asistente) y reutilizar el render de `guion`; medir la suite con la máquina quieta antes de decidir.
 - **Prioridad:** baja.
+
+### B116 · La calibración cámara-IMU, con Kalibr `imu_camera`, cuando llegue el IMU
+- **Qué:** la investigación del autor (`Claude outputs/especificaci_n_de_calibraci_n_est_reo_para_navegaci_n_por_grafo_de_factores.md`, §2.2) propone `kalibr_calibrate_imu_camera`: extrínsecos cámara-IMU y desfase temporal con B-splines. Es la herramienta de referencia para ese paso.
+- **Por qué queda:** la meta 006 fusiona solo las cámaras; el IMU va después. Kalibr pide ROS 1 en Docker (Linux): se correría en `servidor` o en la Jetson, no en Windows.
+- **De dónde:** la revisión de la dirección de esa investigación (P45, 2026-11-11).
+- **Qué haría falta:** al planear el IMU, comparar Kalibr con Basalt `basalt_calibrate_imu`; grabar en formato EuRoC o `.bag`; ADR por la herramienta externa.
+- **Prioridad:** media (hará falta seguro; hoy no hay IMU).
+
+### B117 · mrcal como validador externo de la calibración
+- **Qué:** la misma investigación (§2.3) propone mrcal (NASA JPL): propagación de la incertidumbre de la calibración y validación cruzada, útil para pesar los factores del grafo.
+- **Por qué queda:** el diagnóstico del 2026-11-11 mostró que lo que pesa hoy es el marker equivocado (B55), los intrínsecos de gs2 y un montaje no rígido, no el método. mrcal corre en Linux; Context7 no lo indexa (lo dicho de él no está verificado).
+- **De dónde:** P45, 2026-11-11.
+- **Qué haría falta:** con la estructura rígida y los intrínsecos nuevos, pasarle las mismas vistas en `servidor` y comparar extrínsecos e incertidumbre; ADR si se adopta.
+- **Prioridad:** baja (espera a que el montaje y los intrínsecos estén bien).
+
+### B118 · El criterio de desfase entre cámaras de la Fase 7a (≤ 11.1 ms) no tiene sentido con el tablero quieto
+- **Qué:** en la sesión del 2026-11-11 el asistente dio un desfase máximo de 13.56 ms entre las dos cámaras y el resumen lo marcó FALLA. Con el tablero quieto (≤ 0.3 px por cámara, comprobado) el desfase no cambia la vista; la investigación del autor (§3.2) dice lo mismo: captura estática si no hay trigger.
+- **Por qué queda:** es un criterio del plan de la Fase 7a; cambiarlo es del plan.
+- **De dónde:** la sesión `fase-7/asistente/correr_20261111-124742` (2026-11-11).
+- **Qué haría falta:** pasarlo a informativo, o ligarlo a la quietud (desfase × velocidad del tablero), en el replan de la Fase 7.
+- **Prioridad:** baja (no afecta al resultado).
 
 ## Cerrados
 
