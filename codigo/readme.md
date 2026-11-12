@@ -192,7 +192,7 @@ módulo, **siempre desde `codigo\`** y con los argumentos explícitos (principio
 | `vision\` | Detección ArUco, pose de un marker (IPPE_SQUARE), filtro 1-Euro y el paso por frame (`MarkerTracker`). |
 | `transport\` | El servidor OpenIGTLink y el envío de transforms (`IgtlSender`). |
 | `calibration\` | Calibración de la lente con tablero y comprobación de la escala con regla. |
-| `diagnostics\` | Sondear la cámara, medir modos y enfocar, verificar IDs, grabar y resumir poses, y generar el marker de la referencia para imprimir (`marker_image`). |
+| `diagnostics\` | Sondear la cámara, medir modos y enfocar, verificar IDs, grabar y resumir poses, generar el marker de la referencia para imprimir (`marker_image`) y barrer `error_correction_rate` sobre frames para elegir la tasa que no lee IDs falsos (`barrido_correccion`). |
 | `gui\` | El panel de control (PySide6). |
 | `profiles\` | Los perfiles de las cámaras (`tracker_config_gs1.yaml`, `tracker_config_gs2.yaml`). |
 | `data\` | Los intrínsecos de cada cámara y el tablero de calibración. |

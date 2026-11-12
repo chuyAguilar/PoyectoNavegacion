@@ -460,3 +460,10 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: una segunda copia del ID 100, impresa en papel con la PNG del generador (`fase-7c/marker/`), junto a la referencia: PD1 (las dos, 20 s por cámara) y PD2 (solo la referencia, 15 s), con el perfil del repo y el listener; ~3 min más; con `-SinCopia`, PD1 se salta y queda para la sesión de la 7e. (b) Sin forzar: solo la coherencia en P7 (la línea `[Repetidos]` igual a los dobles del `.npz`); no cuesta nada, pero si el tablero no da un doble del 100 en P7 el filtro queda sin verificar en vivo. (c) Una segunda referencia impresa en 3D: la misma prueba que (a), con más trabajo para el autor.
 - **Respuesta del autor:** «solo sintético», que es (b): no se fuerza ningún doble en vivo. El filtro se verifica con la cámara falsa y las grabaciones con dobles inyectados (los criterios sin cámara de la 7d2b); en la sesión, PD1 no existe (sin copia de papel) y quedan PD2 (solo la referencia: 0 repetidos, pose ≥ 95 %, ≥ 85 fps) y la coherencia de P7 (`[Repetidos]` igual a los dobles del `.npz`). Si P7 no da ningún doble, el filtro queda sin verificar en vivo y se dice en el reporte.
 - **Fecha:** 2026-11-11
+
+## P74 · Los fantasmas de los frames de la referencia sola en la regla de la tasa (Fase 7d2; P69)
+
+- **Contexto:** la parte sin cámara de la 7d2 midió, en 206 frames reales del Marker0 ID 0 sin tablero ChArUco a la vista, 32 IDs fantasma en 31 frames con 0.60 (ninguno el 0 ni el 100) y 0 con 0.45 o menos. La regla de P69 cuenta los fantasmas solo en los frames del tablero (P6, P7 y los sintéticos), no en los de la referencia sola (P5). Detalle: `Claude outputs/fases/006/fase-7d2-implementa.md`.
+- **Opciones:** (a) recomendada: la regla exige 0 fantasmas de cualquier ID en todos los frames, también los de P5; con los números de hoy no cambia la elección (0.30 o 0.20). (b) Solo los del tablero; los de P5, informativos.
+- **Respuesta del autor:** (a), la recomendada: 0 fantasmas en todos los frames, también los de la referencia sola.
+- **Fecha:** 2026-11-11
