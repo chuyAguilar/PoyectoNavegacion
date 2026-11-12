@@ -12,6 +12,9 @@ codigo/historico/iter4/dodecahedron/pose_rigid_body.py.
 
 Lo que publica (principio 6, ADR-026): solo `ReferenceToTracker`, en el puerto
 `igtlink.transforms_port` (18944). `igtlink.send_video: true` aborta (P7).
+Un ID de la lista que sale dos o mas veces en un frame no se publica ese frame
+(meta 006, fase 7d2b; B39): al salir, la linea `[Repetidos]` dice en cuantos
+frames paso, y `--record` lo guarda en `repeated` de los metadatos.
 
 Uso (desde codigo\, con el venv; --config obligatorio, principio 7):
     python -m tracker --config profiles\tracker_config_gs1.yaml
@@ -397,6 +400,7 @@ def main(argv: list[str] | None = None) -> int:
                                 if t_loop_end > t_start else None),
                 "clock": "time.perf_counter", "capture": capture,
                 "sent": sender.sent, "dropped": sender.dropped,
+                "repeated": tracker.resumen_repetidos(),
                 "opencv": cv2.__version__, "numpy": np.__version__,
             }
             path = log.save(K, dist, meta)
@@ -405,6 +409,9 @@ def main(argv: list[str] | None = None) -> int:
         if sw is not None:
             _save_timing(sw, args, argv, show_window, n_frames, t_start, t_loop_end, capture)
         if grabber is not None and n_frames:
+            rep = tracker.resumen_repetidos()
+            print(f"[Repetidos] {rep['frames']} frames con un ID repetido, sin publicar ese ID "
+                  f"(por ID: {rep['por_id']})")
             el = t_loop_end - t_start
             fps_cam = f" ({capture['fps_camera']:.1f} fps)" if capture["fps_camera"] else ""
             fps_loop = f" ({n_frames / el:.1f} fps)" if el > 0 else ""

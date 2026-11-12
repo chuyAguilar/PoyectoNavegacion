@@ -26,7 +26,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B31 | El criterio de exposición de `medir_modos.py` favorece imágenes casi saturadas | Media | — |
 | B35 | El criterio de escala por medias no mira la repetibilidad | Media | — |
 | B36 | Cámara 2 con el punto principal 90 px sobre el centro | Baja | — |
-| B39 | Con el detector de los perfiles gs1/gs2, un Marker0 sintético inclinado se lee como ID 87 o 115; el tablero ChArUco da IDs fantasma de 36h12, uno de ellos el 100 (regla: tablero fuera de la vista al arrancar el tracker) | Alta | Meta 006, fase 7d2 (`error_correction_rate`, P66; parte sin cámara hecha, falta la sesión) y fase 7d2b (un ID repetido no se publica, P70) |
+| B39 | Con el detector de los perfiles gs1/gs2, un Marker0 sintético inclinado se lee como ID 87 o 115; el tablero ChArUco da IDs fantasma de 36h12, uno de ellos el 100 (regla: tablero fuera de la vista al arrancar el tracker) | Alta | Meta 006, fase 7d2 (`error_correction_rate`, P66; parte sin cámara hecha, falta la sesión) y fase 7d2b (un ID repetido no se publica, P70; sin cámara hecha) |
 | B40 | Instrumento y punta con un transform de nombre nuevo | Media | — |
 | B41 | Runbook de Slicer con Marker0 y el registro nuevo | Media | — |
 | B42 | Documentos del dodecaedro y la Femto que siguen en `documentos/` | Baja | — |
@@ -115,6 +115,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B130 | Las pruebas del bucle con la cámara falsa pierden frames con la CPU cargada (fallos sueltos de `test_referencia_id.py`) | Media | — |
 | B131 | «Verificar IDs» estricto (`identify_ids.make_detector`) usa su propia tasa, 0.35, y no la del perfil | Baja | — |
 | B132 | Los frames de los barridos de `barrido_correccion` ocupan disco (~0.7–2 GB por sesión) | Baja | — |
+| B133 | Los repetidos no se ven en vivo (el contador sale al terminar, no en `[FPS]` ni en el panel) | Baja | — |
+| B134 | Un fantasma suelto del ID de la referencia: el filtro de repetidos no lo cubre | Media | — |
 
 ## Abiertos
 
@@ -280,6 +282,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Decisión del autor (2026-11-11, P66 y P67):** se acepta la Fase 7d con la mitad del criterio 9 sin cumplir (el detector del perfil sigue leyendo fantasmas con el tablero a la vista). **B39 queda en alta.** (1) Regla de procedimiento, desde ya: **el tablero, fuera de la vista antes de arrancar el tracker**, en todo protocolo (7e, 7g, la sesión 2 y cualquier corrida con la referencia). (2) La corrección, `error_correction_rate` en los perfiles, será una fase propia justo después de la 7d y antes de la 7e: la planifica `planificacion`, no la 7d. (3) `test_criterio_9_el_detector_del_perfil_solo_ve_el_id_100` queda como `xfail(strict=True)`; la quita esa fase.
 - **Ampliado (2026-11-11, meta 006, fase 7d2 · Los IDs falsos del tablero en el detector del tracker, parte sin cámara; sintético):** `python -m diagnostics.barrido_correccion` barre `error_correction_rate` (0.60, 0.50, 0.45, 0.40, 0.30 y 0.20: 7, 6, 5, 4, 3 y 2 bits) con el detector del perfil y elige con la regla de P69. Barrido sintético completo (`Claude outputs/fases/006/fase-7d2/sinteticos.json`; escenas de `tests/escenas_b39.py`, poses nuevas con semilla 0 en los rangos de arriba, así que los números no son los de la 7c y la 7d): la referencia ID 100 sola, 2028 poses: con 0.60 se lee como 100 en 1816 (89.5 %) y como otro ID en 212 (87 en 94, 149 en 74); con 0.50, en 2013; con 0.45, en 2027; con 0.40, 0.30 y 0.20, en las 2028. Ninguna tasa pierde un frame que 0.60 lea (0 perdidos; 212 ganados) y las esquinas son las mismas (0.0 px en los 1816 comunes). El tablero ChArUco solo, 60 vistas: 674 fantasmas con 0.60 (en las 60), 221 con 0.50, 44 con 0.45, 6 con 0.40 y **0 con 0.30 y con 0.20**; con la referencia al lado, 668, 257, 61, 9, 0 y 0. En esta semilla ningún fantasma lleva el ID 100 ni el 0. Sobre sintéticos, la tasa más alta sin fantasmas es 0.30.
 - **Ampliado (2026-11-11, fase 7d2, parte sin cámara; los primeros frames de cámara, informativos):** el mismo barrido sobre frames reales que ya había, con otro ID, así que no decide (`Claude outputs/fases/006/fase-7d2/real-informativo/`). (1) 206 frames del Marker0 ID 0 (`grabacion-pc/datos/20261105-223853/M1*_frames`, gs1 y gs2): el ID 0 se lee una vez en los 206 con las seis tasas (0 perdidos, también con 0.20) y con las mismas esquinas (0.0 px). **Con 0.60, sin ningún tablero ChArUco a la vista, hay 32 IDs fantasma en 31 de los 206 frames** (240 en 8, 97 en 6, 31 y 127 en 4…; ninguno es el 0 ni el 100); con 0.50, 3; de 0.45 abajo, 0. (2) 44 frames del tablero de ajedrez 8 × 5 (`fase-7/datos/20261110-180748/T0*_frames`): 1 fantasma con 0.60 (ID 1) y 0 con las demás. **Lo que implica:** los fantasmas no vienen solo del ChArUco; la escena de trabajo ya los da con la tasa de hoy en ~15 % de los frames, y la lista blanca los tapa salvo que uno coincida con el ID de la referencia (no se ha visto: 0 de 33). (3) Por qué bajar la tasa no pierde lecturas en estos frames, comprobado con `Dictionary.identify` en OpenCV 4.11: los bits que corrige son `int(12 × tasa)` y devuelve **el primer ID dentro de esa distancia, no el más cercano** (un patrón a 5 bits del 100 y a 7 del 4 se lee como 4 con 0.60, como 100 con 0.45 y no se lee con 0.30). La tasa la elige la sesión conjunta con frames reales de la referencia ID 100 inclinada (P5–P8).
+- **Ampliado (2026-11-12, fase 7d2b · Un ID repetido no se publica; sin cámara):** la opción (c) está hecha: `MarkerTracker.process_corners` no publica ninguna detección de un ID que sale dos o más veces en el mismo frame y lo cuenta (`[Repetidos]` al salir; `repeated` en el `.npz`). Con el ID 100 doble en 5 de 20 frames de la cámara falsa, 15 envíos y ninguno en esos 5; sin dobles, las matrices salen con el mismo sha256 que antes (replay de Marker0 8/8 en 0.0). Falta verlo en vivo (sesión conjunta, PD2 y la coherencia de P7) y cerrar B39 con la tasa elegida por la 7d2. Lo que el filtro no cubre, un 100 falso suelto, es B134.
 - **Qué haría falta:** una corrida en vivo con Marker0 inclinado 15–20° (se graba con `--record`; el resumen de `pose_log.py` da la fracción con pose) y, si queda por debajo de 95 %, buscar qué parámetro lo causa (`polygonal_approx_accuracy_rate` 0.05, `max_erroneous_bits_in_border_rate` 0.40, ventanas del umbral), una variable a la vez, con el replay de detección de la fase 1. Se puede hacer en la sesión en vivo de otra fase de la meta 003 sin costo extra.
 - **Prioridad:** alta desde el 2026-11-11 (era baja, «sube si aparece otro ID leído como 0»): en la fase 7d de la meta 006 el tablero ChArUco dio un fantasma con el ID de la referencia nueva (100) en 1 de 60 vistas sintéticas, y dos detecciones del mismo ID se publican las dos: puede dar un resultado equivocado con el tablero a la vista del tracker. La pone el agente de desarrollo; la dirección la confirma o la baja.
 
@@ -916,6 +919,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** plan de la fase 7d2 · Los IDs falsos del tablero en el detector del tracker (meta 006), 2026-11-11.
 - **Qué haría falta:** si estorba, comprimirlos o borrar los de una sesión ya cerrada, con el visto bueno del autor.
 - **Prioridad:** baja (solo si estorba).
+
+### B133 · Los repetidos no se ven en vivo
+- **Qué:** el contador de frames con un ID repetido sale al terminar el tracker (`[Repetidos] N frames…` y los metadatos `repeated` del `.npz`) y una línea la primera vez que ocurre por ID. Ni la línea `[FPS]` ni el panel lo enseñan mientras el tracker corre.
+- **Por qué queda:** no hace falta para cerrar la fase 7d2b; el resumen final y `pose_log` bastan para las sesiones previstas.
+- **De dónde:** fase 7d2b · Un ID repetido no se publica (meta 006), 2026-11-12; anotado en el plan (replan 11-11 d).
+- **Qué haría falta:** añadir el contador a la línea `[FPS]` y a `gui/status.py`, con su prueba.
+- **Prioridad:** baja (solo si en una sesión hace falta saberlo antes de parar el tracker).
+
+### B134 · Un fantasma suelto del ID de la referencia
+- **Qué:** el filtro de la 7d2b descarta un ID que sale dos o más veces en el mismo frame; no cubre un solo 100 falso con la referencia fuera de la vista: ese se publica como `ReferenceToTracker`.
+- **Por qué queda:** lo cubren la tasa de `error_correction_rate` (fase 7d2) y la regla de procedimiento (tablero fuera de la vista al arrancar, P71). Un tercer cinturón toca `vision/` y pide su ADR.
+- **De dónde:** fase 7d2b · Un ID repetido no se publica (meta 006), 2026-11-12; B39 (el fantasma del tablero con el ID 100: 1 de 60 vistas sintéticas con la tasa 0.60).
+- **Qué haría falta:** un gate de plausibilidad antes de publicar (el lado del marker en px frente a la distancia, o el salto frente a la pose anterior), con su ADR, su replay y su verificación en vivo.
+- **Prioridad:** media (sube a alta si una sesión ve un envío lejos de la referencia con la tasa elegida).
 
 ## Cerrados
 

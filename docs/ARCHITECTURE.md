@@ -6,7 +6,8 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-11-11 (árbol: meta 006 · Grafo de factores óptico-inercial, fase 7d2 · Los IDs falsos del tablero en el detector del tracker, parte sin cámara: `diagnostics/barrido_correccion.py`, fuera de la cadena; los perfiles no cambian). Antes, 2026-11-11 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7d · El tablero ChArUco y los intrínsecos con el asistente de una cámara: `calibration/charuco_board.py`, `calibration/stl_bicolor.py` y el modo `--modo intrinsecos` del asistente, fuera de la cadena). Antes, 2026-11-11 (§2, §3.3, §3.5, §3.6, §4, §6, §7 y §9: meta 006 · Grafo de factores óptico-inercial, fase 7c2 · `Reference` y `ReferenceToTracker`: la referencia se llama `Reference`, la cadena publica `ReferenceToTracker` en vez de `Marker0ToTracker` y el script de Slicer es `slicer/receive_reference.py`; el mapa de §9.1, reexportado; el puerto y la jerarquía no cambian). Antes, 2026-11-11 (§6, árbol: meta 006 · Grafo de factores óptico-inercial, fase 7c · La referencia con su propio ID: `diagnostics/marker_image.py`, `profiles.check_markers` y las copias congeladas de los perfiles en `tests/data/`; la cadena no cambia). Antes, 2026-11-10 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7a · El asistente de captura del tablero: `calibration/capture_stereo_board.py`, fuera de la cadena; antes, 2026-11-09, `calibrate_extrinsics.py`)._
+> _Última actualización: 2026-11-12 (§3.2, árbol y la fila «Pose» de §9.1: meta 006 · Grafo de factores óptico-inercial, fase 7d2b · Un ID repetido no se publica (B39, opción c): `MarkerTracker.process_corners` no da pose de un ID de `markers.list` que sale dos o más veces en un frame, y lo cuenta; el tracker lo dice al salir (`[Repetidos]`) y `--record` lo guarda; no cambia nombre, puerto ni jerarquía)._
+> _Antes, 2026-11-11 (árbol: meta 006 · Grafo de factores óptico-inercial, fase 7d2 · Los IDs falsos del tablero en el detector del tracker, parte sin cámara: `diagnostics/barrido_correccion.py`, fuera de la cadena; los perfiles no cambian). Antes, 2026-11-11 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7d · El tablero ChArUco y los intrínsecos con el asistente de una cámara: `calibration/charuco_board.py`, `calibration/stl_bicolor.py` y el modo `--modo intrinsecos` del asistente, fuera de la cadena). Antes, 2026-11-11 (§2, §3.3, §3.5, §3.6, §4, §6, §7 y §9: meta 006 · Grafo de factores óptico-inercial, fase 7c2 · `Reference` y `ReferenceToTracker`: la referencia se llama `Reference`, la cadena publica `ReferenceToTracker` en vez de `Marker0ToTracker` y el script de Slicer es `slicer/receive_reference.py`; el mapa de §9.1, reexportado; el puerto y la jerarquía no cambian). Antes, 2026-11-11 (§6, árbol: meta 006 · Grafo de factores óptico-inercial, fase 7c · La referencia con su propio ID: `diagnostics/marker_image.py`, `profiles.check_markers` y las copias congeladas de los perfiles en `tests/data/`; la cadena no cambia). Antes, 2026-11-10 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7a · El asistente de captura del tablero: `calibration/capture_stereo_board.py`, fuera de la cadena; antes, 2026-11-09, `calibrate_extrinsics.py`)._
 > _Antes, 2026-11-05 (§6: meta 006 · Grafo de factores óptico-inercial, fase 1 · Verlo, parte A: paquete nuevo `codigo/fusion/`, fuera de línea y sin gtsam, que no toca la cadena)._
 > _Antes, 2026-11-04 (§3.1, diagnósticos y árbol: meta 007 · El tracker en la Jetson Orin Nano, fase 7b · Las dos cámaras a la vez en Windows, parte B: en Windows la marca y los ajustes se leen y se escriben por COM, sin abrir vídeo (`capa_para_plataforma("win32")` da `CapaWindowsCOM`), y `linux.perfil_temporal` gana `camera.usb_port_windows`; la cadena no cambia).
 > _Antes, 2026-11-04 (§3.1, diagnósticos y árbol: meta 007 · El tracker en la Jetson Orin Nano, fase 7b · Las dos cámaras a la vez en Windows, parte A: `camera/dshow_props.py` (lectura por COM, el tracker no lo usa), la sonda con `--capa` y `--comparar-capas`, y `igtl_rate listen --idle-s`; sin cambio en la cadena). Antes, 2026-11-04 (diagnósticos y árbol: fase 7 · Las dos cámaras a la vez en la Jetson: `diagnostics/tegrastats_log.py`). Antes, 2026-11-03 (§3.5 y §6: fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes: `IgtlSender(port, iface)`, `--igtl-iface` y `diagnostics/clock_offset.py`; sin la opción la cadena no cambia; y `TCP_NODELAY` en cada cliente aceptado, §3.5)._
@@ -171,6 +172,14 @@ profiles\tracker_config_gsN.yaml` (desde `codigo\`; `--config` obligatorio). `tr
   `MarkerPose` (id, nombre, lado, rvec, tvec, matriz, esquinas) por detección, en el
   orden del detector; `process(gray, t, K, dist)` hace además la detección. Lo usan
   `tracker.py`, el replay (`tests/replay_util.py`) y `diagnostics.measure_modes`.
+  Un ID de la lista que sale dos o más veces en el frame no se publica ese frame y se
+  cuenta (meta 006, fase 7d2b, 2026-11-12; B39, opción c): cada ID de la lista es un
+  objeto físico único, dos detecciones son siempre un error y no se sabe cuál es la
+  buena. Ese frame no toca el 1-Euro de ese ID y los demás IDs del frame se publican
+  (`ids_repetidos`; los contadores `frames_con_repetido` y `repetidos_por_id`, que
+  `resumen_repetidos()` da para los metadatos). No cubre un fantasma suelto del ID con la
+  referencia fuera de la vista: eso es de la tasa del detector y de tener el tablero
+  ChArUco fuera de la vista (B39).
 
 Por frame, `tracker.main()`:
 
@@ -186,7 +195,8 @@ Por frame, `tracker.main()`:
    89.9 (gs1) y 88.8 fps (gs2), sd z 0.037 y 0.030 mm, 99.96 % con pose (fase 7b, 2026-10-25).
 2. Lo pasa a gris y detecta con la lista blanca (`MarkerTracker.detect`).
 3. Estima la pose y filtra la posición (`MarkerTracker.process_corners`, con el tiempo
-   del frame).
+   del frame). Un ID de la lista repetido en el frame no da pose ese frame (fase 7d2b de
+   la meta 006).
 4. Envía cada pose como `<nombre>ToTracker` (`IgtlSender.send`, §3.5).
 5. Con ventana, dibuja contorno y ejes (`draw_poses`), `imshow` y `waitKey(1)`; `q`
    sale. Cada 5 s escribe `[FPS] Promedio`.
@@ -204,6 +214,10 @@ las etapas y el frame que da `[FPS] Promedio`. Desde la fase 7b (2026-10-25),
 al leer una línea `q` o el fin de la entrada (`[Detener] …`); sin la opción no se lee la
 entrada. La usa el panel con el tracker sin ventana (§3.7). `igtlink.send_video: true` aborta (P7).
 Al salir, siempre: cierra la cámara, la ventana y el servidor, y escribe `[Salida limpia]`.
+Si hubo frames, antes escribe `[Repetidos] N frames con un ID repetido, sin publicar ese ID
+(por ID: {…})`, también con N = 0, y `--record` guarda lo mismo en `repeated` de los
+metadatos (fase 7d2b de la meta 006); las detecciones se graban antes de ese filtro, así
+que `pose_log.summarize` da los frames con el ID doble (`frames_with_repeated_detection`).
 La pose multi-marker del dodecaedro está archivada en
 `codigo/historico/iter4/dodecahedron/pose_rigid_body.py`.
 
@@ -517,7 +531,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   ├── .venv\                      # Python 3.11.9
 │   ├── requirements.txt, readme.md, pytest.ini   # pytest.ini: pythonpath = . (codigo\ en sys.path para la suite)
 │   ├── tracker.py                  # solo el bucle (395 líneas desde la fase 7b: `--slicer-timeout`, `--sync-capture` (fase 7), `--stop-stdin` (fase 7b); `python -m tracker --config profiles\...`, --config obligatorio): cámara → `MarkerTracker.process_corners` → `IgtlSender.send` → ventana; opciones apagadas --record, --no-window, --save-frames, --frames-every, --duration y --timing (fase 6); importa `camera` antes que `cv2` (B28); `send_video: true` aborta (2026-10-24, fase 4)
-│   ├── vision\                     # detection.py (diccionario, parámetros del detector, `create_detector`, `detect` con lista blanca), pose.py (`build_object_points`, `estimate_single_pose` IPPE_SQUARE y z > 0, `rvec_tvec_to_matrix`), filtering.py (`OneEuroFilter`, `PositionFilter`), tracking.py (`MarkerPose`, `MarkerTracker.process_corners/process/reset`) (2026-10-24, fase 4)
+│   ├── vision\                     # detection.py (diccionario, parámetros del detector, `create_detector`, `detect` con lista blanca), pose.py (`build_object_points`, `estimate_single_pose` IPPE_SQUARE y z > 0, `rvec_tvec_to_matrix`), filtering.py (`OneEuroFilter`, `PositionFilter`), tracking.py (`MarkerPose`, `ids_repetidos`, `MarkerTracker.process_corners/process/reset/resumen_repetidos`; un ID de la lista repetido en un frame no se publica y se cuenta, meta 006 fase 7d2b, 2026-11-12) (2026-10-24, fase 4)
 │   ├── transport\                  # igtl.py: `IgtlSender(port, iface=None)` con `send(device_name, matrix 4×4)` (sin esperar, con guarda de conexión), `is_connected`, `wait_for_client(timeout_s)`, `close` (para el servidor pyigtl con tope de 5 s) (2026-10-24, fases 4 y 7; `iface` en la fase 6 de la meta 007)
 │   ├── profiles\                   # __init__.py: CODE_ROOT, PROFILES_DIR, DATA_DIR, resolve_path, load (rutas del perfil relativas a codigo\; aborta si faltan; valida `markers.list` con `check_markers`: sin nombres ni IDs repetidos y `size_mm` > 0, fase 7c), check_markers, list_profiles
 │   │   └── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO, sin `rigid_bodies` (solo la referencia, `name: Reference`): puerto USB, marca focus, controles, 1280×960 MJPG 90 fps, 0.977 ms, `calibration_file: data/intrinsecos_gsN_1280x960.yml`
@@ -693,7 +707,7 @@ La misma figura, exportada en SVG para los visores que no dibujan Mermaid (vecto
 | Hilo de captura | `camera/grabber.py:FrameGrabber`, que el bucle lee con `camera/grabber.py:FrameGrabber.next_frame` | los frames de la cámara | el último frame BGR y su hora de captura; los que el bucle no alcanza se cuentan como saltados (§3.2) |
 | Gris | `tracker.py:main` | el frame BGR | la imagen en gris, del mismo tamaño |
 | Detección | `vision/tracking.py:MarkerTracker.detect`, que llama a `vision/detection.py:detect` con el detector de `vision/detection.py:create_detector` | la imagen en gris | por cada marker de la lista blanca, su ID y sus 4 esquinas en px, en el orden de §7 |
-| Pose | `vision/tracking.py:MarkerTracker.process_corners`, que llama a `vision/pose.py:estimate_single_pose` con las esquinas del modelo de `vision/pose.py:build_object_points` | las 4 esquinas, el lado del marker en mm, K y dist | rvec (la rotación, en rad) y tvec (la posición, en mm), o nada si la solución queda detrás de la cámara |
+| Pose | `vision/tracking.py:MarkerTracker.process_corners`, que llama a `vision/pose.py:estimate_single_pose` con las esquinas del modelo de `vision/pose.py:build_object_points` | las 4 esquinas, el lado del marker en mm, K y dist | rvec (la rotación, en rad) y tvec (la posición, en mm), o nada si la solución queda detrás de la cámara o si el ID sale dos o más veces en el frame (`vision/tracking.py:ids_repetidos`; B39) |
 | Filtro | `vision/filtering.py:PositionFilter.filter`, un `vision/filtering.py:OneEuroFilter` por eje | tvec y la hora del frame | tvec filtrada; la orientación no se filtra (§3.2) |
 | Matriz | `vision/pose.py:rvec_tvec_to_matrix` | rvec y tvec | la 4×4 de la referencia en el frame de la cámara, en mm |
 | Envío | `transport/igtl.py:IgtlSender.send` | la 4×4 y el nombre `ReferenceToTracker` (`<name>ToTracker`, con el `name` del perfil) | el mensaje OpenIGTLink, sin esperar (§3.5) |

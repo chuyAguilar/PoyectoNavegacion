@@ -14,10 +14,15 @@ matrices que envio por OpenIGTLink, en un `.npz` de tablas sin pickle:
     sent_M (S, 4, 4) float64       la matriz enviada
     frames_saved (F,) int32        frames guardados como PNG (frame_NNNNN.png)
     frames_every () int32
-    metadata_json () str           perfil, argumentos, versiones, tiempos
+    metadata_json () str           perfil, argumentos, versiones, tiempos; `repeated`, los
+                                   frames con un ID repetido que conto el tracker (fase 7d2b)
 
 Las cuatro primeras tablas y K/dist son las del replay de la meta 001, asi
 que `tests/replay_util.cargar_dataset` las lee igual.
+
+Los ids y las esquinas se graban antes del filtro de IDs repetidos de
+`vision.tracking` (meta 006, fase 7d2b): un frame con el ID de la referencia
+dos veces trae las dos detecciones y ningun envio.
 
 `summarize` resume una grabacion para la linea base. Como CLI, desde
 `codigo\\` con el venv y los argumentos explicitos:
@@ -177,7 +182,17 @@ def summarize(npz_path: Path, name: str) -> dict:
     angulo a la rotacion media, grados) y saltos > 5 grados entre frames
     seguidos con pose. La pose de un frame es el ultimo envio de `name` en
     ese frame (lo ultimo que recibio Slicer). `name` va siempre explicito (principio 7):
-    `Reference`, o `Marker0` en las grabaciones anteriores a la fase 7c2 de la meta 006."""
+    `Reference`, o `Marker0` en las grabaciones anteriores a la fase 7c2 de la meta 006.
+
+    Meta 006, fase 7d2b: `frames_with_repeated_detection` son los frames cuyas
+    detecciones grabadas traen dos o mas veces el ID de `name` (el ID sale de
+    `metadata.markers` por nombre; None si no esta), y `repeated_tracker`, lo
+    que conto el tracker (`metadata.repeated`; None en las grabaciones de antes).
+    Con el filtro, `frames_with_two_sends` tiene que dar 0, y tambien
+    `sends_in_repeated_frames`: los envios de `name` en esos frames (None si el ID
+    no esta en los metadatos). `max_dist_to_median_mm` es la distancia mayor de una
+    posicion enviada a la mediana de todas (por eje): con la referencia quieta, un
+    fantasma publicado sale lejos."""
     rec = load_recording(npz_path)
     t = rec["timestamps"]
     n = len(t)
@@ -192,6 +207,15 @@ def summarize(npz_path: Path, name: str) -> dict:
         M[f] = rec["sent_M"][j]
         envios_por_frame[f] += 1
     valid = envios_por_frame > 0
+    ref_id = next((int(m["id"]) for m in (meta.get("markers") or [])
+                   if isinstance(m, dict) and str(m.get("name")) == name and "id" in m), None)
+    repetidos = envios_en_repetidos = None
+    if ref_id is not None:
+        acumulado = np.concatenate([[0], np.cumsum(rec["marker_ids"] == ref_id)])
+        off = rec["frame_offsets"].astype(np.int64)
+        con_doble = acumulado[off[1:]] - acumulado[off[:-1]] >= 2
+        repetidos = int(np.sum(con_doble))
+        envios_en_repetidos = int(np.sum(envios_por_frame[con_doble]))
     span = float(t[-1] - t[0])
     out: dict = {
         "file": Path(npz_path).name, "name": name, "frames": int(n),
@@ -201,6 +225,9 @@ def summarize(npz_path: Path, name: str) -> dict:
         "frames_with_pose": int(valid.sum()),
         "fraction_with_pose": float(valid.mean()),
         "frames_with_two_sends": int(np.sum(envios_por_frame > 1)),
+        "frames_with_repeated_detection": repetidos,
+        "sends_in_repeated_frames": envios_en_repetidos,
+        "repeated_tracker": meta.get("repeated"),
     }
     if valid.sum() < 2:
         out["error"] = f"menos de 2 frames con pose de {name}"
@@ -220,6 +247,7 @@ def summarize(npz_path: Path, name: str) -> dict:
         "sd_x_mm": float(T[:, 0].std(ddof=1)), "sd_y_mm": float(T[:, 1].std(ddof=1)),
         "sd_z_mm": float(T[:, 2].std(ddof=1)),
         "range_z_mm": float(T[:, 2].max() - T[:, 2].min()),
+        "max_dist_to_median_mm": float(np.max(np.linalg.norm(T - np.median(T, axis=0), axis=1))),
         "sd_orientation_deg": float(np.sqrt(np.mean(dev ** 2))),
         "max_orientation_dev_deg": float(dev.max()),
         "consecutive_pairs": int(len(seguidos)),
