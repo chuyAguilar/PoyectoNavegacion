@@ -418,3 +418,45 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: dejarla así. (b) Quitarla y dejar el fallo solo en B39.
 - **Respuesta del autor:** (a), dejarla como `xfail(strict=True)`; la quita la fase de P66.
 - **Fecha:** 2026-11-11
+
+## P68 · Juntar la sesión de la Fase 7d2 · Los IDs falsos del tablero (B39) con la de la 7c2 (replan del 2026-11-11, noche; P66)
+
+- **Contexto:** la sesión de la 7c2 (`fase-7c/correr.ps1`, ~15 min con Slicer) espera el marker ID 100 medido. La 7d2 necesita grabar la referencia inclinada y el tablero, barrer la tasa y verificar la elegida. Requisito nuevo si se juntan: el tablero ChArUco impreso entero (medirlo no hace falta).
+- **Opciones:** (a) recomendada: un solo `correr.ps1`, el de `fase-7c/` ampliado: primero P0–P4 de la 7c2 con los perfiles del repo (tasa 0.60), así la 7c2 se mide sin la variable nueva; después P5–P7 (la referencia inclinada, el tablero solo y el tablero con la referencia, con un listener), el barrido y la regla en el script, y P8 con un perfil temporal con la tasa elegida; ~35 min en una tarde; con `-SinTablero`, solo la 7c2 y P5. (b) Dos sesiones: la de la 7c2 como está y otra para la 7d2; cada una más corta y más fácil de leer, pero dos tardes del autor y dos aperturas de las cámaras. (c) Elegir la tasa sin cámara (sintéticos y los ~190 frames reales del ID 0) y ponerla en los perfiles antes de la sesión de la 7c2: una sola sesión y sin perfil temporal, pero la 7c2 se mide con dos cosas cambiadas a la vez y la tasa no sale de frames de la referencia real.
+- **Respuesta del autor:** (a), la recomendada: una sola sesión, el `correr.ps1` de `fase-7c/` ampliado.
+- **Fecha:** 2026-11-11
+
+## P69 · Cómo se elige `error_correction_rate` y qué pérdida de lectura de la referencia se acepta (Fase 7d2; B39)
+
+- **Contexto:** con 36h12 (`maxCorrectionBits` 12), las tasas 0.60, 0.50, 0.45, 0.40, 0.30 y 0.20 corrigen 7, 6, 5, 4, 3 y 2 bits. En la 7d, sintético: 0.45 deja 41 fantasmas en 60 vistas del tablero; 0.30, 0. Lo que se pierde de la referencia real inclinada no se ha medido. La regla se fija antes de ver los números.
+- **Opciones:** (a) recomendada: la tasa más alta de esa lista que cumpla las tres: 0 fantasmas de cualquier ID en todos los frames del tablero (los reales de P6 y P7 y los sintéticos), 0 frames con el ID 100 dos veces, y una pérdida ≤ 1.0 % de los frames reales de P5 en que 0.60 lee la referencia; la pérdida en las 2028 poses sintéticas, informativa. Si ninguna cumple, no se cambia nada y se replantea. (b) Lo mismo con pérdida ≤ 0.5 %: más exigente con la referencia, más probable que ninguna cumpla. (c) Pérdida ≤ 3 %: casi seguro que 0.30 pasa, pero puede perder frames de la referencia muy inclinada sin que nadie lo decida.
+- **Respuesta del autor:** (a), la recomendada: la tasa más alta que cumpla 0 fantasmas, 0 dobles del 100 y pérdida ≤ 1.0 %; si ninguna cumple, no se cambia nada y se replantea.
+- **Fecha:** 2026-11-11
+
+## P70 · La opción (c) de B39: que el tracker no publique dos detecciones del mismo ID (Fase 7d2)
+
+- **Contexto:** `MarkerTracker.process_corners` publica todas las detecciones de un ID de la lista blanca, también dos del 100 en un frame. Con una sola referencia física, un doble es siempre un error. La tasa quita la causa; esto no cubre un fantasma del 100 con la referencia fuera de la vista, y toca `vision/tracking.py` (la cadena).
+- **Opciones:** (a) recomendada: no en esta fase; al BACKLOG en media con el número de dobles que dé la sesión (P5, P7 y P8), y a alta si aparece un doble del 100 con la tasa elegida: una variable a la vez. (b) En esta fase: con un ID repetido, el tracker no publica ninguno ese frame y lo cuenta en el resumen; defensa doble, pero dos cambios en la misma sesión, replay y verificación en vivo de `vision/`, y su ADR. (c) Con un ID repetido, publicar el de mayor perímetro: no pierde frames, pero puede elegir el fantasma.
+- **Respuesta del autor:** (b): en esta fase. Con un ID repetido en un frame, el tracker no publica ninguno ese frame y lo cuenta en el resumen; con su replay, su verificación en vivo de `vision/` y su ADR. Cambia el plan: replan.
+- **Fecha:** 2026-11-11
+
+## P71 · La regla «el tablero fuera de la vista antes de arrancar el tracker» después de la 7d2 (P66)
+
+- **Contexto:** la regla rige desde el 2026-11-11 hasta que la 7d2 cierre. Con 0 fantasmas en unos cientos de frames reales, el riesgo baja, pero el barrido no cubre toda luz, distancia y ángulo posibles.
+- **Opciones:** (a) recomendada: se queda en los protocolos (7e, 7g, la sesión 2) y pasa a trampa de `docs/CONTEXT.md` §4 con los números de la 7d2; no cuesta nada y cubre lo que el barrido no vio. (b) Se retira al cerrar la 7d2 si la sesión cumple: los protocolos más cortos, y el tablero puede quedarse en la mesa mientras corre el tracker.
+- **Respuesta del autor:** (a), la recomendada: se queda en los protocolos y pasa a trampa de `docs/CONTEXT.md` §4.
+- **Fecha:** 2026-11-11
+
+## P72 · Qué no se publica cuando un ID sale repetido y hay otros markers en el frame (Fase 7d2b; P70 b)
+
+- **Contexto:** P70 (b) dice que, con un ID repetido en un frame, el tracker «no publica ninguno ese frame». Hoy `markers.list` tiene un solo marker (`Reference`, ID 100) y las dos lecturas hacen lo mismo; cambian cuando llegue el instrumento (B40).
+- **Opciones:** (a) recomendada: no se publica solo el ID repetido; los demás markers del frame se publican (un fantasma del 100 no dice nada de la pose del instrumento). (b) No se publica nada en ese frame: más conservador, pero un doble de un ID corta también los demás.
+- **Respuesta del autor:** (a), la recomendada: no se publica solo el ID repetido; los demás markers del frame se publican.
+- **Fecha:** 2026-11-11
+
+## P73 · Cómo se fuerza un doble en vivo para verificar el filtro de la 7d2b (sesión conjunta)
+
+- **Contexto:** con la referencia sola y el tablero fuera, el detector casi nunca da dos 100 en un frame, así que en vivo el filtro no tendría nada que hacer y no se vería si funciona. Los pasos de la tasa (P5–P8) no deben servir para eso: mezclarían las dos variables.
+- **Opciones:** (a) recomendada: una segunda copia del ID 100, impresa en papel con la PNG del generador (`fase-7c/marker/`), junto a la referencia: PD1 (las dos, 20 s por cámara) y PD2 (solo la referencia, 15 s), con el perfil del repo y el listener; ~3 min más; con `-SinCopia`, PD1 se salta y queda para la sesión de la 7e. (b) Sin forzar: solo la coherencia en P7 (la línea `[Repetidos]` igual a los dobles del `.npz`); no cuesta nada, pero si el tablero no da un doble del 100 en P7 el filtro queda sin verificar en vivo. (c) Una segunda referencia impresa en 3D: la misma prueba que (a), con más trabajo para el autor.
+- **Respuesta del autor:** «solo sintético», que es (b): no se fuerza ningún doble en vivo. El filtro se verifica con la cámara falsa y las grabaciones con dobles inyectados (los criterios sin cámara de la 7d2b); en la sesión, PD1 no existe (sin copia de papel) y quedan PD2 (solo la referencia: 0 repetidos, pose ≥ 95 %, ≥ 85 fps) y la coherencia de P7 (`[Repetidos]` igual a los dobles del `.npz`). Si P7 no da ningún doble, el filtro queda sin verificar en vivo y se dice en el reporte.
+- **Fecha:** 2026-11-11
