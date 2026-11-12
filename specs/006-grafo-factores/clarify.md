@@ -404,3 +404,17 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: renombrarlo con `git mv` a `receive_reference.py`, con `NAME = "ReferenceToTracker"` y la comprobación de que `Marker0ToTracker` no está en la escena, y reexportar el mapa (el Mermaid cambia igual por el nombre del nodo). (b) Mantener `receive_marker0.py` y cambiar solo su `NAME`: el comando de Slicer del autor no cambia, pero el nombre del archivo cuenta otra cosa que lo que mide.
 - **Respuesta del autor:** (a), la recomendada: `git mv` a `receive_reference.py` y reexportar el mapa de §9.1.
 - **Fecha:** 2026-11-11
+
+## P66 · Los IDs fantasma del tablero ChArUco en el detector del tracker (Fase 7d, criterio 9; B39)
+
+- **Contexto:** la Fase 7d midió, sobre imágenes sintéticas, que el detector de los perfiles (`DICT_ARUCO_MIP_36h12`, `errorCorrectionRate` por defecto 0.6) lee IDs fantasma en los marcadores `DICT_4X4_50` del tablero ChArUco: en 60 de 60 vistas (646 en total) y el ID 100 en 1 de ellas, que saldría como `ReferenceToTracker`. Con 0.30, 0 de 646. La calibración no se afecta. Detalle: `Claude outputs/fases/006/fase-7d-implementa.md`.
+- **Opciones:** (a) recomendada: regla de procedimiento ya (el tablero fuera de la vista antes de arrancar el tracker, en todos los protocolos) y una fase propia antes de la 7g que ponga `error_correction_rate` en los perfiles, mida cuánto baja la lectura de la referencia real y se verifique en vivo. (b) La regla y la misma fase cuanto antes: justo después de la 7d, antes de la 7e. (c) Solo la regla, sin fase.
+- **Respuesta del autor:** (b): la regla ya y la fase de `error_correction_rate` justo después de la 7d, antes de la 7e. B39 queda en alta.
+- **Fecha:** 2026-11-11
+
+## P67 · La prueba del criterio 9 de la Fase 7d como fallo esperado
+
+- **Contexto:** `test_criterio_9_el_detector_del_perfil_solo_ve_el_id_100` falla hoy por P66; desarrollo la dejó con `xfail(strict=True)`: la suite sale verde con «1 xfailed» y, cuando se arregle, la prueba pasa y obliga a quitar la marca.
+- **Opciones:** (a) recomendada: dejarla así. (b) Quitarla y dejar el fallo solo en B39.
+- **Respuesta del autor:** (a), dejarla como `xfail(strict=True)`; la quita la fase de P66.
+- **Fecha:** 2026-11-11

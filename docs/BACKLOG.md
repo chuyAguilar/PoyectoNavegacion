@@ -26,7 +26,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B31 | El criterio de exposición de `medir_modos.py` favorece imágenes casi saturadas | Media | — |
 | B35 | El criterio de escala por medias no mira la repetibilidad | Media | — |
 | B36 | Cámara 2 con el punto principal 90 px sobre el centro | Baja | — |
-| B39 | Con el detector de los perfiles gs1/gs2, un Marker0 sintético inclinado se lee como ID 87 o 115 | Baja | — |
+| B39 | Con el detector de los perfiles gs1/gs2, un Marker0 sintético inclinado se lee como ID 87 o 115; el tablero ChArUco da IDs fantasma de 36h12, uno de ellos el 100 (regla: tablero fuera de la vista al arrancar el tracker) | Alta | Meta 006, fase propia tras la 7d (`error_correction_rate`, P66) |
 | B40 | Instrumento y punta con un transform de nombre nuevo | Media | — |
 | B41 | Runbook de Slicer con Marker0 y el registro nuevo | Media | — |
 | B42 | Documentos del dodecaedro y la Femto que siguen en `documentos/` | Baja | — |
@@ -95,7 +95,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B109 | El emparejado por hora admite medio periodo: con el marker en movimiento, el PnP conjunto mezcla dos instantes | Media | Meta 006, Fase 4 |
 | B110 | El RMS de reproyección del PnP conjunto podría avisar en vivo de una cámara movida | Media | Meta 006, Fase 5 |
 | B111 | gs2 grabó a 41.4 fps en un tramo de la sesión del tablero cortada | Baja | — |
-| B112 | El asistente del tablero podría servir para los intrínsecos | Baja | Meta 006, Fase 7d |
 | B113 | El asistente no comprueba en vivo el orden de las esquinas ni la coherencia de la vista | Baja | Meta 006, Fase 7f |
 | B114 | `calibrate_extrinsics --solo-comprobar` da la `z` de la primera esquina del tablero, que depende del orden de las esquinas | Baja | Meta 006, Fase 7f |
 | B115 | Las pruebas del asistente del tablero suman 26 s a la suite (el plan decía ≤ 25) | Baja | — |
@@ -110,8 +109,9 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B124 | Las skills de Claude Code fuera del repo nombrarán un transform que ya no existe | Baja | — |
 | B125 | La Jetson publicará `ReferenceToTracker` al retomar la meta 007 | Baja | — |
 | B126 | Una sola ventana para recalibrar y lanzar la fusión | Baja | — |
-| B127 | La malla del STL bicolor quedará en dos sitios cuando llegue `calibration/stl_bicolor.py` | Baja | — |
+| B127 | La malla del STL bicolor está en dos sitios: `diagnostics/marker_image.py` y `calibration/stl_bicolor.py` | Baja | — |
 | B128 | Los scripts de Slicer de `femto_pruebas/` (en pausa) buscan el nodo `Marker0ToTracker`, que ya no se publica | Media | — |
+| B129 | `charuco_board detectar` no ve si el negro del tablero ChArUco salió gordo o flaco: a ±0.4 mm por lado lee las 48 esquinas con 1.6 px de error a 30 cm | Media | — |
 
 ## Abiertos
 
@@ -272,8 +272,11 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** `tests/test_pose_log.py`, fase 1 · Línea base de Marker0 en vivo, antes de mover nada (meta 003), 2026-10-23.
 - **Acotado (2026-10-23, línea base en vivo):** con Marker0 real de frente (≤ 10°) a ~37–38 cm, 100 % de los frames con pose y ID 0 en las dos cámaras (gs1 977 y 628 frames; gs2 973 y 1057); no apareció ni un 87 o 115. No se ha probado inclinado 15–20° con imágenes reales, así que no se cierra: solo se sabe que de frente no pasa.
 - **Ampliado (2026-11-11, meta 006, fase 7c · La referencia con su propio ID; sin cámara):** con el detector de `tracker_config_gs1.yaml`. (1) La referencia nueva, ID 100, sintética (98.6 mm, `tests/synthetic.render_marker`, 2028 poses: 350–550 mm, ±40 mm de lado, inclinada hasta ±40° en dos ejes) se lee como 100 en 1824 (89.9 %) y como otro ID en 204 (87 en 121 de ellas, 149 en 30, 160 en 20); el ID 0 de 80 mm, en las mismas poses, como 0 en 1676 (82.6 %). Ninguno de los dos se leyó nunca como el otro (0 ↔ 100). Con `DetectorParameters()` por defecto, 1978 y 1984 de 2028. (2) Sobre la imagen perfecta de cada ID (`diagnostics.marker_image.marker_png`, sin perspectiva, 250 IDs a 100, 150, 300 y 600 ppp), 12 de 1000 se leen como otro ID: 53 → 68, 89 → 22, 91 → 101, 112 → 69, 121 → 68, 151 → 149 y 223 → 149 (a 100–300 ppp; ninguno a 600); con los parámetros por defecto, 0 de 1000. El ID 100, bien en 56 de 56 resoluciones (50–600 ppp). (3) El texto junto a un marker da IDs fantasma: con el ID y el diccionario dibujados bajo el marker (fuente Hershey), se leía además un 20 o un 160 en 5 de 56 resoluciones; por eso la PNG del generador no lleva texto y la franja del SVG se recorta. Todo esto es sobre imágenes sintéticas. Qué mirar: en la sesión en vivo de la Fase 7c2, la fracción de frames con pose del ID 100 y si «Verificar IDs» enseña algún ID que no sea 100; y al elegir los IDs del instrumento (B40), pasarlos antes por el detector del perfil (los siete de arriba, descartados).
+- **Ampliado (2026-11-11, meta 006, fase 7d · El tablero ChArUco y los intrínsecos con el asistente de una cámara; sin cámara):** el criterio 9 de la fase pedía que, con el tablero ChArUco (`DICT_4X4_50`) y la referencia en la misma imagen, el detector del perfil viera solo el ID 100. **No se cumple.** Con el detector de `tracker_config_gs1.yaml` sobre 60 vistas sintéticas del tablero solo (1280 × 960, K y distorsión de gs1, 30–60 cm, inclinado hasta ~34° en dos ejes y girado; la mitad con ruido de sd 3), las 60 dan IDs fantasma de 36h12: 646 en total, mediana 11 por vista, máximo 16, 76 IDs distintos (los más frecuentes 163, 31, 173, 57 y 224); **el ID 100 salió como fantasma en 1 de las 60** y el ID 0 en ninguna. Con `DetectorParameters()` por defecto, también 60 de 60. La causa, medida: en OpenCV 4.11 `DICT_ARUCO_MIP_36h12` trae `maxCorrectionBits = 12` y con `errorCorrectionRate` 0.6 (el valor por defecto; los perfiles no lo fijan) el detector acepta un candidato con hasta 7 bits cambiados (12 × 0.6). Con ese mismo detector y `error_correction_rate` 0.45 (5 bits) quedan 41 fantasmas en 31 de las 60 vistas; con 0.30 o 0.25 (3 bits), **0 en las 60**. Cada vista del tablero trae 31 marcadores, o sea 31 candidatos con borde negro. Sobre imágenes sintéticas; sin probar con cámara.
+- **Lo que implica (2026-11-11):** la lista blanca descarta todos los fantasmas salvo el que coincide con el ID de la referencia, y `vision/tracking.py` admite dos detecciones del mismo ID y publica las dos (como en B55): **con el tablero ChArUco a la vista de un tracker en marcha, un fantasma con el ID de la referencia se publicaría como `ReferenceToTracker`.** No afecta a la calibración (el asistente y `calibrate_camera` no usan el detector del tracker, y `detectar_charuco` da las mismas 48 esquinas con la referencia al lado). Sí a lo que junte el tablero y la referencia en la misma escena: el paso 2 de la Fase 7g («pon la referencia a la vista de las dos»), la verificación en vivo de la 7e y cualquier sesión con el tablero olvidado en la mesa. Qué haría falta, además de lo de abajo: (a) de procedimiento, ya: el tablero fuera de la vista antes de arrancar el tracker, dicho en los protocolos de 7e, 7g y la sesión 2; (b) de fondo, en su propia fase (toca la cadena, principio 6): `error_correction_rate` en `markers.detector` de los dos perfiles (`DETECTOR_PARAM_KEYS` ya admite la clave), midiendo antes cuánto baja la fracción de frames en que se lee la referencia de verdad (las 2028 poses de arriba y el replay de detección), una variable a la vez; (c) que `MarkerTracker` no publique dos detecciones del mismo ID.
+- **Decisión del autor (2026-11-11, P66 y P67):** se acepta la Fase 7d con la mitad del criterio 9 sin cumplir (el detector del perfil sigue leyendo fantasmas con el tablero a la vista). **B39 queda en alta.** (1) Regla de procedimiento, desde ya: **el tablero, fuera de la vista antes de arrancar el tracker**, en todo protocolo (7e, 7g, la sesión 2 y cualquier corrida con la referencia). (2) La corrección, `error_correction_rate` en los perfiles, será una fase propia justo después de la 7d y antes de la 7e: la planifica `planificacion`, no la 7d. (3) `test_criterio_9_el_detector_del_perfil_solo_ve_el_id_100` queda como `xfail(strict=True)`; la quita esa fase.
 - **Qué haría falta:** una corrida en vivo con Marker0 inclinado 15–20° (se graba con `--record`; el resumen de `pose_log.py` da la fracción con pose) y, si queda por debajo de 95 %, buscar qué parámetro lo causa (`polygonal_approx_accuracy_rate` 0.05, `max_erroneous_bits_in_border_rate` 0.40, ventanas del umbral), una variable a la vez, con el replay de detección de la fase 1. Se puede hacer en la sesión en vivo de otra fase de la meta 003 sin costo extra.
-- **Prioridad:** baja (sube si la corrida inclinada da menos del 95 % con pose o si aparece otro ID leído como 0).
+- **Prioridad:** alta desde el 2026-11-11 (era baja, «sube si aparece otro ID leído como 0»): en la fase 7d de la meta 006 el tablero ChArUco dio un fantasma con el ID de la referencia nueva (100) en 1 de 60 vistas sintéticas, y dos detecciones del mismo ID se publican las dos: puede dar un resultado equivocado con el tablero a la vista del tracker. La pone el agente de desarrollo; la dirección la confirma o la baja.
 
 ### B40 · Instrumento y punta con un transform de nombre nuevo
 - **Qué:** volver a seguir un instrumento con punta, publicado con un transform de nombre nuevo y su ADR (principio 6).
@@ -768,13 +771,6 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** mirar los fps por tramo de la sesión del asistente; si se repite, medirlo con la caja al máximo y una sola variable. Si algún tramo da < 85 fps, la entrada sube a media con ese número.
 - **Prioridad:** baja (un tramo, sin efecto en la vista).
 
-### B112 · El asistente del tablero podría servir para los intrínsecos
-- **Qué:** `calibration.capture_stereo_board` (Fase 7a) con una sola cámara sustituiría la captura por ESPACIO de `calibration.calibrate_camera.capturar_vistas`: captura sola al quedar quieto y con variedad medida.
-- **Por qué queda:** los intrínsecos de gs1 y gs2 valen (meta 002); solo hace falta si hay que recalibrarlos.
-- **De dónde:** el plan de la Fase 7a (meta 006, replan del 2026-11-10).
-- **Qué haría falta:** un modo de una cámara en el asistente y que `calibrate_camera` lea sus vistas; con su plan.
-- **Prioridad:** baja (solo si hay que recalibrar intrínsecos: B36, o la estructura del autor).
-
 ### B113 · El asistente no comprueba en vivo el orden de las esquinas ni la coherencia de la vista
 - **Qué:** el asistente de la Fase 7a no corre `emparejar_orden` durante la sesión; una vista incoherente (el tablero movido entre cámaras, imposible con la ráfaga simultánea salvo un golpe) la aparta el cálculo de `calibrate_extrinsics`.
 - **Por qué queda:** con la captura simultánea es improbable; comprobarlo en vivo añade tiempo a cada ráfaga.
@@ -873,11 +869,12 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** una receta del panel que encadene las dos, con sus topes.
 - **Prioridad:** baja (solo si estorba).
 
-### B127 · La malla del STL bicolor quedará en dos sitios cuando llegue `calibration/stl_bicolor.py`
+### B127 · La malla del STL bicolor está en dos sitios: `diagnostics/marker_image.py` y `calibration/stl_bicolor.py`
 - **Qué:** `diagnostics/marker_image.py` (Fase 7c de la meta 006) trae `malla_altura`, `aristas_sin_pareja` y `stl_ascii`, pasadas de `Claude outputs/tablero/generar_tablero.py`, para sacar el STL bicolor de la referencia. El plan de la Fase 7d · El tablero ChArUco pasa esa misma malla a `calibration/stl_bicolor.py` «para rectángulos cualesquiera»: habrá dos copias.
 - **Por qué queda:** el plan de la 7c pedía solo SVG y PNG (P50); el STL se añadió por encargo de la dirección, para que el autor imprima la referencia en la Bambu Lab A1 como el tablero, y la 7d aún no existe.
 - **De dónde:** fase 7c · La referencia con su propio ID (meta 006), 2026-11-11.
-- **Qué haría falta:** en la 7d, que `diagnostics/marker_image.py` importe la malla de `calibration/stl_bicolor.py` (o al revés) y quede una sola, con sus pruebas (`tests/test_marker_image.py` ya comprueba que las dos piezas son mallas cerradas, que juntas llenan la pieza y que desde arriba son el marker sin espejo).
+- **Estado (2026-11-11, fase 7d):** `calibration/stl_bicolor.py` ya existe (`malla_altura`, `piezas`, `comprobar_cerrada`, `planta`, `escribir_stl`, sin `cv2` ni `numpy`) y lo usa `charuco_board`; `diagnostics/marker_image.py` conserva su copia (la 7d no la tocó). Quedan dos mallas.
+- **Qué haría falta:** que `diagnostics/marker_image.py` importe la malla de `calibration/stl_bicolor.py` y quede una sola, con sus pruebas (`tests/test_marker_image.py` ya comprueba que las dos piezas son mallas cerradas, que juntas llenan la pieza y que desde arriba son el marker sin espejo).
 - **Prioridad:** baja (duplicación, sin riesgo para la cadena).
 
 ### B128 · Los scripts de Slicer de `femto_pruebas/` (en pausa) buscan el nodo `Marker0ToTracker`, que ya no se publica
@@ -887,7 +884,18 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Qué haría falta:** al retomar esa rama, y antes de correr ninguno de los tres, poner el nombre nuevo (o leerlo de un solo sitio), hacer que `diag_overlay_slicer.py` pare si no encuentra el nodo (principio 7) y probarlos en Slicer con una escena nueva.
 - **Prioridad:** media. La rama está en pausa y hoy nadie los corre; pero si alguien corre `diag_overlay_slicer.py` tal cual, da una figura equivocada sin avisar (ya lo hacía antes cuando el tracker no estaba conectado; con el nombre nuevo lo hace siempre). Si la rama se retoma, pasa a alta.
 
+### B129 · `charuco_board detectar` no ve si el negro del tablero ChArUco salió gordo o flaco
+- **Qué:** la prueba de la muestra impresa (`python -m calibration.charuco_board detectar`) da por buena la pieza si lee todas sus esquinas en ≥ 90 % de los frames. Eso no mide el ancho del negro. Sobre vistas sintéticas a 1280 × 960 con la K de gs1 (el tablero de 9 × 7, el negro engordado o adelgazado como región): con ±0.2 mm por lado (casilla negra de 25.6 a 26.4 mm) no cambia nada (48 esquinas, RMS ≤ 0.07 px a 30, 40, 50 y 60 cm); con ±0.3 mm, RMS 0.15 px a 30 cm (máximo 0.29); con ±0.4 mm (casilla de 25.2 o de 26.8 mm) **lee las 48 esquinas con 1.6 px de error a 30 cm** (a 40 cm, máximo 0.45–0.74 px; con +0.4, además, 25–40 de 48 a 40–60 cm inclinado). Con las casillas negras solapadas o separadas 0.8 mm en la esquina, `cornerSubPix` se agarra a otro punto, y lo hace sin avisar.
+- **Por qué queda:** el plan de la fase 7d fijó la prueba de la muestra como «lee sus esquinas»; medir el ancho del negro en la imagen es otra función. No pasa en silencio hasta el final: un error de 1.6 px no cabe en el criterio de RMS ≤ 0.5 px de `calibrate_camera`, que saldría con código 1. Sin probar con cámara.
+- **De dónde:** fase 7d · El tablero ChArUco y los intrínsecos con el asistente de una cámara (meta 006), 2026-11-11, al medir cuánto aguanta la detección un negro mal compensado (`--comp-mm 0.40`).
+- **Qué haría falta:** de procedimiento, ya (va en `Claude outputs/fases/006/fase-7d/imprimir_y_medir.md`): medir con calibrador el lado de una casilla negra de la muestra, aceptar de 25.8 a 26.2 mm y, fuera de 25.6–26.4, generar otra vez con `--comp-mm` corregido (0.40 − (lado − 26.0) / 2). De código: que `detectar` mida en la imagen el ancho del negro frente al paso (el perfil de gris entre dos esquinas vecinas) y lo diga, con su prueba.
+- **Prioridad:** media (el calibrador y el criterio de RMS lo cubren; sube si la muestra impresa sale fuera de 25.6–26.4 mm).
+
 ## Cerrados
+
+### B112 · El asistente del tablero podría servir para los intrínsecos
+- **Qué era:** `calibration.capture_stereo_board` (Fase 7a) con una sola cámara sustituiría la captura por ESPACIO de `calibration.calibrate_camera.capturar_vistas`: captura sola al quedar quieto y con variedad medida.
+- **Cerrado:** 2026-11-11, por la fase 7d · El tablero ChArUco y los intrínsecos con el asistente de una cámara (meta 006): `capture_stereo_board --modo intrinsecos` (una cámara; variedad por celdas 4×3 y 8×6; ajedrez o ChArUco) y `calibrate_camera --desde-asistente --camara` (con `--patron charuco`, `--comparar-con`, `--max-std-px`, `--cobertura-fina-min`). Sobre vistas sintéticas: error de fx, fy, cx, cy ≤ 0.14 px con 40 poses. Con cámara, sin probar: es la sesión de la 7e.
 
 ### B79 · `igtl_rate listen` se para a los 5 s sin datos
 - **Qué era:** si Marker0 no se veía al arrancar el tracker, `diagnostics.igtl_rate listen` se rendía a los 5 s sin mensajes y la corrida no medía nada aunque el tracker siguiera vivo (P-5, fase 5; y en el P-6, fase 6, impidió la corrida d): abrir la cámara en el PC tardó ~8 s).

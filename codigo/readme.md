@@ -240,6 +240,16 @@ python -m diagnostics.igtl_rate bench --port 18944 --hz 90 --seconds 30 --device
 python -m diagnostics.probe_camera --leer --capa com --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)" --salida salida.json --timeout 60
 python -m diagnostics.probe_camera --comparar-capas --puerto "PCIROOT(0)#PCI(1400)#USBROOT(0)#USB(11)#USB(3)" --salida salida.json --timeout 60
 
+# El tablero ChArUco 9x7 de 26 mm (meta 006, fase 7d): genera el STL bicolor, el SVG y la PNG en una carpeta
+# nueva; --muestra hace la pieza de 3x3 casillas para probar la impresión. El detalle: imprimir_y_medir.md
+python -m calibration.charuco_board generar --casillas 9 7 --casilla-mm 26 --marcador-mm 19.5 --diccionario DICT_4X4_50 --margen-mm 8 --comp-mm 0.40 --base-mm 2.4 --capa-mm 0.6 --salida "..\Claude outputs\fases\006\fase-7d\tablero\completo" --timeout 120
+
+# El asistente de captura con una cámara (intrínsecos): captura sola y calibra después, sin cámara, con
+# calibrate_camera --desde-asistente <carpeta> --camara gs1 --patron charuco --tablero-charuco <yaml> (sus
+# argumentos completos, en la cabecera de calibration/calibrate_camera.py). Con la cámara en vivo se corre
+# desde un correr.ps1 de Claude outputs/, no a mano
+python -m calibration.capture_stereo_board --modo intrinsecos --patron charuco --config gs1=profiles\tracker_config_gs1.yaml --tablero-charuco data\tablero_charuco.yaml --salida <carpeta nueva> --timeout 900
+
 # La suite de pruebas (sin cámara)
 python -m pytest tests -q
 ```

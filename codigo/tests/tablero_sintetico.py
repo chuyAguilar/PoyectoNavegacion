@@ -107,3 +107,79 @@ def renderizar_vista(K, rvec, tvec, cols: int, rows: int, square_mm: float, shap
 
 def a_bgr(gray: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+
+# ----------------------------------------------------------------------------
+# El tablero ChArUco (meta 006, fase 7d)
+# ----------------------------------------------------------------------------
+
+_REJILLAS: dict = {}
+_PLANOS: dict = {}
+
+
+def _rejilla_normalizada(K, dist, shape) -> tuple[np.ndarray, np.ndarray]:
+    """Por pixel de una imagen `shape` = (w, h), las coordenadas normalizadas sin distorsion de
+    su centro (`undistortPoints`), en dos arrays float32 (h, w). Se guarda por (K, dist, shape)."""
+    K = np.asarray(K, dtype=np.float64)
+    d = np.zeros(5) if dist is None else np.asarray(dist, dtype=np.float64).flatten()
+    clave = (K.tobytes(), d.tobytes(), tuple(shape))
+    if clave not in _REJILLAS:
+        w, h = int(shape[0]), int(shape[1])
+        uu, vv = np.meshgrid(np.arange(w, dtype=np.float64), np.arange(h, dtype=np.float64))
+        pts = np.stack([uu.ravel(), vv.ravel()], axis=1).reshape(-1, 1, 2)
+        n = cv2.undistortPoints(pts, K, d).reshape(h, w, 2)
+        _REJILLAS[clave] = (np.ascontiguousarray(n[..., 0], dtype=np.float32), np.ascontiguousarray(n[..., 1], dtype=np.float32))
+    return _REJILLAS[clave]
+
+
+def renderizar_plano(plano: np.ndarray, origen_px, ppmm: float, K, rvec, tvec, shape, dist=None,
+                     fondo: int = 128, sobre: np.ndarray | None = None) -> np.ndarray:
+    """La vista en gris (h, w) de un dibujo plano con la pose dada, CON distorsion: cada pixel se
+    lleva a su rayo sin distorsion, el rayo al plano z = 0 del objeto y de ahi a `plano` (una
+    imagen a `ppmm` pixeles por mm cuyo punto (0, 0) mm cae en `origen_px`, en coordenadas de
+    borde de pixel). Convencion de `projectPoints`: el centro del pixel (i, j) es (i, j).
+    `plano` tiene que venir suavizado (bordes mas anchos que un pixel de la vista): el muestreo
+    es puntual. Fuera del dibujo queda `fondo` o, si se da, la imagen `sobre`."""
+    w, h = int(shape[0]), int(shape[1])
+    nx, ny = _rejilla_normalizada(K, dist, (w, h))
+    R, _ = cv2.Rodrigues(np.asarray(rvec, dtype=np.float64).reshape(3, 1))
+    Hi = np.linalg.inv(np.column_stack([R[:, 0], R[:, 1], np.asarray(tvec, dtype=np.float64).reshape(3)])).astype(np.float32)
+    W = nx * Hi[2, 0] + ny * Hi[2, 1] + Hi[2, 2]
+    delante = W > 1e-9
+    W = np.where(delante, W, np.float32(1.0))
+    mx = ((nx * Hi[0, 0] + ny * Hi[0, 1] + Hi[0, 2]) / W * np.float32(ppmm) + np.float32(origen_px[0] - 0.5)).astype(np.float32)
+    my = ((nx * Hi[1, 0] + ny * Hi[1, 1] + Hi[1, 2]) / W * np.float32(ppmm) + np.float32(origen_px[1] - 0.5)).astype(np.float32)
+    mx[~delante] = -10.0
+    my[~delante] = -10.0
+    out = np.full((h, w), fondo, dtype=np.uint8) if sobre is None else sobre.copy()
+    cv2.remap(plano, mx, my, cv2.INTER_LINEAR, dst=out, borderMode=cv2.BORDER_TRANSPARENT)
+    return out
+
+
+def plano_charuco(t, ppmm: float = 8.0, margen_mm: float = 8.0, desenfoque_mm: float = 0.4) -> np.ndarray:
+    """La imagen del tablero ChArUco `t` (`charuco_board.imagen`) suavizada con una gaussiana de
+    `desenfoque_mm` (la optica: sin ella, el muestreo puntual clava los bordes en medios pixeles
+    y `cornerSubPix` se va 0.1-0.2 px; medido en la fase 7d). Se guarda por sus argumentos."""
+    from calibration import charuco_board as chb
+    clave = (t, float(ppmm), float(margen_mm), float(desenfoque_mm))
+    if clave not in _PLANOS:
+        img = chb.imagen(t, margen_mm, ppmm)
+        _PLANOS[clave] = cv2.GaussianBlur(img, (0, 0), desenfoque_mm * ppmm) if desenfoque_mm > 0 else img
+    return _PLANOS[clave]
+
+
+def renderizar_charuco(t, K, rvec, tvec, shape, dist=None, ppmm: float = 8.0, margen_mm: float = 8.0,
+                       desenfoque_mm: float = 0.4, fondo: int = 128, sobre: np.ndarray | None = None) -> np.ndarray:
+    """Vista en gris (h, w) del tablero ChArUco `t` con la pose `T_cam<-tablero` (rvec, tvec; el
+    origen del tablero es su esquina exterior, como en `charuco_board.puntos_objeto`), con la K y
+    la distorsion dadas. Las esquinas verdaderas son `projectPoints(puntos_objeto(t, ids), ...)`."""
+    plano = plano_charuco(t, ppmm, margen_mm, desenfoque_mm)
+    return renderizar_plano(plano, (margen_mm * ppmm, margen_mm * ppmm), ppmm, K, rvec, tvec, shape, dist, fondo, sobre)
+
+
+def pose_charuco_hacia(t, K, rvec, objetivo_px, z_mm: float) -> np.ndarray:
+    """tvec que pone el centro del tablero ChArUco en `objetivo_px` a la profundidad `z_mm`."""
+    R, _ = cv2.Rodrigues(np.asarray(rvec, dtype=np.float64).reshape(3, 1))
+    centro = np.array([t.ancho_mm / 2.0, t.alto_mm / 2.0, 0.0])
+    u, v = objetivo_px
+    return np.array([(u - K[0, 2]) / K[0, 0] * z_mm, (v - K[1, 2]) / K[1, 1] * z_mm, z_mm]) - R @ centro
