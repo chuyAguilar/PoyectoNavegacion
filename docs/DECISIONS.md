@@ -7,7 +7,7 @@
 > conserva, para no repetir errores ya pagados.
 >
 > Estados: `Aceptada` · `Reemplazada` · `En pausa` · `Propuesta`.
-> _Última actualización: 2026-10-28._
+> _Última actualización: 2026-11-11 (ADR-035)._
 
 Índice rápido:
 
@@ -47,6 +47,7 @@
 | 032 | El mapa de `ARCHITECTURE.md` §9.1 se exporta con `mermaid-cli`, fuera de `requirements.txt`, y una prueba lo ata al código y al Mermaid | Aceptada |
 | 033 | La meta 004 cierra con la cadena explicada en `ARCHITECTURE.md` §9 y atada al código por pruebas | Aceptada |
 | 034 | Los compañeros envían peticiones: commit y push solo de archivos nuevos en `peticiones/`, y lo hacen ellos | Aceptada |
+| 035 | La meta 006 es «el PC detecta y fusiona»; la Jetson sale de la meta por ahora | Aceptada |
 
 ---
 
@@ -680,3 +681,12 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 4. Todo lo demás (código, docs, specs, configuración) sigue siendo del autor.
 
 **Consecuencias.** Los hooks se pueden saltar (`--no-verify`, quitar `core.hooksPath`, empujar con otra herramienta) y GitHub no filtra por ruta en un repo personal y público: queda como riesgo en el BACKLOG (P12). El clon completo pone el DICOM en las máquinas de los compañeros; encaja con ADR-019 porque los tres son del equipo médico (P1, P6), y el repo público con más personas con escritura va al BACKLOG con prioridad alta (P4). El autor hace `git pull --rebase` antes de sus push, porque `main` recibe commits de otros.
+
+## ADR-035 — La meta 006 es «el PC detecta y fusiona»; la Jetson sale de la meta por ahora
+**Fecha:** 2026-11-05 (escrito el 2026-11-11) · **Estado:** Aceptada · **Sustituye:** el reparto de P22 (la Jetson detecta y el PC fusiona), que no llegó a ADR
+
+**Contexto.** La meta 006 · Grafo de factores óptico-inercial (`specs/006-grafo-factores/`) arrancó el 2026-11-05 con el reparto de P22: la Jetson detecta con las dos cámaras y el PC fusiona y habla con Slicer, porque en Windows la segunda cámara no recibía vídeo en el concentrador USB 2.0 del frente (`0x800718CF`, B5). Ese mismo día, en el P-7b5 de la meta 007, con gs2 fuera de ese concentrador (`…USB(5)`), las dos cámaras fueron a la vez en Windows a 89.5–90 fps cada una, en los dos órdenes (`docs/CONTEXT.md` §4.21). En la Jetson, las dos a la vez daban 63.2 fps de bucle con la CPU al 95.5 % (B91): sin margen para la fusión.
+
+**Decisión.** (P33, respuesta del autor del 2026-11-05.) El PC detecta con las dos cámaras y fusiona; la Jetson sale de la meta 006 por ahora y la meta 007 sigue en pausa. La fase «La Jetson envía al PC» desaparece y las fases se renumeran: 3 · Cada tracker envía sus esquinas al fusionador; 4 · El fusionador del PC, sin GTSAM; 5 · La fusión en vivo con Slicer; 6 · El grafo con GTSAM; 8 · Cierre.
+
+**Consecuencias.** Todo lo en vivo de la meta corre en el PC, con gs1 en `USB(11)#USB(3)` y gs2 en `USB(5)`: las cámaras no cambian de puerto. La fase 1 parte A (sobre la grabación de la Jetson) se conserva como experimento fuera de línea. Volver a la Jetson es otra decisión, con su ADR, al retomar la meta 007 (B91). La cadena no cambia: el nombre, el puerto 18944 y la jerarquía.
