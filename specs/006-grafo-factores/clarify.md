@@ -467,3 +467,9 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: la regla exige 0 fantasmas de cualquier ID en todos los frames, también los de P5; con los números de hoy no cambia la elección (0.30 o 0.20). (b) Solo los del tablero; los de P5, informativos.
 - **Respuesta del autor:** (a), la recomendada: 0 fantasmas en todos los frames, también los de la referencia sola.
 - **Fecha:** 2026-11-11
+## P75 · La prueba de la cadena que falla al pasar los perfiles al ID 100 (Fase 7c; B39)
+
+- **Contexto:** con los perfiles en ID 100 / 99.8 mm y la tasa 0.60, `test_referencia_id.py::…se_envia_solo_el_de_la_lista[repo]` falla: el ID 100 sintético se lee como 149 en 1 de 6 frames; con 0.40 o menos, 6 de 6. Es B39, no un cambio de la cadena. Detalle: `Claude outputs/fases/006/fase-7c-perfiles.md`.
+- **Opciones:** (a) recomendada: `xfail(strict=True)` atado a B39, que se quita en el cierre de la 7d2 con la tasa elegida en los perfiles. (b) Mover los frames de la prueba a una pose que 0.60 lea bien. (c) Dejarla roja hasta la sesión.
+- **Respuesta del autor:** (a), la recomendada.
+- **Fecha:** 2026-11-12

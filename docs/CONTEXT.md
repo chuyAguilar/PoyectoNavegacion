@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-11-12 (§6: la fase 7d2b sin cámara). Antes, 2026-11-11 (§6 recortado: lo cerrado de las metas 003, 004 y 007 y el detalle de las fases de la 006, copiados literal a `docs/history/CONTEXT_s6_2026-11-11.md`, con las actualizaciones anteriores). Las de antes, también en el historial de git._
+> _Última actualización: 2026-11-12 (§3 y §6: los perfiles en el ID 100 de 99.8 mm; antes, el mismo día, §6: la fase 7d2b sin cámara). Antes, 2026-11-11 (§6 recortado: lo cerrado de las metas 003, 004 y 007 y el detalle de las fases de la 006, copiados literal a `docs/history/CONTEXT_s6_2026-11-11.md`, con las actualizaciones anteriores). Las de antes, también en el historial de git._
 
 ---
 
@@ -70,7 +70,8 @@
   puerto USB y la marca `focus`; 1280×960 MJPG 90 fps, sin modo de 60 (pedir 60 da ~29,
   fase 7 de la meta 003); intrínsecos en
   `codigo\data\intrinsecos_gs{1,2}_1280x960.yml`). Solo la referencia (`name: Reference`
-  en el perfil; hasta la fase 7c2 de la meta 006, Marker0), hoy el ID 0 de 80 mm. La Femto
+  en el perfil; hasta la fase 7c2 de la meta 006, Marker0), desde el 2026-11-12 el ID 100
+  de 99.8 mm (antes, el ID 0 de 80 mm; fase 7c, B55). La Femto
   Bolt y el contexto «doctor» están archivados en `codigo\historico\iter4\femto\` y
   `old_profiles\` (ADR-025).
 - **Segunda máquina (a confirmar):** memoria registra un "equipo del doctor"
@@ -218,7 +219,7 @@ Desde el 2026-10-28 (ADR-034, meta 005 · Agente de consulta para el equipo y bu
 
 - **Meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC** (`specs/007-jetson/`; en pausa desde el 2026-11-05, ADR-035): fases 1 a 7 hechas. Los agentes entran a la Jetson solo por `ssh nav-jetson <verbo>` (guardián 3); venv `~/.venvs/navegacion`; la suite corre en Linux con 0 fallos; `camera/v4l2.py` abre cada cámara por su enlace by-path; Slicer en el PC recibe de la Jetson 84.0 Hz por la LAN y 82.0 por Tailscale; las dos cámaras a la vez en la Jetson, 63.2 fps de bucle con la CPU al 95.5 % (B91). Fase 7b · Las dos cámaras a la vez en Windows: partes A y B hechas (`244d31e`, `ba3ed36`): marca y ajustes por COM, y las dos a ~89–90 fps con gs2 en el frontal USB 3.0 (§4.21); faltan los Hz de Slicer de B4 y la parte C. Abiertas: B77, B85, B86, B91, B92, B93. El detalle de cada fase, en `docs/history/CONTEXT_s6_2026-11-11.md` y en `specs/007-jetson/tasks.md`.
 
-- **Meta 006 · Grafo de factores óptico-inercial** (`specs/006-grafo-factores/`, activa desde el 2026-11-05; el PC detecta con las dos cámaras y fusiona, ADR-035). Hechas: la fase 1 parte A (`a1a714b`: fusionar baja el jitter 31.9–63.1 % fuera de línea), la 2 (`ccfe803`: B94 «se movió»), la 7a · El asistente de captura del tablero (`238117e`), la 7c y la 7c2 sin cámara (`80e21a9`, `3b271df`: la referencia es el marker ID 100, se llama `Reference` y la cadena publica `ReferenceToTracker`; **los perfiles siguen con ID 0 y 80 mm hasta la sesión conjunta**), la 7d sin cámara (`7d35af1`: el tablero ChArUco 9×7 de 26 mm y el asistente de una cámara para los intrínsecos) y la parte sin cámara de la 7d2 (`6cd759e`: el barrido de `error_correction_rate`; B39 en alta; **el tablero, fuera de la vista antes de arrancar el tracker**) y la 7d2b sin cámara (un ID repetido en un frame no se publica; falta lo en vivo). La Fase 7 · Los extrínsecos por tablero, parcial (`1cf90c3`). Los números, en `tasks.md`; el detalle hasta el 2026-11-11, en `docs/history/CONTEXT_s6_2026-11-11.md`.
+- **Meta 006 · Grafo de factores óptico-inercial** (`specs/006-grafo-factores/`, activa desde el 2026-11-05; el PC detecta con las dos cámaras y fusiona, ADR-035). Hechas: la fase 1 parte A (`a1a714b`: fusionar baja el jitter 31.9–63.1 % fuera de línea), la 2 (`ccfe803`: B94 «se movió»), la 7a · El asistente de captura del tablero (`238117e`), la 7c y la 7c2 sin cámara (`80e21a9`, `3b271df`: la referencia es el marker ID 100, se llama `Reference` y la cadena publica `ReferenceToTracker`; **desde el 2026-11-12 los perfiles llevan el ID 100 de 99.8 mm**; las copias congeladas del replay siguen en ID 0 y 80 mm), la 7d sin cámara (`7d35af1`: el tablero ChArUco 9×7 de 26 mm y el asistente de una cámara para los intrínsecos) y la parte sin cámara de la 7d2 (`6cd759e`: el barrido de `error_correction_rate`; B39 en alta; **el tablero, fuera de la vista antes de arrancar el tracker**) y la 7d2b sin cámara (un ID repetido en un frame no se publica; falta lo en vivo). La Fase 7 · Los extrínsecos por tablero, parcial (`1cf90c3`). Los números, en `tasks.md`; el detalle hasta el 2026-11-11, en `docs/history/CONTEXT_s6_2026-11-11.md`.
 
 ### En pausa (se conserva, se puede retomar)
 

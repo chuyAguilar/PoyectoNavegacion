@@ -121,7 +121,12 @@ def _casos() -> dict:
 # 1. El tracker sigue solo al marker de la lista
 # ----------------------------------------------------------------------------
 
-@pytest.mark.parametrize("caso", ["id100", "repo"])
+@pytest.mark.parametrize("caso", [
+    "id100",
+    pytest.param("repo", marks=pytest.mark.xfail(
+        strict=True, reason="B39: con la tasa 0.60 del perfil, el ID 100 sintetico de 99.8 mm se lee como 149 "
+                            "en 1 de 6 frames; se quita en el cierre de la 7d2 con la tasa elegida en los perfiles (P75)")),
+])
 def test_con_el_viejo_y_el_nuevo_a_la_vista_se_envia_solo_el_de_la_lista(caso: str, tmp_path: Path, monkeypatch) -> None:
     c = _casos()[caso]
     mid, mm = c["listado"]

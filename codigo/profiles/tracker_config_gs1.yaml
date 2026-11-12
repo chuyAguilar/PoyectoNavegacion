@@ -104,13 +104,13 @@ markers:
     corner_refinement_win_size: 7
 
   # Reference, la referencia osea (meta 006, fase 7c2; P57): el tracker la publica como
-  # ReferenceToTracker. Hasta esa fase se llamo Marker0. Hoy sigue siendo el ID 0 de
-  # 80 mm (el de P02, medido con calibrador, P3); pasa al ID 100 con su size_mm cuando
-  # el autor entregue las 5 medidas del marker impreso (fase 7c, B55).
+  # ReferenceToTracker. Hasta esa fase se llamo Marker0. Desde el 2026-11-12 es el ID 100
+  # de 99.8 mm (fase 7c, B55): el autor midio el marker impreso cinco veces, todas 99.8 mm.
+  # Antes era el ID 0 de 80 mm (el de P02); las copias congeladas del replay lo conservan.
   list:
-    - id: 0
+    - id: 100
       name: Reference
-      size_mm: 80.0
+      size_mm: 99.8
 
 
 # =====================================================================
