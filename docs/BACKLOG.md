@@ -111,6 +111,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B125 | La Jetson publicará `ReferenceToTracker` al retomar la meta 007 | Baja | — |
 | B126 | Una sola ventana para recalibrar y lanzar la fusión | Baja | — |
 | B127 | La malla del STL bicolor quedará en dos sitios cuando llegue `calibration/stl_bicolor.py` | Baja | — |
+| B128 | Los scripts de Slicer de `femto_pruebas/` (en pausa) buscan el nodo `Marker0ToTracker`, que ya no se publica | Media | — |
 
 ## Abiertos
 
@@ -878,6 +879,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** fase 7c · La referencia con su propio ID (meta 006), 2026-11-11.
 - **Qué haría falta:** en la 7d, que `diagnostics/marker_image.py` importe la malla de `calibration/stl_bicolor.py` (o al revés) y quede una sola, con sus pruebas (`tests/test_marker_image.py` ya comprueba que las dos piezas son mallas cerradas, que juntas llenan la pieza y que desde arriba son el marker sin espejo).
 - **Prioridad:** baja (duplicación, sin riesgo para la cadena).
+
+### B128 · Los scripts de Slicer de `femto_pruebas/` (en pausa) buscan el nodo `Marker0ToTracker`, que ya no se publica
+- **Qué:** `femto_pruebas/diag_distancias_slicer.py`, `diag_overlay_slicer.py` e `inyectar_en_slicer.py` (la rama de registro por superficie con la Femto, en pausa) buscan en la escena de Slicer un nodo llamado `Marker0ToTracker` y cuelgan de él la nube y el hueso. Desde la Fase 7c2 · `Reference` y `ReferenceToTracker` de la meta 006 el tracker publica `ReferenceToTracker`: con una escena nueva esos scripts no encuentran el nodo. `diag_distancias_slicer.py` falla en `getNode` (se ve); `inyectar_en_slicer.py` avisa y no anida; **`diag_overlay_slicer.py` no anida la nube, no avisa y aun así escribe «Ambos estan bajo Marker0ToTracker»**: la nube quedaría en el frame de la cámara y la comparación azul / amarillo no diría nada cierto.
+- **Por qué queda:** `femto_pruebas/` está en pausa (`docs/CONTEXT.md` §6; B16) y fuera de `codigo/`; la fase 7c2 renombra lo que corre hoy y la guarda de `tests/test_nombre_referencia.py` solo mira `codigo/`. Sus scripts son además de la jerarquía anterior (`DodecaedroToTracker`, `BoneToMarker0`).
+- **De dónde:** fase 7c2 · `Reference` y `ReferenceToTracker` (meta 006), 2026-11-11: salió al buscar el nombre viejo en el repo.
+- **Qué haría falta:** al retomar esa rama, y antes de correr ninguno de los tres, poner el nombre nuevo (o leerlo de un solo sitio), hacer que `diag_overlay_slicer.py` pare si no encuentra el nodo (principio 7) y probarlos en Slicer con una escena nueva.
+- **Prioridad:** media. La rama está en pausa y hoy nadie los corre; pero si alguien corre `diag_overlay_slicer.py` tal cual, da una figura equivocada sin avisar (ya lo hacía antes cuando el tracker no estaba conectado; con el nombre nuevo lo hace siempre). Si la rama se retoma, pasa a alta.
 
 ## Cerrados
 

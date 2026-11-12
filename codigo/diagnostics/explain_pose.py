@@ -64,7 +64,6 @@ from vision.pose import build_object_points, estimate_single_pose, rvec_tvec_to_
 from vision.tracking import MarkerTracker
 
 DEFAULT_CROP_PX = 320
-MARKER_NAME = "Marker0"
 
 
 def sha256_fin_de_linea(path: Path) -> dict:
@@ -128,12 +127,14 @@ def _rel_codigo(path: Path) -> str:
 
 
 def explain_frame(dataset: Path, frames_dir: Path, frame: int, profile: Path,
-                  alt_size_mm: float | None = None, name: str = MARKER_NAME) -> dict:
+                  alt_size_mm: float | None = None, name: str | None = None) -> dict:
     """El ejemplo de un frame, de principio a fin (ver el docstring del modulo).
 
     Aborta con un mensaje claro si falta el PNG, si el frame no tiene una
     deteccion y un envio de `name` en la grabacion, o si el perfil no define el
     marker (principio 7). Devuelve un dict de numeros de Python (vale para JSON).
+    Sin `name`, el marker es la referencia del perfil (`profiles.reference_marker`:
+    `Reference`, o `Marker0` en la copia congelada del perfil de una grabacion vieja).
     """
     dataset, frames_dir, profile = Path(dataset), Path(frames_dir), Path(profile)
     png = frames_dir / f"frame_{int(frame):05d}.png"
@@ -144,6 +145,8 @@ def explain_frame(dataset: Path, frames_dir: Path, frame: int, profile: Path,
     if not 0 <= int(frame) < n_frames:
         raise ValueError(f"frame {frame} fuera de la grabacion ({n_frames} frames)")
     cfg = profiles.load(str(profile))
+    if name is None:
+        name = str(profiles.reference_marker(cfg["markers"].get("list", []) or [])["name"])
     markers = [m for m in cfg["markers"].get("list", []) or [] if str(m["name"]) == name]
     if len(markers) != 1:
         raise ValueError(f"{profile.name}: tiene que haber un solo marker '{name}' en markers.list")

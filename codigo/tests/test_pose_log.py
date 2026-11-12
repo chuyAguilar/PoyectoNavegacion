@@ -21,7 +21,7 @@ import tracker
 
 from . import replay_util
 from .conftest import PROFILES_DIR
-from .synthetic import DIST_SYN, K_SYN, MARKER0_ID, FakeCamera, FakeSender, fake_time, render_marker
+from .synthetic import DIST_SYN, K_SYN, REFERENCE_ID, FakeCamera, FakeSender, fake_time, render_marker
 
 N_FRAMES = 12
 
@@ -146,21 +146,21 @@ def test_main_record_guarda_lo_enviado_y_el_replay_lo_repite(
                          ["--record", str(rec_path), "--save-frames", str(frames_dir),
                           "--frames-every", "4"])
     assert cam.opened and cam.closed and srv.closed
-    enviados = [m for (n, m) in srv.sent if n == "Marker0ToTracker"]
+    enviados = [m for (n, m) in srv.sent if n == "ReferenceToTracker"]
     assert len(enviados) == N_FRAMES, "el marker sintetico tiene que verse en todos los frames"
 
     rec = pose_log.load_recording(rec_path)
     assert len(rec["timestamps"]) == N_FRAMES
-    assert rec["sent_name"].tolist() == ["Marker0"] * N_FRAMES
+    assert rec["sent_name"].tolist() == ["Reference"] * N_FRAMES
     assert rec["sent_frame"].tolist() == list(range(N_FRAMES))
     for M_rec, M_srv in zip(rec["sent_M"], enviados):
         assert np.array_equal(M_rec.astype(np.float32), M_srv)
     assert rec["frames_saved"].tolist() == [0, 4, 8]
     meta = rec["metadata"]
-    assert meta["show_window"] is False and meta["whitelist"] == [MARKER0_ID] and meta["frames"] == N_FRAMES
+    assert meta["show_window"] is False and meta["whitelist"] == [REFERENCE_ID] and meta["frames"] == N_FRAMES
 
-    replay = replay_util.run_marker0_replay(rec_path, profile_syn)
-    c = replay_util.compare_marker0(replay, replay_util.recorded_marker0(rec_path))
+    replay = replay_util.run_marker0_replay(rec_path, profile_syn, name="Reference")
+    c = replay_util.compare_marker0(replay, replay_util.recorded_marker0(rec_path, name="Reference"))
     assert c["sends"] == N_FRAMES and c["frames_differ"] == 0
     assert c["max_diff_translation_mm"] == 0.0 and c["max_diff_rotation_deg"] == 0.0
 
@@ -168,8 +168,9 @@ def test_main_record_guarda_lo_enviado_y_el_replay_lo_repite(
     assert d["frames"] == 3 and d["frames_ids_differ"] == 0 and d["detections"] == 3
     assert d["max_diff_px"] == 0.0
 
-    s = pose_log.summarize(rec_path, "Marker0")
+    s = pose_log.summarize(rec_path, "Reference")
     assert s["fraction_with_pose"] == 1.0
+    assert pose_log.summarize(rec_path, "Marker0")["fraction_with_pose"] == 0.0     # el nombre de antes ya no se envia
     assert 445.0 < s["mean_z_mm"] < 455.0
 
 

@@ -26,7 +26,7 @@ por rafaga.
 
 Lo que no toca: `tracker.py`, `transport/`, `camera/` y `vision/`. No importa
 `cv2` ni `camera`. El nombre del dispositivo del banco es otro a proposito
-(`RateProbeToTracker`), nunca `Marker0ToTracker`.
+(`RateProbeToTracker`), nunca `ReferenceToTracker`.
 
 Meta 007, fase 6 · Slicer en el PC recibe de la Jetson: con el tracker en otra
 maquina, `t_wall - timestamp` resta dos relojes. `listen --clock-offset-ms X`
@@ -40,9 +40,9 @@ receptor; el `timestamp` del emisor sigue siendo su `time.time()`.
 Desde codigo\\, con el venv y los argumentos explicitos (principio 7), con tope
 (principio 9):
 
-    python -m diagnostics.igtl_rate listen --port 18944 --seconds 30 --timeout 60 --device Marker0ToTracker
-    python -m diagnostics.igtl_rate listen --port 18944 --seconds 600 --timeout 60 --device Marker0ToTracker --idle-s 60
-    python -m diagnostics.igtl_rate listen --host <IP de la Jetson> --port 18944 --seconds 30 --timeout 60 --device Marker0ToTracker --clock-offset-ms <desfase>
+    python -m diagnostics.igtl_rate listen --port 18944 --seconds 30 --timeout 60 --device ReferenceToTracker
+    python -m diagnostics.igtl_rate listen --port 18944 --seconds 600 --timeout 60 --device ReferenceToTracker --idle-s 60
+    python -m diagnostics.igtl_rate listen --host <IP de la Jetson> --port 18944 --seconds 30 --timeout 60 --device ReferenceToTracker --clock-offset-ms <desfase>
 
 Meta 007, fase 7b (B79): `listen --idle-s N` es cuanto espera conectado sin recibir
 nada antes de parar (sin la opcion, los 5 s de siempre, `NO_DATA_S`). En el PC
@@ -486,7 +486,7 @@ def main(argv: list[str] | None = None) -> int:
     pl.add_argument("--port", required=True, type=int)
     pl.add_argument("--seconds", required=True, type=float, help="ventana desde el primer mensaje")
     pl.add_argument("--timeout", required=True, type=float, help="tope de la espera de la conexion, s")
-    pl.add_argument("--device", default=None, help="solo este dispositivo (p. ej. Marker0ToTracker)")
+    pl.add_argument("--device", default=None, help="solo este dispositivo (p. ej. ReferenceToTracker)")
     pl.add_argument("--gap-ms", type=float, default=DEFAULT_GAP_MS)
     pl.add_argument("--clock-offset-ms", type=float, default=0.0,
                     help="reloj del emisor menos reloj de aqui, ms (de diagnostics.clock_offset measure); "
@@ -499,7 +499,7 @@ def main(argv: list[str] | None = None) -> int:
     pb.add_argument("--port", required=True, type=int, help="18950 en E1; 18944 solo con Slicer y el tracker parado")
     pb.add_argument("--hz", required=True, type=float)
     pb.add_argument("--seconds", required=True, type=float)
-    pb.add_argument("--device", required=True, help="RateProbeToTracker (nunca Marker0ToTracker)")
+    pb.add_argument("--device", required=True, help="RateProbeToTracker (nunca ReferenceToTracker)")
     pb.add_argument("--timeout", required=True, type=float, help="tope de la espera del cliente, s")
     pb.add_argument("--external", action="store_true", help="el cliente es de fuera (Slicer)")
     pb.add_argument("--timer-1ms", action="store_true", help="timeBeginPeriod(1) mientras dura el banco")

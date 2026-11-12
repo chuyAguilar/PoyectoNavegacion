@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
-"""receive_marker0.py — recibe `Marker0ToTracker` en 3D Slicer y mide su frecuencia.
+"""receive_reference.py — recibe `ReferenceToTracker` en 3D Slicer y mide su frecuencia.
 
 Se corre DENTRO de la consola Python de 3D Slicer (5.x + SlicerOpenIGTLink),
-no con el venv del proyecto. Lo que hace (ADR-026, meta 003):
+no con el venv del proyecto. Hasta la fase 7c2 de la meta 006 (P57, P65) se llamaba
+`receive_marker0.py` y el transform, `Marker0ToTracker`. Lo que hace (ADR-026, meta 003):
 
 1. Busca un conector OpenIGTLink cliente a HOST:PORT; si no hay, lo crea y lo
    activa. Slicer tiene que estar conectado ANTES de arrancar el tracker
    (`pyigtl` bloquea; CONTEXT.md §4.5), asi que esto se corre primero.
-2. Espera a que aparezca el nodo `Marker0ToTracker` (llega cuando la camara ve
-   Marker0).
+2. Espera a que aparezca el nodo `ReferenceToTracker` (llega cuando la camara ve
+   la referencia).
 3. Cuenta sus `TransformModifiedEvent` durante SECONDS segundos y escribe la
-   frecuencia (Hz), la ultima posicion y si existe un nodo `DodecaedroToTracker`
-   en la escena (no deberia: la cadena publica solo Marker0). Desde la fase 8b
+   frecuencia (Hz), la ultima posicion, si el nodo esta en la raiz de la escena
+   (`en_raiz`: no cuelga de ningun otro transform, principio 6) y si existe en la
+   escena un nodo con alguno de los nombres de antes (`LEGACY_NAMES`:
+   `DodecaedroToTracker`, `Marker0ToTracker`; no deberia: la cadena publica solo
+   `ReferenceToTracker`). Desde la fase 8b
    (meta 003) guarda tambien el `time.monotonic()` de cada evento y escribe una
    segunda linea con los intervalos entre modificaciones (p50, p95 y max en ms):
    si el p50 ronda los 15-16 ms, Slicer recibe al ritmo de las rafagas del
@@ -22,12 +26,16 @@ mensajes OpenIGTLink solo llegan mientras el bucle de eventos corre.
 
 Uso, en la consola Python de Slicer (ruta explicita, principio 7):
 
-    exec(open(r"C:\\Dev\\OrtoMeta\\PoyectoNavegacion\\codigo\\slicer\\receive_marker0.py", encoding="utf-8").read())
+    exec(open(r"C:\\Dev\\OrtoMeta\\PoyectoNavegacion\\codigo\\slicer\\receive_reference.py", encoding="utf-8").read())
     run()            # 10 s por defecto
     run(seconds=30)  # otra duracion
     run(seconds=20, name="RateProbeToTracker")   # otro nodo: el del banco diagnostics.igtl_rate (fase 8b)
 
-El resultado tambien queda en `LAST_REPORT` (dict) para copiarlo al reporte.
+El resultado tambien queda en `LAST_REPORT` (dict) para copiarlo al reporte:
+`node`, `seconds`, `updates`, `hz`, `last_position_mm`, `connector_state`, `en_raiz`
+(bool), `legacy_present` (`{nombre: bool}`, uno por cada nombre de `LEGACY_NAMES`) y los
+intervalos. En una escena nueva (File -> Close Scene antes de cargar el script) se
+espera `en_raiz == True` y todos los `legacy_present` en False.
 """
 
 import time
@@ -39,12 +47,12 @@ import vtk
 HOST = "localhost"
 PORT = 18944
 SECONDS = 10.0
-NAME = "Marker0ToTracker"
-LEGACY_NAME = "DodecaedroToTracker"       # no debe aparecer (ADR-026)
+NAME = "ReferenceToTracker"
+LEGACY_NAMES = ("DodecaedroToTracker", "Marker0ToTracker")   # no deben aparecer (ADR-026; meta 006, fase 7c2)
 WAIT_NODE_TIMEOUT_S = 120.0               # tope de la espera del nodo (principio 9)
 POLL_MS = 200
 
-TAG = "[receive_marker0]"
+TAG = "[receive_reference]"
 LAST_REPORT = {}
 
 
@@ -96,8 +104,14 @@ def ensure_connector(host=HOST, port=PORT):
 
 
 def legacy_present():
-    """True si hay un nodo `DodecaedroToTracker` en la escena (no deberia)."""
-    return slicer.mrmlScene.GetFirstNodeByName(LEGACY_NAME) is not None
+    """`{nombre: bool}` por cada nombre de `LEGACY_NAMES`: True si hay en la escena un nodo
+    con ese nombre (no deberia haber ninguno)."""
+    return {name: slicer.mrmlScene.GetFirstNodeByName(name) is not None for name in LEGACY_NAMES}
+
+
+def en_raiz(node):
+    """True si `node` no cuelga de ningun otro transform (esta en la raiz de la escena)."""
+    return node.GetParentTransformNode() is None
 
 
 def _position(node):
@@ -154,6 +168,7 @@ def measure(node, seconds=SECONDS, done=None):
             "hz": round(hz, 1),
             "last_position_mm": _position(node),
             "connector_state": state_name(connector) if connector else "sin conector",
+            "en_raiz": en_raiz(node),
             "legacy_present": legacy_present(),
         }
         report.update(interval_stats(stamps))
@@ -165,11 +180,17 @@ def measure(node, seconds=SECONDS, done=None):
         _log(f"intervalos entre actualizaciones (ms): p50 {report['interval_ms_p50']} "
              f"p95 {report['interval_ms_p95']} max {report['interval_ms_max']} "
              f"(tic de Windows 15.625; un frame a 90 fps 11.1)")
-        if report["legacy_present"]:
-            _log(f"ATENCION: existe un nodo {LEGACY_NAME} en la escena (ADR-026: no deberia enviarse). "
-                 "Si la escena es nueva, el tracker lo sigue publicando.")
+        if report["en_raiz"]:
+            _log(f"{report['node']} en la raiz de la escena (correcto, principio 6)")
         else:
-            _log(f"{LEGACY_NAME}: no existe en la escena (correcto, ADR-026)")
+            _log(f"ATENCION: {report['node']} cuelga de {node.GetParentTransformNode().GetName()}: "
+                 "tiene que estar en la raiz de la escena (principio 6).")
+        for legacy_name, present in report["legacy_present"].items():
+            if present:
+                _log(f"ATENCION: existe un nodo {legacy_name} en la escena (no deberia enviarse). "
+                     "Si la escena es nueva (File -> Close Scene), alguien lo sigue publicando.")
+            else:
+                _log(f"{legacy_name}: no existe en la escena (correcto)")
         if done:
             done(report)
 
@@ -191,7 +212,7 @@ def wait_for_node(name=NAME, timeout_s=WAIT_NODE_TIMEOUT_S, then=None):
             connector = find_connector()
             _log(f"TOPE: {name} no aparecio en {timeout_s:g} s (conector "
                  f"{state_name(connector) if connector else 'sin conector'}). "
-                 "¿Esta corriendo el tracker y ve Marker0?")
+                 "¿Esta corriendo el tracker y ve la referencia?")
             LAST_REPORT.clear()
             LAST_REPORT.update({"node": name, "error": "timeout"})
             return
@@ -202,7 +223,7 @@ def wait_for_node(name=NAME, timeout_s=WAIT_NODE_TIMEOUT_S, then=None):
 
 
 def run(seconds=SECONDS, host=HOST, port=PORT, name=NAME):
-    """Conector listo -> espera el nodo `name` (Marker0ToTracker) -> mide `seconds` s -> reporte.
+    """Conector listo -> espera el nodo `name` (ReferenceToTracker) -> mide `seconds` s -> reporte.
 
     `name` (fase 8b) sirve para medir otro transform, p. ej. `RateProbeToTracker`,
     el del banco `diagnostics.igtl_rate bench --external`."""

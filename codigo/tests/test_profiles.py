@@ -35,7 +35,7 @@ def test_load_resuelve_el_yml_de_cada_perfil(nombre: str) -> None:
     yml = Path(cfg["camera"]["calibration_file"])
     assert yml.is_absolute() and yml.is_file() and yml.parent == (CODIGO_DIR / "data").resolve()
     assert "rigid_bodies" not in cfg
-    assert [m["name"] for m in cfg["markers"]["list"]] == ["Marker0"]
+    assert [m["name"] for m in cfg["markers"]["list"]] == ["Reference"]      # meta 006, fase 7c2 (P57)
 
 
 def test_load_falla_con_el_nombre_del_perfil_si_falta_una_ruta(tmp_path: Path) -> None:

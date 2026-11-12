@@ -7,7 +7,7 @@ servidor de prueba en 127.0.0.1 y puerto efimero (nunca el 18944) cuenta todos
 los mensajes y sale al tope, filtra por dispositivo y para si el servidor
 cierra; sin servidor, `ConnectionError` en menos del tope + 1 s y `main` da 3;
 `send_at_rate` manda matrices distintas al ritmo pedido con un emisor falso;
-`main` exige `--port`, `--timeout` y `--device`. `receive_marker0.py` solo corre
+`main` exige `--port`, `--timeout` y `--device`. `receive_reference.py` solo corre
 en Slicer: se mira con `ast` que `run` tiene `name=NAME` y que la primera
 linea del reporte no cambio. Nada abre el servidor pyigtl (B34, conftest).
 """
@@ -27,7 +27,7 @@ from diagnostics.igtl_rate import IgtlArrival
 
 from .conftest import CODIGO_DIR
 
-RECEIVE_MARKER0 = CODIGO_DIR / "slicer" / "receive_marker0.py"
+RECEIVE_REFERENCE = CODIGO_DIR / "slicer" / "receive_reference.py"
 
 
 def _packed(n: int, device: str = "RateProbeToTracker", t0: float = 1_700_000_000.0) -> list[tuple[bytes, float]]:
@@ -92,7 +92,7 @@ def test_split_messages_con_cabecera_incompleta_no_saca_nada() -> None:
 # summarize
 # ----------------------------------------------------------------------------
 
-def _arrival(t: float, ts: float, read_index: int, name: str = "Marker0ToTracker") -> IgtlArrival:
+def _arrival(t: float, ts: float, read_index: int, name: str = "ReferenceToTracker") -> IgtlArrival:
     return IgtlArrival(t_arrival=t, t_wall=t + 1e9, device_name=name, timestamp=ts + 1e9, read_index=read_index)
 
 
@@ -262,12 +262,12 @@ def test_listen_cuenta_todos_los_mensajes_y_sale_al_tope(server: LocalServer) ->
 
 
 def test_listen_filtra_por_dispositivo(server: LocalServer) -> None:
-    mine = _packed(5, device="Marker0ToTracker")
+    mine = _packed(5, device="ReferenceToTracker")
     other = _packed(5, device="RateProbeToTracker")
     server.serve([p for p, _ in mine] + [p for p, _ in other], gap_s=0.0, close_after=False)
     logs: list[str] = []
-    arrivals = igtl_rate.listen("127.0.0.1", server.port, 0.3, 2.0, device="Marker0ToTracker", log=logs.append)
-    assert len(arrivals) == 5 and {a.device_name for a in arrivals} == {"Marker0ToTracker"}
+    arrivals = igtl_rate.listen("127.0.0.1", server.port, 0.3, 2.0, device="ReferenceToTracker", log=logs.append)
+    assert len(arrivals) == 5 and {a.device_name for a in arrivals} == {"ReferenceToTracker"}
     assert any("5 mensajes de otros dispositivos" in m for m in logs)
 
 
@@ -478,7 +478,7 @@ def test_timer_resolution_apagado_no_toca_nada() -> None:
 
 
 # ----------------------------------------------------------------------------
-# receive_marker0.py (solo corre en Slicer): la forma, por ast
+# receive_reference.py (solo corre en Slicer; hasta la fase 7c2 de la meta 006, receive_marker0.py): la forma, por ast
 # ----------------------------------------------------------------------------
 
 def _funcion(tree: ast.Module, name: str) -> ast.FunctionDef:
@@ -488,8 +488,8 @@ def _funcion(tree: ast.Module, name: str) -> ast.FunctionDef:
     raise AssertionError(name)
 
 
-def test_receive_marker0_run_tiene_name_con_default_NAME() -> None:
-    src = RECEIVE_MARKER0.read_text(encoding="utf-8")
+def test_receive_reference_run_tiene_name_con_default_NAME() -> None:
+    src = RECEIVE_REFERENCE.read_text(encoding="utf-8")
     tree = ast.parse(src)
     run = _funcion(tree, "run")
     args = [a.arg for a in run.args.args]
@@ -499,15 +499,38 @@ def test_receive_marker0_run_tiene_name_con_default_NAME() -> None:
     assert [d.id for d in defaults[:-1]] == ["SECONDS", "HOST", "PORT"]
     constantes = {n.targets[0].id: n.value.value for n in tree.body
                   if isinstance(n, ast.Assign) and isinstance(n.value, ast.Constant)}
-    assert constantes["NAME"] == "Marker0ToTracker" and constantes["PORT"] == 18944
+    assert constantes["NAME"] == "ReferenceToTracker" and constantes["PORT"] == 18944
+    assert constantes["TAG"] == "[receive_reference]"
+    assert not (CODIGO_DIR / "slicer" / "receive_marker0.py").exists()        # P65: se renombro, no se copio
 
 
-def test_receive_marker0_primera_linea_del_reporte_no_cambio_y_tiene_intervalos() -> None:
-    src = RECEIVE_MARKER0.read_text(encoding="utf-8")
+def test_receive_reference_comprueba_la_raiz_y_los_nombres_de_antes() -> None:
+    """Meta 006, fase 7c2 (P57, P65): `LEGACY_NAMES` trae los dos nombres que ya no se publican,
+    `legacy_present()` da un dict por nombre, `en_raiz(node)` mira `GetParentTransformNode()`
+    y los dos van al reporte."""
+    src = RECEIVE_REFERENCE.read_text(encoding="utf-8")
+    tree = ast.parse(src)
+    legacy = [n.value for n in tree.body if isinstance(n, ast.Assign) and n.targets[0].id == "LEGACY_NAMES"]
+    assert len(legacy) == 1 and isinstance(legacy[0], ast.Tuple)
+    assert [e.value for e in legacy[0].elts] == ["DodecaedroToTracker", "Marker0ToTracker"]
+    assert not any(isinstance(n, ast.Assign) and n.targets[0].id == "LEGACY_NAME" for n in tree.body)
+    presentes = _funcion(tree, "legacy_present")
+    assert presentes.args.args == [] and isinstance(presentes.body[-1], ast.Return)
+    assert isinstance(presentes.body[-1].value, ast.DictComp)
+    raiz = _funcion(tree, "en_raiz")
+    assert [a.arg for a in raiz.args.args] == ["node"]
+    assert "node.GetParentTransformNode() is None" in ast.unparse(raiz)
+    assert '"en_raiz": en_raiz(node),' in src and '"legacy_present": legacy_present(),' in src
+    assert "en la raiz de la escena (correcto, principio 6)" in src
+    assert "no existe en la escena (correcto)" in src
+
+
+def test_receive_reference_primera_linea_del_reporte_no_cambio_y_tiene_intervalos() -> None:
+    src = RECEIVE_REFERENCE.read_text(encoding="utf-8")
     assert "{report['node']}: {report['updates']} actualizaciones en {report['seconds']} s = " in src
     assert "{report['hz']} Hz; ultima posicion (mm) {report['last_position_mm']}; " in src
     assert "conector {report['connector_state']}" in src
     for key in ("interval_ms_p50", "interval_ms_p95", "interval_ms_max"):
         assert f'"{key}"' in src
-    for key in ("node", "seconds", "updates", "hz", "last_position_mm", "connector_state", "legacy_present"):
+    for key in ("node", "seconds", "updates", "hz", "last_position_mm", "connector_state", "en_raiz", "legacy_present"):
         assert f'"{key}":' in src

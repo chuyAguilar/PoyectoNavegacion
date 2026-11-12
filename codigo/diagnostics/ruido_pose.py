@@ -39,6 +39,7 @@ import numpy as np
 from scipy import signal
 from scipy.ndimage import map_coordinates
 
+import profiles
 from diagnostics.pose_log import load_recording
 from vision.filtering import PositionFilter
 from vision.pose import estimate_single_pose
@@ -64,12 +65,15 @@ def _marker(rec: dict, nombre: str) -> tuple[int, float]:
     raise ValueError(f"la grabacion no tiene un marker llamado {nombre!r} en metadata.markers")
 
 
-def serie_pose(rec: dict, nombre: str = "Marker0") -> dict:
+def serie_pose(rec: dict, nombre: str | None = None) -> dict:
     """Los frames con exactamente una deteccion del marker y pose valida: `frames` (N,),
     `t` (N,), `esquinas` (N, 4, 2), `xyz_crudo` (N, 3) de IPPE_SQUARE sin filtro con el K,
     el dist y el tamano grabados, y `xyz_enviado` (N, 3) del ultimo `sent_M` de `nombre`
     en ese frame (NaN si ese frame no envio). `excluidos` cuenta los frames con 0, con
-    mas de una deteccion del id o con pose invalida."""
+    mas de una deteccion del id o con pose invalida. Sin `nombre`, la referencia de la
+    grabacion (`profiles.reference_marker`: `Reference`, o `Marker0` en las viejas)."""
+    if nombre is None:
+        nombre = str(profiles.reference_marker(rec["metadata"].get("markers") or [])["name"])
     mid, size_mm = _marker(rec, nombre)
     K, dist = rec["K"], rec["dist"]
     off, ids, corners = rec["frame_offsets"], rec["marker_ids"], rec["corners_2d"]
@@ -416,7 +420,7 @@ def _pngs_de(frames_dir: Path, serie: dict, rec: dict) -> tuple[list[Path], list
     return pngs, esq
 
 
-def analizar(npz: Path, frames_dir: Path | None = None, nombre: str = "Marker0",
+def analizar(npz: Path, frames_dir: Path | None = None, nombre: str | None = None,
              paso_z_mm: float = PASO_Z_MM, paso_lado_px: float = PASO_LADO_PX) -> dict:
     """Todo lo anterior para una grabacion. `refiltrado_grabado` tiene que reproducir lo
     enviado (`max_diff_refiltrado_mm`); `refiltrado_uniforme` usa tiempos a la fps media."""
@@ -559,7 +563,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--frames", action="append", default=[], type=_etiqueta_ruta, metavar="ETIQUETA=CARPETA",
                     help="PNG de --save-frames de esa grabacion (opcional).")
     ap.add_argument("--referencia", required=True, help="La etiqueta frente a la que se comparan las demas.")
-    ap.add_argument("--name", default="Marker0", help="Nombre del marker (Marker0).")
+    ap.add_argument("--name", default=None,
+                    help="Nombre del marker; sin la opcion, la referencia de cada grabacion (Reference, o Marker0 en las viejas).")
     ap.add_argument("--output", required=True, type=Path, help="JSON (no se pisa).")
     ap.add_argument("--output-markdown", required=True, type=Path, help="Markdown con la tabla (no se pisa).")
     args = ap.parse_args(argv)

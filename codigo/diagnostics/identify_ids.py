@@ -10,7 +10,7 @@ bucle, asi que con deteccion son los de la camara aunque el bucle vaya mas lento
 Tiene dos modos:
 
 - Por defecto, IDs y colocar la camara (fase 8a; clarify.md P16 = b): dibuja el
-  ID (numero grande) sobre cada marker detectado (Marker0, o cualquiera del
+  ID (numero grande) sobre cada marker detectado (la referencia, o cualquiera del
   diccionario del perfil), mas un punto rojo en la esquina 0 para ver su
   orientacion, y ademas la cruz fina en el centro y la linea con los fps de la
   camara. El detector ArUco decodifica la orientacion del patron, asi que el ID
@@ -169,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{tag} Coloca la camara: imagen, cruz en el centro y fps de la camara. "
                   f"q o la X = salir (tope {args.timeout:.0f} s).")
         else:
-            print(f"{tag} Apunta los markers (Marker0) a la camara y colocala con la cruz "
+            print(f"{tag} Apunta los markers (la referencia) a la camara y colocala con la cruz "
                   f"y los fps de la camara. q o la X = salir (tope {args.timeout:.0f} s).")
         cv2.namedWindow(win, cv2.WINDOW_NORMAL)
         grabber = FrameGrabber(cam)

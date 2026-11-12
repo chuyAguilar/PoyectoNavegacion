@@ -26,7 +26,7 @@ import profiles
 from vision import tracking
 
 from .conftest import CODIGO_DIR, PROFILES_DIR
-from .synthetic import MARKER0_ID, MARKER0_MM      # el Marker0 del perfil gs1 (meta 006, fase 7c)
+from .synthetic import REFERENCE_ID, REFERENCE_MM      # la referencia del perfil gs1 (meta 006, fases 7c y 7c2)
 
 PERFIL_GS1 = str(PROFILES_DIR / "tracker_config_gs1.yaml")
 DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_MIP_36h12)
@@ -36,7 +36,7 @@ DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_ARUCO_MIP_36h12)
 # Falsos
 # ----------------------------------------------------------------------------
 
-def imagen_marker(mid: int = MARKER0_ID, lado: int = 120, lienzo: tuple[int, int] = (300, 300)) -> np.ndarray:
+def imagen_marker(mid: int = REFERENCE_ID, lado: int = 120, lienzo: tuple[int, int] = (300, 300)) -> np.ndarray:
     """Un frame BGR con el marker `mid` del diccionario del tracker centrado sobre fondo blanco."""
     img = DICT.generateImageMarker(mid, lado)
     h, w = lienzo
@@ -69,7 +69,7 @@ class CamFalsa:
 
 
 def cfg_gs1() -> dict:
-    """El perfil gs1 tal cual (solo Marker0 desde la meta 003, fase 2)."""
+    """El perfil gs1 tal cual (solo la referencia desde la meta 003, fase 2)."""
     return profiles.load(PERFIL_GS1)
 
 
@@ -220,8 +220,8 @@ def test_medir_captura_solo_lee_y_guarda_muestra() -> None:
 
 def test_preparar_tracking_con_el_perfil_gs1() -> None:
     ctx = mm.preparar_tracking(cfg_gs1())
-    assert ctx["ids_conocidos"] == {MARKER0_ID}
-    assert isinstance(ctx["tracker"], tracking.MarkerTracker) and set(ctx["tracker"].filters) == {MARKER0_ID}
+    assert ctx["ids_conocidos"] == {REFERENCE_ID}
+    assert isinstance(ctx["tracker"], tracking.MarkerTracker) and set(ctx["tracker"].filters) == {REFERENCE_ID}
 
 
 def test_preparar_tracking_exige_markers() -> None:
@@ -264,10 +264,10 @@ def test_medir_tracking_pasa_por_marker_tracker_y_empieza_los_filtros_de_cero(mo
         return original(corners, size_mm, K, dist)
     monkeypatch.setattr(tracking, "estimate_single_pose", espia)
     K, dist = mm.k_nominal(300, 300, 84.0)
-    ctx["tracker"].filters[MARKER0_ID].filter(np.array([[1.0], [1.0], [1.0]]), 0.0)    # estado sucio
+    ctx["tracker"].filters[REFERENCE_ID].filter(np.array([[1.0], [1.0], [1.0]]), 0.0)    # estado sucio
     r = mm.medir_tracking(CamFalsa([imagen_marker()]), ctx, 0.3, False, K, dist)
-    assert r["fraccion_pose"] == 1.0 and llamadas and llamadas[0] == MARKER0_MM
-    assert ctx["tracker"].filters[MARKER0_ID].filters[0].t_prev > 0.0            # reset() lo dejo de cero
+    assert r["fraccion_pose"] == 1.0 and llamadas and llamadas[0] == REFERENCE_MM
+    assert ctx["tracker"].filters[REFERENCE_ID].filters[0].t_prev > 0.0            # reset() lo dejo de cero
 
 
 def test_cfg_camara_para_no_toca_el_perfil() -> None:
@@ -411,7 +411,7 @@ def test_main_modos_guarda_cada_fila_al_tenerla(tmp_path, monkeypatch) -> None:
     assert guardados[:3] == [1, 2, 3]                         # B25: una escritura por fila
     assert [f["pedido"]["fourcc"] for f in e["filas"]] == ["MJPG", "MJPG", "YUY2"]
     assert e["filas"][0]["fps_tracking_ventana"] > 0 and e["filas"][0]["exposicion_ms"] == 1.953
-    assert e["filas"][0]["fraccion_pose"] == 1.0              # Marker0 solo ya da pose
+    assert e["filas"][0]["fraccion_pose"] == 1.0              # la referencia sola ya da pose
     assert "fps_tracking" not in e["filas"][2] and e["filas"][2]["error"].startswith("[Webcam]")
     assert e["modos_que_cumplen"] == [] or all("MJPG" in m for m in e["modos_que_cumplen"])
 

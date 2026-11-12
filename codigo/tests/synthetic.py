@@ -10,9 +10,11 @@ procesar cada frame antes de que llegue el siguiente); las lecturas fallidas
 (None) no tardan. `fake_time()` da el modulo `time` falso que el tracker usa
 (`perf_counter` avanza un paso fijo por llamada; `time` tambien, aparte).
 
-Meta 006, fase 7c (B55): `render_marker` dibuja por defecto el Marker0 del perfil gs1
-del repo (`MARKER0_ID`, `MARKER0_MM`, leidos al importar), no el ID 0 de 80 mm: las
-pruebas que pasan un frame sintetico por el perfil del repo siguen al perfil.
+Meta 006, fase 7c (B55): `render_marker` dibuja por defecto la referencia del perfil gs1
+del repo (`REFERENCE_ID`, `REFERENCE_MM`, leidos al importar), no el ID 0 de 80 mm: las
+pruebas que pasan un frame sintetico por el perfil del repo siguen al perfil. Fase 7c2
+(P57): la referencia es la entrada `Reference` (`profiles.reference_marker`); hasta
+entonces las constantes se llamaban `MARKER0_ID` y `MARKER0_MM`.
 """
 from __future__ import annotations
 
@@ -33,20 +35,19 @@ FAKE_DELAY_S = 0.02
 FAKE_STEP_S = 0.011
 
 
-def _marker0_del_perfil() -> tuple[int, float]:
-    """El ID y el lado (mm) de la entrada `Marker0` del perfil gs1 del repo."""
+def _referencia_del_perfil() -> tuple[int, float]:
+    """El ID y el lado (mm) de la referencia del perfil gs1 del repo."""
     perfil = profiles.PROFILES_DIR / "tracker_config_gs1.yaml"
-    lista = profiles.load(perfil)["markers"]["list"]
-    m0 = [m for m in lista if m["name"] == "Marker0"]
-    if len(m0) != 1:
-        raise ValueError(f"{perfil.name}: se esperaba una entrada 'Marker0' en markers.list, hay {len(m0)}")
-    return int(m0[0]["id"]), float(m0[0]["size_mm"])
+    ref = profiles.reference_marker(profiles.load(perfil)["markers"]["list"])
+    if ref["name"] != profiles.REFERENCE_NAME:
+        raise ValueError(f"{perfil.name}: la referencia se llama {ref['name']!r}, no {profiles.REFERENCE_NAME!r}")
+    return int(ref["id"]), float(ref["size_mm"])
 
 
-MARKER0_ID, MARKER0_MM = _marker0_del_perfil()
+REFERENCE_ID, REFERENCE_MM = _referencia_del_perfil()
 
 
-def render_marker(tz: float, tx: float, marker_id: int = MARKER0_ID, size_mm: float = MARKER0_MM,
+def render_marker(tz: float, tx: float, marker_id: int = REFERENCE_ID, size_mm: float = REFERENCE_MM,
                   K: np.ndarray = K_SYN, dist: np.ndarray = DIST_SYN,
                   shape: tuple[int, int] = (480, 640), euler_xy=(185.0, 5.0)) -> np.ndarray:
     """Un marker del diccionario del tracker proyectado con `K` a (tx, 5, tz) mm,

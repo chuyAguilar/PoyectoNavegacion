@@ -22,7 +22,7 @@ Cuatro modos, uno por corrida (todos con --config, --salida y --timeout):
       --segundos-captura 10 --fov-grados 84 --luz "..."
       Medicion 1: por candidata, FPS de captura (solo leyendo frames), y sobre
       una muestra de esos frames (uno cada MUESTRA_CADA_S) el brillo medio, la
-      fraccion saturada sobre los markers del perfil (Marker0 desde la meta
+      fraccion saturada sobre los markers del perfil (la referencia desde la meta
       003) y la mediana de markers. Elige la
       exposicion (elegir_exposicion) y dice si la exposicion pedida cambia de
       verdad el brillo (exposicion_cambia_brillo).
@@ -31,7 +31,7 @@ Cuatro modos, uno por corrida (todos con --config, --salida y --timeout):
       --fps 90 --segundos-captura 10 --segundos-tracking 30 --fov-grados 84
       --luz "..." [--exposicion-ms 3.906]
       Medicion 2: por modo, tamano real, exposicion leida, FPS de captura, FPS
-      de tracking sin y con ventana (deteccion + lista blanca + pose de Marker0
+      de tracking sin y con ventana (deteccion + lista blanca + pose de la referencia
       + 1-Euro, con `vision.tracking.MarkerTracker`, el mismo paso por frame
       del tracker; sin servidor OpenIGTLink; meta 003, fase 4, B32),
       mediana de markers y fraccion de frames con pose. Los de
@@ -308,7 +308,7 @@ def preparar_tracking(cfg: dict) -> dict:
     """Lo que el tracker construye antes del bucle: el `MarkerTracker` del perfil
     (detector, lista blanca y filtros de `markers.list`; meta 003, fase 4)."""
     if not (cfg["markers"].get("list") or []):
-        raise ValueError("el perfil no trae markers.list (Marker0): no hay nada que medir")
+        raise ValueError("el perfil no trae markers.list (la referencia): no hay nada que medir")
     mt = MarkerTracker(cfg["markers"], cfg.get("filtering"))
     return {"tracker": mt, "ids_conocidos": set(mt.valid_ids)}
 
@@ -344,7 +344,7 @@ def analizar_muestra(muestra: list, ctx: dict) -> dict:
 def medir_tracking(cam, ctx: dict, segundos: float, ventana: bool,
                    K: np.ndarray, dist: np.ndarray) -> dict:
     """FPS haciendo por frame lo del tracker sin enviar: gris, deteccion, lista blanca,
-    pose de Marker0 y 1-Euro (`MarkerTracker.process_corners`, el mismo paso que el
+    pose de la referencia y 1-Euro (`MarkerTracker.process_corners`, el mismo paso que el
     tracker); con `ventana`, tambien el dibujo (`tracker.draw_poses`), imshow y
     waitKey(1). q en la ventana interrumpe el pase. Los filtros empiezan de cero en
     cada pase, como arranca el tracker."""

@@ -3,7 +3,7 @@
 `OneEuroFilter` es el de `tracker.py` (meta 003, fase 4): el mismo calculo,
 con `filter` en vez de `filtrar`. `PositionFilter` son los tres 1-Euro (x, y,
 z) que el tracker creaba por marker y aplicaba a `tvec` con el tiempo del
-frame. La orientacion de Marker0 no se filtra (clarify.md P6 de la meta 003).
+frame. La orientacion de la referencia no se filtra (clarify.md P6 de la meta 003).
 """
 from __future__ import annotations
 

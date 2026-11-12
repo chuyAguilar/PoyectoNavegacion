@@ -696,7 +696,7 @@ class Panel(QMainWindow):
             f"(localhost:{puerto}, conector Active)?")
         if r != QMessageBox.StandardButton.Yes:
             self.log_msg("tracker: cancelado — conectar Slicer primero "
-                         "(codigo/slicer/README.md: receive_marker0.py)")
+                         "(codigo/slicer/README.md: receive_reference.py)")
             return False
         return True
 

@@ -1,5 +1,5 @@
 r"""
-Tracker ArUco de Marker0 para navegacion quirurgica: el bucle camara -> vision
+Tracker ArUco de la referencia para navegacion quirurgica: el bucle camara -> vision
 -> envio por OpenIGTLink -> ventana.
 
 Desde la meta 003, fase 4 · El tracker en piezas (ADR-027), este archivo solo
@@ -10,7 +10,7 @@ servidor OpenIGTLink: `IgtlSender`) y `profiles` (el perfil, con rutas
 relativas a codigo/). La pose multi-marker del dodecaedro esta archivada en
 codigo/historico/iter4/dodecahedron/pose_rigid_body.py.
 
-Lo que publica (principio 6, ADR-026): solo `Marker0ToTracker`, en el puerto
+Lo que publica (principio 6, ADR-026): solo `ReferenceToTracker`, en el puerto
 `igtlink.transforms_port` (18944). `igtlink.send_video: true` aborta (P7).
 
 Uso (desde codigo\, con el venv; --config obligatorio, principio 7):
@@ -101,7 +101,7 @@ def draw_poses(display: np.ndarray, poses: list[MarkerPose], K, dist) -> None:
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Tracker de Marker0: camara -> pose -> OpenIGTLink.")
+    parser = argparse.ArgumentParser(description="Tracker de la referencia: camara -> pose -> OpenIGTLink.")
     parser.add_argument("--config", required=True,
                         help="Perfil de la camara (profiles/tracker_config_gs1.yaml o _gs2.yaml).")
     # Linea base de Marker0 (meta 003, fase 1). Todas apagadas por defecto:

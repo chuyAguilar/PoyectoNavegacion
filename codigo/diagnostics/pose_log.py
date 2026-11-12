@@ -10,7 +10,7 @@ matrices que envio por OpenIGTLink, en un `.npz` de tablas sin pickle:
     corners_2d (D, 4, 2) float32   esquinas de cada deteccion
     K, dist                        los intrinsecos que uso el tracker
     sent_frame (S,) int32          frame de cada envio, en orden
-    sent_name (S,) str             nombre del envio sin "ToTracker" (Marker0, ...)
+    sent_name (S,) str             nombre del envio sin "ToTracker" (Reference, ...)
     sent_M (S, 4, 4) float64       la matriz enviada
     frames_saved (F,) int32        frames guardados como PNG (frame_NNNNN.png)
     frames_every () int32
@@ -22,8 +22,11 @@ que `tests/replay_util.cargar_dataset` las lee igual.
 `summarize` resume una grabacion para la linea base. Como CLI, desde
 `codigo\\` con el venv y los argumentos explicitos:
 
-    python -m diagnostics.pose_log --input "<grabacion>.npz" --name Marker0 ^
+    python -m diagnostics.pose_log --input "<grabacion>.npz" --name Reference ^
         --output "<resumen>.json"
+
+(`--name Marker0` para una grabacion anterior a la fase 7c2 de la meta 006: el nombre
+es el que tenia el marker en el perfil con que se grabo, `metadata.markers`.)
 
 `Stopwatch` (meta 003, fase 6 · Donde se va el tiempo por frame) cronometra
 el bucle del tracker por etapa (`tracker --timing <json>`): `mark(etapa)`
@@ -168,12 +171,13 @@ def _angle_deg(Ra: np.ndarray, Rb: np.ndarray) -> float:
     return float(np.degrees(np.arctan2(s, c)))
 
 
-def summarize(npz_path: Path, name: str = "Marker0") -> dict:
+def summarize(npz_path: Path, name: str) -> dict:
     """Resumen de una grabacion para la linea base: frames, fps, fraccion con
     pose, sd x/y/z (mm, muestral), rango z, sd de la orientacion (RMS del
     angulo a la rotacion media, grados) y saltos > 5 grados entre frames
     seguidos con pose. La pose de un frame es el ultimo envio de `name` en
-    ese frame (lo ultimo que recibio Slicer)."""
+    ese frame (lo ultimo que recibio Slicer). `name` va siempre explicito (principio 7):
+    `Reference`, o `Marker0` en las grabaciones anteriores a la fase 7c2 de la meta 006."""
     rec = load_recording(npz_path)
     t = rec["timestamps"]
     n = len(t)
@@ -340,7 +344,7 @@ def format_timing(summary: dict) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Resumen de una grabacion del tracker (meta 003).")
     ap.add_argument("--input", required=True, type=Path, help="Grabacion .npz de tracker.py --record.")
-    ap.add_argument("--name", required=True, help="Nombre del envio, sin ToTracker (Marker0).")
+    ap.add_argument("--name", required=True, help="Nombre del envio, sin ToTracker (Reference; Marker0 en las grabaciones viejas).")
     ap.add_argument("--output", type=Path, default=None, help="JSON de salida (no se pisa).")
     args = ap.parse_args(argv)
     res = summarize(args.input, args.name)

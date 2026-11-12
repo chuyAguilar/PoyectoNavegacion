@@ -6,7 +6,7 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-11-11 (§6, árbol: meta 006 · Grafo de factores óptico-inercial, fase 7c · La referencia con su propio ID: `diagnostics/marker_image.py`, `profiles.check_markers` y las copias congeladas de los perfiles en `tests/data/`; la cadena no cambia). Antes, 2026-11-10 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7a · El asistente de captura del tablero: `calibration/capture_stereo_board.py`, fuera de la cadena; antes, 2026-11-09, `calibrate_extrinsics.py`)._
+> _Última actualización: 2026-11-11 (§2, §3.3, §3.5, §3.6, §4, §6, §7 y §9: meta 006 · Grafo de factores óptico-inercial, fase 7c2 · `Reference` y `ReferenceToTracker`: la referencia se llama `Reference`, la cadena publica `ReferenceToTracker` en vez de `Marker0ToTracker` y el script de Slicer es `slicer/receive_reference.py`; el mapa de §9.1, reexportado; el puerto y la jerarquía no cambian). Antes, 2026-11-11 (§6, árbol: meta 006 · Grafo de factores óptico-inercial, fase 7c · La referencia con su propio ID: `diagnostics/marker_image.py`, `profiles.check_markers` y las copias congeladas de los perfiles en `tests/data/`; la cadena no cambia). Antes, 2026-11-10 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7a · El asistente de captura del tablero: `calibration/capture_stereo_board.py`, fuera de la cadena; antes, 2026-11-09, `calibrate_extrinsics.py`)._
 > _Antes, 2026-11-05 (§6: meta 006 · Grafo de factores óptico-inercial, fase 1 · Verlo, parte A: paquete nuevo `codigo/fusion/`, fuera de línea y sin gtsam, que no toca la cadena)._
 > _Antes, 2026-11-04 (§3.1, diagnósticos y árbol: meta 007 · El tracker en la Jetson Orin Nano, fase 7b · Las dos cámaras a la vez en Windows, parte B: en Windows la marca y los ajustes se leen y se escriben por COM, sin abrir vídeo (`capa_para_plataforma("win32")` da `CapaWindowsCOM`), y `linux.perfil_temporal` gana `camera.usb_port_windows`; la cadena no cambia).
 > _Antes, 2026-11-04 (§3.1, diagnósticos y árbol: meta 007 · El tracker en la Jetson Orin Nano, fase 7b · Las dos cámaras a la vez en Windows, parte A: `camera/dshow_props.py` (lectura por COM, el tracker no lo usa), la sonda con `--capa` y `--comparar-capas`, y `igtl_rate listen --idle-s`; sin cambio en la cadena). Antes, 2026-11-04 (diagnósticos y árbol: fase 7 · Las dos cámaras a la vez en la Jetson: `diagnostics/tegrastats_log.py`). Antes, 2026-11-03 (§3.5 y §6: fase 6 · Slicer en el PC recibe de la Jetson, por las tres redes: `IgtlSender(port, iface)`, `--igtl-iface` y `diagnostics/clock_offset.py`; sin la opción la cadena no cambia; y `TCP_NODELAY` en cada cliente aceptado, §3.5)._
@@ -27,16 +27,16 @@
 _Desde el 2026-10-26 (meta 004, fase 1). Una línea por sección; se lee primero el índice y después solo la sección que haga falta (`CLAUDE.md` §1)._
 
 - **§1 · Propósito del sistema:** qué se navega y con qué (instrumento, anatomía, Slicer).
-- **§2 · Topología:** el dibujo de un vistazo, 6 cajas, de Marker0 a Slicer.
+- **§2 · Topología:** el dibujo de un vistazo, 6 cajas, de la referencia a Slicer.
 - **§3 · Componentes:** §3.1 la cámara (`camera/`), §3.2 el bucle del tracker y `vision/`, §3.3 lo que se rastrea, §3.4 los artefactos de calibración, §3.5 el transporte OpenIGTLink y el techo de ~65 Hz, §3.6 Slicer, §3.7 el panel y los scripts de calibración y diagnóstico.
-- **§4 · Flujo de datos y cadena de transforms en Slicer:** hoy solo `Marker0ToTracker`; la cadena anterior como referencia.
+- **§4 · Flujo de datos y cadena de transforms en Slicer:** hoy solo `ReferenceToTracker`; la cadena anterior como referencia.
 - **§5 · Registro paciente ↔ modelo:** el paired-point de antes, como referencia.
 - **§6 · Estructura del repositorio:** el árbol de carpetas y la comprobación de «no cambió».
 - **§7 · Frames de coordenadas y convenciones:** el frame de la cámara, la convención de esquinas, LPS↔RAS.
 - **§8 · Decisiones de configuración (2026-08-13):** reemplazadas; quedan como registro.
 - **§9 · Cómo funciona: de la cámara a Slicer** (meta 004), para el autor:
   - **§9.1 · El mapa del proyecto:** el panel, el arranque, el bucle por frame y Slicer, con el archivo o la función de cada caja y lo que pasa por cada flecha; su imagen exportada.
-  - **§9.2 · De la detección a la pose, paso a paso:** la explicación en español llano, en 11 pasos: la cámara y el hilo de captura, el gris, el detector ArUco y la lista blanca, el orden de las esquinas, K y la distorsión, el PnP con IPPE_SQUARE, la escala (B55), rvec, tvec y la 4×4, el 1-Euro, `Marker0ToTracker` y el techo de ~65 Hz en Slicer.
+  - **§9.2 · De la detección a la pose, paso a paso:** la explicación en español llano, en 11 pasos: la cámara y el hilo de captura, el gris, el detector ArUco y la lista blanca, el orden de las esquinas, K y la distorsión, el PnP con IPPE_SQUARE, la escala (B55), rvec, tvec y la 4×4, el 1-Euro, `ReferenceToTracker` y el techo de ~65 Hz en Slicer.
   - **§9.3 · Un ejemplo resuelto con un frame real:** el frame 480 de gs1 de principio a fin, con sus números (esquinas, K, pose, reproyección, filtro, 4×4, la escala de B55) y su figura; lo genera `diagnostics/explain_pose.py`.
   - **§9.4 · Glosario:** los términos de los logs y los docs (fps de cámara y del bucle, saltados, ráfaga, tic, sd z, replay, R2, semáforo «Cámara»…), en orden alfabético.
   - **§9.5 · De dónde sale cada número:** una tabla con la fuente de cada número de §9.2 y §9.4 (perfil, `.yml`, código o medida de la meta 003).
@@ -58,11 +58,11 @@ Sistemas análogos comerciales: Brainlab, Navident, Medtronic StealthStation.
 
 ## 2. Topología (vista de alto nivel)
 
-Hoy (2026-10-24, meta 003, fase 5): solo Marker0, con una de las dos SVPRO global shutter.
+Hoy (2026-11-11; desde la meta 003, fase 5): solo la referencia (`Reference` en el perfil; hasta la fase 7c2 de la meta 006 se llamó Marker0), con una de las dos SVPRO global shutter.
 
 ```mermaid
 flowchart LR
-    PAC["Marker0 (ID 0, 80 mm)\nsobre el phantom"]
+    PAC["Reference, la referencia\n(hoy ID 0, 80 mm)\nsobre el phantom"]
     CAM["camera.backend (WebcamBackend)\nSVPRO gs1 o gs2, 1280×960 MJPG"]
     subgraph PY["tracker.py (el bucle)"]
         DET["vision.detection\n(ArucoDetector + lista blanca)"]
@@ -70,14 +70,14 @@ flowchart LR
         FILT["vision.filtering\n(1-Euro de la posición)"]
     end
     IGT["transport.igtl (IgtlSender)\nOpenIGTLink, TCP 18944"]
-    SL["3D Slicer 5.x + SlicerIGT\nMarker0ToTracker en la raíz"]
+    SL["3D Slicer 5.x + SlicerIGT\nReferenceToTracker en la raíz"]
 
     PAC -- luz --> CAM
     CAM --> DET --> POSE --> FILT --> IGT --> SL
 ```
 
-**Flujo en una frase:** la cámara ve Marker0 → `vision` lo detecta, estima su pose
-y filtra la posición → `transport` la envía como `Marker0ToTracker` → Slicer la
+**Flujo en una frase:** la cámara ve la referencia → `vision` la detecta, estima su pose
+y filtra la posición → `transport` la envía como `ReferenceToTracker` → Slicer la
 recibe en la raíz de la escena. El instrumento con su punta, el registro con el
 hueso y la navegación sobre los cortes se rehacen en sus metas (ADR-025, ADR-026;
 B40, B41); lo que hacían antes está en §4 y en `documentos/historico/MANUAL_simplificado.md`.
@@ -209,10 +209,16 @@ La pose multi-marker del dodecaedro está archivada en
 
 ### 3.3 Lo que se rastrea
 
-_Al día: 2026-10-24._
+_Al día: 2026-11-11 (meta 006, fase 7c2; antes, 2026-10-24)._
 
-- **Marker0** — un solo ArUco **ID 0** de **80 mm**, en los perfiles gs1 y gs2. El
-  tracker publica `Marker0ToTracker`, el **único** transform de la cadena (ADR-026).
+- **La referencia (`Reference`)** — un solo ArUco, la entrada `name: Reference` de
+  `markers.list` en los perfiles gs1 y gs2: hoy el **ID 0** de **80 mm**; pasa al ID 100 de
+  ~100 mm, con su `size_mm` medido, cuando el autor mida el marker impreso (meta 006, fase 7c;
+  B55). El tracker publica `ReferenceToTracker` (`<name>ToTracker`), el **único** transform de
+  la cadena (ADR-026). Hasta la fase 7c2 de la meta 006 (P57) se llamaban Marker0 y
+  `Marker0ToTracker`. `profiles.load` exige una sola referencia (`profiles.reference_marker`:
+  la entrada `Reference` o, en las grabaciones viejas y las copias congeladas de sus perfiles,
+  `Marker0`), así que una grabación de antes y una de ahora se leen igual.
 - **El dodecaedro (stylus, «v2 compartido», IDs 3–13, 14.6 mm)** se descartó en la meta
   003: desde la fase 2 los perfiles no definen `rigid_bodies` y desde la fase 3 su
   código, sus geometrías (calibrada por BA a 1.26 px) y sus puntas están en
@@ -264,7 +270,7 @@ aunque el emisor dé ~88 ráfagas/s: el techo es de Slicer, no del tracker (conc
 B54). Por eso el «Hz en Slicer ≥ fps − 10 %» solo se puede pedir por debajo de ~65 Hz; con
 ventana (55–62 fps) se cumple. El receptor de control y el banco son
 `diagnostics/igtl_rate.py` (`listen` sustituye a Slicer como cliente; `bench` publica
-`RateProbeToTracker` con `IgtlSender` tal cual, nunca como Marker0, y con `--timer-1ms`
+`RateProbeToTracker` con `IgtlSender` tal cual, nunca con el nombre de la referencia, y con `--timer-1ms`
 pide `timeBeginPeriod(1)` mientras dura el banco). El tracker no cambia por esto.
 
 _Fase 6 de la meta 007 (2026-11-03; la medición en vivo, P-6, pendiente):_ `IgtlSender(port, iface=None)`
@@ -285,10 +291,12 @@ emisor más el ACK retrasado del receptor agrupaban los mensajes (P-6 por la LAN
 
 ### 3.6 Aplicación — 3D Slicer + SlicerIGT (`codigo/slicer/`)
 
-_Al día: 2026-10-25 (meta 003, fase 8b)._ Slicer recibe `Marker0ToTracker` por el módulo **OpenIGTLink IF**
-(conector cliente a `localhost:18944`). Lo versionado: `codigo/slicer/receive_marker0.py`
-(crea o reutiliza el conector, espera el nodo, cuenta sus `TransformModifiedEvent` y da
-los Hz, la última posición y si existe `DodecaedroToTracker`; desde la fase 8b, también
+_Al día: 2026-11-11 (meta 006, fase 7c2; antes, 2026-10-25, meta 003, fase 8b)._ Slicer recibe `ReferenceToTracker` por el módulo **OpenIGTLink IF**
+(conector cliente a `localhost:18944`). Lo versionado: `codigo/slicer/receive_reference.py`
+(hasta la fase 7c2 de la meta 006, `receive_marker0.py`; crea o reutiliza el conector, espera
+el nodo, cuenta sus `TransformModifiedEvent` y da los Hz, la última posición, si el nodo está
+en la raíz de la escena (`en_raiz`) y si existe algún nodo con los nombres de antes,
+`DodecaedroToTracker` o `Marker0ToTracker` (`legacy_present`); desde la fase 8b, también
 los intervalos entre actualizaciones, p50, p95 y máximo, y `run(..., name=...)` para medir
 otro nodo, como el `RateProbeToTracker` del banco; `run()` sin argumentos da la misma
 primera línea de siempre) y su `README.md` (cómo pegarlo en la consola de Slicer). Con
@@ -418,15 +426,16 @@ en `codigo/historico/iter4/dodecahedron/gui/` (meta 003, fase 3).
 
 ## 4. Flujo de datos y cadena de transforms en Slicer
 
-_Al día: 2026-10-24 (meta 003, fase 5)._ **Hoy** el tracker emite un solo transform
-crudo, en el frame de la cámara: `Marker0ToTracker` (ADR-026, principio 6), por
+_Al día: 2026-11-11 (meta 006, fase 7c2; antes, 2026-10-24, meta 003, fase 5)._ **Hoy** el tracker emite un solo transform
+crudo, en el frame de la cámara: `ReferenceToTracker` (ADR-026, principio 6; hasta la fase
+7c2 de la meta 006 se llamó `Marker0ToTracker`), por
 OpenIGTLink en el puerto 18944. En Slicer llega a la **raíz** de la escena y no cuelga
 nada de él: el instrumento, su punta y el registro con el hueso vuelven en sus metas,
 con nombres nuevos y su ADR (ADR-025; B40, B41).
 
 ```mermaid
 flowchart TD
-    M0["Marker0ToTracker\n(raíz; único transform publicado)"]
+    M0["ReferenceToTracker\n(raíz; único transform publicado)"]
 ```
 
 **La cadena anterior, como referencia** (hasta la meta 002, con el dodecaedro y el
@@ -498,7 +507,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   ├── vision\                     # detection.py (diccionario, parámetros del detector, `create_detector`, `detect` con lista blanca), pose.py (`build_object_points`, `estimate_single_pose` IPPE_SQUARE y z > 0, `rvec_tvec_to_matrix`), filtering.py (`OneEuroFilter`, `PositionFilter`), tracking.py (`MarkerPose`, `MarkerTracker.process_corners/process/reset`) (2026-10-24, fase 4)
 │   ├── transport\                  # igtl.py: `IgtlSender(port, iface=None)` con `send(device_name, matrix 4×4)` (sin esperar, con guarda de conexión), `is_connected`, `wait_for_client(timeout_s)`, `close` (para el servidor pyigtl con tope de 5 s) (2026-10-24, fases 4 y 7; `iface` en la fase 6 de la meta 007)
 │   ├── profiles\                   # __init__.py: CODE_ROOT, PROFILES_DIR, DATA_DIR, resolve_path, load (rutas del perfil relativas a codigo\; aborta si faltan; valida `markers.list` con `check_markers`: sin nombres ni IDs repetidos y `size_mm` > 0, fase 7c), check_markers, list_profiles
-│   │   └── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO, sin `rigid_bodies` (solo Marker0): puerto USB, marca focus, controles, 1280×960 MJPG 90 fps, 0.977 ms, `calibration_file: data/intrinsecos_gsN_1280x960.yml`
+│   │   └── tracker_config_gs1.yaml, _gs2.yaml  # perfiles de las dos SVPRO, sin `rigid_bodies` (solo la referencia, `name: Reference`): puerto USB, marca focus, controles, 1280×960 MJPG 90 fps, 0.977 ms, `calibration_file: data/intrinsecos_gsN_1280x960.yml`
 │   ├── data\                       # intrinsecos_gs1/gs2_1280x960.yml y tablero_calibracion.yaml (nada más)
 │   ├── camera\                     # grabber.py (`FrameGrabber`: hilo de captura con el último frame; `SyncGrabber`; fase 7); __init__ importa camera.uvc (apaga la aceleración HW de MSMF); backend.py (WebcamBackend: puerto, marca, controles, tamaño; `femtobolt` aborta: archivada), uvc.py (enumeración y ruta del puerto USB), controls.py (camera.controls por DSHOW), dshow_props.py (los controles por COM sin abrir vídeo, solo lectura; el tracker no lo usa; meta 007 fase 7b parte A, 2026-11-04), v4l2.py (la capa de Linux: by-path, `v4l2-ctl`, `CapaLinuxV4L2`; meta 007 fase 5, 2026-11-02)
 │   ├── calibration\                # calibrate_camera.py (intrínsecos con tablero, detectores clasico|sb|ambos), check_scale.py (escala contra regla), calibrate_extrinsics.py (T_gs1←gs2 con el tablero, sin cámara; meta 006 fase 7), capture_stereo_board.py (asistente que graba el tablero con las dos cámaras; fase 7a)
@@ -507,9 +516,9 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 │   ├── gui\                        # panel PySide6 (`python -m gui.panel`): panel.py, recipes.py (argv con -m), processes.py, status.py (semáforos: entorno, config, intrínsecos, puerto, cámara), calibration_window.py, profile_editor.py, camera_probe.py
 │   ├── linux\                      # lo de la Jetson (meta 007, desde la fase 1, 2026-10-29): escanear_jetson.sh (el escaneo en solo lectura, bash, ASCII y LF: 12 secciones, cada orden con `timeout`, nada escrito en la Jetson), escanear.ps1 (lo lanza el autor por ssh con `Start-Process` y tope; `-Alias -Salida -TopeS`); la barrera de los agentes (fase 2): guardian.py (la lista blanca de verbos de `ssh nav-jetson`; guardián 3 desde la fase 3, 2026-11-02: lee las zonas térmicas con `os.read`), sonda_privilegios.py, tars_malos.py, instalar_guardian.sh, desinstalar_guardian.sh y probar_barrera.ps1; el entorno (fase 3, 2026-11-02): enviar_wip.ps1 (`-Alias -TopeS [-Codigo]`: tar de codigo\ sin .venv, __pycache__, historico\, *.nrrd ni *.dcm, comprobado y mandado por `wip recibir`, con el sha256 comparado) e instalar_entorno.sh (lo corre `entorno instalar`: uv 0.13.6 con su sha256, `~/.venvs/navegacion` con CPython 3.11.9 y requirements-jetson.txt, la comprobación y, con `--gtsam`, gtsam en un venv aparte); perfil_temporal.py (fase 5b, 2026-11-03: `--base --salida --puerto --poner`, un perfil temporal con una sola clave cambiada, comprobado contra el original); README.md; paquete desde la fase 2 (`__init__.py`)
 │   ├── requirements-jetson.txt     # las versiones del venv del PC con == para el venv de la Jetson (opencv-python, numpy, scipy, pyyaml, pyigtl, pytest; sin PySide6, open3d, pyorbbecsdk2 ni matplotlib; gtsam comentado) (meta 007, fase 3)
-│   ├── slicer\                     # scripts para la consola Python de Slicer: receive_marker0.py (cuenta los Hz de Marker0ToTracker y avisa si existe DodecaedroToTracker; desde la fase 8b, los intervalos entre actualizaciones y `name=` para otro nodo) y README.md (2026-10-23, meta 003 fase 2)
+│   ├── slicer\                     # scripts para la consola Python de Slicer: receive_reference.py (hasta la meta 006, fase 7c2, receive_marker0.py; cuenta los Hz de ReferenceToTracker, dice si está en la raíz y avisa si existe DodecaedroToTracker o Marker0ToTracker; desde la fase 8b, los intervalos entre actualizaciones y `name=` para otro nodo) y README.md (2026-10-23, meta 003 fase 2)
 │   ├── tests\                      # suite pytest; conftest.py da rutas (PROFILES_DIR, DATA_DIR, HISTORICO_DIR…) y el fixture autouse `no_real_camera` (niega `cv2.VideoCapture`, la enumeración de cámaras, `WebcamBackend.open` sin `abrir` falso y el servidor pyigtl; B34); synthetic.py: Marker0 proyectado, cámara y emisor falsos (2026-10-24, fase 4)
-│   │   ├── test_*.py                           # vision, transport, tracker_loop, profiles, no_real_camera, compilan (con avisos como errores), gui_headless (selftest del panel), replay_marker0, pose_log, timing (fase 6), grabber (fase 7), identify_ids (fases 7b y 8a), igtl_rate (fase 8b), como_funciona (meta 004: la fidelidad de §9 al código, el sha del mapa, el tamaño de sus imágenes y el bloque y la figura del ejemplo de §9.3), explain_pose (meta 004, fase 2: el ejemplo sobre los 6 frames guardados: esquinas, 4×4, reproyección, escala y K), status, camaras_uvc, ajustes_camara, sondear_camara, camera_backend, aceleracion_msmf, calibrar_camara, comprobar_escala, medir_modos, panel/ventana de calibración (sin cámara), ruido_pose y perfil_temporal (meta 007, fase 5b), tegrastats_log (meta 007, fase 7), marker_image y referencia_id (la referencia con su propio ID, meta 006, fase 7c)
+│   │   ├── test_*.py                           # vision, transport, tracker_loop, profiles, no_real_camera, compilan (con avisos como errores), gui_headless (selftest del panel), replay_marker0, pose_log, timing (fase 6), grabber (fase 7), identify_ids (fases 7b y 8a), igtl_rate (fase 8b), como_funciona (meta 004: la fidelidad de §9 al código, el sha del mapa, el tamaño de sus imágenes y el bloque y la figura del ejemplo de §9.3), explain_pose (meta 004, fase 2: el ejemplo sobre los 6 frames guardados: esquinas, 4×4, reproyección, escala y K), status, camaras_uvc, ajustes_camara, sondear_camara, camera_backend, aceleracion_msmf, calibrar_camara, comprobar_escala, medir_modos, panel/ventana de calibración (sin cámara), ruido_pose y perfil_temporal (meta 007, fase 5b), tegrastats_log (meta 007, fase 7), marker_image y referencia_id (la referencia con su propio ID, meta 006, fase 7c), nombre_referencia (meta 006, fase 7c2: `reference_marker`, el nombre es lo único que cambia en lo que se envía y la guarda de que nada vivo nombra `Marker0ToTracker`)
 │   │   ├── replay_util.py                      # replay de Marker0 (reference-marker0, copy-frames; `python -m tests.replay_util`); pasa las esquinas grabadas por `MarkerTracker.process_corners` (el replay del dodecaedro se archivó, fase 4)
 │   │   └── data\                               # marker0_gs1/gs2: grabación en vivo, referencia y 3 frames (2.17 MB, versionados); linux\ (fase 5 de la meta 007): salidas reales de `v4l2-ctl` y del by-path de la Jetson para `test_v4l2.py`; `marker0_gs1_perfil.yaml` y `marker0_gs2_perfil.yaml`, copias congeladas de los perfiles con que se grabó (ID 0, 80 mm): las pruebas de las grabaciones leen estas y no `profiles/` (meta 006, fase 7c)
 │   └── historico\                  # snapshots de iteraciones previas; no se mantienen (iter1, iter2, iter2_callejones_sin_salida, iter3 y:)
@@ -550,7 +559,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 - **Frame del tracker** = frame de la cámara. Todo lo crudo del tracker vive ahí.
 - **Frame del dodecaedro** (archivado en la meta 003) = frame del rigid body del stylus
   (origen ~centro del dodecaedro). La calibración de la punta se expresaba aquí.
-- **Frame de Marker0** = frame del paciente. El registro deja el hueso aquí.
+- **Frame de la referencia** (`Reference`; antes Marker0) = frame del paciente. El registro deja el hueso aquí.
 - **Convención de esquinas del marcador:** `c0=TL c1=TR c2=BR c3=BL`.
 - **LPS↔RAS:** Slicer carga STL con conversión LPS→RAS (voltea X,Y). Relevante
   cuando una transform se calcula sobre vértices crudos fuera de Slicer (era el
@@ -582,7 +591,7 @@ C:\Dev\OrtoMeta\PoyectoNavegacion\
 <!-- como-funciona:inicio -->
 ## 9. Cómo funciona: de la cámara a Slicer
 
-_Desde el 2026-10-26 (meta 004 · Cómo funciona el tracker; `specs/004-como-funciona/`)._ Esta sección es el «cómo y por qué», para el autor; §1–§8 siguen siendo el «qué» (contratos, opciones, números de rendimiento, árbol) y aquí se citan por sección, no se copian. Describe lo que hay en HEAD al empezar la meta 004: solo Marker0 y `Marker0ToTracker` (ADR-026).
+_Desde el 2026-10-26 (meta 004 · Cómo funciona el tracker; `specs/004-como-funciona/`)._ Esta sección es el «cómo y por qué», para el autor; §1–§8 siguen siendo el «qué» (contratos, opciones, números de rendimiento, árbol) y aquí se citan por sección, no se copian. Describe lo que hay en HEAD al empezar la meta 004: solo Marker0 y `Marker0ToTracker` (ADR-026). Desde la fase 7c2 de la meta 006 (2026-11-11) el marker es la referencia, `Reference`, y el transform, `ReferenceToTracker`: el mapa, los pasos y el glosario llevan los nombres nuevos; el ejemplo de §9.3 es de una grabación anterior y conserva los de entonces.
 
 **La regla de las referencias:** dentro de esta sección, toda referencia a código va como `<ruta>.py` o `<ruta>.py:<Símbolo>`, con la ruta relativa a `codigo/` (el símbolo puede ser `<Clase>.<método>`); un perfil o un `.yml` de datos, como `<ruta>.yaml` o `<ruta>.yml`. `tests/test_como_funciona.py` comprueba que cada una existe en el árbol vivo (fuera de `historico/`) y que el símbolo está definido; si algo se renombra, la prueba falla.
 
@@ -616,14 +625,14 @@ flowchart LR
         ENVIO["Envío sin esperar<br/>transport/igtl.py:IgtlSender.send"]
         VENT["Solo con ventana: contorno y ejes<br/>tracker.py:draw_poses"]
     end
-    SLICER["3D Slicer: nodo Marker0ToTracker en la raíz<br/>slicer/receive_marker0.py:ensure_connector"]
+    SLICER["3D Slicer: nodo ReferenceToTracker en la raíz<br/>slicer/receive_reference.py:ensure_connector"]
     subgraph S4["4 · Aparte: calibración y diagnóstico"]
         direction TB
         CALIB["Calibración con tablero<br/>calibration/calibrate_camera.py:main"]
         YML["Intrínsecos de la cámara 1<br/>data/intrinsecos_gs1_1280x960.yml"]
         IDS["Verificar IDs y colocar la cámara<br/>diagnostics/identify_ids.py:main"]
         LOG["Grabación de lo enviado<br/>diagnostics/pose_log.py:PoseLog"]
-        HZ["Hz que recibe Slicer<br/>slicer/receive_marker0.py:run"]
+        HZ["Hz que recibe Slicer<br/>slicer/receive_reference.py:run"]
     end
 
     PANEL -->|"«Arrancar tracker»"| REC
@@ -632,7 +641,7 @@ flowchart LR
     ESPERA -->|"Slicer conectado"| CAM
     CAM -->|"frames BGR 1280×960"| HILO
     GRIS -->|"imagen gris 1280×960"| DET
-    DET -->|"4 esquinas en px, c0 a c3, ID 0"| POSE
+    DET -->|"4 esquinas en px, c0 a c3, y el ID de la referencia"| POSE
     POSE -->|"rvec en rad, tvec en mm"| FILT
     FILT -->|"tvec filtrada, rvec sin filtrar"| MAT
     MAT -->|"4×4 en mm"| ENVIO
@@ -644,7 +653,7 @@ flowchart LR
 
     S1 -->|"proceso python -m tracker"| S2
     S2 -->|"el último frame y su hora de captura;<br/>K 3×3 y dist, 5 coeficientes, para la pose"| S3
-    S3 -->|"Marker0ToTracker por OpenIGTLink,<br/>TCP 18944, float32"| SLICER
+    S3 -->|"ReferenceToTracker por OpenIGTLink,<br/>TCP 18944, float32"| SLICER
     SLICER -.->|"cuenta las actualizaciones"| S4
     S1 -.->|"«Verificar IDs y colocar la cámara»"| S4
     S3 -.->|"con record: esquinas, tiempos y 4×4"| S4
@@ -673,14 +682,14 @@ La misma figura, exportada en SVG para los visores que no dibujan Mermaid (vecto
 | Detección | `vision/tracking.py:MarkerTracker.detect`, que llama a `vision/detection.py:detect` con el detector de `vision/detection.py:create_detector` | la imagen en gris | por cada marker de la lista blanca, su ID y sus 4 esquinas en px, en el orden de §7 |
 | Pose | `vision/tracking.py:MarkerTracker.process_corners`, que llama a `vision/pose.py:estimate_single_pose` con las esquinas del modelo de `vision/pose.py:build_object_points` | las 4 esquinas, el lado del marker en mm, K y dist | rvec (la rotación, en rad) y tvec (la posición, en mm), o nada si la solución queda detrás de la cámara |
 | Filtro | `vision/filtering.py:PositionFilter.filter`, un `vision/filtering.py:OneEuroFilter` por eje | tvec y la hora del frame | tvec filtrada; la orientación no se filtra (§3.2) |
-| Matriz | `vision/pose.py:rvec_tvec_to_matrix` | rvec y tvec | la 4×4 de Marker0 en el frame de la cámara, en mm |
-| Envío | `transport/igtl.py:IgtlSender.send` | la 4×4 y el nombre `Marker0ToTracker` | el mensaje OpenIGTLink, sin esperar (§3.5) |
+| Matriz | `vision/pose.py:rvec_tvec_to_matrix` | rvec y tvec | la 4×4 de la referencia en el frame de la cámara, en mm |
+| Envío | `transport/igtl.py:IgtlSender.send` | la 4×4 y el nombre `ReferenceToTracker` (`<name>ToTracker`, con el `name` del perfil) | el mensaje OpenIGTLink, sin esperar (§3.5) |
 | Ventana | `tracker.py:draw_poses` | el frame, las poses, K y dist | el contorno y los ejes dibujados; solo con ventana (§3.2) |
-| Slicer | `slicer/receive_marker0.py:ensure_connector` (en la consola Python de Slicer) | los mensajes del puerto 18944 | el nodo `Marker0ToTracker` en la raíz de la escena (§3.6, §4) |
+| Slicer | `slicer/receive_reference.py:ensure_connector` (en la consola Python de Slicer) | los mensajes del puerto 18944 | el nodo `ReferenceToTracker` en la raíz de la escena (§3.6, §4) |
 | Calibración | `calibration/calibrate_camera.py:main` | las vistas del tablero | el `.yml` de intrínsecos, `data/intrinsecos_gs1_1280x960.yml` para la cámara 1 (§3.4) |
 | Verificar IDs | `diagnostics/identify_ids.py:main`, por `gui/recipes.py:receta_identificar_ids` | la cámara del perfil | los IDs que ve, la cruz del centro y los fps de la cámara (§3.7) |
 | Grabación | `diagnostics/pose_log.py:PoseLog`, con la opción `--record` del tracker | lo de cada frame | el `.npz` con tiempos, esquinas y poses enviadas; lo usa el replay (§6) |
-| Hz en Slicer | `slicer/receive_marker0.py:run` | las actualizaciones del nodo | los Hz y los intervalos entre actualizaciones (§3.5, §3.6) |
+| Hz en Slicer | `slicer/receive_reference.py:run` | las actualizaciones del nodo | los Hz, los intervalos entre actualizaciones, si el nodo está en la raíz (`slicer/receive_reference.py:en_raiz`) y si queda algún nodo con un nombre de antes (`slicer/receive_reference.py:legacy_present`) (§3.5, §3.6) |
 
 ### 9.2 De la detección a la pose, paso a paso
 
@@ -696,21 +705,21 @@ _Desde el 2026-10-26 (meta 004, fase 3)._ Lo que le pasa a cada frame en el grup
 
 **5 · K y la distorsión: de milímetros a píxeles.** La cámara se modela como un agujero (el modelo *pinhole*): un punto a (X, Y, Z) mm de la cámara (X a la derecha, Y hacia abajo, Z hacia delante; §7) cae en el píxel **u = fx·X/Z + cx, v = fy·Y/Z + cy**. K es la matriz 3×3 que guarda esos cuatro números: fx y fy, la distancia focal medida en píxeles (849.9 y 848.9 en gs1), y (cx, cy), el píxel por donde pasa el eje óptico (603.6, 488.9; no es el centro exacto de la imagen, 640, 480). La **distorsión** (dist) son 5 coeficientes, k1, k2 y k3 radiales y p1 y p2 tangenciales, que dicen cuánto curva el lente las rectas, más cuanto más lejos del centro. Los dos salen de calibrar la cámara con el tablero (`calibration/calibrate_camera.py:main`) y viven en `data/intrinsecos_gs1_1280x960.yml` (la cámara 2, en `data/intrinsecos_gs2_1280x960.yml`); su RMS de reproyección, 0.167 px en gs1, dice cuánto se aparta el modelo de la imagen real. La imagen no se corrige: el detector trabaja sobre la imagen tal cual y la distorsión entra al calcular la pose (paso 6), que la aplica a solo 4 puntos en vez de a los 1 228 800 píxeles del frame. K y dist valen para esa cámara, ese modo y ese enfoque: si se mueve el lente, hay que recalibrar (`docs/CONTEXT.md` §4.10; B36).
 
-**6 · El PnP con IPPE_SQUARE: de cuatro esquinas a una pose.** PnP (*Perspective-n-Point*) es el problema inverso del paso 5: se conocen n puntos de un objeto en mm (el modelo del paso 4), dónde cayeron en la imagen en px, K y dist, y se busca la posición y el giro del objeto que los hacen caer justo ahí. `vision/pose.py:estimate_single_pose` llama a `solvePnP` con `SOLVEPNP_IPPE_SQUARE`, un método hecho para un cuadrado plano de 4 esquinas: directo, sin un punto de partida que adivinar. Un cuadrado plano tiene **dos soluciones** que lo dibujan casi igual: la verdadera y otra inclinada «al revés», como una moneda que no se sabe si se inclina hacia ti o en contra. IPPE calcula las dos y devuelve la que reproyecta mejor. A veces gana la equivocada y queda con el marker detrás de la cámara (z ≤ 0), que es imposible: la cámara solo ve lo que tiene delante. Esa pose se descarta y en ese frame no se envía nada de Marker0: mejor nada que una pose falsa (principio 7). El filtro de z solo atrapa ese caso imposible; si las dos soluciones quedan delante, se queda la que elige IPPE. En el ejemplo, z = 374.4 mm, y la pose devuelve las esquinas detectadas con 0.056 px de error (§9.3, punto 4).
+**6 · El PnP con IPPE_SQUARE: de cuatro esquinas a una pose.** PnP (*Perspective-n-Point*) es el problema inverso del paso 5: se conocen n puntos de un objeto en mm (el modelo del paso 4), dónde cayeron en la imagen en px, K y dist, y se busca la posición y el giro del objeto que los hacen caer justo ahí. `vision/pose.py:estimate_single_pose` llama a `solvePnP` con `SOLVEPNP_IPPE_SQUARE`, un método hecho para un cuadrado plano de 4 esquinas: directo, sin un punto de partida que adivinar. Un cuadrado plano tiene **dos soluciones** que lo dibujan casi igual: la verdadera y otra inclinada «al revés», como una moneda que no se sabe si se inclina hacia ti o en contra. IPPE calcula las dos y devuelve la que reproyecta mejor. A veces gana la equivocada y queda con el marker detrás de la cámara (z ≤ 0), que es imposible: la cámara solo ve lo que tiene delante. Esa pose se descarta y en ese frame no se envía nada: mejor nada que una pose falsa (principio 7). El filtro de z solo atrapa ese caso imposible; si las dos soluciones quedan delante, se queda la que elige IPPE. En el ejemplo, z = 374.4 mm, y la pose devuelve las esquinas detectadas con 0.056 px de error (§9.3, punto 4).
 
 **7 · Por qué el tamaño del marker fija la escala (B55).** La imagen no mide distancias: con u = fx·X/Z, si X y Z crecen en la misma proporción, el píxel no cambia. Un marker de 80 mm a 374 mm y uno de 98.6 mm a 461 mm se ven idénticos. Lo único que pone milímetros en la cuenta es el lado del perfil, `size_mm` en `markers.list` (80.0). Comprobación a mano con el ejemplo: **Z ≈ fx · lado en mm / lado en px** = 849.9 · 80 / 178.19 ≈ 381.6 mm, frente a los 374.4 de la pose (la cuenta supone el marker de frente y este está inclinado 21.7°; §9.3, punto 5). Con 98.6 en vez de 80, las mismas esquinas dan una posición 1.2325 veces mayor y la misma rotación (§9.3, punto 8). Por eso, con el Marker0 de 100 mm (98.6 medidos) delante y el perfil en 80, todo sale a escala 80/98.6 = 0.811 y nada avisa: en el cierre de la meta 003, 50 mm reales salieron como 40.28. Mientras B55 siga abierto, se usa el Marker0 de 80 mm.
 
 **8 · rvec, tvec y la matriz 4×4.** `solvePnP` devuelve dos vectores de tres números. **tvec** es dónde está el centro del marker, en mm, en el frame de la cámara (§7). **rvec** es el giro, escrito como eje y ángulo a la vez: la dirección del vector es el eje y su largo, el ángulo en radianes (en el ejemplo, 159.13°). `vision/pose.py:rvec_tvec_to_matrix` pasa rvec a la rotación R (3×3) con `Rodrigues` y junta R y tvec en una 4×4: las tres primeras columnas son los ejes del marker vistos desde la cámara, la cuarta es la posición y la última fila es (0, 0, 0, 1). Con esa matriz, un punto en mm del marker se pasa a mm de la cámara con una multiplicación; es la forma en que Slicer guarda una transformación.
 
-**9 · El filtro 1-Euro.** Con Marker0 quieto, la posición tiembla unas centésimas de milímetro de un frame a otro (sd z 0.030–0.043 mm en la meta 003). El 1-Euro (`vision/filtering.py:PositionFilter`, uno por eje x, y, z) es un promedio que se adapta a la velocidad: quieto, suaviza mucho y quita el temblor; en movimiento, suaviza poco y no se queda atrás. En cada eje, **x_suave = a·x + (1 − a)·x_anterior**, y a crece con un corte de frecuencia que sube con la velocidad: corte = `min_cutoff` + `beta`·|velocidad|, con 2.0 Hz y 0.05 (la sección `filtering` del perfil). Quieto, el corte es 2 Hz y a ≈ 0.12 a 90 fps: de cada medida nueva entra un 12 %. Moviéndose de forma sostenida a 100 mm/s, el corte sube a 7 Hz y a ≈ 0.33. La velocidad se suaviza aparte, con un corte fijo de 1 Hz (`vision/filtering.py:OneEuroFilter.filter`). El filtro usa la hora de captura de cada frame y no su número, así que se porta igual a 55 que a 90 fps. La orientación no se filtra: sale tal cual del PnP (decisión de la meta 003). En el ejemplo, el filtro movió la posición 0.059 mm (§9.3, punto 6).
+**9 · El filtro 1-Euro.** Con la referencia quieta, la posición tiembla unas centésimas de milímetro de un frame a otro (sd z 0.030–0.043 mm en la meta 003). El 1-Euro (`vision/filtering.py:PositionFilter`, uno por eje x, y, z) es un promedio que se adapta a la velocidad: quieto, suaviza mucho y quita el temblor; en movimiento, suaviza poco y no se queda atrás. En cada eje, **x_suave = a·x + (1 − a)·x_anterior**, y a crece con un corte de frecuencia que sube con la velocidad: corte = `min_cutoff` + `beta`·|velocidad|, con 2.0 Hz y 0.05 (la sección `filtering` del perfil). Quieto, el corte es 2 Hz y a ≈ 0.12 a 90 fps: de cada medida nueva entra un 12 %. Moviéndose de forma sostenida a 100 mm/s, el corte sube a 7 Hz y a ≈ 0.33. La velocidad se suaviza aparte, con un corte fijo de 1 Hz (`vision/filtering.py:OneEuroFilter.filter`). El filtro usa la hora de captura de cada frame y no su número, así que se porta igual a 55 que a 90 fps. La orientación no se filtra: sale tal cual del PnP (decisión de la meta 003). En el ejemplo, el filtro movió la posición 0.059 mm (§9.3, punto 6).
 
-**10 · Qué es `Marker0ToTracker`.** El nombre dice lo que es: la transformación que lleva las coordenadas de Marker0 a las del tracker, es decir, de la cámara. Es la 4×4 del paso 8 con la posición filtrada: la pose de Marker0 en el frame de la cámara, en mm. `transport/igtl.py:IgtlSender.send` la manda como un mensaje TRANSFORM de OpenIGTLink, por TCP, al puerto 18944 (`igtlink.transforms_port` del perfil), sin esperar a que salga (§3.5); pyigtl la guarda en float32, unas 7 cifras, así que a 374 mm el redondeo es del orden de 1e-5 mm (§9.3, punto 7). En Slicer, el conector OpenIGTLink (cliente a localhost:18944) crea o actualiza un nodo de transformación con ese nombre en la raíz de la escena, sin convertir nada: los mm siguen siendo mm y los ejes, los de la cámara. Si un frame no tiene pose de Marker0, no se envía nada y el nodo conserva la última. Lo que colgará de él (el instrumento, el hueso) vuelve en otras metas (§4; ADR-025).
+**10 · Qué es `ReferenceToTracker`.** El nombre dice lo que es: la transformación que lleva las coordenadas de la referencia (`Reference`, el marker del perfil) a las del tracker, es decir, de la cámara. Hasta la fase 7c2 de la meta 006 se llamó `Marker0ToTracker`, y así sale en el ejemplo de §9.3, que es de una grabación de entonces. Es la 4×4 del paso 8 con la posición filtrada: la pose de la referencia en el frame de la cámara, en mm. `transport/igtl.py:IgtlSender.send` la manda como un mensaje TRANSFORM de OpenIGTLink, por TCP, al puerto 18944 (`igtlink.transforms_port` del perfil), sin esperar a que salga (§3.5); pyigtl la guarda en float32, unas 7 cifras, así que a 374 mm el redondeo es del orden de 1e-5 mm (§9.3, punto 7). En Slicer, el conector OpenIGTLink (cliente a localhost:18944) crea o actualiza un nodo de transformación con ese nombre en la raíz de la escena, sin convertir nada: los mm siguen siendo mm y los ejes, los de la cámara. Si un frame no tiene pose de la referencia, no se envía nada y el nodo conserva la última. Lo que colgará de él (el instrumento, el hueso) vuelve en otras metas (§4; ADR-025).
 
 **11 · Por qué Slicer ve ~65 Hz y no 90.** Sin ventana, el tracker envía una pose por frame, ~90 por segundo. Pero el reloj de Windows avanza a saltos, los **tics**, de 15.6 ms: 64 por segundo. El hilo de envío de pyigtl despierta una vez por tic y manda en una **ráfaga** lo que se juntó (1 o 2 mensajes), y Slicer actualiza el nodo como mucho una vez cada ~16 ms. Por eso cuenta ~65 actualizaciones por segundo aunque reciba más mensajes. No se pierde nada en el tracker: el techo es de Slicer (la conclusión R2 de la meta 003); cómo junta Slicer los mensajes por dentro no se ha mirado (B54). Con ventana, el tracker va por debajo de ese techo y Slicer cuenta casi lo mismo que se envía. Los números, en §3.5.
 
 ### 9.3 Un ejemplo resuelto con un frame real
 
-_Desde el 2026-10-26 (meta 004, fase 2)._ Un frame de la grabación en vivo de la cámara 1 (`marker0_gs1.npz` en `tests/data/`, 977 frames, Marker0 quieto a unos 37 cm: la línea base de la meta 003, §6), seguido desde las esquinas hasta la 4×4 que recibe Slicer con el mismo código que corre el tracker (el grupo 3 del mapa de §9.1), sin cámara ni Slicer. Lo calcula `diagnostics/explain_pose.py:explain_frame`: detecta en el PNG guardado, toma K y dist de la grabación, estima la pose, la reproyecta, pasa por el 1-Euro los frames anteriores con sus esquinas y tiempos grabados, y compara la 4×4 con la que se envió en vivo. El bloque de números de abajo lo escribe `diagnostics/explain_pose.py:format_markdown` y la figura `diagnostics/explain_pose.py:draw_example`; ninguno se edita a mano. Para regenerarlos, desde `codigo\` con el venv y los argumentos explícitos (las salidas no se pisan: borrar antes la figura):
+_Desde el 2026-10-26 (meta 004, fase 2)._ **Nota (2026-11-11):** la grabación es anterior a la fase 7c2 de la meta 006; entonces el marker se llamaba `Marker0` y el transform `Marker0ToTracker`, y así salen abajo. Hoy son `Reference` y `ReferenceToTracker`, y la cuenta es la misma. Un frame de la grabación en vivo de la cámara 1 (`marker0_gs1.npz` en `tests/data/`, 977 frames, Marker0 quieto a unos 37 cm: la línea base de la meta 003, §6), seguido desde las esquinas hasta la 4×4 que recibe Slicer con el mismo código que corre el tracker (el grupo 3 del mapa de §9.1), sin cámara ni Slicer. Lo calcula `diagnostics/explain_pose.py:explain_frame`: detecta en el PNG guardado, toma K y dist de la grabación, estima la pose, la reproyecta, pasa por el 1-Euro los frames anteriores con sus esquinas y tiempos grabados, y compara la 4×4 con la que se envió en vivo. El bloque de números de abajo lo escribe `diagnostics/explain_pose.py:format_markdown` y la figura `diagnostics/explain_pose.py:draw_example`; ninguno se edita a mano. Para regenerarlos, desde `codigo\` con el venv y los argumentos explícitos (las salidas no se pisan: borrar antes la figura):
 
 ```powershell
 python -m diagnostics.explain_pose --dataset tests/data/marker0_gs1.npz --frames-dir tests/data/marker0_gs1_frames --frame 480 --config tests/data/marker0_gs1_perfil.yaml --alt-size-mm 98.6 --output-markdown "..\Claude outputs\fases\004\ejemplo_gs1_480.md" --output-image ../docs/img/004/marker0_gs1_frame_00480.png --crop-px 320
@@ -781,21 +790,21 @@ Los seis frames guardados (3 de gs1 y 3 de gs2) dan lo mismo: `tests/test_explai
 
 _Desde el 2026-10-26 (meta 004, fase 3)._ Los términos que aparecen en los logs y en los docs, en orden alfabético. Si un término ya está explicado en §9.2 o en §3, aquí va una línea y la cita. Las fuentes de los números, en §9.5.
 
-- **1-Euro:** el filtro que suaviza la posición de Marker0: mucho si está quieto, poco si se mueve; la orientación no se filtra (§9.2, paso 9; `vision/filtering.py:OneEuroFilter`).
+- **1-Euro:** el filtro que suaviza la posición de la referencia: mucho si está quieto, poco si se mueve; la orientación no se filtra (§9.2, paso 9; `vision/filtering.py:OneEuroFilter`).
 - **`[Salida limpia]`:** la última línea que escribe el tracker al salir por cualquier camino (`q`, «Detener tracker», `--duration`, la cámara que deja de entregar, Slicer que no llega). Cuando aparece, ya cerró la cámara, la ventana y el servidor del puerto 18944 (el `finally` de `tracker.py:main`). Si no aparece, el proceso murió a la fuerza y hay que comprobar que la cámara y el puerto quedaron libres (principio 9).
 - **Aceleración HW de MSMF:** una opción de Media Foundation que en estas cámaras alarga la apertura de 0.4–4 s a 43–51 s sin dar más fps; el código la apaga antes de cargar OpenCV (`docs/CONTEXT.md` §4.18; §3.1).
 - **Código de salida 3:** el tracker sale con 3 cuando Slicer no se conectó en `--slicer-timeout` (30 s): lo dice y no abre la cámara (`tracker.py:EXIT_NO_SLICER`; §3.5; ADR-028). 0 es la salida normal y 2, un perfil con `send_video: true`.
-- **Conector:** en Slicer, el nodo del módulo OpenIGTLink IF que se conecta al tracker como cliente a localhost:18944. Se crea a mano o con `slicer/receive_marker0.py:ensure_connector`, y tiene que estar conectado antes de arrancar el tracker (§3.6).
+- **Conector:** en Slicer, el nodo del módulo OpenIGTLink IF que se conecta al tracker como cliente a localhost:18944. Se crea a mano o con `slicer/receive_reference.py:ensure_connector`, y tiene que estar conectado antes de arrancar el tracker (§3.6).
 - **dist:** los 5 coeficientes de la distorsión del lente, k1, k2, p1, p2 y k3 (§9.2, paso 5).
 - **Esquina (c0 a c3):** un punto del marker en píxeles; el orden es el del dibujo del marker, no el de la imagen (§9.2, paso 4; §7).
 - **fps de cámara:** los frames por segundo que la cámara entrega de verdad, contados por el hilo de captura (`camera/grabber.py:_GrabberBase.frames_read`), no por el bucle. Es el «camara X fps» del log del tracker y de «Verificar IDs». Con la caja de luz al máximo, ~90; con poca luz las SVPRO bajan solas a 22–31 (B50; `docs/CONTEXT.md` §4.20), y el 2026-10-26 «Verificar IDs» marcó 30 la primera vez y 89.8 la segunda, con la caja al máximo y sin explicar (B50).
 - **fps del bucle:** las vueltas por segundo de `tracker.py:main`, cada una con su detección, su pose y su envío: el `[FPS] Promedio` que el tracker escribe cada 5 s. No puede pasar de los fps de cámara: sin ventana va a su ritmo y con ventana, algo por debajo, porque dibujar y mostrar cuesta (los números, en §3.2).
-- **Hz en Slicer:** las actualizaciones por segundo del nodo `Marker0ToTracker` en Slicer, contadas por `slicer/receive_marker0.py:run`; como mucho ~65 (§9.2, paso 11; B54).
+- **Hz en Slicer:** las actualizaciones por segundo del nodo `ReferenceToTracker` en Slicer, contadas por `slicer/receive_reference.py:run`; como mucho ~65 (§9.2, paso 11; B54).
 - **IPPE_SQUARE:** el método de `solvePnP` para un cuadrado plano; da dos soluciones y se descarta la que queda detrás de la cámara (§9.2, paso 6).
 - **K:** la matriz de la cámara: fx, fy, cx y cy, en píxeles (§9.2, paso 5).
 - **Lista blanca:** los IDs del perfil (`markers.list`; hoy solo el 0); todo otro ID detectado se descarta antes de calcular nada (§9.2, paso 3; `vision/detection.py:detect`).
 - **Marca:** un control de la cámara que no cambia la imagen (`focus`: 500 en la cámara 1, 332 en la 2) y que se escribió a propósito para reconocerla; si al abrir no coincide con el perfil, el tracker para sin escribir nada: las cámaras se intercambiaron de puerto (§3.1; `docs/CONTEXT.md` §4.19).
-- **`Marker0ToTracker`:** la pose de Marker0 en el frame de la cámara, en mm: la única transformación que publica el tracker (§9.2, paso 10; ADR-026).
+- **`Marker0ToTracker`:** el nombre de `ReferenceToTracker` hasta la fase 7c2 de la meta 006; ya no se publica, y `slicer/receive_reference.py:legacy_present` comprueba que no está en la escena. Sale en el ejemplo de §9.3, que es de una grabación de entonces.
 - **MJPG:** cada frame viaja de la cámara al PC comprimido como un JPEG; sin él (y sin MSMF) los fps caen (`docs/CONTEXT.md` §4.3). Lo descomprime el hilo de captura.
 - **MSMF:** Media Foundation, la vía de Windows por la que OpenCV lee la cámara en el tracker. DSHOW (DirectShow), la otra vía, solo se usa para leer la marca y escribir los ajustes (§3.1).
 - **«No cambió»:** la comprobación de que un cambio no movió la cadena: la suite, el replay de Marker0 y el selftest del panel (§6).
@@ -803,12 +812,14 @@ _Desde el 2026-10-26 (meta 004, fase 3)._ Los términos que aparecen en los logs
 - **Perfil:** el `.yaml` de una cámara física (`profiles/tracker_config_gs1.yaml`, `profiles/tracker_config_gs2.yaml`): qué cámara (puerto USB y marca), en qué modo y con qué ajustes, qué intrínsecos, qué markers y de qué tamaño, el puerto OpenIGTLink y el filtro. Lo lee `profiles/__init__.py:load` (§3.2; ADR-024).
 - **PnP:** calcular la pose de un objeto conocido a partir de dónde caen sus puntos en la imagen (§9.2, paso 6).
 - **R2:** la conclusión de la fase 8b de la meta 003: el techo de ~65 Hz es de Slicer, no del tracker. R1 a R4 eran las explicaciones candidatas (`specs/003-arquitectura-tracker/resultados.md`; §3.5).
+- **Referencia (`Reference`):** el marker que el tracker sigue, la entrada `name: Reference` de `markers.list` del perfil; su frame es el del paciente (§3.3, §7). Hasta la fase 7c2 de la meta 006 se llamó Marker0; `profiles/__init__.py:reference_marker` la encuentra con cualquiera de los dos nombres.
+- **`ReferenceToTracker`:** la pose de la referencia en el frame de la cámara, en mm: la única transformación que publica el tracker (§9.2, paso 10; ADR-026).
 - **Ráfaga:** los mensajes OpenIGTLink que salen juntos porque el hilo de pyigtl despierta una vez por tic de Windows y vacía su cola de una vez: 1 o 2 por ráfaga a 90 fps (§3.5).
 - **Replay:** volver a pasar por el código de hoy las esquinas y los tiempos grabados en vivo (`tests/data/`, gs1 y gs2) y comprobar que salen las mismas 4×4 que se enviaron (`tests/replay_util.py:run_marker0_replay`). «0.0 mm / 0.0°» quiere decir ≤ 1e-9 mm y ≤ 1e-9°, y «detección 0.0 px», ≤ 1e-6 px sobre los 3 frames guardados de cada cámara (`tests/test_replay_marker0.py:TOL_MM`, `tests/test_replay_marker0.py:TOL_DEG`, `tests/test_replay_marker0.py:TOL_PX`). Eso en Windows; en Linux (la Jetson) son 1e-3 mm, 1e-3° y 1e-3 px (meta 007, P22).
 - **RMS de reproyección:** la raíz de la media de los cuadrados de las distancias, en píxeles, entre lo medido en la imagen y lo que el modelo (K, dist y la pose) predice. En la calibración de la cámara, 0.167 px (gs1) y 0.154 px (gs2), con un criterio de 0.5 px; en una sola pose, 0.056 px en el ejemplo (§9.3).
 - **rvec / tvec:** el giro (eje y ángulo en radianes) y la posición (mm) de un marker respecto a la cámara (§9.2, paso 8).
 - **Saltados:** frames que la cámara entregó y el bucle no procesó porque antes llegó uno más nuevo (`camera/grabber.py:_GrabberBase.skipped`). No es un error: es la manera de no ir con retraso (§9.2, paso 1).
-- **sd z:** la desviación estándar de z, la distancia a la cámara, en las poses enviadas con Marker0 quieto: cuánto tiembla la profundidad, que es lo que peor mide una sola cámara. Línea base 0.043 mm (gs1) y 0.039 (gs2); tras la optimización, 0.030–0.037. La calcula `diagnostics/pose_log.py:summarize`.
+- **sd z:** la desviación estándar de z, la distancia a la cámara, en las poses enviadas con la referencia quieta: cuánto tiembla la profundidad, que es lo que peor mide una sola cámara. Línea base 0.043 mm (gs1) y 0.039 (gs2); tras la optimización, 0.030–0.037. La calcula `diagnostics/pose_log.py:summarize`.
 - **Semáforo «Cámara»:** en el panel, gris al arrancar. Al cerrar «Verificar IDs y colocar la cámara», verde con el último «camara X fps» si salió con código 0, o rojo con el motivo si no (`gui/status.py:chequeo_camara_tras_receta`; fase 2b de la meta 004). Verde dice que la cámara del perfil abrió, entregó frames y cerró bien; no juzga los fps: si marca ~30 en vez de ~90, falta luz (B50).
 - **Sin cliente:** los envíos que no se encolaron porque Slicer no estaba conectado (`dropped` en `transport/igtl.py:IgtlSender.send`); aparece en la línea `[FPS]`.
 - **Tic de Windows:** el paso del reloj del sistema, 15.6 ms (1/64 s). Las esperas cortas acaban en el siguiente tic; de ahí las ráfagas y el techo de ~65 Hz (§9.2, paso 11; §3.5).
@@ -828,7 +839,7 @@ _Desde el 2026-10-26 (meta 004, fase 3)._ Cada número de §9.2 y §9.4, con el 
 | ~0.5, ~6 y 0.17 ms | gris, detección, y pose con filtro, por frame | pasos 2 y 3 | `resultados.md` de la meta 003, fase 6 (medias de las cuatro corridas con cámara, tabla por etapa: 0.46–0.50, 5.58–5.98 y 0.17–0.18 ms; corregido el 2026-10-26 por P05) |
 | 6×6 = 36 casillas, distancia mínima 12 | el diccionario | paso 3 | el nombre `DICT_ARUCO_MIP_36h12` (perfil, `markers.dictionary`): 36 bits y distancia de Hamming 12 |
 | 5 a 35 px, de 10 en 10; 7 px | las ventanas del umbral adaptativo; la del refinado subpíxel | paso 3 | perfil, `markers.detector` (`adaptive_thresh_win_size_min`, `_max`, `_step`; `corner_refinement_win_size`) |
-| ID 0; 80.0 mm | Marker0 y su lado | pasos 3, 4 y 7 | perfil, `markers.list` (`id`, `size_mm`) |
+| ID 0; 80.0 mm | la referencia de hoy y su lado (en el ejemplo, Marker0) | pasos 3, 4 y 7 | perfil, `markers.list` (`id`, `size_mm`) |
 | ±40 mm, z = 0 | las esquinas del modelo | paso 4 | `vision/pose.py:build_object_points` con 80.0 |
 | 90° | el giro que daría correr el orden un lugar | paso 4 | geometría: un lugar de cuatro es un cuarto de vuelta |
 | fx 849.9, fy 848.9, cx 603.6, cy 488.9 px | K de gs1 | paso 5 | `data/intrinsecos_gs1_1280x960.yml`, `camera_matrix` |
@@ -844,7 +855,7 @@ _Desde el 2026-10-26 (meta 004, fase 3)._ Cada número de §9.2 y §9.4, con el 
 | 1 Hz | el corte fijo con que se suaviza la velocidad | paso 9 | `vision/filtering.py:OneEuroFilter.filter` (`_alpha(1.0, dt)`) |
 | a ≈ 0.12 y 0.33; 7 Hz; 100 mm/s | lo que entra de cada medida, quieto y en movimiento | paso 9 | la cuenta con `vision/filtering.py:OneEuroFilter._alpha`: a = 1 / (1 + τ/dt), τ = 1 / (2π · corte), dt = 1/90 s; corte = 2.0 + 0.05 · 100 = 7 Hz (100 mm/s es un ejemplo) |
 | 55 y 90 fps | el rango en que funciona el filtro | paso 9 | los fps del bucle con y sin ventana: `resultados.md` de la meta 003, fases 7 (61.7 y 55.2) y 7b (89.9 y 88.8) |
-| sd z 0.030–0.043 mm; 0.043 y 0.039; 0.030–0.037 | el temblor de Marker0 quieto: línea base y tras la optimización | paso 9; glosario | `resultados.md` de la meta 003, fase 1 (0.043 gs1, 0.039 gs2) y fase 7b (0.037 gs1, 0.030 gs2, sin ventana; con ventana 0.033 y 0.034, fase 7) |
+| sd z 0.030–0.043 mm; 0.043 y 0.039; 0.030–0.037 | el temblor de la referencia quieta (entonces Marker0): línea base y tras la optimización | paso 9; glosario | `resultados.md` de la meta 003, fase 1 (0.043 gs1, 0.039 gs2) y fase 7b (0.037 gs1, 0.030 gs2, sin ventana; con ventana 0.033 y 0.034, fase 7) |
 | 18944 | el puerto OpenIGTLink | paso 10; glosario | perfil, `igtlink.transforms_port` |
 | float32, unas 7 cifras | cómo viaja la 4×4 | paso 10 | pyigtl 0.3.1, `TransformMessage` (anotado en `transport/igtl.py`); float32 tiene 24 bits de mantisa |
 | ~90 envíos por segundo | sin ventana, una pose por frame | paso 11 | `resultados.md` de la meta 003, fase 7b (bucle 89.9 y 88.8 fps, 99.96 % de frames con pose) |

@@ -2,12 +2,16 @@
 
 Cada tracker de la Jetson grabo con `--record` un `.npz` de `diagnostics.pose_log.PoseLog`
 (`<segmento>_<camara>.npz`; un intento repetido lleva `_r2`, `_r3`). `load_segment` lee
-los de un segmento y rehace, frame a frame, la pose cruda de Marker0 desde las esquinas
+los de un segmento y rehace, frame a frame, la pose cruda de la referencia desde las esquinas
 grabadas con IPPE_SQUARE (las dos soluciones, `ippe_solutions`), sin el 1-Euro; la pose
 enviada (`sent_M`, con el filtro) queda aparte en `T_sent`. `check_segment` comprueba lo
 que fija el plan antes de usar un segmento: el ancla de reloj de los dos procesos, el
 solape, la fraccion con pose, el sha256 de la calibracion frente a `data/` y que la
 rotacion rehecha coincida con la enviada (la orientacion no la filtra el 1-Euro).
+
+La referencia de cada grabacion la da `profiles.reference_marker` sobre su
+`metadata.markers` (meta 006, fase 7c2): `Reference`, o `Marker0` en las grabaciones
+anteriores a esa fase; una vieja y una nueva se leen igual.
 
 `cut_segment` recorta un segmento (sin frames) para la suite: `tests/data/fusion_gs1_gs2/`.
 Como CLI, desde `codigo\\` con el venv y los argumentos explicitos:
@@ -33,12 +37,12 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+import profiles
 from diagnostics.pose_log import TABLES, load_recording
 from fusion.geometry import angle_deg
 from vision.pose import build_object_points, rvec_tvec_to_matrix
 
 CAMERAS = ("gs1", "gs2")
-MARKER_NAME = "Marker0"
 ANCHOR_TOL_MS = 1.0
 OVERLAP_MARGIN_S = 10.0
 POSE_MIN_FRACTION = 0.90
@@ -118,9 +122,12 @@ def _marker(meta: dict, name: str) -> tuple[int, float]:
     raise ValueError(f"la grabacion no tiene un marker llamado {name!r} en metadata.markers")
 
 
-def build_track(rec: dict, camera: str, name: str = MARKER_NAME, file: str = "") -> CameraTrack:
-    """Una `CameraTrack` desde una grabacion ya cargada (`load_recording`)."""
+def build_track(rec: dict, camera: str, name: str | None = None, file: str = "") -> CameraTrack:
+    """Una `CameraTrack` desde una grabacion ya cargada (`load_recording`). Sin `name`, el
+    marker es la referencia de la grabacion (`profiles.reference_marker`)."""
     meta = rec["metadata"]
+    if name is None:
+        name = str(profiles.reference_marker(meta.get("markers") or [])["name"])
     mid, size_mm = _marker(meta, name)
     K, dist = np.asarray(rec["K"], dtype=np.float64), np.asarray(rec["dist"], dtype=np.float64)
     t = np.asarray(rec["timestamps"], dtype=np.float64)
@@ -183,7 +190,7 @@ def segment_file(folder: Path, segment: str, camera: str, attempt: str | None = 
 
 
 def load_segment(folder: Path, segment: str, cameras: tuple[str, ...] = CAMERAS,
-                 attempt: str | None = None, name: str = MARKER_NAME) -> dict[str, CameraTrack]:
+                 attempt: str | None = None, name: str | None = None) -> dict[str, CameraTrack]:
     """Las pistas de las camaras de un segmento. Aborta si falta un `.npz`."""
     out = {}
     for cam in cameras:

@@ -26,7 +26,7 @@ import tracker
 from vision.tracking import MarkerTracker
 
 from .conftest import PROFILES_DIR
-from .synthetic import (DIST_SYN, K_SYN, MARKER0_ID, FakeCamera, FakeSender, fake_time, render_marker,
+from .synthetic import (DIST_SYN, K_SYN, REFERENCE_ID, FakeCamera, FakeSender, fake_time, render_marker,
                         servidor_pyigtl_sin_puerto)
 
 GS1 = PROFILES_DIR / "tracker_config_gs1.yaml"
@@ -88,7 +88,7 @@ def test_sale_con_q_y_cierra_todo(fakes, frames_syn, profile_syn) -> None:
     assert cam.opened and cam.closed and sender.closed
     assert sender.port == 18944 and sender.waited == [tracker.DEFAULT_SLICER_TIMEOUT_S]
     assert est["imshow"] == 5 and est["destroy"] == 1 and est["title"] == tracker.WINDOW_TITLE
-    assert [n for n, _ in sender.sent] == ["Marker0ToTracker"] * 5       # cinco frames, 'q' en el quinto
+    assert [n for n, _ in sender.sent] == ["ReferenceToTracker"] * 5       # cinco frames, 'q' en el quinto
     assert 5 <= cam.i <= 6                                               # el hilo pudo leer uno mas
 
 
@@ -109,7 +109,7 @@ def test_lo_enviado_es_lo_que_da_marker_tracker(fakes, frames_syn, profile_syn, 
     mt = MarkerTracker(cfg["markers"], cfg["filtering"])
     for f, t, (nombre, M) in zip(frames_syn, ts, sender.sent):
         poses = mt.process(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY), float(t), K_SYN, DIST_SYN)
-        assert nombre == "Marker0ToTracker" and np.array_equal(M, poses[0].matrix.astype(np.float32))
+        assert nombre == "ReferenceToTracker" and np.array_equal(M, poses[0].matrix.astype(np.float32))
     assert rec["metadata"]["clock"] == "time.perf_counter"
     assert rec["metadata"]["capture"]["frames_read"] >= len(frames_syn)
 
@@ -172,7 +172,7 @@ def test_config_obligatorio_y_aceleracion_en_el_log(fakes, frames_syn, profile_s
     fakes(frames_syn, profile_syn(), extra=["--no-window"])
     out = capsys.readouterr().out
     assert "[Tracker] Aceleracion HW de MSMF" in out
-    assert f"[Whitelist] IDs aceptados: [{MARKER0_ID}]" in out and "[Salida limpia]" in out
+    assert f"[Whitelist] IDs aceptados: [{REFERENCE_ID}]" in out and "[Salida limpia]" in out
     assert "[OpenIGTLink] Cliente conectado" in out and "[Captura] Camara" in out
     # Fase 6 (meta 007): sin --igtl-iface el emisor no lleva interfaz y el log dice 127.0.0.1:18944.
     assert FakeSender.instances[0].iface is None
@@ -189,7 +189,7 @@ def test_igtl_iface_llega_al_emisor_y_el_log_dice_su_direccion(fakes, frames_syn
         FakeSender.ifaces = {}
     assert rc == 0 and cam.opened and cam.closed and sender.closed
     assert sender.iface == "ifaz0" and sender.host == "192.0.2.10"
-    assert [n for n, _ in sender.sent] == ["Marker0ToTracker"] * len(frames_syn)
+    assert [n for n, _ in sender.sent] == ["ReferenceToTracker"] * len(frames_syn)
     out = capsys.readouterr().out
     assert "[Esperando] Conecta Slicer como cliente a 192.0.2.10:18944" in out
 

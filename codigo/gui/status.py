@@ -108,7 +108,7 @@ def chequear_config(ruta_cfg):
     if cfg.get("rigid_bodies"):
         return Chequeo("config", "Config del perfil", ROJO,
                        "define rigid_bodies: el dodecaedro esta archivado (ADR-026); "
-                       "el tracker sigue solo Marker0 (markers.list)"), cfg
+                       "el tracker sigue solo la referencia (markers.list)"), cfg
     return Chequeo("config", "Config del perfil", VERDE,
                    f"{ruta_cfg.name} (camera_type={ctype})"), cfg
 

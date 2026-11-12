@@ -106,10 +106,13 @@ markers:
     max_erroneous_bits_in_border_rate: 0.40
     corner_refinement_win_size: 7
 
-  # Marker0 (referencia osea): 80 mm, el de P02, medido con calibrador (P3).
+  # Reference, la referencia osea (meta 006, fase 7c2; P57): el tracker la publica como
+  # ReferenceToTracker. Hasta esa fase se llamo Marker0. Hoy sigue siendo el ID 0 de
+  # 80 mm (el de P02, medido con calibrador, P3); pasa al ID 100 con su size_mm cuando
+  # el autor entregue las 5 medidas del marker impreso (fase 7c, B55).
   list:
     - id: 0
-      name: Marker0
+      name: Reference
       size_mm: 80.0
 
 

@@ -25,6 +25,12 @@ DATA_DIR = CODE_ROOT / "data"
 
 PROFILE_GLOB = "tracker_config*.yaml"
 
+# La referencia (meta 006, fase 7c2; P57): el marker que el tracker sigue y publica como
+# `<name>ToTracker`. Hasta esa fase se llamo "Marker0": las grabaciones de entonces y las
+# copias congeladas de sus perfiles (`tests/data/`) llevan ese nombre y se leen igual.
+REFERENCE_NAME = "Reference"
+LEGACY_REFERENCE_NAMES = ("Marker0",)
+
 
 def resolve_path(p: str | Path) -> Path:
     """La ruta `p` de un perfil, absoluta: tal cual si ya lo es; si no, relativa a `codigo/`.
@@ -38,6 +44,26 @@ def resolve_path(p: str | Path) -> Path:
     return path.resolve()
 
 
+def reference_marker(markers: list[dict]) -> dict:
+    """La entrada de la referencia en `markers` (la `markers.list` de un perfil o el
+    `metadata.markers` de una grabacion): la que se llama `Reference` o, si no hay, la que
+    lleva el nombre de antes (`Marker0`). Asi una grabacion vieja y una nueva se leen igual.
+
+    ValueError, con los nombres que encontro, si no hay ninguna o si hay mas de una (las
+    dos a la vez, o un nombre repetido): no se adivina cual es (principio 7).
+    """
+    lista = [m for m in (markers or []) if isinstance(m, dict)]
+    nuevas = [m for m in lista if m.get("name") == REFERENCE_NAME]
+    viejas = [m for m in lista if m.get("name") in LEGACY_REFERENCE_NAMES]
+    if len(nuevas) + len(viejas) == 1:
+        return (nuevas or viejas)[0]
+    nombres = [m.get("name") for m in lista]
+    validos = ", ".join(repr(n) for n in (REFERENCE_NAME, *LEGACY_REFERENCE_NAMES))
+    if not nuevas and not viejas:
+        raise ValueError(f"no hay referencia: ninguna entrada se llama {validos} (hay {nombres})")
+    raise ValueError(f"hay mas de una referencia: tiene que haber una sola entrada llamada {validos} (hay {nombres})")
+
+
 def check_markers(cfg: dict, profile_name: str) -> None:
     """Valida `markers.list` del perfil; ValueError con el perfil y la entrada si algo no cuadra.
 
@@ -46,6 +72,9 @@ def check_markers(cfg: dict, profile_name: str) -> None:
     repiten. El tracker publica `<name>ToTracker` por cada marker de la lista con pose: con
     dos entradas del mismo nombre mandaria dos transforms con ese nombre por frame, y con un
     `size_mm` que no es el del marker la pose sale a otra escala sin avisar.
+
+    Fase 7c2 (P57): la lista tiene exactamente una referencia (`reference_marker`): una
+    entrada `Reference` o, en las copias congeladas de los perfiles viejos, una `Marker0`.
     """
     markers = cfg.get("markers")
     lista = markers.get("list") if isinstance(markers, dict) else None
@@ -69,6 +98,10 @@ def check_markers(cfg: dict, profile_name: str) -> None:
         if nombre in nombres:
             raise ValueError(f"{donde}: el nombre '{nombre}' ya esta en markers.list[{nombres[nombre]}]")
         ids[mid], nombres[nombre] = n, n
+    try:
+        reference_marker(lista)
+    except ValueError as e:
+        raise ValueError(f"perfil {profile_name}: markers.list: {e}") from None
 
 
 def load(path: str | Path, *, missing_ok: bool = False) -> dict:

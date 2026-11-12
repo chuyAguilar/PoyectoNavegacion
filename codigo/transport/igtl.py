@@ -189,7 +189,7 @@ class IgtlSender:
         return True
 
     def send(self, device_name: str, matrix: np.ndarray) -> bool:
-        """Encola `matrix` (4x4) como la transform `device_name` (p. ej. Marker0ToTracker)
+        """Encola `matrix` (4x4) como la transform `device_name` (p. ej. ReferenceToTracker)
         sin esperar al envio. False, y cuenta en `dropped`, si no hay cliente conectado."""
         M = np.asarray(matrix, dtype=np.float64)
         if M.shape != (4, 4):

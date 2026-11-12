@@ -6,20 +6,23 @@ referencia nueva es el ID 100 (P48) y el perfil lista solo ese (P49): el ID 0 sa
 lista blanca. Aqui se comprueba:
 
 1. Con un marker viejo (ID 0) y el nuevo (ID 100) en el mismo frame, el tracker manda un
-   solo `Marker0ToTracker` por frame y es la pose del nuevo, con su tamano; con solo un
+   solo `ReferenceToTracker` por frame y es la pose del nuevo, con su tamano; con solo un
    ID 0 a la vista (el de 80 o el de ~100), no manda nada. Lo mismo con el perfil del
    repo tal como este: el marker de su lista y uno que no es de ella.
 2. Las mismas esquinas con 80 mm y con el tamano nuevo dan la misma rotacion y una `t` en
    la razon de los tamanos: equivocarse de tamano es exactamente un error de escala.
-3. `profiles.check_markers`: nombres o IDs repetidos, o un `size_mm` que no vale, paran la
-   carga con el nombre del perfil; los perfiles del repo y las copias congeladas pasan.
+3. `profiles.check_markers`: nombres o IDs repetidos, un `size_mm` que no vale, ninguna
+   referencia o mas de una paran la carga con el nombre del perfil; los perfiles del repo
+   y las copias congeladas pasan.
 4. `replay_util.profile_diff` entre la copia congelada (el perfil con que se grabo
-   `tests/data/marker0_<cam>.npz`: ID 0, 80 mm) y el perfil del repo: solo puede diferir
-   `markers`, y dentro de el solo el ID y el tamano.
+   `tests/data/marker0_<cam>.npz`: ID 0, 80 mm, `name: Marker0`) y el perfil del repo:
+   solo difiere `markers`: el nombre (fase 7c2) y, cuando el autor mida, el ID y el tamano.
 5. Los dos perfiles del repo llevan la misma entrada, y su ID y su tamano van juntos: el
    ID 0 con 80 mm (hasta que el autor mida la referencia nueva) o el ID 100 con ~100 mm.
 
-En esta fase el `name` sigue siendo `Marker0` (lo cambia la fase 7c2).
+Desde la fase 7c2 (P57) el `name` del perfil es `Reference` y se publica
+`ReferenceToTracker`; las copias congeladas conservan `Marker0`. El nombre, sus alias y
+la guarda del nombre de antes se prueban en `test_nombre_referencia.py`.
 """
 from __future__ import annotations
 
@@ -38,7 +41,7 @@ from vision.tracking import MarkerTracker
 
 from . import replay_util
 from .conftest import PROFILES_DIR, TESTS_DATA_DIR
-from .synthetic import (DIST_SYN, K_SYN, MARKER0_ID, MARKER0_MM, FakeCamera, FakeSender, fake_time,
+from .synthetic import (DIST_SYN, K_SYN, REFERENCE_ID, REFERENCE_MM, FakeCamera, FakeSender, fake_time,
                         render_marker)
 
 GS1 = PROFILES_DIR / "tracker_config_gs1.yaml"
@@ -46,6 +49,8 @@ GS2 = PROFILES_DIR / "tracker_config_gs2.yaml"
 CAMERAS = ("gs1", "gs2")
 ID_VIEJO, MM_VIEJO = 0, 80.0            # el Marker0 de siempre
 MM_VIEJO_GRANDE = 98.6                  # el otro Marker0 con ID 0 (B55)
+REF = profiles.REFERENCE_NAME           # "Reference": el nombre de la referencia en el perfil (P57)
+DEVICE = f"{REF}ToTracker"              # lo que publica el tracker
 ID_NUEVO, MM_NUEVO = 100, 98.6          # la referencia nueva (P48); su lado, un ejemplo hasta que se mida
 N_FRAMES = 6
 TOL_MM, TOL_DEG, TOL_REL = 1e-9, 1e-9, 1e-9
@@ -103,12 +108,12 @@ def _correr(monkeypatch, frames: list, profile: Path, extra: list[str]):
 
 def _casos() -> dict:
     """`lista`: la `markers.list` del perfil; `listado` e `intrusos`: (id, mm)."""
-    otro = (ID_NUEVO, MM_NUEVO) if MARKER0_ID == ID_VIEJO else (ID_VIEJO, MM_VIEJO)
+    otro = (ID_NUEVO, MM_NUEVO) if REFERENCE_ID == ID_VIEJO else (ID_VIEJO, MM_VIEJO)
     return {
-        "id100": {"lista": [{"id": ID_NUEVO, "name": "Marker0", "size_mm": MM_NUEVO}],
+        "id100": {"lista": [{"id": ID_NUEVO, "name": REF, "size_mm": MM_NUEVO}],
                   "listado": (ID_NUEVO, MM_NUEVO),
                   "intrusos": [(ID_VIEJO, MM_VIEJO), (ID_VIEJO, MM_VIEJO_GRANDE)]},
-        "repo": {"lista": LISTA_DEL_REPO, "listado": (MARKER0_ID, MARKER0_MM), "intrusos": [otro]},
+        "repo": {"lista": LISTA_DEL_REPO, "listado": (REFERENCE_ID, REFERENCE_MM), "intrusos": [otro]},
     }
 
 
@@ -130,11 +135,12 @@ def test_con_el_viejo_y_el_nuevo_a_la_vista_se_envia_solo_el_de_la_lista(caso: s
         rec_path = tmp_path / f"dos_{k}.npz"
         rc, sender = _correr(monkeypatch, frames, profile, ["--record", str(rec_path)])
         assert rc == 0
-        assert [n for n, _ in sender.sent] == ["Marker0ToTracker"] * N_FRAMES      # un solo envio por frame
+        assert DEVICE == "ReferenceToTracker"
+        assert [n for n, _ in sender.sent] == [DEVICE] * N_FRAMES                  # un solo envio por frame
         rec = pose_log.load_recording(rec_path)
         assert rec["metadata"]["whitelist"] == [mid]
         assert rec["marker_ids"].tolist() == [mid] * N_FRAMES                      # el intruso ni se graba
-        assert rec["sent_name"].tolist() == ["Marker0"] * N_FRAMES
+        assert rec["sent_name"].tolist() == [REF] * N_FRAMES
         assert rec["sent_frame"].tolist() == list(range(N_FRAMES))
         # La pose enviada es la del marker de la lista: la de `estimate_single_pose` de sus esquinas
         # con su tamano. El giro no se filtra; la posicion pasa por el 1-Euro (la primera sale tal cual).
@@ -149,8 +155,8 @@ def test_con_el_viejo_y_el_nuevo_a_la_vista_se_envia_solo_el_de_la_lista(caso: s
             assert float(np.linalg.norm(M[:3, 3] - tvec.flatten())) < 2.0               # el filtro apenas la mueve
             assert abs(M[0, 3] - (85.0 + 0.2 * i)) < 2.0 and abs(M[2, 3] - TZ_DOS) < 3.0   # esta donde el de la lista
         # Y es lo que da el paso por frame del tracker sobre lo grabado, envio a envio.
-        r = replay_util.compare_marker0(replay_util.run_marker0_replay(rec_path, profile),
-                                        replay_util.recorded_marker0(rec_path))
+        r = replay_util.compare_marker0(replay_util.run_marker0_replay(rec_path, profile, name=REF),
+                                        replay_util.recorded_marker0(rec_path, name=REF))
         assert r["sends"] == N_FRAMES and r["frames_differ"] == 0
         assert r["max_diff_translation_mm"] <= TOL_MM and r["max_diff_rotation_deg"] <= TOL_DEG
 
@@ -205,7 +211,7 @@ def test_otro_tamano_con_las_mismas_esquinas_es_exactamente_otra_escala(euler_xy
     assert replay_util._angle_deg(R80, Rn) <= TOL_DEG
     # Lo mismo por el paso del tracker, sin filtro: dos perfiles que solo difieren en el size_mm.
     lista = lambda mm: {"dictionary": "DICT_ARUCO_MIP_36h12",                    # noqa: E731
-                        "list": [{"id": ID_NUEVO, "name": "Marker0", "size_mm": mm}]}
+                        "list": [{"id": ID_NUEVO, "name": REF, "size_mm": mm}]}
     (p80,) = MarkerTracker(lista(MM_VIEJO), {"enabled": False}).process_corners(
         [(ID_NUEVO, esquinas)], 0.0, K_SYN, DIST_SYN)
     (pn,) = MarkerTracker(lista(mm_nuevo), {"enabled": False}).process_corners(
@@ -220,20 +226,24 @@ def test_otro_tamano_con_las_mismas_esquinas_es_exactamente_otra_escala(euler_xy
 # 3. check_markers
 # ----------------------------------------------------------------------------
 
-BUENA = {"id": ID_NUEVO, "name": "Marker0", "size_mm": MM_NUEVO}
+BUENA = {"id": ID_NUEVO, "name": REF, "size_mm": MM_NUEVO}
+VIEJA = {"id": ID_VIEJO, "name": "Marker0", "size_mm": MM_VIEJO}         # la entrada de las copias congeladas
 
 
 @pytest.mark.parametrize("lista,trozo", [
-    ([BUENA, {"id": 0, "name": "Marker0", "size_mm": 80.0}], "el nombre 'Marker0' ya esta"),     # dos Marker0ToTracker por frame
+    ([BUENA, {"id": 0, "name": REF, "size_mm": 80.0}], "el nombre 'Reference' ya esta"),         # dos envios con el mismo nombre por frame
+    ([VIEJA, {"id": ID_NUEVO, "name": "Marker0", "size_mm": MM_NUEVO}], "el nombre 'Marker0' ya esta"),
+    ([BUENA, VIEJA], "hay mas de una referencia"),                                              # fase 7c2: la nueva y la de antes a la vez
+    ([{"id": 7, "name": "Otro", "size_mm": 40.0}], "no hay referencia"),
     ([BUENA, {"id": ID_NUEVO, "name": "Otro", "size_mm": 80.0}], "el id 100 ya esta"),
     ([{**BUENA, "size_mm": 0.0}], "size_mm"), ([{**BUENA, "size_mm": -98.6}], "size_mm"),
     ([{**BUENA, "size_mm": "98.6"}], "size_mm"), ([{**BUENA, "size_mm": True}], "size_mm"),
     ([{**BUENA, "size_mm": float("nan")}], "size_mm"),
-    ([{"id": ID_NUEVO, "name": "Marker0"}], "size_mm"),
+    ([{"id": ID_NUEVO, "name": REF}], "size_mm"),
     ([{**BUENA, "id": -1}], "id"), ([{**BUENA, "id": 1.5}], "id"), ([{**BUENA, "id": True}], "id"),
-    ([{**BUENA, "id": "100"}], "id"), ([{"name": "Marker0", "size_mm": 98.6}], "id"),
+    ([{**BUENA, "id": "100"}], "id"), ([{"name": REF, "size_mm": 98.6}], "id"),
     ([{**BUENA, "name": ""}], "name"), ([{**BUENA, "name": 7}], "name"), ([{"id": 1, "size_mm": 98.6}], "name"),
-    (["Marker0"], "id, name y size_mm"),
+    ([REF], "id, name y size_mm"),
     ([], "falta o esta vacia"), (None, "falta o esta vacia"), ({"id": 1}, "falta o esta vacia")])
 def test_check_markers_para_con_el_nombre_del_perfil(lista, trozo: str, tmp_path: Path) -> None:
     with pytest.raises(ValueError, match=trozo) as e:
@@ -256,14 +266,19 @@ def test_check_markers_sin_la_seccion_markers(tmp_path: Path) -> None:
 
 
 def test_el_tracker_no_arranca_con_dos_entradas_del_mismo_nombre(tmp_path: Path, monkeypatch) -> None:
-    """P49 (c): con el viejo y el nuevo los dos como `Marker0`, el tracker mandaria dos
-    `Marker0ToTracker` por frame. No llega a crear la camara ni el emisor."""
+    """P49 (c): con el viejo y el nuevo los dos como `Reference`, el tracker mandaria dos
+    `ReferenceToTracker` por frame. No llega a crear la camara ni el emisor. Tampoco con
+    la referencia nueva y la de antes (`Marker0`) a la vez (fase 7c2): serian dos
+    transforms de referencia, uno con cada nombre."""
     creados: list[str] = []
     monkeypatch.setattr(tracker, "create_backend", lambda cfg_cam: creados.append("camara"))
     monkeypatch.setattr(tracker, "IgtlSender", lambda *a, **k: creados.append("emisor"))
-    dos = [BUENA, {"id": ID_VIEJO, "name": "Marker0", "size_mm": MM_VIEJO}]
+    dos = [BUENA, {"id": ID_VIEJO, "name": REF, "size_mm": MM_VIEJO}]
     ruta = _perfil_syn(tmp_path, dos, nombre="tracker_config_dos.yaml")
-    with pytest.raises(ValueError, match="tracker_config_dos.yaml.*el nombre 'Marker0' ya esta"):
+    with pytest.raises(ValueError, match="tracker_config_dos.yaml.*el nombre 'Reference' ya esta"):
+        tracker.main(["--config", str(ruta), "--no-window"])
+    ruta = _perfil_syn(tmp_path, [BUENA, VIEJA], nombre="tracker_config_dos_nombres.yaml")
+    with pytest.raises(ValueError, match="tracker_config_dos_nombres.yaml.*hay mas de una referencia"):
         tracker.main(["--config", str(ruta), "--no-window"])
     assert creados == []
 
@@ -271,13 +286,15 @@ def test_el_tracker_no_arranca_con_dos_entradas_del_mismo_nombre(tmp_path: Path,
 def test_check_markers_acepta_lo_que_vale() -> None:
     profiles.check_markers({"markers": {"list": [BUENA]}}, "p.yaml")
     profiles.check_markers({"markers": {"list": [BUENA, {"id": 7, "name": "Otro", "size_mm": 40}]}}, "p.yaml")
+    profiles.check_markers({"markers": {"list": [VIEJA]}}, "p.yaml")           # una copia congelada: la de antes, sola
 
 
 @pytest.mark.parametrize("ruta", [GS1, GS2, _congelado("gs1"), _congelado("gs2")], ids=lambda p: p.name)
 def test_los_perfiles_del_repo_y_las_copias_congeladas_pasan(ruta: Path) -> None:
     cfg = profiles.load(ruta)
     profiles.check_markers(cfg, ruta.name)
-    assert [m["name"] for m in cfg["markers"]["list"]] == ["Marker0"]            # un solo Marker0ToTracker
+    esperado = "Marker0" if ruta.parent == TESTS_DATA_DIR else REF               # la copia congelada conserva su nombre
+    assert [m["name"] for m in cfg["markers"]["list"]] == [esperado]             # un solo envio por frame
 
 
 # ----------------------------------------------------------------------------
@@ -296,14 +313,14 @@ def test_la_copia_congelada_es_el_perfil_de_las_grabaciones(cam: str) -> None:
 
 
 @pytest.mark.parametrize("cam", CAMERAS)
-def test_el_perfil_del_repo_solo_difiere_de_la_copia_en_el_id_y_el_tamano(cam: str) -> None:
+def test_el_perfil_del_repo_solo_difiere_de_la_copia_en_markers(cam: str) -> None:
+    """Desde la fase 7c2 difieren siempre en el nombre; el ID y el tamano, cuando el autor mida."""
     repo = PROFILES_DIR / f"tracker_config_{cam}.yaml"
     d = replay_util.profile_diff(_congelado(cam), repo)
-    assert set(d) <= {"markers"}, d                    # diccionario, detector, filtro e intrinsecos, iguales
-    if d:
-        (antes,), (ahora,) = d["markers"]
-        assert antes == {"id": ID_VIEJO, "name": "Marker0", "size_mm": MM_VIEJO}
-        assert ahora["name"] == antes["name"] and (ahora["id"], ahora["size_mm"]) != (antes["id"], antes["size_mm"])
+    assert set(d) == {"markers"}, d                    # diccionario, detector, filtro e intrinsecos, iguales
+    (antes,), (ahora,) = d["markers"]
+    assert antes == VIEJA
+    assert ahora == {"id": REFERENCE_ID, "name": REF, "size_mm": REFERENCE_MM}
 
 
 def test_profile_diff_dice_cada_cosa_que_cambia(tmp_path: Path) -> None:
@@ -317,10 +334,9 @@ def test_profile_diff_dice_cada_cosa_que_cambia(tmp_path: Path) -> None:
         ruta.write_text(texto.replace(a, b), encoding="utf-8")
         return ruta
     # Como quedara el perfil del repo con la referencia nueva: solo cambia `markers` (el ID y el tamano).
-    nuevo = copia("nuevo.yaml", viejo, f"    - id: {ID_NUEVO}\n      name: Marker0\n      size_mm: {MM_NUEVO}\n")
+    nuevo = copia("nuevo.yaml", viejo, f"    - id: {ID_NUEVO}\n      name: {REF}\n      size_mm: {MM_NUEVO}\n")
     assert replay_util.profile_diff(_congelado("gs1"), nuevo) == {
-        "markers": ([{"id": ID_VIEJO, "name": "Marker0", "size_mm": MM_VIEJO}],
-                    [{"id": ID_NUEVO, "name": "Marker0", "size_mm": MM_NUEVO}])}
+        "markers": ([VIEJA], [{"id": ID_NUEVO, "name": REF, "size_mm": MM_NUEVO}])}
     detector = copia("detector.yaml", "    min_marker_perimeter_rate: 0.02\n", "    min_marker_perimeter_rate: 0.03\n")
     assert set(replay_util.profile_diff(_congelado("gs1"), detector)) == {"detector"}
     filtro = copia("filtro.yaml", "  min_cutoff: 2.0\n", "  min_cutoff: 1.0\n")
@@ -340,9 +356,9 @@ def test_los_perfiles_del_repo_llevan_la_misma_entrada_y_su_id_va_con_su_tamano(
     listas = [yaml.safe_load(p.read_text(encoding="utf-8"))["markers"]["list"] for p in (GS1, GS2)]
     assert listas[0] == listas[1] and len(listas[0]) == 1
     m = listas[0][0]
-    assert (m["id"], m["size_mm"]) == (MARKER0_ID, MARKER0_MM) and m["name"] == "Marker0"
+    assert (m["id"], m["size_mm"]) == (REFERENCE_ID, REFERENCE_MM) and m["name"] == REF == "Reference"
     if m["id"] == ID_VIEJO:
-        assert m["size_mm"] == MM_VIEJO, "el ID 0 es el Marker0 de 80 mm (B55)"
+        assert m["size_mm"] == MM_VIEJO, "el ID 0 es el marker de 80 mm (B55)"
     else:
         assert m["id"] == ID_NUEVO, "la referencia nueva es el ID 100 (P48)"
         assert 95.0 <= m["size_mm"] <= 105.0, "el lado medido de la referencia de ~100 mm"

@@ -166,7 +166,7 @@ def test_timing_no_cambia_lo_que_se_envia(tmp_path: Path, monkeypatch, frames_sy
                                           profile_syn) -> None:
     _, a = _run(monkeypatch, frames_syn, profile_syn, [])
     _, b = _run(monkeypatch, frames_syn, profile_syn, ["--timing", str(tmp_path / "t.json")])
-    assert [n for n, _ in a.sent] == [n for n, _ in b.sent] == ["Marker0ToTracker"] * len(frames_syn)
+    assert [n for n, _ in a.sent] == [n for n, _ in b.sent] == ["ReferenceToTracker"] * len(frames_syn)
     for (_, ma), (_, mb) in zip(a.sent, b.sent):
         assert np.array_equal(ma, mb)
 
