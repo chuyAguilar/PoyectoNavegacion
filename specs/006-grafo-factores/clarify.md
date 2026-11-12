@@ -480,3 +480,31 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: medirlo con la cámara contra el tablero registrado, con un paso nuevo al final de la sesión conjunta (tablero plano junto al marker, quietos) y un módulo que calcule su lado; replan corto. (b) Lo mismo en una sesión aparte, después. (c) Dejar 99.8 y anotar la incertidumbre en el BACKLOG.
 - **Respuesta del autor:** (a), la recomendada. Hasta la medida, los perfiles siguen en 99.8 (en P4, el 0.8 % son 0.4 mm de los 50).
 - **Fecha:** 2026-11-12
+
+## P77 · Cuándo se cambia el `size_mm` de la referencia con la medida de la cámara (Fase 7c3; P76 a)
+
+- **Contexto:** P9 da el lado medido por gs1 y por gs2 contra el tablero (25.95 mm, ±0.14 mm en 100 mm por la resolución del calibrador en B − A). Al planear, con la K desviada como la del diagnóstico y el conjunto centrado, el error por intrínsecos salió ≤ 0.015 mm. La placa sugiere ~100.4–100.6; los perfiles están en 99.8.
+- **Opciones:** (a) recomendada: la medida vale si cada cámara tiene ≥ 30 frames válidos con sd entre frames ≤ 0.05 mm y |gs1 − gs2| ≤ 0.3 mm; el valor es la media de las dos, a 0.1 mm; se escribe en los perfiles si difiere de 99.8 más que U = √(0.14² + (|gs1 − gs2| / 2)²) (con las cámaras a 0.1 mm, U ≈ 0.15). Evita un commit y un «no cambió» por una diferencia que no se distingue del ruido. (b) Si vale, se escribe siempre el valor medido, aunque quede dentro de U: más simple; cuesta un cambio de la cadena aunque no aporte. (c) Como (a), pero más estricta entre cámaras (≤ 0.15 mm): más confianza; más probable que haya que repetir P9.
+- **Respuesta del autor:** (a), la recomendada: la regla de validez (≥ 30 frames por cámara, sd ≤ 0.05 mm, |gs1−gs2| ≤ 0.3 mm) y se cambia solo si la media se aparta de 99.8 más que U; a 0.1 mm.
+- **Fecha:** 2026-11-12
+
+## P78 · La altura de la referencia frente al tablero en P9 (Fase 7c3)
+
+- **Contexto:** los dos son piezas de 3.0 mm en el STL (base 2.4 y capa 0.6), apoyadas en la misma mesa. Una diferencia de grosor Δh cambia el lado medido en lado × Δh / d: 0.25 mm por cada mm a 40 cm. El módulo la corrige exactamente si se le da Δh.
+- **Opciones:** (a) recomendada: antes de P9, el autor mide con las puntas del calibrador el grosor del tablero y el de la referencia (tres medidas de cada uno, en el borde, sin apoyar en la mesa) y el script pasa la diferencia; ~1 min; quita el término. (b) Δh = 0 por ser los dos de 3.0 mm en el STL, y el término se anota como ±0.05 mm (0.2 mm de tolerancia de impresión): nada que medir; deja una incertidumbre sin comprobar.
+- **Respuesta del autor:** ya medido: las dos piezas tienen el mismo grosor, 2.8 mm (calibrador entre mordazas, orillas físicas). Δh = 0 medido, no supuesto; no hace falta medir en la sesión. El script pasa Δh = 0.
+- **Fecha:** 2026-11-12
+
+## P79 · Repetir la medida del lado después de recalibrar los intrínsecos (Fases 7c3 y 7e)
+
+- **Contexto:** P9 se mide con los intrínsecos de la meta 002, antes de la 7e. Por homografía, los intrínsecos solo entran por la distorsión: al planear, ≤ 0.015 mm con el conjunto centrado; hasta 0.13 mm en gs1 con el conjunto corrido 150 px (por eso el módulo descarta los frames descentrados).
+- **Opciones:** (a) recomendada: no repetirla como requisito; el `verificar.ps1` de la 7e repite P9 con los intrínsecos nuevos como número de control (~4 min) y, si sale a más de U del valor escrito, la dirección decide. (b) Repetirla obligatoriamente y escribir el `size_mm` solo después de la 7e: la medida con los mejores intrínsecos; los perfiles siguen en 99.8 durante la 7e. (c) No repetirla: nada que hacer; sin control con los intrínsecos nuevos.
+- **Respuesta del autor:** (a), la recomendada: no es requisito; el `verificar.ps1` de la 7e la repite como control.
+- **Fecha:** 2026-11-12
+
+## P80 · Cuántas colocaciones de la referencia por cámara en P9 (Fase 7c3)
+
+- **Contexto:** con una sola colocación, un sesgo del detector que dependa de la orientación de los bordes en la imagen o del sitio de la imagen se suma igual en todos los frames y no se ve en la dispersión; solo la diferencia entre gs1 y gs2 lo delata.
+- **Opciones:** (a) recomendada: dos colocaciones por cámara (la referencia a la derecha del tablero, y después girada 90° y a su izquierda), 10 s cada una: separa ese sesgo y da una dispersión real; ~2 min más de sesión. (b) Una colocación por cámara, 10 s (lo del encargo): la sesión más corta; el sesgo solo se ve entre cámaras.
+- **Respuesta del autor:** (a), la recomendada: dos colocaciones por cámara (a la derecha del tablero y girada 90° a su izquierda).
+- **Fecha:** 2026-11-12
