@@ -117,6 +117,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B132 | Los frames de los barridos de `barrido_correccion` ocupan disco (~0.7–2 GB por sesión) | Baja | — |
 | B133 | Los repetidos no se ven en vivo (el contador sale al terminar, no en `[FPS]` ni en el panel) | Baja | — |
 | B134 | Un fantasma suelto del ID de la referencia: el filtro de repetidos no lo cubre | Media | — |
+| B135 | Las 31 pruebas de `medir_referencia` suman ~21 s a la suite (el plan decía ≤ 15) | Baja | — |
+| B136 | `RADIO_MAX_PX` de `medir_referencia` es un tope grueso: no ve un conjunto corrido hacia el lado del tablero | Baja | Meta 006, sesión conjunta (P9) |
 
 ## Abiertos
 
@@ -934,6 +936,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** fase 7d2b · Un ID repetido no se publica (meta 006), 2026-11-12; B39 (el fantasma del tablero con el ID 100: 1 de 60 vistas sintéticas con la tasa 0.60).
 - **Qué haría falta:** un gate de plausibilidad antes de publicar (el lado del marker en px frente a la distancia, o el salto frente a la pose anterior), con su ADR, su replay y su verificación en vivo.
 - **Prioridad:** media (sube a alta si una sesión ve un envío lejos de la referencia con la tasa elegida).
+
+### B135 · Las 31 pruebas de `medir_referencia` suman ~21 s a la suite (el plan decía ≤ 15)
+- **Qué:** `tests/test_medir_referencia.py` tarda 20.7 y 21.6 s (dos corridas, 31 pruebas). Un frame con ruido cuesta ~120–150 ms (el detector del perfil sobre 1280×960 tarda el doble con ruido); `main` de punta a punta con 30 + 30 frames lleva 9.2 s.
+- **Por qué queda:** ya se recortó (6 frames, no 30, en los lados de 99.80 y 101.00; la segunda cámara de `main` usa copias del frame sin ruido). Bajar más resta cobertura de la sd entre frames, que solo se mide en la serie de 100.50. El autor lo aceptó (P82 a, 2026-11-12).
+- **De dónde:** fase 7c3 · El tamaño de la referencia medido con el tablero, parte sin cámara (meta 006), 2026-11-12. Va junto a B115 y B130: la suite se acerca al tope de 600 s con la máquina cargada.
+- **Qué haría falta:** si el tiempo estorba, bajar los 30 frames de `main` a 12–15 y reutilizar la escena renderizada entre pruebas; medir con la máquina quieta antes de decidir.
+- **Prioridad:** baja.
+
+### B136 · `RADIO_MAX_PX` de `medir_referencia` es un tope grueso: no ve un conjunto corrido hacia el lado del tablero
+- **Qué:** el radio (382 px, el de 30 cm de frente) descarta por lo que se aparta del centro la referencia, no el conjunto tablero + referencia. A 40 y 55 cm el error de una K desviada pasa de 0.03 mm antes de llegar a 382 px; con el conjunto corrido 150 px hacia el tablero a 40 cm, −0.07 mm (260 px: −0.33 mm), aunque la referencia quede más cerca del centro. Se añadió `conjunto_px` (cuánto se aparta del centro la caja de las esquinas de ambos) en el `.json` y en la tabla de P9, sin descartar nada.
+- **Por qué queda:** descartar por `conjunto_px` cambia el significado de `descentrada` y es del plan. El autor aceptó el tope grueso más el número y centrar a mano (P82 a, 2026-11-12). Las dos colocaciones por cámara y la diferencia entre cámaras delatan en parte el error.
+- **De dónde:** fase 7c3 · El tamaño de la referencia medido con el tablero, parte sin cámara (meta 006), 2026-11-12 (`test_limite_conocido_…`).
+- **Qué haría falta:** si P9 da un `conjunto_px` grande con un lado fuera de U, descartar por `conjunto_px` (con tope propio) y renovar las pruebas.
+- **Prioridad:** baja (hoy se ve el número y se centra a mano).
 
 ## Cerrados
 

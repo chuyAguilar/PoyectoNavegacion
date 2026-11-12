@@ -183,3 +183,76 @@ def pose_charuco_hacia(t, K, rvec, objetivo_px, z_mm: float) -> np.ndarray:
     centro = np.array([t.ancho_mm / 2.0, t.alto_mm / 2.0, 0.0])
     u, v = objetivo_px
     return np.array([(u - K[0, 2]) / K[0, 0] * z_mm, (v - K[1, 2]) / K[1, 1] * z_mm, z_mm]) - R @ centro
+
+
+# ----------------------------------------------------------------------------
+# La referencia junto al tablero ChArUco (meta 006, fase 7c3)
+# ----------------------------------------------------------------------------
+
+REF_DICCIONARIO, REF_ID = "DICT_ARUCO_MIP_36h12", 100     # la referencia de los perfiles (P48)
+REF_MARGEN_MM = 14.0            # el blanco alrededor del marker en su placa (130 mm de placa, ~100 de marker)
+TABLERO_MARGEN_MM = 8.0         # el blanco alrededor del tablero impreso (fase 7d)
+_PLANOS_MARKER: dict = {}
+
+
+def plano_marker(diccionario: str, marker_id: int, lado_mm: float, margen_mm: float, px_por_modulo: int = 50,
+                 desenfoque_mm: float = 0.4) -> tuple[np.ndarray, float]:
+    """El dibujo plano de un marker ArUco de `lado_mm` con sus bordes en el sitio exacto, y su
+    escala: `(plano, ppmm)`. El marker se dibuja a `px_por_modulo` pixeles por modulo
+    (`generateImageMarker`; 8 modulos por lado en 36h12), asi que `ppmm` = modulos x
+    `px_por_modulo` / `lado_mm` no tiene por que ser entero (`renderizar_plano` lo admite) y
+    cualquier lado sale exacto. Alrededor, `margen_mm` de blanco redondeado hacia arriba a
+    pixeles enteros: el marker queda centrado y su primera esquina cae en el pixel (m, m), con
+    m = (plano.shape[0] - modulos x px_por_modulo) / 2. Suavizado con una gaussiana de
+    `desenfoque_mm` (como `plano_charuco`). Se guarda por sus argumentos."""
+    from vision.detection import get_dictionary
+    clave = (str(diccionario), int(marker_id), float(lado_mm), float(margen_mm), int(px_por_modulo), float(desenfoque_mm))
+    if clave not in _PLANOS_MARKER:
+        if not lado_mm > 0 or margen_mm < 0 or px_por_modulo < 1:
+            raise ValueError(f"lado_mm > 0, margen_mm >= 0 y px_por_modulo >= 1, no {lado_mm}, {margen_mm} y {px_por_modulo}")
+        dic = get_dictionary(diccionario)
+        lado_px = (int(dic.markerSize) + 2) * int(px_por_modulo)
+        ppmm = lado_px / float(lado_mm)
+        m = int(np.ceil(margen_mm * ppmm))
+        plano = np.full((lado_px + 2 * m, lado_px + 2 * m), 255, np.uint8)
+        plano[m:m + lado_px, m:m + lado_px] = cv2.aruco.generateImageMarker(dic, int(marker_id), lado_px)
+        if desenfoque_mm > 0:
+            plano = cv2.GaussianBlur(plano, (0, 0), desenfoque_mm * ppmm)
+        _PLANOS_MARKER[clave] = (plano, ppmm)
+    return _PLANOS_MARKER[clave]
+
+
+def escena_tablero_y_marker(t, K, dist, rvec, tvec, lado_mm: float, x0_mm: float, y0_mm: float, altura_mm: float,
+                            shape, ruido_sd: float = 0.0, rng=None) -> tuple[np.ndarray, np.ndarray]:
+    """La vista en gris (h, w) del tablero ChArUco `t` con la pose `T_cam<-tablero` (rvec, tvec)
+    y, a su lado, la referencia (ID 100, `DICT_ARUCO_MIP_36h12`) de `lado_mm` con su placa blanca
+    (`REF_MARGEN_MM`); y las 4 esquinas verdaderas de la referencia, (4, 2) float64, en el orden
+    del detector (`projectPoints`).
+
+    La referencia va en la pose del tablero trasladada a (`x0_mm`, `y0_mm`, -`altura_mm`) en mm
+    del tablero: (x0, y0) es donde cae la primera esquina de su cuadro negro (la de arriba a la
+    izquierda), con los ejes de `charuco_board.puntos_objeto` (x a la derecha, y hacia abajo,
+    z hacia dentro del tablero); `altura_mm` > 0 la acerca a la camara (su cara queda mas alta
+    que la del tablero), paralela a el. El tablero se dibuja a la primera escala de
+    `charuco_board.PPMM_PNG` en que su casilla mide pixeles enteros (20 px/mm con 25.95 mm).
+    Con `ruido_sd` > 0, ruido gaussiano en niveles de gris (`rng`, o uno nuevo con semilla 0)."""
+    from calibration import charuco_board as chb
+    ppmm_t = next((p for p in chb.PPMM_PNG if abs(t.casilla_mm * p - round(t.casilla_mm * p)) < 1e-6
+                   and abs(TABLERO_MARGEN_MM * p - round(TABLERO_MARGEN_MM * p)) < 1e-6), None)
+    if ppmm_t is None:
+        raise ValueError(f"la casilla de {t.casilla_mm:g} mm no mide pixeles enteros a ninguna de las escalas {chb.PPMM_PNG}")
+    img = renderizar_charuco(t, K, rvec, tvec, shape, dist, ppmm=float(ppmm_t), margen_mm=TABLERO_MARGEN_MM)
+    plano, ppmm = plano_marker(REF_DICCIONARIO, REF_ID, lado_mm, REF_MARGEN_MM)
+    m = (plano.shape[0] - round(lado_mm * ppmm)) / 2.0
+    rv = np.asarray(rvec, dtype=np.float64).reshape(3)
+    R, _ = cv2.Rodrigues(rv.reshape(3, 1))
+    tv = np.asarray(tvec, dtype=np.float64).reshape(3) + R @ np.array([x0_mm, y0_mm, -altura_mm], dtype=np.float64)
+    img = renderizar_plano(plano, (m, m), ppmm, K, rv, tv, shape, dist, sobre=img)
+    L = float(lado_mm)
+    cuadro = np.array([[0.0, 0.0, 0.0], [L, 0.0, 0.0], [L, L, 0.0], [0.0, L, 0.0]])
+    d = np.zeros(5) if dist is None else np.asarray(dist, dtype=np.float64)
+    esquinas = cv2.projectPoints(cuadro, rv, tv, np.asarray(K, dtype=np.float64), d)[0].reshape(4, 2).astype(np.float64)
+    if ruido_sd > 0:
+        rng = np.random.default_rng(0) if rng is None else rng
+        img = np.clip(img.astype(np.float64) + rng.normal(0.0, ruido_sd, img.shape), 0, 255).astype(np.uint8)
+    return img, esquinas

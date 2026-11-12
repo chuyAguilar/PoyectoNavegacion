@@ -508,3 +508,17 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: dos colocaciones por cámara (la referencia a la derecha del tablero, y después girada 90° y a su izquierda), 10 s cada una: separa ese sesgo y da una dispersión real; ~2 min más de sesión. (b) Una colocación por cámara, 10 s (lo del encargo): la sesión más corta; el sesgo solo se ve entre cámaras.
 - **Respuesta del autor:** (a), la recomendada: dos colocaciones por cámara (a la derecha del tablero y girada 90° a su izquierda).
 - **Fecha:** 2026-11-12
+
+## P81 · Qué tiene que valer el `size_mm`: el borde que ve el detector o el lado dibujado (Fase 7c3)
+
+- **Contexto:** en el sintético, `medir_referencia` da el lado 0.04–0.13 mm (mediana −0.105) por debajo del dibujado: el refinado `CORNER_REFINE_SUBPIX` del detector del perfil pone cada esquina ~0.15 px hacia dentro. El plan pedía ≤ 0.05 mm frente al dibujado (criterios 1–3). Detalle: `Claude outputs/fases/006/fase-7c3-implementa.md`.
+- **Opciones:** (a) recomendada: el borde que ve el detector; el tracker hace la pose con esas mismas esquinas, así que ese `size_mm` le da la profundidad sin sesgo; los criterios 1–3 se leen frente a la geometría detectada y las pruebas fijan lo obtenido; el sesgo (~0.1 %) se anota. (b) El lado dibujado, sumando el sesgo sintético. (c) Parar y replanificar.
+- **Respuesta del autor:** (a), la recomendada.
+- **Fecha:** 2026-11-12
+
+## P82 · El descarte por radio y el tiempo de las pruebas de la 7c3
+
+- **Contexto:** `RADIO_MAX_PX` = 382 px no ve un conjunto corrido hacia el lado del tablero (−0.07 mm a 150 px); se añadió `conjunto_px` como número, sin descartar. Las 31 pruebas nuevas tardan 21 s frente a ≤ 15 s del plan.
+- **Opciones:** (a) recomendada: aceptarlas y anotarlas en el BACKLOG (baja; el tiempo junto a B115). (b) Corregirlas antes del commit.
+- **Respuesta del autor:** (a), la recomendada.
+- **Fecha:** 2026-11-12
