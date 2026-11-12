@@ -1,0 +1,20 @@
+# Tablero ChArUco de calibracion (meta 006, fase 7d; P51, P59). Lo escribe
+# `python -m calibration.charuco_board registrar` y lo leen el asistente
+# (`capture_stereo_board --patron charuco`) y `calibrate_camera --patron charuco`.
+# Medidas con calibrador digital, de una orilla de una casilla negra a la MISMA
+# orilla de otra casilla negra, casillas_por_medida casillas mas alla en la misma
+# hilera (la misma orilla: el engrosamiento se cancela).
+# lado_mm = media de las medidas / casillas_por_medida, con dos decimales.
+# marcador_mm es el nominal: OpenCV solo lo usa para interpolar las esquinas.
+casillas_horizontales: 9
+casillas_verticales: 7
+esquinas_horizontales: 8
+esquinas_verticales: 6
+diccionario: DICT_4X4_50
+legacy: false
+marcador_mm: 19.5
+medidas_mm: [51.9, 51.9, 51.9, 51.9, 51.9]
+casillas_por_medida: 2
+lado_mm: 25.95
+fecha: "2026-11-12"
+fuente: "calibrador digital 0.1 mm, autor, 2026-11-12; cada medida = B(4 casillas, 103.0) - A(2 casillas, 51.1) en 5 filas, cancela un error fijo de apoyo de -0.8 mm; planitud: sin luz en las diagonales; PETG"

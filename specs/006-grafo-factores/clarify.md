@@ -473,3 +473,10 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: `xfail(strict=True)` atado a B39, que se quita en el cierre de la 7d2 con la tasa elegida en los perfiles. (b) Mover los frames de la prueba a una pose que 0.60 lea bien. (c) Dejarla roja hasta la sesión.
 - **Respuesta del autor:** (a), la recomendada.
 - **Fecha:** 2026-11-12
+
+## P76 · Cómo se fija el `size_mm` del marker ID 100 (Fase 7c; B55)
+
+- **Contexto:** a mano, sobre la superficie plana, el calibrador da un error de apoyo de ~0.8 mm que no depende del tramo (el cero marca 0.0). El tablero lo cancela restando dos tramos (B − A, casilla de 25.95 mm). El marker no: se ha medido 99.8 y 99.4, y la placa (129.2 de 130 nominales) con su margen de 14.0 sugiere ~100.4–100.6. La incertidumbre es de ~±0.8 % en la escala de la referencia: ~4 mm de profundidad a 50 cm.
+- **Opciones:** (a) recomendada: medirlo con la cámara contra el tablero registrado, con un paso nuevo al final de la sesión conjunta (tablero plano junto al marker, quietos) y un módulo que calcule su lado; replan corto. (b) Lo mismo en una sesión aparte, después. (c) Dejar 99.8 y anotar la incertidumbre en el BACKLOG.
+- **Respuesta del autor:** (a), la recomendada. Hasta la medida, los perfiles siguen en 99.8 (en P4, el 0.8 % son 0.4 mm de los 50).
+- **Fecha:** 2026-11-12
