@@ -1,0 +1,12 @@
+# Las reglas del `correr.ps1`: lo que corre el autor en vivo
+
+Vienen de `CLAUDE.md` §4 (regla del autor, 2026-11-05; movidas aquí el 2026-11-13 para aligerar el arranque, sin cambiar ninguna). Las lee `desarrollo` cuando escribe un script en vivo y la dirección cuando lo revisa.
+
+- **Lo que corre el autor en vivo va en un solo `.ps1`** (regla del autor, 2026-11-05). Junto al `.md` del protocolo (qué mide y qué se espera), un script `correr.ps1` en la misma carpeta de `Claude outputs/` (fuera de git) hace todos los pasos en orden, y el autor lanza solo ese. Las reglas del script:
+  - **Simula primero.** Con `-Simular` imprime cada comando sin ejecutar nada. Sin él, muestra el plan y espera «s» antes de empezar. Un paso que necesita una mano (Slicer, mover una cámara) para con el texto exacto de lo que hay que hacer y espera Enter.
+  - **Solo lo del proyecto.** Ejecuta solo `codigo\.venv\Scripts\python.exe -m <módulo del repo>`, los `.ps1` del repo o de `Claude outputs/` y `ssh nav-jetson <verbo>`. Nunca: administrador (`-Verb RunAs`, `sudo`), instalar (`pip`, `uv`, `winget`), registro, servicios, firewall, red, energía o drivers, `Set-ExecutionPolicy` (solo `-ExecutionPolicy Bypass` por llamada), descargas (`Invoke-WebRequest`, `curl`), `Invoke-Expression`, ni `git` que escriba.
+  - **Solo escribe en su carpeta de salida** y no borra nada (`Remove-Item`, `Move-Item`): una corrida nueva escribe con otro nombre. Lo único que cambia en el equipo es lo que el protocolo nombra (p. ej. un control de la cámara), y lo devuelve a su valor al terminar o si falla. No nombra datos de paciente (principio 5).
+  - **Comprueba antes y después.** Antes: la raíz, el venv, y que los puertos y las cámaras están libres; si no, no empieza. Después: que todo lo que lanzó terminó y todo quedó libre.
+  - **Topes (principio 9).** Cada proceso tiene su tope. Si se pasa, falla un paso crítico o el autor pulsa Ctrl+C (`try/finally`), para solo los procesos que él lanzó, por su PID y nunca por nombre, se detiene en ese paso y dice qué falló.
+  - **Deja constancia.** Un registro con la hora, el comando y el código de cada paso, y al final la tabla esperado / obtenido. Lo que solo ve el autor (los Hz de Slicer) lo pide por teclado y lo escribe en la tabla.
+  - **La dirección lo revisa antes de dárselo**, contra esta lista y buscando en el texto lo prohibido, y le dice al autor que lo revisó y con qué resultado.
