@@ -36,11 +36,11 @@ Aprobada por el autor el 2026-10-19 (ADR-020). Principio 1 enmendado el 2026-10-
    *Fuente: `docs/CONTEXT.md` §2; ADR-019.*
 
 6. **La cadena tracker → OpenIGTLink → Slicer y su jerarquía no se rompen nunca.**
-   - El tracker publica solo `Marker0ToTracker` por OpenIGTLink (TCP 18944, solo transforms). Desde la meta 003 ya no publica `DodecaedroToTracker` (ADR-026).
-   - En Slicer, `Marker0ToTracker` llega a la raíz de la escena; lo reciben los scripts versionados en `codigo/slicer/`. El instrumento y su punta, y el registro con el hueso, se rehacen en sus metas (ADR-025), con nombres nuevos y su ADR. Hasta entonces, la jerarquía anterior (`DodecaedroToMarker0`, `StylusTipToDodecaedro`, `BoneToMarker0`) queda como referencia en `documentos/historico/MANUAL_simplificado.md`.
+   - El tracker publica solo `ReferenceToTracker` por OpenIGTLink (TCP 18944, solo transforms): la referencia es el marker `Reference`, ID 100 (ADR-036). Hasta el 2026-11-12 se llamó `Marker0ToTracker` (ADR-026); desde la meta 003 ya no publica `DodecaedroToTracker`.
+   - En Slicer, `ReferenceToTracker` llega a la raíz de la escena; lo recibe `codigo/slicer/receive_reference.py`. El instrumento y su punta, y el registro con el hueso, se rehacen en sus metas (ADR-025), con nombres nuevos y su ADR. Hasta entonces, la jerarquía anterior (`DodecaedroToMarker0`, `StylusTipToDodecaedro`, `BoneToMarker0`) queda como referencia en `documentos/historico/MANUAL_simplificado.md`.
    - Cambiar nombres, puerto o jerarquía exige un ADR y una verificación en vivo con Slicer. Todo lo demás (cámaras, geometrías, calibraciones, GUI, scripts) puede cambiar con su plan.
 
-   *Fuente: `docs/ARCHITECTURE.md` §3.5 y §4; ADR-004; ADR-005; ADR-025; ADR-026; decisiones del autor del 2026-10-19 y del 2026-10-23.*
+   *Fuente: `docs/ARCHITECTURE.md` §3.5 y §4; ADR-004; ADR-005; ADR-025; ADR-026; ADR-036; decisiones del autor del 2026-10-19 y del 2026-10-23.*
 
 7. **Fallar fuerte, no en silencio.**
    - Un script valida sus entradas (config, geometría, calibración presente y coherente) y aborta con un mensaje claro antes que dar un resultado plausible pero falso.

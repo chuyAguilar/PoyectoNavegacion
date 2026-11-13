@@ -18,7 +18,7 @@ La primera fase es **ver si sirve**: una grabación con las dos cámaras en la J
 1. **Las dos cámaras en un mismo sistema de coordenadas:** la calibración extrínseca de gs2 respecto a gs1, guardada como dato versionado junto a los intrínsecos, con su error medido. El autor diseña aparte una estructura rígida para las dos cámaras (barra con separación elegible y ángulo fijo); hasta que exista, se trabaja con el montaje actual (dos pinzas en la caja de luz) y la calibración se repite sobre la estructura cuando llegue. **Desde el 2026-11-11 (P53):** la estructura deja de ser condición; ningún montaje es perfecto, así que los extrínsecos valen para la sesión en que se midieron y se recalibran en un paso, rápido y guiado («recalibrar y continuar»), al empezar la sesión o el día, o cuando algo no cuadre.
 2. **Las dos cámaras a la vez, con hora:** capturar gs1 y gs2 juntas y emparejar sus medidas por tiempo, sabiendo que las SVPRO no dan hora de hardware (hoy, `perf_counter` tras decodificar). Una grabación simultánea de las dos, como dataset para el replay.
 3. **La fusión en un grafo de factores:** un paquete nuevo junto a `vision/` que recibe las poses de Marker0 de cada cámara (con su ruido) y estima una sola pose con iSAM2, de forma incremental y con tope de tiempo por frame. Modular: la fuente de cada medida (ArUco de una cámara hoy; IMU o puntos IR mañana) entra como un factor más, sin tocar el resto.
-4. **La fusión en el tracker, apagada por defecto:** con la fusión apagada, el tracker hace exactamente lo de hoy; encendida, publica la pose fusionada por el mismo `Marker0ToTracker`.
+4. **La fusión en el tracker, apagada por defecto:** con la fusión apagada, el tracker hace exactamente lo de hoy; encendida, publica la pose fusionada por el mismo `ReferenceToTracker` (ADR-036; hasta el 2026-11-12, `Marker0ToTracker`).
 5. **La dependencia nueva:** `gtsam` en `codigo/requirements.txt`, con su porqué y su versión.
 
 ## Criterio de cierre
@@ -34,7 +34,7 @@ Números del autor (2026-10-29), medidos con Marker0 de 80 mm a la distancia de 
 
 ## Lo que no se toca
 
-- **La cadena (principio 6):** el nombre `Marker0ToTracker`, el puerto 18944 y la jerarquía en Slicer. **Desde el 2026-11-11 (P57):** el nombre pasa a `ReferenceToTracker` (marker `Reference`, ID 100) en las fases 7c y 7c2, con el ADR G7, que enmienda el principio 6, y verificación en vivo con Slicer; después, lo que no se toca es `ReferenceToTracker`. Si la fusión cambia qué significa «Tracker» (gs1 u otro frame común), es un ADR y una verificación en vivo con Slicer. Con la fusión apagada, el replay de Marker0 tiene que salir igual.
+- **La cadena (principio 6):** el nombre `ReferenceToTracker` (marker `Reference`, ID 100; hasta el 2026-11-12, `Marker0ToTracker`: fases 7c y 7c2, ADR-036, verificado en vivo con Slicer), el puerto 18944 y la jerarquía en Slicer. Si la fusión cambia qué significa «Tracker» (gs1 u otro frame común), es un ADR y una verificación en vivo con Slicer. Con la fusión apagada, el replay de Marker0 tiene que salir igual.
 - La detección ArUco, el PnP IPPE_SQUARE, los intrínsecos y los perfiles gs1 y gs2: se reusan tal cual. Si hace falta tocarlos, el plan dice por qué.
 - El IMU, el instrumento y la punta (B40), el registro con el hueso y los puntos IR: fuera de esta meta. El diseño solo deja el hueco.
 - La estructura de las cámaras la diseña y construye el autor aparte; la meta no la diseña.

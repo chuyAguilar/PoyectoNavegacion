@@ -7,7 +7,7 @@
 > conserva, para no repetir errores ya pagados.
 >
 > Estados: `Aceptada` · `Reemplazada` · `En pausa` · `Propuesta`.
-> _Última actualización: 2026-11-11 (ADR-035)._
+> _Última actualización: 2026-11-12 (ADR-036 y ADR-037)._
 
 Índice rápido:
 
@@ -38,7 +38,7 @@
 | 023 | La SVPRO AR0234 es de obturador global (corrige ADR-016) | Aceptada |
 | 024 | Un perfil por cámara física, identificada por su puerto USB | Aceptada |
 | 025 | Se rescata solo el tracking; lo demás se rehace sobre las cámaras nuevas | Aceptada |
-| 026 | La cadena publica solo `Marker0ToTracker` | Aceptada |
+| 026 | La cadena publica solo `Marker0ToTracker` | Aceptada (el nombre, sustituido por ADR-036) |
 | 027 | El código se ordena por responsabilidad en `codigo/` y se lanza con `python -m` | Aceptada |
 | 028 | La captura va en un hilo con el último frame y el envío no espera | Aceptada |
 | 029 | El panel detiene el tracker con un botón propio y, sin ventana, por la entrada estándar | Aceptada |
@@ -48,6 +48,8 @@
 | 033 | La meta 004 cierra con la cadena explicada en `ARCHITECTURE.md` §9 y atada al código por pruebas | Aceptada |
 | 034 | Los compañeros envían peticiones: commit y push solo de archivos nuevos en `peticiones/`, y lo hacen ellos | Aceptada |
 | 035 | La meta 006 es «el PC detecta y fusiona»; la Jetson sale de la meta por ahora | Aceptada |
+| 036 | La referencia es el marker `Reference`, ID 100, y la cadena publica `ReferenceToTracker` | Aceptada |
+| 037 | Un ID repetido en un frame no se publica ese frame | Aceptada |
 
 ---
 
@@ -561,7 +563,7 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 ---
 
 ## ADR-026 — La cadena publica solo `Marker0ToTracker`
-**Fecha:** 2026-10-23 · **Estado:** Aceptada
+**Fecha:** 2026-10-23 · **Estado:** Aceptada (el nombre, sustituido por ADR-036 el 2026-11-12; el «solo un transform» sigue)
 
 **Contexto.** El autor descartó el dodecaedro al abrir la meta 003 (2026-10-23): por ahora el tracker sigue solo Marker0, y el instrumento y la punta vuelven en otra meta con un transform de nombre nuevo (`specs/003-arquitectura-tracker/`, ADR-025). En la meta 002 la pose del dodecaedro saltaba 11–25 mm al cambiar el juego de markers (B37); Marker0 quieto da sd z 0.04 mm y 100 % de frames con pose (meta 003, fase 1). El principio 6 nombraba `DodecaedroToTracker` y la jerarquía de Slicer que cuelga de él.
 
@@ -690,3 +692,48 @@ como valor por defecto: la dirección lo fija en cada lanzamiento.
 **Decisión.** (P33, respuesta del autor del 2026-11-05.) El PC detecta con las dos cámaras y fusiona; la Jetson sale de la meta 006 por ahora y la meta 007 sigue en pausa. La fase «La Jetson envía al PC» desaparece y las fases se renumeran: 3 · Cada tracker envía sus esquinas al fusionador; 4 · El fusionador del PC, sin GTSAM; 5 · La fusión en vivo con Slicer; 6 · El grafo con GTSAM; 8 · Cierre.
 
 **Consecuencias.** Todo lo en vivo de la meta corre en el PC, con gs1 en `USB(11)#USB(3)` y gs2 en `USB(5)`: las cámaras no cambian de puerto. La fase 1 parte A (sobre la grabación de la Jetson) se conserva como experimento fuera de línea. Volver a la Jetson es otra decisión, con su ADR, al retomar la meta 007 (B91). La cadena no cambia: el nombre, el puerto 18944 y la jerarquía.
+
+---
+
+## ADR-036 — La referencia es el marker `Reference`, ID 100, y la cadena publica `ReferenceToTracker`
+**Fecha:** 2026-11-12 · **Estado:** Aceptada · **Sustituye:** el nombre de ADR-026 (el «solo un transform» de ADR-026 sigue) · **Enmienda:** el principio 6 (principio 10)
+
+**Contexto.** La meta 006 · Grafo de factores óptico-inercial (`specs/006-grafo-factores/`) calibra con un tablero ChArUco y con la referencia en la misma escena. La referencia era el ID 0 de 80 mm, `Marker0`, y había dos markers con el ID 0. Uno de ellos medía ~100 mm, y eso daba escalas cruzadas (B55). Además, el ID 0 sale fácil como ID falso. El autor pidió un ID propio, y un nombre que diga qué es y no qué marker fue (P46, P48, P49, P57).
+
+**Decisión.**
+1. La referencia es el marker ID 100 de `DICT_ARUCO_MIP_36h12`, impreso en PETG. Se llama `Reference` en `markers.list`, y los dos perfiles tienen una sola entrada. El ID 0 sale de la lista blanca.
+2. El tracker la publica como `ReferenceToTracker`, con el mismo puerto (18944), la misma jerarquía (en la raíz de la escena de Slicer) y las mismas matrices byte a byte que `Marker0ToTracker`. El script de Slicer es `codigo/slicer/receive_reference.py`.
+3. `profiles.load` exige una sola referencia. Las grabaciones viejas se leen con el alias `Marker0` y se reproducen con la copia congelada de su perfil (ID 0, 80 mm), así que el replay sigue en 0.0.
+4. El `size_mm` de la referencia se mide con la cámara contra el tablero ChArUco registrado (`calibration.medir_referencia`, P76), no con calibrador: el calibrador, apoyado sobre una pieza impresa plana, mete ~0.8 mm. Hasta tener una medida válida, los perfiles llevan 99.8 mm, medido con calibrador (±0.8 %, B55).
+5. El principio 6 de `docs/constitution.md` cambia en el mismo commit que este ADR.
+
+**Consecuencias.** Verificado en vivo en la sesión del 2026-11-12 (`Claude outputs/fases/006/fase-7c/correr_20261112-171751`, P83):
+- el ID 100 se lee en 60 de 60 líneas con cada cámara;
+- el tracker va a 90.0 / 89.8 fps y Slicer recibe a 64 / 62 Hz;
+- `ReferenceToTracker` llega a la raíz de la escena, sin `Marker0ToTracker` ni `DodecaedroToTracker`;
+- con el ID 0 a la vista, 0 envíos en 1346 frames.
+
+Lo que queda abierto:
+- «Se mueve 50 mm» dio 51.60 / 51.01 mm. Se vuelve a medir después de la recalibración de los intrínsecos (fase 7e) y de la medida del `size_mm` (fase 7c3; B55).
+- Las skills de Claude Code de fuera del repo que nombran `Marker0ToTracker` las pone al día el autor.
+
+---
+
+## ADR-037 — Un ID repetido en un frame no se publica ese frame
+**Fecha:** 2026-11-12 · **Estado:** Aceptada
+
+**Contexto.** Con el tablero ChArUco a la vista, el detector leía IDs falsos (B39). Uno de ellos era el ID de la referencia, y con eso el tracker podía publicar la pose de un objeto que no estaba ahí. Cada ID de `markers.list` es un objeto físico único, así que dos detecciones del mismo ID en un frame son siempre un error, y no hay forma fiable de saber cuál es la buena (P70 b, P72).
+
+**Decisión.**
+1. Si un ID de `markers.list` sale dos o más veces en un frame, el tracker no publica ese ID en ese frame, ni alimenta su filtro 1-Euro, y lo cuenta: la línea `[Repetidos]` al salir y `repeated` en los metadatos del `.npz`. Los demás IDs del frame se publican (fase 7d2b).
+2. No cubre un ID falso suelto. Eso lo cubre la tasa de corrección del detector, `error_correction_rate: 0.3` en los dos perfiles (fase 7d2, P84). Con esa tasa:
+   - los IDs falsos del tablero pasan de 3148 a 0;
+   - la referencia inclinada no pierde ningún frame (0 de 1072).
+3. No cambia el nombre, el puerto ni la jerarquía (principio 6).
+
+**Consecuencias.**
+- **Replay:** 8/8 en 0.0, porque las grabaciones del repo no tienen dobles.
+- **En vivo (sesión del 2026-11-12):**
+  - 2 frames con el ID 100 doble en P7 gs2, contados por `[Repetidos]` y sin envío;
+  - con una sola referencia, 0 repetidos.
+- **La verificación en vivo que hay:** no se forzó ningún doble con una copia de papel (P73 b). Por eso esa verificación se limita a lo que salió solo.
