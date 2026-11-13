@@ -194,52 +194,30 @@ Desde el 2026-10-28 (ADR-034, meta 005 · Agente de consulta para el equipo y bu
 
 ## 6. Estado del proyecto (hecho / en pausa / WIP)
 
+El detalle anterior, en `docs/history/CONTEXT_s6_2026-11-11.md` y `docs/history/CONTEXT_s6_2026-11-12.md` (copias literales).
+
 ### Hecho y validado
 
-- **Tracking de la referencia** (`python -m tracker`, meta 003; la referencia se llamó Marker0 hasta la fase 7c2 de la meta 006): `camera` (dos SVPRO global
-  shutter por puerto USB y marca, aceleración HW de MSMF apagada) → `vision` (ArUco con
-  lista blanca, IPPE_SQUARE con z > 0, 1-Euro de la posición) → `transport`
-  (`ReferenceToTracker` por OpenIGTLink, 18944; antes `Marker0ToTracker`) → Slicer. Línea base (fase 1, Marker0
-  quieto a ~37–38 cm): 100 % de frames con pose, sd z 0.043 mm (gs1) y 0.039 mm (gs2),
-  orientación 0.10–0.13°. Desde la fase 7 (ADR-028) la captura va en un hilo con el último
-  frame y el envío no espera; en vivo (2026-10-25, caja de luz al máximo, cámara a 90):
-  con ventana, gs1 61.7 fps (sd z 0.033 mm) y gs2 55.2 (sd z 0.034, aceptado por el autor,
-  P11), Slicer 50.4–56.9 Hz; sin ventana, el bucle va al ritmo de la cámara, 89.9 y 88.8
-  fps (sd z 0.037 y 0.030 mm, 99.96 % con pose), y Slicer recibe como mucho ~65 Hz: el
-  techo es de Slicer, no del tracker (fase 8b, R2; B54). Salida limpia con los dos botones
-  del tracker del panel y el 18944 libre (fase 8a).
-- **Las dos cámaras calibradas** (meta 002, cerrada el 2026-10-23; números en
-  `specs/002-calibracion-camaras/resultados.md`): 1280×960 MJPG 90 fps, 0.977 ms;
-  cámara 1 RMS 0.167 / control 0.146 px, cámara 2 0.154 / 0.150 px (detector `sb`,
-  tablero de 24.86 mm); escala por medias +0.27 y −0.37 mm en 80 mm. Calibración desde
-  el panel en tres pasos (enfocar, tablero, escala). **No girar ni sacar el lente de la
-  cámara 2 sin recalibrar** (cy 389.8, B36).
-- **Suite pytest sin cámara** (`codigo\tests\`; cuántas y cuánto tardan, en `memory.md`): niega la cámara real y el servidor pyigtl (B34); la comprobación de «no cambió» es la suite, el selftest del panel y el replay de la referencia (`docs/ARCHITECTURE.md` §6).
-- **Meta 003 · Arquitectura y optimización del tracker** (cerrada el 2026-10-25, `26e724e`; ADR-026 a ADR-031; números en `specs/003-arquitectura-tracker/resultados.md`): el código en paquetes bajo `codigo\`, la captura en un hilo con el último frame, el envío sin esperar, el tracker sin ventana a ~89–90 fps y el techo de ~65 Hz de Slicer explicado (B54).
-- **Meta 004 · Cómo funciona el tracker** (cerrada el 2026-10-26; ADR-032 y ADR-033): `docs/ARCHITECTURE.md` §9, con el mapa del proyecto, la detección → pose en 11 pasos y un ejemplo resuelto, atados al código por pruebas.
-- **Histórico (archivado, se puede retomar):** el dodecaedro v2 (IDs 3–13, BA a 1.26 px),
-  su punta por dock (spread ~1.8 mm) y la jerarquía de Slicer con registro
-  **paired-point** (RMS 2.80–3.46 mm) y navegación tomográfica (iter 3), en
-  `codigo\historico\iter4\dodecahedron\` y `documentos\historico\MANUAL_simplificado.md`.
+- **Tracking de la referencia** (`python -m tracker`, meta 003): `camera` (dos SVPRO global shutter por puerto USB, aceleración HW de MSMF apagada) → `vision` (ArUco con lista blanca y `error_correction_rate` 0.3, IPPE_SQUARE con z > 0, 1-Euro; un ID repetido en un frame no se publica, ADR-037) → `transport` (`ReferenceToTracker` por OpenIGTLink, 18944; ADR-036) → Slicer. Quieto: 100 % de frames con pose, sd z 0.03–0.04 mm. Sin ventana, el bucle va a ~90 fps y Slicer recibe como mucho ~65 Hz (techo de Slicer, B54); con el tablero ChArUco a la vista baja a 52–66 fps (B137).
+- **Las dos cámaras calibradas** (meta 002; `specs/002-calibracion-camaras/resultados.md`): 1280×960 MJPG 90 fps, RMS 0.15–0.17 px. **No girar ni sacar el lente de la cámara 2 sin recalibrar** (B36). Se recalibran con ChArUco en la Fase 7e de la meta 006.
+- **Suite pytest sin cámara** (cuántas y cuánto, en `memory.md`); «no cambió» = suite + selftest del panel + replay de la referencia (`docs/ARCHITECTURE.md` §6).
+- **Metas 003 y 004** (cerradas el 2026-10-25/26; ADR-026 a ADR-033): el código en paquetes, la captura en un hilo, el envío sin esperar, y `docs/ARCHITECTURE.md` §9 atado al código por pruebas.
+- **Histórico (archivado):** el dodecaedro v2, su punta y la jerarquía de Slicer con registro paired-point, en `codigo\historico\iter4\dodecahedron\` y `documentos\historico\MANUAL_simplificado.md`.
 
 ### Vía activa
 
-- **Rumbo (2026-10-20; ADR-025):** se rescata solo el tracking; punta, registro, navegación en Slicer y runbooks se rehacen mejorados sobre gs1/gs2. Solo valen los perfiles `profiles\tracker_config_gs1.yaml` y `_gs2.yaml`. Los contextos viejos (Femto `tracker_config.yaml`, «doctor» `tracker_config_doctor.yaml` + `globalshutter.yml`; ADR-014/015/016) están archivados en `codigo\historico\iter4\femto\` y `old_profiles\` como referencia.
-
-- **Meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC** (`specs/007-jetson/`; en pausa desde el 2026-11-05, ADR-035): fases 1 a 7 hechas. Los agentes entran a la Jetson solo por `ssh nav-jetson <verbo>` (guardián 3); venv `~/.venvs/navegacion`; la suite corre en Linux con 0 fallos; `camera/v4l2.py` abre cada cámara por su enlace by-path; Slicer en el PC recibe de la Jetson 84.0 Hz por la LAN y 82.0 por Tailscale; las dos cámaras a la vez en la Jetson, 63.2 fps de bucle con la CPU al 95.5 % (B91). Fase 7b · Las dos cámaras a la vez en Windows: partes A y B hechas (`244d31e`, `ba3ed36`): marca y ajustes por COM, y las dos a ~89–90 fps con gs2 en el frontal USB 3.0 (§4.21); faltan los Hz de Slicer de B4 y la parte C. Abiertas: B77, B85, B86, B91, B92, B93. El detalle de cada fase, en `docs/history/CONTEXT_s6_2026-11-11.md` y en `specs/007-jetson/tasks.md`.
-
-- **Meta 006 · Grafo de factores óptico-inercial** (`specs/006-grafo-factores/`, activa desde el 2026-11-05; el PC detecta con las dos cámaras y fusiona, ADR-035). Hechas: la fase 1 parte A (`a1a714b`: fusionar baja el jitter 31.9–63.1 % fuera de línea), la 2 (`ccfe803`: B94 «se movió»), la 7a · El asistente de captura del tablero (`238117e`), la 7c y la 7c2 sin cámara (`80e21a9`, `3b271df`: la referencia es el marker ID 100, se llama `Reference` y la cadena publica `ReferenceToTracker`; **desde el 2026-11-12 los perfiles llevan el ID 100 de 99.8 mm**; las copias congeladas del replay siguen en ID 0 y 80 mm), la 7d sin cámara (`7d35af1`: el tablero ChArUco 9×7 de 26 mm y el asistente de una cámara para los intrínsecos), la 7d2b (`26a23eb`: un ID repetido en un frame no se publica) y la parte sin cámara de la 7c3 (`503a0d0`: `calibration/medir_referencia.py` mide el lado de la referencia contra el tablero). **La sesión conjunta del 2026-11-12** (`Claude outputs/fases/006/fase-7c/correr_20261112-171751`) cerró la 7c2 en vivo (90.0 / 89.8 fps, Slicer 64 / 62 Hz, `ReferenceToTracker` en la raíz; «se mueve 50 mm», 51.60 / 51.01, se vuelve a medir tras la 7e; P83), lo en vivo de la 7d2b (2 dobles del 100 en P7, contados y sin envío) y la 7d2: **los perfiles fijan `error_correction_rate: 0.3`** (3 bits; 0 IDs falsos en P5–P8 y en el sintético, 0 de 1072 frames perdidos; con el tablero a la vista el tracker baja a 52–66 fps, B137; P84); B39 cerrada; **el tablero sigue fuera de la vista antes de arrancar el tracker** (§4.22). P9 de la 7c3 no dio una medida válida (P85): los perfiles siguen en 99.8 mm; lo siguiente es un diagnóstico de P9 y luego la 7e, que repite P9. La Fase 7 · Los extrínsecos por tablero, parcial (`1cf90c3`). Los números, en `tasks.md`; el detalle hasta el 2026-11-11, en `docs/history/CONTEXT_s6_2026-11-11.md`.
+- **Rumbo (ADR-025):** se rescata solo el tracking; punta, registro, navegación y runbooks se rehacen sobre gs1/gs2. Solo valen `profiles\tracker_config_gs1.yaml` y `_gs2.yaml`.
+- **Meta 006 · Grafo de factores óptico-inercial** (activa; el PC detecta y fusiona, ADR-035). Hechas: 1 parte A, 2, 7a, 7c, 7c2, 7d, 7d2, 7d2b y la 7c3 sin cámara; la 7 parcial. La referencia es el marker ID 100 (`Reference`, 99.8 mm a la espera de la medida con la cámara, B55) y la cadena publica `ReferenceToTracker`. Tablero ChArUco 9×7 de casilla 25.95 mm; **fuera de la vista antes de arrancar el tracker** (§4.22). Lo siguiente: el diagnóstico de P9, la 7e (que repite P9 y P4), el cierre de la 7c3, y la 7 / 7f / 7g / 7h. Los números, en `specs/006-grafo-factores/tasks.md`.
+- **Meta 007 · El tracker en la Jetson** (en pausa desde el 2026-11-05, ADR-035): fases 1 a 7 hechas; abiertas B77, B85, B86, B91, B92, B93. Detalle en `specs/007-jetson/tasks.md`.
 
 ### En pausa (se conserva, se puede retomar)
 
-- **Femto *depth* / nube de puntos / registro por superficie** (`femto_pruebas/`): 1.76 mm, con brazo de palanca del Marker0 (ADR-013) y ambigüedad en la columna repetitiva; plan: banco rígido con cubo distintivo (`stl/BaseMarcador/`).
+- **Femto *depth* / registro por superficie** (`femto_pruebas/`): 1.76 mm (ADR-013).
 
 ### WIP / deuda técnica pendiente
 
-- **Runbooks:** `documentos/historico/MANUAL_simplificado.md` (archivado el 2026-10-23) es del contexto doctor y del dodecaedro; se rehacen con el rumbo nuevo (su §4.2 espera la prueba en Slicer, B10).
-- **Panel** (`python -m gui.panel`; brief-01/02, verificado 2026-08-13 con la Femto y desde la meta 003 con gs1 y gs2; detalle en el historial de git de este archivo, antes de `cd77185`): el asistente del dodecaedro y el dock se archivaron en la fase 3 de la meta 003, así que su verificación en vivo (B10) espera al instrumento nuevo (B40).
-- **Detección ~3–4 markers/vista** (histórico 5–6): revisar distancia, ángulo y luz antes que el detector.
-- **La referencia (Marker0 en ADR-013) rígida y corta**; **stylus impreso nuevo** (IDs 181–191, sin pose robusta, no urgente); **depth en el BA** cuando se resuelva el bias (ADR-008).
+- **Runbooks y panel:** `documentos/historico/MANUAL_simplificado.md` es del contexto anterior; la verificación en vivo del panel con el instrumento (B10) espera al instrumento nuevo (B40).
+- **Stylus nuevo** (IDs 181–191, sin pose robusta, no urgente); **depth en el BA** (ADR-008).
 
 ## 7. Preferencias de comunicación
 
