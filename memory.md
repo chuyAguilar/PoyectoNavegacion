@@ -50,7 +50,7 @@ Peticiones pendientes: 0
 
 ## Pendientes del autor
 
-- **Meta 006:** el commit de la 7c4. Los `correr.ps1` anteriores a la 7c2 piden `Marker0ToTracker` y no valen. La casilla del tablero solo se midió a lo ancho (P85). Miniforge, para la Fase 6.
+- **Meta 006 (pausa del autor, 2026-11-13):** la sesión 1 de la 7e, `Claude outputs/fases/006/fase-7e/correr.ps1` (primero `-Simular`; scripts escritos y revisados por la dirección; ~45–60 min, sin Slicer); después desarrollo acepta los intrínsecos y corre `b141_comparar.py`, y la sesión 2 es `verificar.ps1` (Slicer, P4 y P9). La casilla del tablero mide lo mismo a lo ancho y a lo alto (autor). Los `correr.ps1` anteriores a la 7c2 no valen. Miniforge, para la Fase 6.
 - **Meta 007 (en pausa):** los Hz de Slicer de B4; `enviar_wip.ps1` y `ssh nav-jetson suite wip` con la parte B; la Wi-Fi de la Jetson (B86, con sudo); el cable directo (B85).
 - Meta 005 (aplazado hasta compartirlo con los compañeros): las pruebas en vivo de las fases 1 a 4, con sus protocolos en `Claude outputs/fases/005/`.
 - Decidir si B19 y B20 (alta) se cierran: su código y su punta se archivaron. Decidir si B35 entra en la meta.
