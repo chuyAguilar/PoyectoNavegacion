@@ -522,3 +522,24 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: aceptarlas y anotarlas en el BACKLOG (baja; el tiempo junto a B115). (b) Corregirlas antes del commit.
 - **Respuesta del autor:** (a), la recomendada.
 - **Fecha:** 2026-11-12
+
+## P83 · Cómo se cierra la 7c2 con P3 y P4 fuera de lo esperado (sesión conjunta del 2026-11-12, `correr_20261112-171751`)
+
+- **Contexto:** todo cumple salvo dos filas. P3: Slicer lista `Red Transform`, `Green Transform` y `Yellow Transform`, que son los transforms que Slicer crea para cada vista de corte (documentación de Slicer, «Slice model transform node»), no de la cadena; el tracker envió 0 de 1346 frames con el ID 0. P4: «se mueve 50 mm» sale 51.60 (gs1) y 51.01 (gs2), frente a 50 ± 1; las dos cámaras vieron el mismo deslizamiento y difieren 0.6 mm entre sí.
+- **Opciones:** (a) recomendada: dar la 7c2 por buena; P3 cumple en el fondo (el criterio debió excluir los transforms de las vistas de corte); P4 queda como número y se vuelve a medir tras la 7e y la 7c3. (b) Repetir P4 antes.
+- **Respuesta del autor:** (a), la recomendada.
+- **Fecha:** 2026-11-12
+
+## P84 · Cerrar la 7d2 con la tasa 0.30 pese a los FPS de P8
+
+- **Contexto:** el barrido eligió 0.30: en P5 pierde 0 de 1072 frames (gana 35); 0 fantasmas en P5, P6, P7 y en el sintético (con 0.60, 3148 en el tablero solo). P8: sin dobles, posición a ≤ 1.43 mm de la mediana; pero `[FPS] Promedio` 65.2 y 62.1 frente a ≥ 85. Es el tablero a la vista: P6 y P7 con 0.60 y el tablero dieron 52–56 fps, y sin tablero 90.
+- **Opciones:** (a) recomendada: cerrar con 0.30 en los dos perfiles, quitar los `xfail` de P67 y P75; el FPS con el tablero a la vista al BACKLOG (en cirugía no hay tablero). (b) Medir antes los FPS con 0.30 sin tablero.
+- **Respuesta del autor:** (a), la recomendada.
+- **Fecha:** 2026-11-12
+
+## P85 · P9 no dio una medida válida
+
+- **Contexto:** gs2 casi no vio el tablero entero (0 % de frames con las 48 esquinas; 8 y 3 frames válidos). En gs1 los cuatro lados del marker difieren ~3 mm y las dos colocaciones dan 98.5 y 100.4 mm. Causa sin separar: encuadre, planitud o geometría del tablero (la casilla solo se midió a lo ancho).
+- **Opciones:** (a) recomendada: un diagnóstico corto sobre los PNG de P9 que separe las causas, y P9 se repite en la sesión de la 7e con lo que salga; los perfiles siguen en 99.8. (b) Repetir P9 ya, más lejos, sin diagnóstico.
+- **Respuesta del autor:** (a), la recomendada.
+- **Fecha:** 2026-11-12

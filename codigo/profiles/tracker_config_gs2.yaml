@@ -105,6 +105,11 @@ markers:
     polygonal_approx_accuracy_rate: 0.05
     max_erroneous_bits_in_border_rate: 0.40
     corner_refinement_win_size: 7
+    # error_correction_rate (meta 006, fase 7d2; B39): corrige 3 de 12 bits de 36h12 (sin la
+    # clave, 0.6: 7 bits, y lee IDs falsos en el tablero ChArUco). Regla P69/P74, sesion del
+    # 2026-11-12 (correr_20261112-171751): fantasmas 3148 / 3040 (P6 / P7) con 0.6 y 0 con 0.3;
+    # la referencia inclinada (P5), 0 de 1072 frames perdidos. Igual en los dos perfiles.
+    error_correction_rate: 0.3
 
   # Reference, la referencia osea (meta 006, fase 7c2; P57): el tracker la publica como
   # ReferenceToTracker. Hasta esa fase se llamo Marker0. Desde el 2026-11-12 es el ID 100

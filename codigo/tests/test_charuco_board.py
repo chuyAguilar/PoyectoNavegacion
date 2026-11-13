@@ -431,14 +431,11 @@ def test_la_referencia_y_el_tablero_no_se_cruzan() -> None:
           f"su lista blanca, ve [100]; sin ella, el detector del perfil lee {len(crudos)} IDs de 36h12: {sorted(crudos)} (B39)")
 
 
-@pytest.mark.xfail(strict=True, reason="B39 (alta): el detector de los perfiles acepta hasta 7 bits cambiados (maxCorrectionBits 12 x "
-                                       "errorCorrectionRate 0.6) y lee IDs fantasma de 36h12 en los marcadores del tablero ChArUco; "
-                                       "la lista blanca los descarta salvo el que coincida con el de la referencia")
 def test_criterio_9_el_detector_del_perfil_solo_ve_el_id_100() -> None:
-    """El punto 9 del criterio de la fase 7d, tal como lo dice el plan: no se cumple (medido el 2026-11-11: sobre 60
-    vistas del tablero solo, 646 IDs fantasma y el 100 en una de ellas; con `error_correction_rate` 0.3, ninguno).
-    Queda como fallo esperado y estricto: cuando B39 se arregle en los perfiles, esta prueba pasara y habra que
-    quitarle la marca."""
+    """El punto 9 del criterio de la fase 7d, tal como lo dice el plan. Con la tasa 0.6 no se cumplia (medido el
+    2026-11-11: sobre 60 vistas del tablero solo, 646 IDs fantasma y el 100 en una de ellas; B39) y fue un fallo
+    esperado y estricto (P67). Desde el cierre de la 7d2 (2026-11-12, P84) los perfiles fijan
+    `error_correction_rate: 0.3` y se cumple."""
     cfg = profiles.load(PROFILES_DIR / "tracker_config_gs1.yaml")
     del_perfil = create_detector(cfg["markers"])
     fantasmas = 0

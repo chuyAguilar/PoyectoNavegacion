@@ -96,9 +96,14 @@ def test_bits_efectivos_es_lo_que_corrige_opencv(tasa: float) -> None:
 @pytest.mark.parametrize("perfil", [GS1, GS2], ids=lambda p: p.name)
 def test_detector_con_tasa_solo_cambia_la_tasa(perfil: Path, capsys) -> None:
     cfg = _markers(perfil)
-    assert "error_correction_rate" not in (cfg.get("detector") or {})      # los perfiles no la fijan (hasta el cierre)
+    # Desde el cierre de la 7d2 (2026-11-12, P84) los perfiles fijan 0.3; sin la clave, el valor por defecto de OpenCV.
+    assert cfg["detector"]["error_correction_rate"] == 0.3
+    sin_tasa = copy.deepcopy(cfg)
+    sin_tasa["detector"].pop("error_correction_rate")
     antes = copy.deepcopy(cfg)
-    del_perfil = create_detector(cfg).getDetectorParameters()
+    capsys.readouterr()
+    assert create_detector(cfg).getDetectorParameters().errorCorrectionRate == 0.3
+    del_perfil = create_detector(sin_tasa).getDetectorParameters()
     assert del_perfil.errorCorrectionRate == 0.6 == bc.BASE                # el valor por defecto de OpenCV
     capsys.readouterr()
     atributos = [a for a in dir(del_perfil) if not a.startswith("_") and not callable(getattr(del_perfil, a))]
@@ -337,8 +342,11 @@ def _sin_tasa(cfg: dict) -> dict:
     return cfg
 
 
-@pytest.mark.parametrize("perfil", [GS1, GS2], ids=lambda p: p.name)
-def test_perfil_con_tasa_sobre_los_perfiles_del_repo(perfil: Path, tmp_path: Path) -> None:
+@pytest.mark.parametrize("cam", CAMERAS)
+def test_perfil_con_tasa_sobre_los_perfiles_del_repo(cam: str, tmp_path: Path) -> None:
+    """Desde el cierre de la 7d2 los perfiles del repo ya traen la clave (0.3): la copia la cambia en su linea. La
+    copia congelada del replay no la trae: la copia la anade al final del bloque del detector."""
+    perfil = PROFILES_DIR / f"tracker_config_{cam}.yaml"
     antes = perfil.read_bytes()
     base = profiles.load(perfil)
     for tasa in (0.30, 0.45):
@@ -346,17 +354,31 @@ def test_perfil_con_tasa_sobre_los_perfiles_del_repo(perfil: Path, tmp_path: Pat
         assert bc.perfil_con_tasa(perfil, tasa, salida) == salida
         copia = profiles.load(salida)                                      # carga, con sus intrinsecos y su markers.list
         assert copia["markers"]["detector"]["error_correction_rate"] == tasa
-        assert _sin_tasa(copia) == _sin_tasa(base) and copia != base       # solo difiere esa clave
+        assert _sin_tasa(copia) == _sin_tasa(base) and (copia == base) is (tasa == 0.30)   # solo difiere esa clave
         assert create_detector(copia["markers"]).getDetectorParameters().errorCorrectionRate == tasa
-        assert set(replay_util.profile_diff(perfil, salida)) == {"detector"}
-        # En el texto: tres lineas de mas (dos de comentario y la clave), al final del bloque del detector.
+        assert set(replay_util.profile_diff(perfil, salida)) == (set() if tasa == 0.30 else {"detector"})
+        # En el texto: las mismas lineas, y solo la de la clave puede cambiar.
         a, b = antes.decode("utf-8").splitlines(), salida.read_bytes().decode("utf-8").splitlines()
+        assert len(b) == len(a) and [x for x, y in zip(a, b) if x != y] == ([] if tasa == 0.30 else ["    error_correction_rate: 0.3"])
+        assert f"    error_correction_rate: {tasa:g}" in b
+        assert (b"\r\n" in salida.read_bytes()) == (b"\r\n" in antes)       # los fines de linea del base
+    assert perfil.read_bytes() == antes                                    # el perfil del repo, sin tocar
+    # Sobre la copia congelada, sin la clave: tres lineas de mas (dos de comentario y la clave), al final del detector.
+    congelado = _congelado(cam)
+    antes_c = congelado.read_bytes()
+    for tasa in (0.30, 0.45):
+        salida = tmp_path / f"{congelado.stem}_{bc.clave_tasa(tasa)}.yaml"
+        assert bc.perfil_con_tasa(congelado, tasa, salida) == salida
+        copia = profiles.load(salida)
+        assert copia["markers"]["detector"]["error_correction_rate"] == tasa
+        assert _sin_tasa(copia) == _sin_tasa(profiles.load(congelado))
+        a, b = antes_c.decode("utf-8").splitlines(), salida.read_bytes().decode("utf-8").splitlines()
         nuevas = [linea for linea in b if linea not in a]
         assert len(b) == len(a) + 3 and len(nuevas) == 3 and nuevas[2] == f"    error_correction_rate: {tasa:g}"
         assert nuevas[0].startswith("    # error_correction_rate: copia temporal") and "bits" in nuevas[1]
         assert b[b.index(nuevas[2]) - 3].strip() == "corner_refinement_win_size: 7"
-        assert (b"\r\n" in salida.read_bytes()) == (b"\r\n" in antes)       # los fines de linea del base
-    assert perfil.read_bytes() == antes                                    # el perfil del repo, sin tocar
+        assert (b"\r\n" in salida.read_bytes()) == (b"\r\n" in antes_c)
+    assert congelado.read_bytes() == antes_c
     # Sobre una copia que ya trae la clave, la cambia en su linea (y conserva el comentario de esa linea).
     con = tmp_path / "con_tasa.yaml"
     con.write_bytes(salida.read_bytes().replace(b"error_correction_rate: 0.45", b"error_correction_rate: 0.45   # nota"))

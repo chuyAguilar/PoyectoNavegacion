@@ -7,7 +7,7 @@
 > se actualiza al cerrar cada iteración.
 >
 > El *qué* está en `ARCHITECTURE.md`; el *porqué* en `DECISIONS.md`.
-> _Última actualización: 2026-11-12 (§6: la fase 7c3 sin cámara; antes, el mismo día, §3 y §6: los perfiles en el ID 100 de 99.8 mm; antes, el mismo día, §6: la fase 7d2b sin cámara). Antes, 2026-11-11 (§6 recortado: lo cerrado de las metas 003, 004 y 007 y el detalle de las fases de la 006, copiados literal a `docs/history/CONTEXT_s6_2026-11-11.md`, con las actualizaciones anteriores). Las de antes, también en el historial de git._
+> _Última actualización: 2026-11-12 (§4.22 y §6: la sesión conjunta y el cierre de la fase 7d2, la tasa 0.3 en los perfiles; antes, el mismo día, §6: la fase 7c3 sin cámara; antes, el mismo día, §3 y §6: los perfiles en el ID 100 de 99.8 mm; antes, el mismo día, §6: la fase 7d2b sin cámara). Antes, 2026-11-11 (§6 recortado: lo cerrado de las metas 003, 004 y 007 y el detalle de las fases de la 006, copiados literal a `docs/history/CONTEXT_s6_2026-11-11.md`, con las actualizaciones anteriores). Las de antes, también en el historial de git._
 
 ---
 
@@ -176,6 +176,15 @@
     marca y los ajustes se leen y se escriben por COM sobre el filtro de captura, sin
     abrir vídeo (`camera/dshow_props.py`; el tracker, desde la parte B de la fase 7b).
     No volver a la apertura corta para leer una cámara mientras la otra corre.
+22. **El tablero ChArUco, fuera de la vista antes de arrancar el tracker,** en todo protocolo
+    con la referencia (P66, P71; B39). Con la tasa por defecto de OpenCV (0.6: 7 bits) el
+    detector leía miles de IDs falsos de 36h12 en el tablero (3148 en 374 frames reales, P6
+    de la sesión del 2026-11-12), y uno con el ID de la referencia se publicaría. Desde el
+    2026-11-12 los perfiles fijan `error_correction_rate: 0.3` (3 bits; meta 006, fase 7d2) y
+    el tracker no publica un ID que sale repetido en un frame (fase 7d2b): en la sesión, 0
+    falsos con 0.3. La regla se queda porque el barrido no cubre toda luz, distancia y ángulo,
+    y un 100 falso suelto sí se publicaría (B134). Con el tablero a la vista, además, el tracker
+    baja a 52–66 fps (B137).
 
 ## 5. Metodología de trabajo (cómo colaboramos humano + IA)
 
@@ -219,7 +228,7 @@ Desde el 2026-10-28 (ADR-034, meta 005 · Agente de consulta para el equipo y bu
 
 - **Meta 007 · El tracker en la Jetson Orin Nano, con Slicer en el PC** (`specs/007-jetson/`; en pausa desde el 2026-11-05, ADR-035): fases 1 a 7 hechas. Los agentes entran a la Jetson solo por `ssh nav-jetson <verbo>` (guardián 3); venv `~/.venvs/navegacion`; la suite corre en Linux con 0 fallos; `camera/v4l2.py` abre cada cámara por su enlace by-path; Slicer en el PC recibe de la Jetson 84.0 Hz por la LAN y 82.0 por Tailscale; las dos cámaras a la vez en la Jetson, 63.2 fps de bucle con la CPU al 95.5 % (B91). Fase 7b · Las dos cámaras a la vez en Windows: partes A y B hechas (`244d31e`, `ba3ed36`): marca y ajustes por COM, y las dos a ~89–90 fps con gs2 en el frontal USB 3.0 (§4.21); faltan los Hz de Slicer de B4 y la parte C. Abiertas: B77, B85, B86, B91, B92, B93. El detalle de cada fase, en `docs/history/CONTEXT_s6_2026-11-11.md` y en `specs/007-jetson/tasks.md`.
 
-- **Meta 006 · Grafo de factores óptico-inercial** (`specs/006-grafo-factores/`, activa desde el 2026-11-05; el PC detecta con las dos cámaras y fusiona, ADR-035). Hechas: la fase 1 parte A (`a1a714b`: fusionar baja el jitter 31.9–63.1 % fuera de línea), la 2 (`ccfe803`: B94 «se movió»), la 7a · El asistente de captura del tablero (`238117e`), la 7c y la 7c2 sin cámara (`80e21a9`, `3b271df`: la referencia es el marker ID 100, se llama `Reference` y la cadena publica `ReferenceToTracker`; **desde el 2026-11-12 los perfiles llevan el ID 100 de 99.8 mm**; las copias congeladas del replay siguen en ID 0 y 80 mm), la 7d sin cámara (`7d35af1`: el tablero ChArUco 9×7 de 26 mm y el asistente de una cámara para los intrínsecos) y la parte sin cámara de la 7d2 (`6cd759e`: el barrido de `error_correction_rate`; B39 en alta; **el tablero, fuera de la vista antes de arrancar el tracker**) y la 7d2b sin cámara (un ID repetido en un frame no se publica; falta lo en vivo). La parte sin cámara de la 7c3 está hecha, pendiente del commit del autor (`calibration/medir_referencia.py`: mide el lado de la referencia contra el tablero; el `size_mm` de los perfiles cambia en el cierre, tras la sesión conjunta). La Fase 7 · Los extrínsecos por tablero, parcial (`1cf90c3`). Los números, en `tasks.md`; el detalle hasta el 2026-11-11, en `docs/history/CONTEXT_s6_2026-11-11.md`.
+- **Meta 006 · Grafo de factores óptico-inercial** (`specs/006-grafo-factores/`, activa desde el 2026-11-05; el PC detecta con las dos cámaras y fusiona, ADR-035). Hechas: la fase 1 parte A (`a1a714b`: fusionar baja el jitter 31.9–63.1 % fuera de línea), la 2 (`ccfe803`: B94 «se movió»), la 7a · El asistente de captura del tablero (`238117e`), la 7c y la 7c2 sin cámara (`80e21a9`, `3b271df`: la referencia es el marker ID 100, se llama `Reference` y la cadena publica `ReferenceToTracker`; **desde el 2026-11-12 los perfiles llevan el ID 100 de 99.8 mm**; las copias congeladas del replay siguen en ID 0 y 80 mm), la 7d sin cámara (`7d35af1`: el tablero ChArUco 9×7 de 26 mm y el asistente de una cámara para los intrínsecos), la 7d2b (`26a23eb`: un ID repetido en un frame no se publica) y la parte sin cámara de la 7c3 (`503a0d0`: `calibration/medir_referencia.py` mide el lado de la referencia contra el tablero). **La sesión conjunta del 2026-11-12** (`Claude outputs/fases/006/fase-7c/correr_20261112-171751`) cerró la 7c2 en vivo (90.0 / 89.8 fps, Slicer 64 / 62 Hz, `ReferenceToTracker` en la raíz; «se mueve 50 mm», 51.60 / 51.01, se vuelve a medir tras la 7e; P83), lo en vivo de la 7d2b (2 dobles del 100 en P7, contados y sin envío) y la 7d2: **los perfiles fijan `error_correction_rate: 0.3`** (3 bits; 0 IDs falsos en P5–P8 y en el sintético, 0 de 1072 frames perdidos; con el tablero a la vista el tracker baja a 52–66 fps, B137; P84); B39 cerrada; **el tablero sigue fuera de la vista antes de arrancar el tracker** (§4.22). P9 de la 7c3 no dio una medida válida (P85): los perfiles siguen en 99.8 mm; lo siguiente es un diagnóstico de P9 y luego la 7e, que repite P9. La Fase 7 · Los extrínsecos por tablero, parcial (`1cf90c3`). Los números, en `tasks.md`; el detalle hasta el 2026-11-11, en `docs/history/CONTEXT_s6_2026-11-11.md`.
 
 ### En pausa (se conserva, se puede retomar)
 

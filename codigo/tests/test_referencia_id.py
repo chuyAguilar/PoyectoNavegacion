@@ -121,12 +121,7 @@ def _casos() -> dict:
 # 1. El tracker sigue solo al marker de la lista
 # ----------------------------------------------------------------------------
 
-@pytest.mark.parametrize("caso", [
-    "id100",
-    pytest.param("repo", marks=pytest.mark.xfail(
-        strict=True, reason="B39: con la tasa 0.60 del perfil, el ID 100 sintetico de 99.8 mm se lee como 149 "
-                            "en 1 de 6 frames; se quita en el cierre de la 7d2 con la tasa elegida en los perfiles (P75)")),
-])
+@pytest.mark.parametrize("caso", ["id100", "repo"])     # "repo", xfail hasta el cierre de la 7d2 (P75; tasa 0.3, P84)
 def test_con_el_viejo_y_el_nuevo_a_la_vista_se_envia_solo_el_de_la_lista(caso: str, tmp_path: Path, monkeypatch) -> None:
     c = _casos()[caso]
     mid, mm = c["listado"]
@@ -319,13 +314,23 @@ def test_la_copia_congelada_es_el_perfil_de_las_grabaciones(cam: str) -> None:
 
 @pytest.mark.parametrize("cam", CAMERAS)
 def test_el_perfil_del_repo_solo_difiere_de_la_copia_en_markers(cam: str) -> None:
-    """Desde la fase 7c2 difieren siempre en el nombre; el ID y el tamano, cuando el autor mida."""
+    """Desde la fase 7c2 difieren siempre en el nombre; el ID y el tamano, cuando el autor mida. Desde el cierre de
+    la 7d2 (2026-11-12, P84), tambien en `markers.detector`, y ahi solo en `error_correction_rate` (0.3)."""
     repo = PROFILES_DIR / f"tracker_config_{cam}.yaml"
     d = replay_util.profile_diff(_congelado(cam), repo)
-    assert set(d) == {"markers"}, d                    # diccionario, detector, filtro e intrinsecos, iguales
+    assert set(d) == {"markers", "detector"}, d        # diccionario, filtro e intrinsecos, iguales
     (antes,), (ahora,) = d["markers"]
     assert antes == VIEJA
     assert ahora == {"id": REFERENCE_ID, "name": REF, "size_mm": REFERENCE_MM}
+    det_antes, det_ahora = d["detector"]
+    assert "error_correction_rate" not in det_antes and det_ahora.pop("error_correction_rate") == 0.3
+    assert det_ahora == det_antes                      # el resto del detector, igual
+
+
+def test_los_dos_perfiles_fijan_la_misma_tasa() -> None:
+    """La tasa de correccion de la 7d2 (P84) es una sola: los dos perfiles llevan el mismo bloque del detector."""
+    detectores = [yaml.safe_load(p.read_text(encoding="utf-8"))["markers"]["detector"] for p in (GS1, GS2)]
+    assert detectores[0] == detectores[1] and detectores[0]["error_correction_rate"] == 0.3
 
 
 def test_profile_diff_dice_cada_cosa_que_cambia(tmp_path: Path) -> None:

@@ -6,7 +6,8 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-11-12 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7c3 · El tamaño de la referencia medido con el tablero, parte sin cámara: `calibration/medir_referencia.py`, fuera de la cadena; los perfiles no cambian hasta el cierre de la fase)._
+> _Última actualización: 2026-11-12 (§3.2 y la tabla de números de §9: meta 006 · Grafo de factores óptico-inercial, cierre de la fase 7d2 · Los IDs falsos del tablero en el detector del tracker: los perfiles fijan `markers.detector.error_correction_rate: 0.3`; nombre, puerto y jerarquía no cambian)._
+> _Antes, 2026-11-12 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7c3 · El tamaño de la referencia medido con el tablero, parte sin cámara: `calibration/medir_referencia.py`, fuera de la cadena; los perfiles no cambian hasta el cierre de la fase)._
 > _Antes, 2026-11-12 (§3.2, árbol y la fila «Pose» de §9.1: meta 006 · Grafo de factores óptico-inercial, fase 7d2b · Un ID repetido no se publica (B39, opción c): `MarkerTracker.process_corners` no da pose de un ID de `markers.list` que sale dos o más veces en un frame, y lo cuenta; el tracker lo dice al salir (`[Repetidos]`) y `--record` lo guarda; no cambia nombre, puerto ni jerarquía)._
 > _Antes, 2026-11-11 (árbol: meta 006 · Grafo de factores óptico-inercial, fase 7d2 · Los IDs falsos del tablero en el detector del tracker, parte sin cámara: `diagnostics/barrido_correccion.py`, fuera de la cadena; los perfiles no cambian). Antes, 2026-11-11 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7d · El tablero ChArUco y los intrínsecos con el asistente de una cámara: `calibration/charuco_board.py`, `calibration/stl_bicolor.py` y el modo `--modo intrinsecos` del asistente, fuera de la cadena). Antes, 2026-11-11 (§2, §3.3, §3.5, §3.6, §4, §6, §7 y §9: meta 006 · Grafo de factores óptico-inercial, fase 7c2 · `Reference` y `ReferenceToTracker`: la referencia se llama `Reference`, la cadena publica `ReferenceToTracker` en vez de `Marker0ToTracker` y el script de Slicer es `slicer/receive_reference.py`; el mapa de §9.1, reexportado; el puerto y la jerarquía no cambian). Antes, 2026-11-11 (§6, árbol: meta 006 · Grafo de factores óptico-inercial, fase 7c · La referencia con su propio ID: `diagnostics/marker_image.py`, `profiles.check_markers` y las copias congeladas de los perfiles en `tests/data/`; la cadena no cambia). Antes, 2026-11-10 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7a · El asistente de captura del tablero: `calibration/capture_stereo_board.py`, fuera de la cadena; antes, 2026-11-09, `calibrate_extrinsics.py`)._
 > _Antes, 2026-11-05 (§6: meta 006 · Grafo de factores óptico-inercial, fase 1 · Verlo, parte A: paquete nuevo `codigo/fusion/`, fuera de línea y sin gtsam, que no toca la cadena)._
@@ -159,7 +160,9 @@ profiles\tracker_config_gsN.yaml` (desde `codigo\`; `--config` obligatorio). `tr
   (principio 7). `list_profiles()` da los `profiles/tracker_config*.yaml`.
 - `vision/detection.py` — `create_detector(cfg_markers)`: `cv2.aruco.ArucoDetector`
   con el diccionario del perfil (**DICT_ARUCO_MIP_36h12**), `CORNER_REFINE_SUBPIX` y
-  los parámetros de `markers.detector` (tuneados para ángulos rasantes);
+  los parámetros de `markers.detector` (tuneados para ángulos rasantes; desde el
+  2026-11-12, `error_correction_rate` 0.3: corrige 3 de 12 bits, no 7, y no lee IDs falsos
+  en el tablero ChArUco; meta 006, fase 7d2, B39);
   `detect(detector, gray, valid_ids)` detecta y aplica la lista blanca (solo los IDs
   de `markers.list`; hoy `[0]`).
 - `vision/pose.py` — `estimate_single_pose(corners, size_mm, K, dist)`:
@@ -875,6 +878,7 @@ _Desde el 2026-10-26 (meta 004, fase 3)._ Cada número de §9.2 y §9.4, con el 
 | ~0.5, ~6 y 0.17 ms | gris, detección, y pose con filtro, por frame | pasos 2 y 3 | `resultados.md` de la meta 003, fase 6 (medias de las cuatro corridas con cámara, tabla por etapa: 0.46–0.50, 5.58–5.98 y 0.17–0.18 ms; corregido el 2026-10-26 por P05) |
 | 6×6 = 36 casillas, distancia mínima 12 | el diccionario | paso 3 | el nombre `DICT_ARUCO_MIP_36h12` (perfil, `markers.dictionary`): 36 bits y distancia de Hamming 12 |
 | 5 a 35 px, de 10 en 10; 7 px | las ventanas del umbral adaptativo; la del refinado subpíxel | paso 3 | perfil, `markers.detector` (`adaptive_thresh_win_size_min`, `_max`, `_step`; `corner_refinement_win_size`) |
+| 0.3 (3 de 12 bits) | cuántos bits cambiados acepta el detector al leer un ID; sin la clave, 0.6 (7 bits), con la que se grabó el ejemplo | paso 3 | perfil, `markers.detector.error_correction_rate` (desde el 2026-11-12; meta 006, fase 7d2, B39) |
 | ID 0; 80.0 mm | la referencia de hoy y su lado (en el ejemplo, Marker0) | pasos 3, 4 y 7 | perfil, `markers.list` (`id`, `size_mm`) |
 | ±40 mm, z = 0 | las esquinas del modelo | paso 4 | `vision/pose.py:build_object_points` con 80.0 |
 | 90° | el giro que daría correr el orden un lugar | paso 4 | geometría: un lugar de cuatro es un cuarto de vuelta |
