@@ -122,6 +122,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B138 | El criterio de P3 de `fase-7c/correr.ps1` no excluye los transforms de las vistas de corte de Slicer | Baja | Meta 006, `verificar.ps1` de la 7e |
 | B139 | El fondo de la caja de luz no es plano ni rígido | Media | Meta 006, Fase 7c4 |
 | B140 | La impresión del tablero ChArUco: un marcador falla y el residuo de la homografía es alto | Baja | Meta 006, tras la 7e |
+| B141 | Las esquinas del borde del tablero ChArUco cambian hasta 3.7 px según qué marcadores vecinos se lean | Media | Meta 006, antes de aceptar los intrínsecos de la 7e |
 
 ## Abiertos
 
@@ -968,6 +969,13 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** el diagnóstico de P9 (P85–P86); replan del 2026-11-12 (b).
 - **Qué haría falta:** tras la 7e, si el residuo de gs1 sigue > 0.15 px con los intrínsecos nuevos, mirar el tablero con lupa y, si hace falta, reimprimirlo y registrarlo otra vez.
 - **Prioridad:** baja (solo si estorba).
+
+### B141 · Las esquinas del borde del tablero ChArUco cambian hasta 3.7 px según qué marcadores vecinos se lean
+- **Qué:** sobre los 274 PNG de P9 del 2026-11-12, el detector del tablero con `perspectiveRemovePixelPerCell` 4 y con 8 da las mismas esquinas en el 98 % de los casos (a ≤ 0.01 px), pero 194 de las 9862 esquinas comunes difieren más de 0.01 px, hasta 3.65 px (gs2), casi todas del borde del tablero (IDs 1, 3, 6, 7, 15, 23), cerca de marcadores que se leen o no según el parámetro. Las dos lecturas quedan a 0.4–2 px de la pose del tablero, sin que una sea mejor que la otra. Hipótesis: `cornerSubPix` (ventana 7 × 7, corrección máxima 2 px) converge a sitios distintos según la esquina aproximada que da `detectBoard`, que cambia con los marcadores vecinos leídos; sin comprobar.
+- **Por qué queda:** la fase 7c4 no lo toca (su criterio 1 pedía ≤ 0.01 px, que se cumple en el sintético y no en el 2 % real); con la referencia encima del tablero solo se usan 12 esquinas de los extremos.
+- **De dónde:** meta 006, fase 7c4 · P9 con la referencia sobre el tablero (criterio 1; `Claude outputs/fases/006/fase-7c3/fase-7c4-real.json`).
+- **Qué haría falta:** en la fase 7e (P91 a), calcular los intrínsecos con los dos detectores (`perspectiveRemovePixelPerCell` 4 y 8) y compararlos (fx, fy, cx, cy y RMS) antes de aceptarlos; si difieren más que su incertidumbre, medir en los PNG la reproyección por esquina contra la pose del tablero y probar a descartar las esquinas cuya corrección de `cornerSubPix` pase de ~1 px o cuyo residuo sea alto.
+- **Prioridad:** media (puede meter 1–2 px en unas pocas esquinas de la calibración; el RMS de la 7e lo vería).
 
 ## Cerrados
 

@@ -578,3 +578,10 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: la segunda colocación, la referencia girada 90° en el mismo sitio del tablero, y el conjunto (tablero y referencia) movido en la imagen ~100–150 px, sin salir del radio; el script dice el giro y el sitio, y no deja seguir si no cambiaron. Separa los dos sesgos. (b) Solo girada 90°, sin mover el conjunto: más fácil; no separa el sitio en la imagen. (c) Dos sitios sobre el tablero (corrida ±26 mm), con la extrapolación de P87 (c).
 - **Respuesta del autor:** (a), la recomendada: girada 90° en el mismo sitio y el conjunto movido 100–150 px en la imagen.
 - **Fecha:** 2026-11-12
+
+## P91 · Los tres criterios de la 7c4 que se quedan cortos por poco
+
+- **Contexto:** (1) con `perspectiveRemovePixelPerCell` 8, el 2 % de las esquinas comunes de los PNG reales de P9 no coincide a ≤ 0.01 px con el detector anterior (hasta 3.65 px, en el borde); en el sintético, 0.0 px (B141). (2) El lado encima frente al de al lado: ≤ 0.03 mm en 4 de 6 poses; a 55 cm, 0.055 y 0.031 mm (el exceso viene de la medida al lado, que extrapola; contra el sesgo del detector, ≤ 0.014 mm en las seis). (3) A 45° con la referencia plana, el sesgo estimado da −0.025 mm (−0.033 con la K desviada) frente al tope de 0.03. Detalle: `Claude outputs/fases/006/fase-7c4-implementa.md`.
+- **Opciones:** (a) recomendada: aceptar las tres; las pruebas fijan lo obtenido; en la 7e se comparan los intrínsecos con los dos detectores (B141). (b) Aceptar 2 y 3 e investigar 1 antes del commit.
+- **Respuesta del autor:** (a), la recomendada.
+- **Fecha:** 2026-11-12

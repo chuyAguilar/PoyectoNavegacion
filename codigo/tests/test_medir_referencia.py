@@ -17,6 +17,10 @@ constantes `PLAN_*` y cada prueba dice el suyo):
 - `RADIO_MAX_PX` sale del procedimiento del criterio 4 a 30 cm (382 px). A 40 y 55 cm el error
   por una K desviada pasa de 0.03 mm antes (295 y 315 px), y si el conjunto se corre hacia el
   lado del tablero crece sin que el radio de la referencia lo vea: una prueba lo deja escrito.
+
+Fase 7c4 (P86 a P90), al final del archivo: la referencia ENCIMA del tablero. Las pruebas de la
+7c3 siguen con la referencia al lado y por eso apagan la puerta "encerrada" (`AL_LADO`); las de
+`decidir` usan la regla de P88 y P89 (sd real, error de la mediana y sesgo).
 """
 from __future__ import annotations
 
@@ -53,6 +57,7 @@ POSE_RUIDO = ((0.0, 0.0, 0.0), 400.0)
 RUIDO_SD, N_RUIDO = 3.0, 30
 N_OTROS = 6                                # frames con ruido de los lados de 99.80 y 101.00 (el plan decia 30: el tiempo)
 DESVIO_K = (11.0, 11.0, -9.5, -7.3)        # fx, fy, cx, cy: la K "de hoy" del diagnostico frente a la del repo
+AL_LADO = -math.inf                        # fase 7c4: la referencia al lado del tablero (la geometria de la 7c3), sin la puerta "encerrada"
 
 # Los umbrales que pedia el plan (criterios 1 y 2) y los que se obtienen sobre el render.
 PLAN_FRAME_MM, PLAN_MEDIANA_MM, PLAN_LADO_MM = 0.05, 0.03, 0.08
@@ -124,7 +129,7 @@ def _escena(gs1, rvec, z, lado=LADO, altura=0.0, corrido_px=(0.0, 0.0)):
 def _medir(img, detectores, gs1, altura=0.0, K=None, radio=1e9) -> dict:
     det_ref, det_tab, ref_id = detectores
     return mr.medir_frame(img, det_ref, ref_id, det_tab, T, gs1["K"] if K is None else K, gs1["dist"], altura,
-                          mr.MIN_ESQUINAS, radio)
+                          mr.MIN_ESQUINAS, radio, LADO, min_encierro_mm=AL_LADO)
 
 
 class _Ruido:
@@ -186,7 +191,8 @@ def corrida(tmp_path_factory, gs1) -> dict:
     perfiles = {cam: _perfil_temporal(raiz, f"{cam}.yaml") for cam in carpetas}
     salida = raiz / "P9_lado.json"
     buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
+    with contextlib.redirect_stdout(buf), pytest.MonkeyPatch.context() as mp:
+        mp.setattr(mr, "MIN_ENCIERRO_MM", AL_LADO)          # la referencia al lado: la geometria de la 7c3
         rc = mr.main(_argv(salida, [(cam, perfiles[cam], carpetas[cam]) for cam in carpetas]))
     return {"rc": rc, "salida": salida, "texto": buf.getvalue(), "raiz": raiz, "carpetas": carpetas, "perfiles": perfiles,
             "base": base, "datos": json.loads(salida.read_text(encoding="utf-8")) if salida.exists() else None}
@@ -446,9 +452,9 @@ def _descartes(gs1, centradas) -> dict:
     tv2 = tv + R @ np.array([_x0() + 20.0, _y0() + LADO + ts.REF_MARGEN_MM + 12.0, 0.0])
     repetida = ts.renderizar_plano(plano, (m, m), ppmm, K, np.asarray(rv, dtype=np.float64), tv2, SHAPE, dist, sobre=buena)
     sin_ref = ts.renderizar_charuco(T, K, rv, tv, SHAPE, dist, ppmm=20.0, margen_mm=ts.TABLERO_MARGEN_MM)
-    tapado = buena.copy()                                   # el tablero tapado salvo sus tres ultimas columnas de casillas
+    tapado = buena.copy()                                   # el tablero tapado salvo sus dos ultimas columnas de casillas
     tab, _ref = _exactos(K, dist, rv, tv)
-    corte = int(tab.reshape(6, 8, 2)[:, 5, 0].max() + 10)
+    corte = int(tab.reshape(6, 8, 2)[:, 6, 0].max() + 10)   # 7c4: con MIN_ESQUINAS 10, quedan 6 esquinas en linea
     tapado[:, :corte] = 128
     return {"buena": buena, "repetida": repetida, "sin_ref": sin_ref, "tapado": tapado}
 
@@ -460,15 +466,18 @@ def test_criterio_5_lo_que_se_descarta_no_entra_en_el_resumen(gs1, detectores, c
         f = _medir(imgs[nombre], detectores, gs1, radio=mr.RADIO_MAX_PX)
         assert f["motivo"] == motivo, (nombre, f["motivo"], f["n_esquinas"], f["n_referencias"])
     assert _medir(imgs["repetida"], detectores, gs1)["n_referencias"] == 2
-    assert _medir(imgs["tapado"], detectores, gs1)["n_esquinas"] == 0       # quedan 12: menos de MIN_ESQUINAS
+    assert _medir(imgs["tapado"], detectores, gs1)["n_esquinas"] == 0       # quedan 6, en linea: menos de MIN_ESQUINAS
     orden = ["buena", "repetida", "sin_ref", "tapado", "buena"]
     for i, nombre in enumerate(orden):
         assert cv2.imwrite(str(tmp_path / f"frame_{i:04d}.png"), imgs[nombre])
     perfil = profiles.load(PROFILES_DIR / "tracker_config_gs1.yaml")
-    r = mr.medir_carpeta(tmp_path, perfil, T, 0.0, mr.MIN_ESQUINAS, mr.RADIO_MAX_PX)
+    r = mr.medir_carpeta(tmp_path, perfil, T, 0.0, mr.MIN_ESQUINAS, mr.RADIO_MAX_PX, min_encierro_mm=AL_LADO)
     assert [f["motivo"] for f in r["frames"]] == [esperado[n] for n in orden]
     assert r["n_frames"] == 5 and r["n_validos"] == 2 and r["completo"] is True
-    assert r["motivos"] == {"sin_tablero": 1, "sin_referencia": 1, "referencia_repetida": 1, "descentrada": 0}
+    assert r["motivos"] == {"sin_tablero": 1, "sin_referencia": 1, "referencia_repetida": 1, "fuera_del_tablero": 0, "descentrada": 0}
+    # Con la puerta "encerrada" (fase 7c4), la referencia al lado del tablero sale fuera_del_tablero.
+    con = mr.medir_carpeta(tmp_path, perfil, T, 0.0, mr.MIN_ESQUINAS, mr.RADIO_MAX_PX)
+    assert [f["motivo"] for f in con["frames"]][0] == "fuera_del_tablero" and con["frames"][0]["encierro_mm"] < -100
     assert abs(r["lado_mediana_mm"] - centradas[2]["f"]["lado_mm"]) < 1e-9 and r["sd_frames_mm"] < 1e-9
     assert len(r["lados_medios_mm"]) == 4 and r["ref_id"] == 100 and r["conjunto_px"] < 40
 
@@ -492,12 +501,14 @@ def test_medir_carpeta_valida_sus_entradas(tmp_path, gs1) -> None:
 # Criterio 6: la regla de P77, con tablas hechas a mano
 # ----------------------------------------------------------------------------
 
-def _res(mediana: float, n: int = 97, sd: float = 0.012) -> dict:
-    return {"n_validos": n, "sd_frames_mm": sd, "lado_mediana_mm": mediana}
+def _res(mediana: float, n: int = 200, sd: float = 0.15, sesgo: float | None = 0.0) -> dict:
+    """Un resumen hecho a mano. Desde la fase 7c4 (P89), la sd por defecto es la real (0.08-0.21 mm) y
+    n el de 30 s por colocacion: error de la mediana 1.2533 x 0.15 / raiz(200) = 0.0133 mm."""
+    return {"n_validos": n, "sd_frames_mm": sd, "lado_mediana_mm": mediana, "sesgo_mm": sesgo, "angulo_normales_deg": 0.0}
 
 
 def _decidir(por_camara: dict) -> dict:
-    return mr.decidir(por_camara, 99.8, 0.14, mr.MIN_FRAMES, mr.MAX_SD_FRAMES_MM, mr.MAX_DIF_CAMARAS_MM)
+    return mr.decidir(por_camara, 99.8, 0.14, mr.MIN_FRAMES, mr.MAX_ERROR_MEDIANA_MM, mr.MAX_DIF_CAMARAS_MM, mr.MAX_SESGO_MM)
 
 
 def test_criterio_6_decidir_cambia_cuando_se_aparta_mas_que_u() -> None:
@@ -518,7 +529,9 @@ def test_criterio_6_decidir_no_cambia_dentro_de_u() -> None:
 @pytest.mark.parametrize("por_camara,texto", [
     ({"gs1.yaml": [_res(100.52)], "gs2.yaml": [_res(100.21)]}, "difieren 0.310 mm"),
     ({"gs1.yaml": [_res(100.52, n=29)], "gs2.yaml": [_res(100.44)]}, "gs1.yaml, colocacion 1: 29 frames validos"),
-    ({"gs1.yaml": [_res(100.52)], "gs2.yaml": [_res(100.44, sd=0.051)]}, "gs2.yaml, colocacion 1: sd entre frames 0.051"),
+    ({"gs1.yaml": [_res(100.52)], "gs2.yaml": [_res(100.44, n=30)]}, "gs2.yaml, colocacion 1: error de la mediana 0.0343 mm (n 30, sd 0.150"),
+    ({"gs1.yaml": [_res(100.52, sesgo=0.06)], "gs2.yaml": [_res(100.44)]}, "gs1.yaml, colocacion 1: inclinada: sesgo +0.060"),
+    ({"gs1.yaml": [_res(100.52, sesgo=None)], "gs2.yaml": [_res(100.44)]}, "gs1.yaml, colocacion 1: sin sesgo"),
     ({"gs1.yaml": [_res(100.52)]}, "hacen falta dos camaras"),
     ({"gs1.yaml": [_res(100.52), {"n_validos": 0, "sd_frames_mm": None, "lado_mediana_mm": None}], "gs2.yaml": [_res(100.44)]},
      "gs1.yaml, colocacion 2: 0 frames validos"),
@@ -529,15 +542,17 @@ def test_criterio_6_decidir_no_valida_dice_el_motivo(por_camara, texto) -> None:
 
 
 def test_criterio_6_decidir_en_el_limite_y_con_dos_colocaciones() -> None:
-    d = _decidir({"gs1.yaml": [_res(100.50, n=30, sd=0.05)], "gs2.yaml": [_res(100.20)]})     # 30, 0.05 y 0.3: valen
+    sd_limite = 0.02 * math.sqrt(30) / mr.FACTOR_MEDIANA                                   # error de la mediana 0.02 justo
+    d = _decidir({"gs1.yaml": [_res(100.50, n=30, sd=sd_limite, sesgo=-0.05)], "gs2.yaml": [_res(100.20)]})  # 30, 0.02, 0.05 y 0.3
     assert d["valida"] is True, d["motivo"]
+    assert _decidir({"gs1.yaml": [_res(100.50, n=200, sd=0.15)], "gs2.yaml": [_res(100.44)]})["valida"] is True     # criterio 5 (7c4)
     d = _decidir({"gs1.yaml": [_res(100.56), _res(100.48)], "gs2.yaml": [_res(100.40), _res(100.48)]})   # P80 a
     assert d["valida"] is True and d["cambiar"] is True
     assert abs(d["por_camara"]["gs1.yaml"]["lado_mm"] - 100.52) < 1e-9 and abs(d["por_camara"]["gs2.yaml"]["lado_mm"] - 100.44) < 1e-9
     assert abs(d["por_camara"]["gs1.yaml"]["dif_colocaciones_mm"] - 0.08) < 1e-9 and d["valor_mm"] == 100.5
     assert _decidir({"gs1.yaml": [_res(100.52)], "gs2.yaml": [_res(100.44)]})["por_camara"]["gs1.yaml"]["dif_colocaciones_mm"] is None
     with pytest.raises(ValueError):
-        mr.decidir({}, 99.8, 0.0, 30, 0.05, 0.3)
+        mr.decidir({}, 99.8, 0.0, 30, 0.02, 0.3, 0.05)
 
 
 # ----------------------------------------------------------------------------
@@ -549,8 +564,13 @@ def test_criterio_7_main_codigo_0_y_el_json(corrida) -> None:
     d = corrida["datos"]
     assert d["codigo"] == 0 and d["completo"] is True and d["nominal_mm"] == 99.8 and d["ref_id"] == 100
     assert d["altura_mm"] == 0.0 and d["u_tablero_mm"] == 0.14 and d["tablero"]["medido"] is True and d["tablero"]["casilla_mm"] == 25.95
-    assert d["criterios"] == {"min_esquinas": 30, "radio_max_px": mr.RADIO_MAX_PX, "min_frames": 30,
-                              "max_sd_frames_mm": 0.05, "max_dif_camaras_mm": 0.3}
+    assert d["criterios"] == {"min_esquinas": 10, "min_encierro_mm": None, "radio_max_px": mr.RADIO_MAX_PX, "min_frames": 30,
+                              "max_error_mediana_mm": 0.02, "factor_mediana": 1.2533, "max_sesgo_mm": 0.05,
+                              "max_dif_camaras_mm": 0.3}
+    assert d["modo"] == "medida" and d["colocacion"] is None
+    c0 = d["colocaciones"][0]
+    assert c0["error_mediana_mm"] is not None and c0["sesgo_mm"] is not None and c0["lado_nominal_mm"] == 99.8
+    assert all(k in c0["frames"][0] for k in mr.CAMPOS_7C4)
     assert [c["etiqueta"] for c in d["colocaciones"]] == ["gs1", "gs2"] and [c["perfil"] for c in d["colocaciones"]] == ["gs1.yaml", "gs2.yaml"]
     assert all(len(c["frames"]) == N_RUIDO and len(c["perfil_sha256"]) == 64 for c in d["colocaciones"])
     dec = d["decision"]
@@ -595,8 +615,9 @@ def test_criterio_7_main_codigo_2_y_nada_escrito(corrida, tmp_path, capsys) -> N
     assert mr.main(argv) == mr.EXIT_USO and "no esta medido" in capsys.readouterr().out and not (tmp_path / "a.json").exists()
 
 
-def test_criterio_7_main_no_valida_con_una_sola_camara(corrida, tmp_path, capsys) -> None:
+def test_criterio_7_main_no_valida_con_una_sola_camara(corrida, tmp_path, capsys, monkeypatch) -> None:
     """Un solo perfil: mide, escribe el json y sale con 1 (no valida), sin cambiar."""
+    monkeypatch.setattr(mr, "MIN_ENCIERRO_MM", AL_LADO)
     pocos = tmp_path / "pocos"
     pocos.mkdir()
     for i in range(3):
@@ -627,7 +648,7 @@ def test_medir_carpeta_con_tope_lleva_lo_hecho(corrida) -> None:
     reloj = iter(range(0, 100000, 10))
     with pytest.raises(TimeoutError) as e:
         mr.medir_carpeta(corrida["carpetas"]["gs1"], perfil, T, 0.0, mr.MIN_ESQUINAS, mr.RADIO_MAX_PX,
-                         clock=lambda: float(next(reloj)), tope_s=25.0)
+                         clock=lambda: float(next(reloj)), tope_s=25.0, min_encierro_mm=AL_LADO)
     assert len(e.value.parcial["frames"]) == 2 and e.value.parcial["n_validos"] == 2 and e.value.parcial["completo"] is False
 
 
@@ -676,3 +697,320 @@ def test_plano_marker_y_la_escena(gs1, detectores) -> None:
     assert 2.7 < dif[medio].std() < 3.3
     _tab, ref = _exactos(gs1["K"], gs1["dist"], rv, tv)
     assert np.abs(esq - ref).max() < 1e-9
+
+
+# ----------------------------------------------------------------------------
+# Fase 7c4 · P9 con la referencia sobre el tablero (P86 a P90)
+# ----------------------------------------------------------------------------
+# La referencia de 100.50 mm encima del tablero y centrada, su cara 2.8 mm mas alta (P78), con
+# el tablero centrado en la imagen. Lo medido en la fase (numeros en el reporte):
+# - encima se leen 12 esquinas (las columnas 0 y 7) en las seis poses; encierro 12.5-14.4 mm;
+# - el lado encima, a <= 0.004 mm del de la misma referencia al lado en la misma pose;
+# - el angulo entre normales, a <= 0.041 grados del dibujado a 15 y 45 grados de vista; DE FRENTE
+#   (vista ~3 grados) la pose IPPE de un marker suelto da 0.2-0.45 grados de angulo espurio, pero
+#   el sesgo que mete es pequeno porque tan(vista) lo es: por eso la puerta va sobre el sesgo (P88);
+# - el sesgo predice el error del lado a +-(20 % + 0.02 mm) a 15 grados; a 45 grados tiene un
+#   suelo de ~-0.025 mm con la referencia plana (un angulo espurio de ~0.03 grados del detector),
+#   y quitado ese suelo predice a <= 0.01 mm.
+
+ALTURA = 2.8                               # P78: la referencia y el tablero miden los dos 2.8 mm
+X0_ENCIMA, Y0_ENCIMA = T.ancho_mm / 2.0 - LADO / 2.0, T.alto_mm / 2.0 - LADO / 2.0
+POSES_ENCIMA = [((0.0, 0.0, 0.0), z) for z in (300.0, 400.0, 550.0)] + [((math.radians(30.0), 0.0, 0.0), z) for z in (300.0, 400.0, 550.0)]
+VISTAS_C3 = (15.0, 45.0)
+INCLINACIONES = (0.0, 0.25, 0.5, 1.0)
+PLAN_ANGULO_DEG = 0.05                     # criterio 3: el angulo, a <= 0.05 grados del dibujado
+SUELO_45_MM = (-0.035, -0.015)             # obtenido: -0.026 / -0.023 (sin y con ruido)
+PLAN_K_ANGULO_DEG, PLAN_K_SESGO_MM = 0.10, 0.03
+K_SESGO_45_MM = 0.04                       # obtenido con la K desviada a 45 grados: -0.033 (el plan pedia <= 0.03)
+
+
+def _pose_tablero_centrado(K, rvec, z: float) -> np.ndarray:
+    return ts.pose_charuco_hacia(T, K, np.asarray(rvec, dtype=np.float64), CENTRO, z)
+
+
+def _medir_encima(img, detectores, gs1, altura=ALTURA, K=None, radio=1e9, encierro=None) -> dict:
+    det_ref, det_tab, ref_id = detectores
+    return mr.medir_frame(img, det_ref, ref_id, det_tab, T, gs1["K"] if K is None else K, gs1["dist"], altura,
+                          mr.MIN_ESQUINAS, radio, LADO, min_encierro_mm=mr.MIN_ENCIERRO_MM if encierro is None else encierro)
+
+
+def _escena_encima(gs1, rvec, tv, **kw):
+    return ts.escena_tablero_y_marker(T, gs1["K"], gs1["dist"], rvec, tv, LADO, X0_ENCIMA, Y0_ENCIMA, ALTURA, SHAPE, **kw)
+
+
+def test_7c4_la_escena_sin_inclinar_es_la_de_la_7c3_byte_a_byte(gs1) -> None:
+    rv = np.zeros(3)
+    tv = _pose_tablero_centrado(gs1["K"], rv, 400.0)
+    a, ea = _escena_encima(gs1, rv, tv)
+    b, eb = _escena_encima(gs1, rv, tv, inclinacion_deg=(0.0, 0.0), giro_deg=0.0)
+    assert np.array_equal(a, b) and np.array_equal(ea, eb)
+    c, ec = _escena_encima(gs1, rv, tv, giro_deg=360.0)           # el otro camino, con un giro que no gira
+    assert np.abs(ec - ea).max() < 1e-6 and np.abs(c.astype(int) - a.astype(int)).max() <= 1
+    _d, ed = _escena_encima(gs1, rv, tv, giro_deg=90.0)           # un cuarto de vuelta: la esquina 0 pasa arriba a la derecha
+    assert np.abs(ed[0] - ea[1]).max() < 1e-6 and np.abs(ed[1] - ea[2]).max() < 1e-6
+
+
+@pytest.fixture(scope="module")
+def encima(gs1, detectores) -> list[dict]:
+    """Criterio 2: las seis poses con la referencia encima y centrada, y la misma referencia al lado
+    del tablero en la misma pose del tablero (la del conjunto de la 7c3, que cabe a 30 cm)."""
+    out = []
+    for rv, z in POSES_ENCIMA:
+        tv = _pose_conjunto(gs1["K"], rv, z)
+        img, esq = _escena_encima(gs1, rv, tv)
+        lado, _e2, _tv = _escena(gs1, rv, z)
+        out.append({"rv": rv, "z": z, "tv": tv, "img": img, "esq": esq, "f": _medir_encima(img, detectores, gs1),
+                    "al_lado": _medir(lado, detectores, gs1)})
+    return out
+
+
+def test_7c4_criterio_2_encima_se_leen_12_esquinas_y_queda_encerrada(encima) -> None:
+    ns = []
+    for e in encima:
+        f = e["f"]
+        assert f["motivo"] is None, (e["rv"], e["z"], f["motivo"], f["n_esquinas"], f["encierro_mm"])
+        assert f["encierro_mm"] > mr.MIN_ENCIERRO_MM, f["encierro_mm"]
+        ns.append(f["n_esquinas"])
+    assert min(ns) == 12 and mr.MIN_ESQUINAS == min(ns) - 2, ns
+
+
+def test_7c4_criterio_2_el_lado_encima_es_el_de_al_lado(encima, gs1, detectores) -> None:
+    """Con `--altura-mm 2.8`, el lado encima frente al de la misma referencia al lado del tablero en
+    la misma pose (los dos con el mismo sesgo del detector, P81 a). El plan pedia <= 0.03 mm; sale
+    <= 0.03 en cuatro de las seis poses, y 0.055 y 0.031 a 55 cm. El exceso es del lado de "al
+    lado": su homografia extrapola (lo que la 7c3 ya midio, hasta +0.083 mm). Para separarlo, cada
+    una se compara tambien con su referencia DETECTADA sobre las esquinas VERDADERAS del tablero
+    (solo el sesgo del detector): encima, a <= 0.03 mm en las seis; y la
+    diferencia encima - al lado la explica la extrapolacion de al lado. Con puntos exactos, encima
+    a <= 1e-9 mm de lo dibujado."""
+    K, dist = gs1["K"], gs1["dist"]
+    det_ref, _det_tab, ref_id = detectores
+
+    def solo_detector(img, rv, tv, altura) -> float:
+        corners, ids = detect(det_ref, img, {ref_id})
+        assert ids is not None and len(ids) == 1
+        tab = cv2.projectPoints(chb.puntos_objeto(T, IDS).astype(np.float64), np.asarray(rv, dtype=np.float64), tv, K, dist)[0].reshape(-1, 2)
+        lados = mr.lados_en_plano(np.asarray(corners[0], dtype=np.float64).reshape(4, 2), tab, IDS, T, K, dist)["lados_mm"]
+        return float(mr.corregir_altura(lados, mr.distancia_al_plano(tab, IDS, T, K, dist), altura).mean())
+
+    difs, interpolas = [], []
+    for e in encima:
+        assert e["al_lado"]["motivo"] is None
+        dif = e["f"]["lado_mm"] - e["al_lado"]["lado_mm"]
+        difs.append(abs(dif))
+        extrapola = e["al_lado"]["lado_mm"] - solo_detector(_escena(gs1, e["rv"], e["z"])[0], e["rv"], e["tv"], 0.0)
+        interpola = e["f"]["lado_mm"] - solo_detector(e["img"], e["rv"], e["tv"], ALTURA)
+        interpolas.append(abs(interpola))
+        assert abs(interpola) <= 0.03, (e["rv"], e["z"], interpola)
+        assert abs(dif) <= 0.03 + abs(extrapola), (e["rv"], e["z"], dif, extrapola)
+        tab = cv2.projectPoints(chb.puntos_objeto(T, IDS).astype(np.float64), np.asarray(e["rv"], dtype=np.float64), e["tv"], K, dist)[0].reshape(-1, 2)
+        lados = mr.lados_en_plano(e["esq"], tab, IDS, T, K, dist)["lados_mm"]
+        assert np.abs(mr.corregir_altura(lados, mr.distancia_al_plano(tab, IDS, T, K, dist), ALTURA) - LADO).max() <= 1e-9
+    assert sum(d <= 0.03 for d in difs) >= 4 and max(difs) <= 0.06, difs
+    print(f"[fase 7c4] |encima - al lado| por pose: {[round(d, 4) for d in difs]} mm; |encima - solo el detector|: "
+          f"{[round(d, 4) for d in interpolas]} mm")
+
+
+def test_7c4_criterio_2_corrida_26_mm_a_lo_alto_sale_fuera_del_tablero(gs1, detectores) -> None:
+    rv = np.zeros(3)
+    tv = _pose_tablero_centrado(gs1["K"], rv, 400.0)
+    img, _esq = ts.escena_tablero_y_marker(T, gs1["K"], gs1["dist"], rv, tv, LADO, X0_ENCIMA, Y0_ENCIMA + 26.0, ALTURA, SHAPE)
+    f = _medir_encima(img, detectores, gs1)
+    assert f["motivo"] == "fuera_del_tablero" and f["encierro_mm"] < 0 and f["lado_mm"] is not None
+
+
+@pytest.fixture(scope="module")
+def inclinadas(gs1, detectores) -> dict:
+    """Criterio 3: a 40 cm, con la vista a ~15 y ~45 grados, la referencia inclinada 0, 0.25, 0.5 y
+    1.0 grados alrededor de cada eje del tablero: el frame limpio y la mediana de 6 con ruido."""
+    out: dict = {}
+    for vista in VISTAS_C3:
+        rv = np.array([math.radians(vista), 0.0, 0.0])
+        tv = _pose_tablero_centrado(gs1["K"], rv, 400.0)
+        for eje in ("x", "y"):
+            for ang in INCLINACIONES:
+                if ang == 0.0 and eje == "y":
+                    out[(vista, "y", 0.0)] = out[(vista, "x", 0.0)]
+                    continue
+                img, _esq = _escena_encima(gs1, rv, tv, inclinacion_deg=(ang, 0.0) if eje == "x" else (0.0, ang))
+                ruido = _Ruido(int(vista * 100 + ang * 10) + (0 if eje == "x" else 7))
+                fs = [_medir_encima(ruido(img), detectores, gs1) for _ in range(6)]
+                out[(vista, eje, ang)] = {"img": img, "f": _medir_encima(img, detectores, gs1),
+                                          "angulo": float(np.median([g["angulo_normales_deg"] for g in fs])),
+                                          "sesgo": float(np.median([g["sesgo_mm"] for g in fs]))}
+        out[(vista, "K")] = _medir_encima(out[(vista, "x", 0.0)]["img"], detectores, gs1, K=_k_desviada(gs1["K"]))
+    return out
+
+
+def test_7c4_criterio_3_el_angulo_entre_normales(inclinadas) -> None:
+    peor = 0.0
+    for vista in VISTAS_C3:
+        for eje in ("x", "y"):
+            for ang in INCLINACIONES:
+                r = inclinadas[(vista, eje, ang)]
+                assert abs(r["f"]["vista_deg"] - vista) < 1.0
+                peor = max(peor, abs(r["angulo"] - ang))
+                assert abs(r["angulo"] - ang) <= PLAN_ANGULO_DEG, (vista, eje, ang, r["angulo"])
+    print(f"[fase 7c4] angulo entre normales: peor {peor:.3f} grados del dibujado")
+
+
+def test_7c4_criterio_3_el_sesgo_predice_el_error_del_lado(inclinadas) -> None:
+    """A 15 grados, a +-(20 % + 0.02 mm), como pedia el plan. A 45, con la referencia plana el sesgo
+    no es 0 sino ~-0.025 mm (el suelo); el plan no se cumple ahi por 0.003-0.007 mm, y quitado el
+    suelo predice a +-(20 % + 0.02) (obtenido: <= 0.009 mm)."""
+    for vista in VISTAS_C3:
+        cero = inclinadas[(vista, "x", 0.0)]
+        if vista == 45.0:
+            assert SUELO_45_MM[0] <= cero["sesgo"] <= SUELO_45_MM[1], cero["sesgo"]
+            assert abs(cero["sesgo"]) > 0.02                                   # el plan no se cumple a 0 grados: si un dia si, se dice
+        suelo = cero["sesgo"] if vista == 45.0 else 0.0
+        for eje in ("x", "y"):
+            for ang in INCLINACIONES:
+                r = inclinadas[(vista, eje, ang)]
+                error = r["f"]["lado_mm"] - cero["f"]["lado_mm"]
+                assert abs(r["sesgo"] - suelo - error) <= 0.2 * abs(error) + 0.02, (vista, eje, ang, r["sesgo"], error)
+
+
+def test_7c4_criterio_3_decidir_para_la_inclinada_y_deja_la_plana(inclinadas) -> None:
+    def res(r):
+        return {"n_validos": 200, "sd_frames_mm": 0.15, "lado_mediana_mm": r["f"]["lado_mm"], "sesgo_mm": r["sesgo"],
+                "angulo_normales_deg": r["angulo"]}
+    plana, inclinada = res(inclinadas[(45.0, "x", 0.0)]), res(inclinadas[(45.0, "x", 1.0)])
+    assert _decidir({"gs1.yaml": [plana], "gs2.yaml": [plana]})["valida"] is True
+    d = _decidir({"gs1.yaml": [inclinada], "gs2.yaml": [plana]})
+    assert d["valida"] is False and "colocacion 1: inclinada: sesgo -0.8" in d["motivo"], d["motivo"]
+
+
+def test_7c4_criterio_3_con_la_k_desviada(inclinadas) -> None:
+    """La referencia plana con la K desviada de la 7c3: el angulo <= 0.10 grados y el sesgo <= 0.03 mm
+    (el plan). A 45 grados el sesgo sale -0.033: con esa K la puerta no es fiable a 45 grados por
+    0.003 mm; P9 va con los intrinsecos de la 7e."""
+    for vista in VISTAS_C3:
+        g = inclinadas[(vista, "K")]
+        assert g["motivo"] is None and abs(g["angulo_normales_deg"]) <= PLAN_K_ANGULO_DEG, (vista, g["angulo_normales_deg"])
+        assert abs(g["sesgo_mm"]) <= (PLAN_K_SESGO_MM if vista == 15.0 else K_SESGO_45_MM), (vista, g["sesgo_mm"])
+    assert abs(inclinadas[(45.0, "K")]["sesgo_mm"]) > PLAN_K_SESGO_MM          # el plan no se cumple a 45: si un dia si, se dice
+
+
+def test_7c4_aspecto_propio_pose_referencia_y_encierro(gs1) -> None:
+    K = gs1["K"]
+    cuadrado = cv2.projectPoints(np.array([[-50.0, 50, 0], [50, 50, 0], [50, -50, 0], [-50, -50, 0]]), np.array([0.3, -0.2, 0.1]),
+                                 np.array([10.0, -5.0, 400.0]), K, None)[0].reshape(4, 2)
+    razon, angulo = mr.aspecto_propio(cuadrado, K, None)
+    assert abs(razon - 1.0) <= 1e-6 and abs(angulo - 90.0) <= 1e-4
+    R, tv, r = mr.pose_referencia(cuadrado, 100.0, K, None)
+    assert np.abs(tv - [10.0, -5.0, 400.0]).max() < 1e-6 and r > 1.0
+    for malo, texto in (((cuadrado[:3], 100.0), "4 esquinas"), ((cuadrado, 0.0), "lado_mm")):
+        with pytest.raises(ValueError, match=texto):
+            mr.pose_referencia(malo[0], malo[1], K, None)
+    ids = np.array([0, 7, 40, 47])                       # las cuatro esquinas de los extremos: la envolvente es su rectangulo
+    p0 = chb.puntos_objeto(T, ids)[:, :2]
+    x0, y0, x1, y1 = p0[:, 0].min(), p0[:, 1].min(), p0[:, 0].max(), p0[:, 1].max()
+    dentro = np.array([[x0 + 8, y0 + 6], [x1 - 9, y0 + 6], [x1 - 9, y1 - 7], [x0 + 8, y1 - 7]], dtype=np.float64)
+    assert abs(mr.encierro_mm(dentro, ids, T) - 6.0) < 1e-3
+    assert abs(mr.encierro_mm(dentro + [0.0, -10.0], ids, T) - (-4.0)) < 1e-3
+    with pytest.raises(ValueError, match=">= 3"):
+        mr.encierro_mm(dentro, ids[:2], T)
+
+
+def test_7c4_criterio_4_el_ruido_parecido_al_real(gs1, detectores) -> None:
+    """`ruido_esquinas` sobre puntos exactos en la geometria de gs1_d de P9 (al lado, ~46 grados de
+    vista, ~470 mm): la sd del lado en 200 tiradas, entre 0.07 y 0.25 mm (la real, 0.084). Con ese
+    ruido, encima a 40 cm de frente: la sd y el error de la mediana con n = 200 (<= 0.02 mm)."""
+    K, dist = gs1["K"], gs1["dist"]
+    rng = np.random.default_rng(7)
+
+    def sd_lado(rv, tv, ids, x0, y0, altura) -> float:
+        tab = cv2.projectPoints(chb.puntos_objeto(T, ids).astype(np.float64), rv, tv, K, dist)[0].reshape(-1, 2)
+        cuadro = np.array([[x0, y0, -altura], [x0 + LADO, y0, -altura], [x0 + LADO, y0 + LADO, -altura], [x0, y0 + LADO, -altura]])
+        ref = cv2.projectPoints(cuadro, rv, tv, K, dist)[0].reshape(-1, 2)
+        d = mr.distancia_al_plano(tab, ids, T, K, dist)
+        lados = [mr.corregir_altura(mr.lados_en_plano(ts.ruido_esquinas(ref, ts.RUIDO_REFERENCIA_PX, rng),
+                                                      ts.ruido_esquinas(tab, ts.RUIDO_TABLERO_PX, rng), ids, T, K, dist)["lados_mm"],
+                                    d, altura).mean() for _ in range(200)]
+        return float(np.std(lados, ddof=1))
+
+    rv = np.array([math.radians(45.8), 0.0, 0.0])
+    al_lado = sd_lado(rv, _pose_conjunto(K, rv, 470.0), IDS, _x0(), _y0(), 0.0)
+    assert 0.07 <= al_lado <= 0.25, al_lado                                     # obtenido: 0.096
+    rv0 = np.zeros(3)
+    tv0 = _pose_tablero_centrado(K, rv0, 400.0)
+    img, _esq = _escena_encima(gs1, rv0, tv0)
+    r = chb.detectar_charuco(img, detectores[1], T, 1)
+    assert r is not None and r[1].tolist() == [0, 7, 8, 15, 16, 23, 24, 31, 32, 39, 40, 47]
+    sd_encima = sd_lado(rv0, tv0, r[1], X0_ENCIMA, Y0_ENCIMA, ALTURA)
+    err = mr.error_mediana(sd_encima, 200)
+    print(f"[fase 7c4] ruido {ts.RUIDO_TABLERO_PX} / {ts.RUIDO_REFERENCIA_PX} px: sd del lado al lado (gs1_d) {al_lado:.3f} mm; "
+          f"encima a 40 cm {sd_encima:.3f} mm, error de la mediana con n 200 {err:.4f} mm")
+    assert sd_encima < al_lado and err <= mr.MAX_ERROR_MEDIANA_MM                # obtenido: 0.036 y 0.0032
+    assert mr.error_mediana(None, 200) is None and mr.error_mediana(0.1, 1) is None
+    assert abs(mr.error_mediana(0.15, 200) - 0.01329) < 1e-5
+
+
+@pytest.fixture(scope="module")
+def colocaciones(tmp_path_factory, gs1) -> dict:
+    """Criterio 6: carpetas de 3 PNG iguales de cuatro escenas encima (a 40 cm): plana de frente,
+    plana girada un cuarto de vuelta, y plana e inclinada 1.0 grado con la vista a 45 grados."""
+    raiz = tmp_path_factory.mktemp("colocacion")
+    escenas = {}
+    rv0 = np.zeros(3)
+    tv0 = _pose_tablero_centrado(gs1["K"], rv0, 400.0)
+    escenas["plana"] = _escena_encima(gs1, rv0, tv0)[0]
+    escenas["girada"] = _escena_encima(gs1, rv0, tv0, giro_deg=90.0)[0]
+    rv45 = np.array([math.radians(45.0), 0.0, 0.0])
+    escenas["inclinada"] = _escena_encima(gs1, rv45, _pose_tablero_centrado(gs1["K"], rv45, 400.0), inclinacion_deg=(1.0, 0.0))[0]
+    carpetas = {}
+    for nombre, img in escenas.items():
+        d = raiz / f"P9_{nombre}_frames"
+        d.mkdir()
+        for i in range(3):
+            assert cv2.imwrite(str(d / f"frame_{i:04d}.png"), img)
+        carpetas[nombre] = d
+    return {"raiz": raiz, "carpetas": carpetas, "perfil": _perfil_temporal(raiz, "gs1.yaml")}
+
+
+def _argv_colocacion(salida: Path, camaras, altura: str = "2.8") -> list[str]:
+    a = _argv(salida, camaras, timeout="60") + ["--colocacion"]
+    a[a.index("--altura-mm") + 1] = altura
+    return a
+
+
+def test_7c4_criterio_6_main_colocacion(colocaciones, tmp_path, capsys) -> None:
+    perfil, c = colocaciones["perfil"], colocaciones["carpetas"]
+    rcs, lineas, datos = {}, {}, {}
+    for nombre in ("plana", "girada", "inclinada"):
+        salida = tmp_path / f"{nombre}.json"
+        rcs[nombre] = mr.main(_argv_colocacion(salida, [("gs1_a", perfil, c[nombre])]))
+        lineas[nombre] = [x for x in capsys.readouterr().out.splitlines() if x.startswith("[Colocacion] ")]
+        datos[nombre] = json.loads(salida.read_text(encoding="utf-8"))
+    assert rcs == {"plana": 0, "girada": 0, "inclinada": 1}, (rcs, lineas)
+    assert all(len(v) == 1 for v in lineas.values())
+    assert "giro 0 grados" in lineas["plana"][0] and lineas["plana"][0].endswith("vale")
+    assert "giro 90 grados" in lineas["girada"][0] and "esquinas 12" in lineas["girada"][0]
+    assert "NO VALE: inclinada: sesgo -0.8" in lineas["inclinada"][0], lineas["inclinada"]
+    d = datos["plana"]
+    assert d["modo"] == "colocacion" and d["decision"] is None and d["codigo"] == 0
+    col = d["colocacion"]
+    assert col["vale"] is True and col["giro_90"] == 0 and col["n_esquinas"] == 12 and col["encierro_mm"] > mr.MIN_ENCIERRO_MM
+    assert np.allclose(col["centro_rel_mm"], [0.0, 0.0], atol=0.5) and col["conjunto_px"] < 30
+    assert datos["girada"]["colocacion"]["giro_90"] == 90
+    assert datos["inclinada"]["colocacion"]["vale"] is False and datos["inclinada"]["codigo"] == 1
+    salida = tmp_path / "dos.json"
+    assert mr.main(_argv_colocacion(salida, [("gs1_a", perfil, c["plana"]), ("gs1_b", perfil, c["girada"])])) == mr.EXIT_USO
+    assert "un solo --camara" in capsys.readouterr().out and not salida.exists()
+
+
+def test_7c4_criterio_6_la_medida_con_dos_colocaciones_encima(colocaciones, tmp_path, capsys) -> None:
+    """Sin `--colocacion`, las lineas `[Lado]` traen normales, sesgo y error de la mediana; con 3
+    frames por colocacion no vale (minimo 30) y sale con 1."""
+    perfil, c = colocaciones["perfil"], colocaciones["carpetas"]
+    salida = tmp_path / "medida.json"
+    argv = _argv(salida, [("gs1_a", perfil, c["plana"]), ("gs1_b", perfil, c["girada"])])
+    argv[argv.index("--altura-mm") + 1] = "2.8"
+    assert mr.main(argv) == mr.EXIT_NO_VALIDA
+    out = capsys.readouterr().out
+    lados = [x for x in out.splitlines() if x.startswith("[Lado] ")]
+    assert len(lados) == 2 and all("normales" in x and "sesgo" in x and "error de la mediana" in x for x in lados)
+    d = json.loads(salida.read_text(encoding="utf-8"))
+    assert [round(x["giro_deg"]) for x in d["colocaciones"]] == [0, 90]
+    assert d["decision"]["max_sesgo_mm"] == 0.05 and d["decision"]["max_error_mediana_mm"] == 0.02

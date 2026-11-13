@@ -103,6 +103,7 @@ CRITERIOS_SUBPIX = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 1e-4
 MAX_CORRECCION_PX = 2.0        # una esquina que el refinado mueve mas que esto (a escala 1) se descarta
 CONVENCION_PX = 0.5            # lo que detectBoard suma respecto a cornerSubPix (medido, OpenCV 4.11)
 MIN_ESQUINAS = 12              # esquinas minimas para que una vista valga en la calibracion
+PIXELES_POR_CELDA = 8          # perspectiveRemovePixelPerCell del detector del tablero (OpenCV trae 4; ver `detector`)
 FRACCION_DETECTAR = 0.90       # `detectar`: fraccion de frames con todas las esquinas de la pieza
 TOLERANCIA_NOMINAL = 0.02      # `registrar`: la casilla medida no se aparta mas que esto de la nominal
 ESPERA_FRAME_S = 0.2
@@ -442,7 +443,19 @@ def detector(t: TableroCharuco, K: np.ndarray | None = None, dist: np.ndarray | 
     """El `CharucoDetector` del tablero, con `tryRefineMarkers = True` y `CORNER_REFINE_CONTOUR`
     (la buena practica de la documentacion). Con `K` y `dist` interpola por pose aproximada; sin
     ellas, por homografia local (lo que usan la calibracion y la vista previa: la K es lo que se
-    esta midiendo). Un detector por hilo."""
+    esta midiendo). Un detector por hilo.
+
+    `perspectiveRemovePixelPerCell` = `PIXELES_POR_CELDA` (8; OpenCV trae 4), desde la fase 7c4 (meta
+    006; P86 a): en los PNG de P9 de la sesion del 2026-11-12 fallaba la lectura de los bits de
+    algunos marcadores del tablero (el 8 casi siempre), no el encuadre; con 8, los frames con las
+    48 esquinas pasan de 17 / 3 / 0 / 0 a 72 / 69 / 36 / 63 (gs1_d, gs1_i, gs2_d, gs2_i), con el
+    mismo tiempo (p95 de `detectar_charuco` 25.4 ms con 8 y 25.7 con 4). Se eligio frente a
+    `perspectiveRemoveIgnoredMarginPerCell` 0.3, que da lo mismo: con 4 px por celda y 0.3 de margen
+    a cada lado el bit se lee con ~1.6 px; con 8 y el margen de siempre (0.13), con ~5.9. En las
+    vistas sinteticas de la 7d las esquinas son las mismas que con 4 (0.0 px: salen de
+    `cornerSubPix`). En los PNG reales, el 98 % de las esquinas comunes coinciden a <= 0.01 px; el
+    resto, esquinas del borde cuyos marcadores vecinos se leen distinto, se van hasta 3.7 px, sin
+    que ninguna de las dos lecturas quede mas cerca de la pose del tablero (B141)."""
     cp = cv2.aruco.CharucoParameters()
     cp.tryRefineMarkers = True
     if K is not None:
@@ -450,6 +463,7 @@ def detector(t: TableroCharuco, K: np.ndarray | None = None, dist: np.ndarray | 
         cp.distCoeffs = np.zeros(5) if dist is None else np.asarray(dist, dtype=np.float64)
     dp = cv2.aruco.DetectorParameters()
     dp.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_CONTOUR
+    dp.perspectiveRemovePixelPerCell = PIXELES_POR_CELDA
     return cv2.aruco.CharucoDetector(t.board(), cp, dp, cv2.aruco.RefineParameters())
 
 

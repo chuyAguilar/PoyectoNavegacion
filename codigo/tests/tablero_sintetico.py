@@ -223,7 +223,8 @@ def plano_marker(diccionario: str, marker_id: int, lado_mm: float, margen_mm: fl
 
 
 def escena_tablero_y_marker(t, K, dist, rvec, tvec, lado_mm: float, x0_mm: float, y0_mm: float, altura_mm: float,
-                            shape, ruido_sd: float = 0.0, rng=None) -> tuple[np.ndarray, np.ndarray]:
+                            shape, ruido_sd: float = 0.0, rng=None, inclinacion_deg: tuple[float, float] = (0.0, 0.0),
+                            giro_deg: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
     """La vista en gris (h, w) del tablero ChArUco `t` con la pose `T_cam<-tablero` (rvec, tvec)
     y, a su lado, la referencia (ID 100, `DICT_ARUCO_MIP_36h12`) de `lado_mm` con su placa blanca
     (`REF_MARGEN_MM`); y las 4 esquinas verdaderas de la referencia, (4, 2) float64, en el orden
@@ -235,7 +236,13 @@ def escena_tablero_y_marker(t, K, dist, rvec, tvec, lado_mm: float, x0_mm: float
     z hacia dentro del tablero); `altura_mm` > 0 la acerca a la camara (su cara queda mas alta
     que la del tablero), paralela a el. El tablero se dibuja a la primera escala de
     `charuco_board.PPMM_PNG` en que su casilla mide pixeles enteros (20 px/mm con 25.95 mm).
-    Con `ruido_sd` > 0, ruido gaussiano en niveles de gris (`rng`, o uno nuevo con semilla 0)."""
+    Con `ruido_sd` > 0, ruido gaussiano en niveles de gris (`rng`, o uno nuevo con semilla 0).
+
+    (Fase 7c4) `inclinacion_deg` = (ax, ay): la referencia girada esos grados alrededor de los ejes
+    x e y del tablero, por su centro (primero y, despues x: R = Rx(ax) Ry(ay)); `giro_deg`: girada
+    en su plano, alrededor de su normal y por su centro, antes de inclinarla (90: un cuarto de
+    vuelta; su esquina 0 pasa a la de arriba a la derecha). Con (0, 0) y 0, la escena de la 7c3
+    byte a byte (el mismo camino de calculo)."""
     from calibration import charuco_board as chb
     ppmm_t = next((p for p in chb.PPMM_PNG if abs(t.casilla_mm * p - round(t.casilla_mm * p)) < 1e-6
                    and abs(TABLERO_MARGEN_MM * p - round(TABLERO_MARGEN_MM * p)) < 1e-6), None)
@@ -246,9 +253,20 @@ def escena_tablero_y_marker(t, K, dist, rvec, tvec, lado_mm: float, x0_mm: float
     m = (plano.shape[0] - round(lado_mm * ppmm)) / 2.0
     rv = np.asarray(rvec, dtype=np.float64).reshape(3)
     R, _ = cv2.Rodrigues(rv.reshape(3, 1))
-    tv = np.asarray(tvec, dtype=np.float64).reshape(3) + R @ np.array([x0_mm, y0_mm, -altura_mm], dtype=np.float64)
-    img = renderizar_plano(plano, (m, m), ppmm, K, rv, tv, shape, dist, sobre=img)
     L = float(lado_mm)
+    if tuple(float(a) for a in inclinacion_deg) == (0.0, 0.0) and float(giro_deg) == 0.0:
+        tv = np.asarray(tvec, dtype=np.float64).reshape(3) + R @ np.array([x0_mm, y0_mm, -altura_mm], dtype=np.float64)
+    else:
+        ax, ay = (np.radians(float(a)) for a in inclinacion_deg)
+        g = np.radians(float(giro_deg))
+        Rx = np.array([[1.0, 0.0, 0.0], [0.0, np.cos(ax), -np.sin(ax)], [0.0, np.sin(ax), np.cos(ax)]])
+        Ry = np.array([[np.cos(ay), 0.0, np.sin(ay)], [0.0, 1.0, 0.0], [-np.sin(ay), 0.0, np.cos(ay)]])
+        Rz = np.array([[np.cos(g), -np.sin(g), 0.0], [np.sin(g), np.cos(g), 0.0], [0.0, 0.0, 1.0]])
+        Ri = Rx @ Ry @ Rz
+        c = np.array([L / 2.0, L / 2.0, 0.0])
+        tv = np.asarray(tvec, dtype=np.float64).reshape(3) + R @ (np.array([x0_mm, y0_mm, -altura_mm], dtype=np.float64) + c - Ri @ c)
+        rv = cv2.Rodrigues(R @ Ri)[0].reshape(3)
+    img = renderizar_plano(plano, (m, m), ppmm, K, rv, tv, shape, dist, sobre=img)
     cuadro = np.array([[0.0, 0.0, 0.0], [L, 0.0, 0.0], [L, L, 0.0], [0.0, L, 0.0]])
     d = np.zeros(5) if dist is None else np.asarray(dist, dtype=np.float64)
     esquinas = cv2.projectPoints(cuadro, rv, tv, np.asarray(K, dtype=np.float64), d)[0].reshape(4, 2).astype(np.float64)
@@ -256,3 +274,22 @@ def escena_tablero_y_marker(t, K, dist, rvec, tvec, lado_mm: float, x0_mm: float
         rng = np.random.default_rng(0) if rng is None else rng
         img = np.clip(img.astype(np.float64) + rng.normal(0.0, ruido_sd, img.shape), 0, 255).astype(np.uint8)
     return img, esquinas
+
+
+# ----------------------------------------------------------------------------
+# El ruido de las esquinas (meta 006, fase 7c4)
+# ----------------------------------------------------------------------------
+
+# El ruido gaussiano por esquina, en px, que da en el sintetico la sd del lado que se midio en P9
+# (2026-11-12): en la geometria de gs1_d (al lado del tablero, ~46 grados de vista, ~470 mm), la sd
+# del lado en 200 tiradas sale 0.096 mm con estos valores, y la real fue 0.084 (criterio 4 de la
+# fase 7c4). Estan dentro de lo que el diagnostico midio entre frames reales: 0.08-0.12 px las
+# esquinas del tablero y 0.03-0.09 px las del marker. Con 0.10 y 0.06 (los del informe), ~0.08.
+RUIDO_TABLERO_PX = 0.12
+RUIDO_REFERENCIA_PX = 0.08
+
+
+def ruido_esquinas(puntos: np.ndarray, sd_px: float, rng) -> np.ndarray:
+    """`puntos` (N, 2) con ruido gaussiano de sd `sd_px` en x y en y (`rng`: un `np.random.Generator`)."""
+    p = np.asarray(puntos, dtype=np.float64).reshape(-1, 2)
+    return p + rng.normal(0.0, float(sd_px), p.shape)

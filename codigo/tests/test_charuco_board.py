@@ -286,6 +286,26 @@ def test_detectar_charuco_a_30_40_y_50_cm_de_frente_y_a_45_grados(vistas_8) -> N
     print("[fase 7d] detectar_charuco, 1280x960 con la K y la distorsion de gs1: " + "; ".join(filas) + f"; peor {peor:.3f} px")
 
 
+def test_7c4_el_detector_lee_los_bits_con_8_pixeles_por_celda(vistas_8) -> None:
+    """Fase 7c4, criterio 1: `detector` pone `perspectiveRemovePixelPerCell` = 8 (OpenCV trae 4), y en
+    las vistas sinteticas de la 7d da las mismas esquinas que con 4, a <= 0.01 px una a una
+    (obtenido: 0.0 px: las esquinas salen de `cornerSubPix`, no de la lectura de bits)."""
+    assert chb.PIXELES_POR_CELDA == 8 and cv2.aruco.DetectorParameters().perspectiveRemovePixelPerCell == 4
+    det8 = chb.detector(T)
+    assert det8.getDetectorParameters().perspectiveRemovePixelPerCell == 8
+    dp4 = det8.getDetectorParameters()
+    dp4.perspectiveRemovePixelPerCell = 4
+    det4 = cv2.aruco.CharucoDetector(T.board(), det8.getCharucoParameters(), dp4, det8.getRefineParameters())
+    peor, comunes = 0.0, 0
+    for z, img, _rv, _tv in vistas_8:
+        a, b = chb.detectar_charuco(img, det4, T, chb.MIN_ESQUINAS), chb.detectar_charuco(img, det8, T, chb.MIN_ESQUINAS)
+        assert a is not None and b is not None and a[1].tolist() == b[1].tolist(), z
+        comunes += len(b[1])
+        peor = max(peor, float(np.abs(a[0] - b[0]).max()))
+    assert comunes == 9 * 48 and peor <= 0.01, peor
+    print(f"[fase 7c4] detector con 8 px por celda frente a 4, vistas de la 7d: {comunes} esquinas, peor {peor:.4f} px")
+
+
 def test_detectboard_va_medio_pixel_corrido_y_detectar_charuco_lo_corrige(vistas_8) -> None:
     """Lo medido en la fase (OpenCV 4.11): `detectBoard` da las esquinas +0.5 px en x y en y respecto a
     `projectPoints` y `cornerSubPix`. Si una version nueva de OpenCV lo cambia, esta prueba lo dice y hay que

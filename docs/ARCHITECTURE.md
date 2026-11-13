@@ -6,7 +6,8 @@
 > El *porqué* de las decisiones vive en `DECISIONS.md`; las *reglas y el estado
 > operativo* viven en `CONTEXT.md`.
 >
-> _Última actualización: 2026-11-12 (§3.2 y la tabla de números de §9: meta 006 · Grafo de factores óptico-inercial, cierre de la fase 7d2 · Los IDs falsos del tablero en el detector del tracker: los perfiles fijan `markers.detector.error_correction_rate: 0.3`; nombre, puerto y jerarquía no cambian)._
+> _Última actualización: 2026-11-12 (§3.7: meta 006 · Grafo de factores óptico-inercial, fase 7c4 · P9 con la referencia sobre el tablero: `calibration/medir_referencia.py` gana la puerta de coplanaridad, la regla del error de la mediana y `--colocacion`, y `charuco_board.detector` pone `perspectiveRemovePixelPerCell` 8; fuera de la cadena)._
+> _Antes, 2026-11-12 (§3.2 y la tabla de números de §9: meta 006 · Grafo de factores óptico-inercial, cierre de la fase 7d2 · Los IDs falsos del tablero en el detector del tracker: los perfiles fijan `markers.detector.error_correction_rate: 0.3`; nombre, puerto y jerarquía no cambian)._
 > _Antes, 2026-11-12 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7c3 · El tamaño de la referencia medido con el tablero, parte sin cámara: `calibration/medir_referencia.py`, fuera de la cadena; los perfiles no cambian hasta el cierre de la fase)._
 > _Antes, 2026-11-12 (§3.2, árbol y la fila «Pose» de §9.1: meta 006 · Grafo de factores óptico-inercial, fase 7d2b · Un ID repetido no se publica (B39, opción c): `MarkerTracker.process_corners` no da pose de un ID de `markers.list` que sale dos o más veces en un frame, y lo cuenta; el tracker lo dice al salir (`[Repetidos]`) y `--record` lo guarda; no cambia nombre, puerto ni jerarquía)._
 > _Antes, 2026-11-11 (árbol: meta 006 · Grafo de factores óptico-inercial, fase 7d2 · Los IDs falsos del tablero en el detector del tracker, parte sin cámara: `diagnostics/barrido_correccion.py`, fuera de la cadena; los perfiles no cambian). Antes, 2026-11-11 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7d · El tablero ChArUco y los intrínsecos con el asistente de una cámara: `calibration/charuco_board.py`, `calibration/stl_bicolor.py` y el modo `--modo intrinsecos` del asistente, fuera de la cadena). Antes, 2026-11-11 (§2, §3.3, §3.5, §3.6, §4, §6, §7 y §9: meta 006 · Grafo de factores óptico-inercial, fase 7c2 · `Reference` y `ReferenceToTracker`: la referencia se llama `Reference`, la cadena publica `ReferenceToTracker` en vez de `Marker0ToTracker` y el script de Slicer es `slicer/receive_reference.py`; el mapa de §9.1, reexportado; el puerto y la jerarquía no cambian). Antes, 2026-11-11 (§6, árbol: meta 006 · Grafo de factores óptico-inercial, fase 7c · La referencia con su propio ID: `diagnostics/marker_image.py`, `profiles.check_markers` y las copias congeladas de los perfiles en `tests/data/`; la cadena no cambia). Antes, 2026-11-10 (§3.7 y árbol: meta 006 · Grafo de factores óptico-inercial, fase 7a · El asistente de captura del tablero: `calibration/capture_stereo_board.py`, fuera de la cadena; antes, 2026-11-09, `calibrate_extrinsics.py`)._
@@ -436,6 +437,11 @@ en `codigo/historico/iter4/dodecahedron/gui/` (meta 003, fase 3).
   junta las colocaciones (dos cámaras) y dice si el `size_mm` de los perfiles cambia (P77);
   `conjunto_px` da cuánto se aparta del centro lo medido (B136). `python -m calibration.medir_referencia`;
   códigos 0 / 1 / 2 / 4. No escribe en los perfiles. No importa `vision.tracking`.
+  Desde la fase 7c4 (2026-11-12): la referencia va encima del tablero (descarta lo `fuera_del_tablero`
+  y lo de menos de `MIN_ESQUINAS` esquinas); `coplanaridad` da el ángulo entre normales y el sesgo
+  del lado, y `decidir` deja fuera una colocación inclinada; la regla de dispersión es el error de la
+  mediana (`FACTOR_MEDIANA` · sd / √n ≤ 0.02 mm), no la sd; `--colocacion` mide una sola cámara y dice
+  si la colocación vale (código 2 con más de una). `charuco_board.detector` fija 8 píxeles por celda.
 - `diagnostics/probe_camera.py` (sonda: modos, puertos, `--leer`, `--fijar`; desde la fase 7b
   de la meta 007, 2026-11-04, `--capa cv2|com` es obligatoria en `--leer`, `--fijar` y
   `--tras-msmf`, `--fijar --capa com` aún para (parte B), y `--comparar-capas --puerto` lee

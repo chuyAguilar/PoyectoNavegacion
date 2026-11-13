@@ -207,7 +207,7 @@ El detalle anterior, en `docs/history/CONTEXT_s6_2026-11-11.md` y `docs/history/
 ### Vía activa
 
 - **Rumbo (ADR-025):** se rescata solo el tracking; punta, registro, navegación y runbooks se rehacen sobre gs1/gs2. Solo valen `profiles\tracker_config_gs1.yaml` y `_gs2.yaml`.
-- **Meta 006 · Grafo de factores óptico-inercial** (activa; el PC detecta y fusiona, ADR-035). Hechas: 1 parte A, 2, 7a, 7c, 7c2, 7d, 7d2, 7d2b y la 7c3 sin cámara; la 7 parcial. La referencia es el marker ID 100 (`Reference`, 99.8 mm a la espera de la medida con la cámara, B55) y la cadena publica `ReferenceToTracker`. Tablero ChArUco 9×7 de casilla 25.95 mm; **fuera de la vista antes de arrancar el tracker** (§4.22). Lo siguiente: el diagnóstico de P9, la 7e (que repite P9 y P4), el cierre de la 7c3, y la 7 / 7f / 7g / 7h. Los números, en `specs/006-grafo-factores/tasks.md`.
+- **Meta 006 · Grafo de factores óptico-inercial** (activa; el PC detecta y fusiona, ADR-035). Hechas: 1 parte A, 2, 7a, 7c, 7c2, 7d, 7d2, 7d2b y las 7c3 y 7c4 sin cámara; la 7 parcial. La referencia es el marker ID 100 (`Reference`, 99.8 mm a la espera de la medida con la cámara, B55) y la cadena publica `ReferenceToTracker`. Tablero ChArUco 9×7 de casilla 25.95 mm; **fuera de la vista antes de arrancar el tracker** (§4.22). Lo siguiente: la 7e (que repite P9 con la referencia sobre el tablero, y P4), el cierre de la 7c3, y la 7 / 7f / 7g / 7h. Los números, en `specs/006-grafo-factores/tasks.md`.
 - **Meta 007 · El tracker en la Jetson** (en pausa desde el 2026-11-05, ADR-035): fases 1 a 7 hechas; abiertas B77, B85, B86, B91, B92, B93. Detalle en `specs/007-jetson/tasks.md`.
 
 ### En pausa (se conserva, se puede retomar)

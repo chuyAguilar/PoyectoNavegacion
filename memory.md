@@ -1,6 +1,6 @@
 # memory.md — estado de hoy
 
-_Actualizado: 2026-11-12 (meta 006 · Grafo de factores óptico-inercial, activa: sesión conjunta hecha, 7c2, 7d2b y 7d2 cerradas, ADR-036 y ADR-037, recorte del arranque; la 7c3 espera P9; metas 007 y 005 en pausa)._
+_Actualizado: 2026-11-12 (meta 006 · Grafo de factores óptico-inercial, activa: 7c4 sin cámara hecha, a la espera del commit; la 7c3 espera P9 en vivo; metas 007 y 005 en pausa)._
 
 Spec activo: `specs/006-grafo-factores/`
 
@@ -24,7 +24,7 @@ Peticiones pendientes: 0
 
 ## La suite
 
-- `codigo/tests/`: **1520: 1510 pasan, 10 saltadas, 0 xfail, 0 fallan**; 222 s (2026-11-12, cierre de la 7d2: sin los dos `xfail` de P67 y P75 y una prueba nueva; antes, 1507 + 2 xfail en 220–234 s). El `pytest.ini` ya trae `-q`: con otro `-q` no sale la línea final (usar `-o addopts="-p no:cacheprovider"`). Dos corridas del mismo árbol difieren ~25 %: es la carga de la máquina; el margen contra el tope de 600 s baja (B115); B130: dos pruebas de `test_referencia_id.py` pueden fallar sueltas con la CPU cargada. Las 10 saltadas: 9 «solo Linux» y 1 solo en la Jetson. En la Jetson: `ssh nav-jetson suite wip` (P22). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`.
+- `codigo/tests/`: **1535: 1525 pasan, 10 saltadas, 0 xfail, 0 fallan**; 237 s y 313 s en dos corridas (2026-11-12, cierre de la 7c4: +15 pruebas; antes, 1520 en 222 s). El `pytest.ini` ya trae `-q`: con otro `-q` no sale la línea final (usar `-o addopts="-p no:cacheprovider"`). Dos corridas del mismo árbol difieren ~25 %: es la carga de la máquina; el margen contra el tope de 600 s baja (B115); B130: dos pruebas de `test_referencia_id.py` pueden fallar sueltas con la CPU cargada. Las 10 saltadas: 9 «solo Linux» y 1 solo en la Jetson. En la Jetson: `ssh nav-jetson suite wip` (P22). Con `timeout 600 codigo/.venv/Scripts/python.exe -m pytest codigo/tests -q`.
 - «No cambió»: la suite + el replay de Marker0 (`tests/test_replay_marker0.py`, gs1 y gs2, 0.0 mm / 0.0°, detección 0.0 px) + `python -m gui.panel --selftest` (con `PYTHONIOENCODING=utf-8`, B49). Detalle en `docs/ARCHITECTURE.md` §6.
 
 ## Decisiones del autor
@@ -39,8 +39,8 @@ Peticiones pendientes: 0
 
 ## Meta 006 · Grafo de factores óptico-inercial (activa desde el 2026-11-05; replan autorizado el 2026-11-11)
 
-- **Hecho** (números en `tasks.md`; detalle en `docs/history/006_tasks_2026-11-1{1,2}.md`): Fases 1 parte A y 2; 7a; 7c y 7c2 (ADR-036); 7d (tablero 25.95 mm); 7d2 (tasa 0.3) y 7d2b (ADR-037), cerradas con la sesión conjunta del 2026-11-12 (`Claude outputs/fases/006/fase-7c/correr_20261112-171751`; P83–P84); 7c3 sin cámara. La Fase 7, parcial (P45). **P9 de la 7c3 no válida (P85):** los perfiles siguen en 99.8 mm; P4 dio 51.60 / 51.01 mm.
-- **Lo siguiente, en orden:** diagnóstico corto sobre los PNG de P9 (encuadre, planitud o geometría del tablero; P85 a) → 7e · Recalibrar gs1 y gs2, cuya sesión repite P9 y P4 → cierre de la 7c3 → 7 parte sin cámara 2 → 7f → 7g → 7 sesión 2 → 7h; después las Fases 3 a 6 y 8.
+- **Hecho** (números en `tasks.md`; detalle en `docs/history/006_tasks_2026-11-1{1,2}.md`): Fases 1 parte A y 2; 7a; 7c y 7c2 (ADR-036); 7d (tablero 25.95 mm); 7d2 (tasa 0.3) y 7d2b (ADR-037), con la sesión conjunta del 2026-11-12 (P83–P84); 7c3 sin cámara; **7c4 sin cámara** (P91 a; B141). La Fase 7, parcial (P45). **P9 de la 7c3 no válida (P85):** los perfiles siguen en 99.8 mm; P4 dio 51.60 / 51.01 mm.
+- **Lo siguiente, en orden:** 7e · Recalibrar gs1 y gs2, cuya sesión repite P9 (`fase-7c3/p9/correr.ps1`) y P4, y compara los intrínsecos con los dos detectores (B141) → cierre de la 7c3 → 7 parte sin cámara 2 → 7f → 7g → 7 sesión 2 → 7h; después las Fases 3 a 6 y 8.
 - **Replan del 2026-11-11 (P46–P74):** ChArUco para intrínsecos (7d, 7e) y extrínsecos (7f); «recalibrar y continuar» (7g; botón 7h): 20 vistas en ~10 min (P60 c); la fusión no arranca con extrínsecos de otro día o > 12 h (P61). La 7c3 mide el borde que ve el detector (P81 a); su `size_mm` se cambia solo si la medida vale (P77).
 - Qué es: GTSAM fusiona lo de gs1 y gs2; el IMU después. P1–P85 en `specs/006-*/clarify.md`.
 
@@ -50,7 +50,7 @@ Peticiones pendientes: 0
 
 ## Pendientes del autor
 
-- **Meta 006:** el commit del recorte. Los `correr.ps1` anteriores a la 7c2 piden `Marker0ToTracker` y no valen. La casilla del tablero solo se midió a lo ancho (P85). Miniforge, para la Fase 6.
+- **Meta 006:** el commit de la 7c4. Los `correr.ps1` anteriores a la 7c2 piden `Marker0ToTracker` y no valen. La casilla del tablero solo se midió a lo ancho (P85). Miniforge, para la Fase 6.
 - **Meta 007 (en pausa):** los Hz de Slicer de B4; `enviar_wip.ps1` y `ssh nav-jetson suite wip` con la parte B; la Wi-Fi de la Jetson (B86, con sudo); el cable directo (B85).
 - Meta 005 (aplazado hasta compartirlo con los compañeros): las pruebas en vivo de las fases 1 a 4, con sus protocolos en `Claude outputs/fases/005/`.
 - Decidir si B19 y B20 (alta) se cierran: su código y su punta se archivaron. Decidir si B35 entra en la meta.
