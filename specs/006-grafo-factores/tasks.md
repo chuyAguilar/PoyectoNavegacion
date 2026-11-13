@@ -1,10 +1,10 @@
-Plan autorizado por el autor el 2026-11-12 (replan corto de la fase 7c3, P76–P80; antes, el 2026-11-11 los de las fases 7c a 7h, 7d2 y 7d2b, el 2026-11-10 y el 2026-11-05).
+Plan autorizado por el autor el 2026-11-12 (replan corto de la fase 7c4, P86–P90; antes, el mismo día el de la 7c3, P76–P80; el 2026-11-11 los de las fases 7c a 7h, 7d2 y 7d2b; el 2026-11-10 y el 2026-11-05).
 
 # Tareas — Meta 006 · Grafo de factores óptico-inercial (primero, las dos cámaras)
 
 Sin la línea 1 («Plan autorizado por el autor el AAAA-MM-DD»), `/fase` no hace nada.
 Una casilla por fase; el criterio es el del plan (`plan.md`, «Fases») y aquí no se repite, para que el arranque pese poco. `/fase <n>` la marca con el número obtenido y la fecha; el commit lo añade `/cerrar-fase` o la fase siguiente, cuando ya está en git.
-Historial de replans (2026-11-05 a 2026-11-12) y el detalle literal de las casillas hechas: `docs/history/006_tasks_2026-11-11.md` y `docs/history/006_tasks_2026-11-12.md`. El orden de ejecución, en la última tabla del principio de `plan.md` («(11-12)»).
+Historial de replans (2026-11-05 a 2026-11-12) y el detalle literal de las casillas hechas: `docs/history/006_tasks_2026-11-11.md` y `docs/history/006_tasks_2026-11-12.md`. El orden de ejecución, en la última tabla del principio de `plan.md` («(11-12 b)»).
 **Lo que prevalece sobre `plan.md`:** **P60 = (c):** la recalibración rápida de la 7g toma objetivo 20 vistas y mínimo 18 (~10 min, tope 15); donde `plan.md` dice 12 / 10 vistas y ≤ 5–6 min, vale P60. **P78:** la referencia y el tablero miden los dos 2.8 mm de grosor (medido por el autor): Δh = 0, sin paso de medir grosores; donde `plan.md` pide medirlos, vale P78.
 **Nota de escala (B55):** la S2 del 2026-11-09 pudo grabarse con el marker de ~100 mm (mm de la Fase 2 a escala 0.81); sin comprobar.
 
@@ -22,6 +22,7 @@ Historial de replans (2026-11-05 a 2026-11-12) y el detalle literal de las casil
 - [x] **Fase 7d2 · Los IDs falsos del tablero en el detector del tracker (B39)** (pesada; toca la cadena). Sin cámara: el barrido (`6cd759e`; P74). Sesión del 2026-11-12 y cierre (P84 a): la regla elige 0.30; P5 pierde 0 de 1072 (gana 35); 0 falsos con 0.30 (con 0.60: 1122 / 3148 / 3040 en P5 / P6 / P7); P8 a ≤ 1.43 / 0.47 mm de la mediana; 65.2 / 62.1 fps con el tablero a la vista (B137). `error_correction_rate: 0.3` en los dos perfiles; suite sin `xfail`. B39 cerrada. Fecha: 2026-11-12. Commit: `6cd759e`; cierre `57fac7f`.
 - [x] **Fase 7d2b · Un ID repetido no se publica (B39, opción c)** (pesada; toca la cadena; P70 b; ADR-037). Sin cámara: con el 100 doble en 5 de 20 frames, 15 envíos y `[Repetidos] 5`; 50 dobles sobre `marker0_gs1`, 927 envíos iguales byte a byte; 25 pruebas. En vivo (sesión del 2026-11-12): PD2 sin repetidos; 2 dobles del 100 en P7 gs2, contados y sin envío. Fecha: 2026-11-12. Commit: `26a23eb`.
 - [ ] **Fase 7c3 · El tamaño de la referencia medido con el tablero (B55; P76 a)** (pesada; el cierre cambia la escala de la pose publicada). Sin cámara (`503a0d0`): `calibration/medir_referencia.py`, 31 pruebas; mide el borde que ve el detector (P81 a; −0.105 mm frente al dibujado); con puntos exactos 1.7e-13 mm; sd 0.012–0.016 mm con ruido; B135, B136 (P82 a). **P9 de la sesión del 2026-11-12, no válida (P85):** gs1 98.52 / 100.37 mm, sd 0.086 / 0.101, lados hasta ~3 mm distintos; gs2 con 8 y 3 frames válidos; entre cámaras 1.80 mm. Perfiles en 99.8; P9 se repite en la sesión de la 7e, tras un diagnóstico. Commit (cierre): —.
+- [ ] **Fase 7c4 · P9 con la referencia sobre el tablero** (pesada; P86 a). Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
 - [ ] **Fase 7e · Recalibrar gs1 y gs2** (pesada; cambia los intrínsecos con los que publica el tracker; nueva por P47). Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
 - [ ] **Fase 7 · Los extrínsecos por tablero, parte sin cámara 2 (epipolar, rigidez, lado de la referencia)** (pesada; reabierta el 2026-11-11). Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.
 - [ ] **Fase 7f · ChArUco en los extrínsecos** (pesada; nueva, si P58 a). Criterio: el del plan. Número obtenido: —. Fecha: —. Commit: —.

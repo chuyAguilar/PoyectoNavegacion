@@ -543,3 +543,38 @@ P1 a P7 son las que el autor ya contestó antes de que existiera este archivo; s
 - **Opciones:** (a) recomendada: un diagnóstico corto sobre los PNG de P9 que separe las causas, y P9 se repite en la sesión de la 7e con lo que salga; los perfiles siguen en 99.8. (b) Repetir P9 ya, más lejos, sin diagnóstico.
 - **Respuesta del autor:** (a), la recomendada.
 - **Fecha:** 2026-11-12
+
+## P86 · Cómo sigue la 7c3 tras el diagnóstico de P9
+
+- **Contexto:** el diagnóstico (`Claude outputs/fases/006/fase-7c3/diagnostico-p9/informe.md`) da la causa de P9: el marker no estaba en el plano del tablero (normales a 1.0–1.9°, esquinas a −2.1…+2.8 mm del plano); medido solo, el marker sale cuadrado. En gs2 la referencia se perdía por la tasa 0.6 (con 0.3, 66/66 y 65/65) y el tablero por la lectura de sus marcadores (con `perspectiveRemovePixelPerCell` 8, ≥ 30 esquinas en todos los frames). La sd real entre frames es 0.08–0.21 mm, no 0.012–0.016 como en el sintético. Como dato aparte, la pose IPPE contra el plano del tablero da 99.83 mm de media (±~0.5).
+- **Opciones:** (a) recomendada: replan corto con el detector del tablero a `perspectiveRemovePixelPerCell` 8, una puerta de coplanaridad en `medir_referencia`, el umbral de sd de P77 como error de la mediana y P9 con la referencia encima del tablero (`--altura-mm 2.8`), y P9 se repite en la sesión de la 7e. (b) Cerrar la 7c3 con 99.8 ± 0.5. (c) Repetir P9 sin cambiar código.
+- **Respuesta del autor:** (a), la recomendada.
+- **Fecha:** 2026-11-12
+
+## P87 · Dónde va la referencia en P9 y cuántas esquinas del tablero bastan (Fase 7c4; P86 a)
+
+- **Contexto:** con la referencia encima del tablero, el informe estimaba ~32 esquinas; al planear se comprobó en el sintético que quedan 12 (la placa de 130 mm tapa 5 de las 6 filas de esquinas; centrada, solo salen las dos columnas de los extremos). `MIN_ESQUINAS` = 30 no se cumpliría nunca. Esas 12 rodean la referencia: la homografía interpola, y con el mismo ruido la sd del lado sale 0.027–0.035 mm, frente a 0.049–0.057 al lado del tablero con 48. Al lado, el informe midió que la extrapolación mete 0.1–0.3 mm en gs1 y hasta ~1 mm en gs2.
+- **Opciones:** (a) recomendada: encima y centrada; `MIN_ESQUINAS` = 10 (las 12 menos dos de holgura) y una puerta nueva, «encerrada»: las 4 esquinas de la referencia, a ≥ 5 mm dentro de la envolvente de las esquinas leídas. Sin margen si la luz se come esquinas de una columna. (b) Al lado, las dos piezas sobre una placa rígida y plana (vidrio): 48 esquinas y `MIN_ESQUINAS` 30; extrapola y hace falta la placa. (c) Encima pero corrida 26 mm hacia un borde corto: 20 esquinas, con 11 mm de la referencia fuera de la envolvente (extrapola poco, sin puerta «encerrada»).
+- **Respuesta del autor:** (a), la recomendada: encima y centrada, `MIN_ESQUINAS` 10 y la puerta «encerrada».
+- **Fecha:** 2026-11-12
+
+## P88 · La puerta de coplanaridad de `medir_referencia` (Fase 7c4; P86 a)
+
+- **Contexto:** lo que la inclinación θ mete en el lado depende de la oblicuidad e (el rayo a la referencia frente a la normal del tablero): hasta θ · L · tan(e) / √2 en la media de los lados. Para 0.05 mm con L = 100: θ ≤ 0.04° a 45°, ≤ 0.11° a 20°, ≤ 0.23° a 10°. Un umbral fijo de ángulo o es flojo con la vista oblicua o rechaza todo con la vista frontal. El ángulo entre frames varió ±0.05° (p5–p95) en P9; su sesgo con una K mala, lo mide la fase.
+- **Opciones:** (a) recomendada: la colocación no vale si la mediana del sesgo estimado (la pose IPPE de la referencia proyectada sobre el plano del tablero) pasa de 0.05 mm; el ángulo, la vista y el «lado coplanar IPPE» van como números. Se adapta a la vista; depende de que la pose IPPE sea fiable (criterio 3 de la fase). (b) Ángulo entre normales ≤ 0.2°: simple; a 45° deja pasar ~0.18 mm. (c) Ángulo ≤ 0.05°: protege a 45°; con la vista frontal rechaza colocaciones buenas y está al nivel del ruido del ángulo.
+- **Respuesta del autor:** (a), la recomendada: el sesgo estimado ≤ 0.05 mm por colocación; el ángulo y la oblicuidad, como números.
+- **Fecha:** 2026-11-12
+
+## P89 · La regla de dispersión de P77 con el ruido real (Fase 7c4; P77, P86 a)
+
+- **Contexto:** P77 pedía sd entre frames ≤ 0.05 mm, fijada contra el sintético (0.012–0.016). La real, al lado del tablero y aun con 48 esquinas fijas, es 0.08–0.21 mm. Lo que importa para el valor es lo precisa que es la mediana: su error típico es ≈ 1.2533 · sd / √n. Con los 10 s de la sesión (~74 PNG a ~66 fps con el tablero a la vista) y sd 0.21 sale 0.031; con 30 s (~200 PNG) y la sd esperada encima (0.05–0.13 mm, hipótesis), 0.004–0.012. Los demás puntos de P77 (≥ 30 válidos, |gs1 − gs2| ≤ 0.3 mm, U, a 0.1 mm) siguen: el informe no muestra que no se alcancen con la referencia encima.
+- **Opciones:** (a) recomendada: error de la mediana ≤ 0.02 mm con n ≥ 30 válidos, y 30 s por colocación (~200 PNG, ~60 MB; ~2 min más de sesión por cámara). (b) sd entre frames ≤ 0.15 mm, con 10 s: simple; gs2_d (0.21) habría fallado y no mira cuántos frames hay. (c) Como (a) con 0.03 mm: más fácil de cumplir; deja más ruido en el valor (U es 0.14–0.15).
+- **Respuesta del autor:** (a), la recomendada: error de la mediana 1.2533·sd/√n ≤ 0.02 mm con n ≥ 30, grabando 30 s por colocación.
+- **Fecha:** 2026-11-12
+
+## P90 · Qué hace distintas las dos colocaciones de cada cámara con la referencia encima (Fase 7c4; P80 a)
+
+- **Contexto:** P80 (a) pedía la referencia a la derecha del tablero y después girada 90° a su izquierda. Encima, no hay «derecha» ni «izquierda»: para que las esquinas la rodeen tiene que ir centrada (P87). Lo que P80 buscaba separar es un sesgo del detector que dependa de la orientación de los bordes o del sitio en la imagen. En P9 del 2026-11-12, gs1 cambió de lado sin girar y gs2 giró sin cambiar de lado.
+- **Opciones:** (a) recomendada: la segunda colocación, la referencia girada 90° en el mismo sitio del tablero, y el conjunto (tablero y referencia) movido en la imagen ~100–150 px, sin salir del radio; el script dice el giro y el sitio, y no deja seguir si no cambiaron. Separa los dos sesgos. (b) Solo girada 90°, sin mover el conjunto: más fácil; no separa el sitio en la imagen. (c) Dos sitios sobre el tablero (corrida ±26 mm), con la extrapolación de P87 (c).
+- **Respuesta del autor:** (a), la recomendada: girada 90° en el mismo sitio y el conjunto movido 100–150 px en la imagen.
+- **Fecha:** 2026-11-12

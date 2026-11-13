@@ -120,6 +120,8 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 | B136 | `RADIO_MAX_PX` de `medir_referencia` es un tope grueso: no ve un conjunto corrido hacia el lado del tablero | Baja | Meta 006, sesión conjunta (P9) |
 | B137 | El tracker baja a 52–66 fps con el tablero ChArUco a la vista, con cualquier tasa | Baja | — |
 | B138 | El criterio de P3 de `fase-7c/correr.ps1` no excluye los transforms de las vistas de corte de Slicer | Baja | Meta 006, `verificar.ps1` de la 7e |
+| B139 | El fondo de la caja de luz no es plano ni rígido | Media | Meta 006, Fase 7c4 |
+| B140 | La impresión del tablero ChArUco: un marcador falla y el residuo de la homografía es alto | Baja | Meta 006, tras la 7e |
 
 ## Abiertos
 
@@ -794,6 +796,7 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **Por qué queda:** la meta 006 fusiona solo las cámaras; el IMU va después. Kalibr pide ROS 1 en Docker (Linux): se correría en `servidor` o en la Jetson, no en Windows.
 - **De dónde:** la revisión de la dirección de esa investigación (P45, 2026-11-11).
 - **Qué haría falta:** al planear el IMU, comparar Kalibr con Basalt `basalt_calibrate_imu`; grabar en formato EuRoC o `.bag`; ADR por la herramienta externa.
+- **Corrección del autor (2026-11-12):** el IMU va **en el instrumento**, junto a su marker, no en el soporte de las cámaras: se triangula el marker del instrumento con las dos cámaras y se fusiona con el IMU del mismo instrumento. La calibración que hace falta es IMU ↔ marker del instrumento (rotación, traslación y desfase temporal), con la pose del marker vista por las cámaras fijas. `kalibr_calibrate_imu_camera` supone el IMU rígido a la cámara que se mueve frente a un blanco fijo: si sirve para este montaje, o si hace falta otra herramienta o un hand-eye propio, está sin comprobar [hipótesis].
 - **Prioridad:** media (hará falta seguro; hoy no hay IMU).
 
 ### B117 · mrcal como validador externo de la calibración
@@ -951,6 +954,20 @@ Lo que se decidió no hacer ahora, con su porqué. Prioridades: **alta**, puede 
 - **De dónde:** sesión conjunta del 2026-11-12, fase 7c2 · `Reference` y `ReferenceToTracker` (meta 006).
 - **Qué haría falta:** en los scripts que lean los nodos de Slicer (el `verificar.ps1` de la 7e y lo que copie `fase-7c/correr.ps1`), excluir los transforms de las vistas de corte o contar solo los nodos que no existían antes de arrancar el tracker.
 - **Prioridad:** baja (da un «NO» falso, no un resultado equivocado de la cadena).
+
+### B139 · El fondo de la caja de luz no es plano ni rígido
+- **Qué:** en P9 de la sesión del 2026-11-12, la referencia y el tablero, apoyados a la vez en el fondo de la caja, quedaron a 1–2° entre sí. El diagnóstico lo atribuye a la lámina flexible del fondo [hipótesis, sin mirar el fondo].
+- **Por qué queda:** la 7c4 lo evita poniendo la referencia encima del tablero; afecta a todo lo que se apoya en el fondo para medir (el deslizamiento de 50 mm de P4, el tablero de los extrínsecos si se deja en el fondo).
+- **De dónde:** P85–P86; `Claude outputs/fases/006/fase-7c3/diagnostico-p9/informe.md`; replan del 2026-11-12 (b).
+- **Qué haría falta:** una placa rígida y plana fija en el fondo, y medir con la puerta de coplanaridad de la 7c4 dos piezas apoyadas en ella.
+- **Prioridad:** media.
+
+### B140 · La impresión del tablero ChArUco: un marcador falla y el residuo de la homografía es alto
+- **Qué:** en P9, el marcador 8 del tablero fallaba en casi todos los frames y la homografía deja 0.21–0.23 px de residuo en gs1 (0.48–0.59 en gs2), cuando una cuadrícula buena daría ~0.05–0.1 [hipótesis c del informe].
+- **Por qué queda:** puede ser el detector (la 7c4 sube `perspectiveRemovePixelPerCell`) o los intrínsecos (los recalibra la 7e).
+- **De dónde:** el diagnóstico de P9 (P85–P86); replan del 2026-11-12 (b).
+- **Qué haría falta:** tras la 7e, si el residuo de gs1 sigue > 0.15 px con los intrínsecos nuevos, mirar el tablero con lupa y, si hace falta, reimprimirlo y registrarlo otra vez.
+- **Prioridad:** baja (solo si estorba).
 
 ## Cerrados
 
